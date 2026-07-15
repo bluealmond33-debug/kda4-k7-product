@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/dotorian-design-system-c5a78f9e-5696-423e-8205-5f92923d838d/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/dotorian-design-system-c5a78f9e-5696-423e-8205-5f92923d838d/tokens/colors.css">
+<link rel="stylesheet" href="_ds/dotorian-design-system-c5a78f9e-5696-423e-8205-5f92923d838d/tokens/typography.css">
+<link rel="stylesheet" href="_ds/dotorian-design-system-c5a78f9e-5696-423e-8205-5f92923d838d/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/dotorian-design-system-c5a78f9e-5696-423e-8205-5f92923d838d/tokens/shape.css">
+<link rel="stylesheet" href="_ds/dotorian-design-system-c5a78f9e-5696-423e-8205-5f92923d838d/styles.css">
+<script src="_ds/dotorian-design-system-c5a78f9e-5696-423e-8205-5f92923d838d/_ds_bundle.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
+<style>
+  body{margin:0;background:#060607;font-family:var(--font-sans,'Geist Sans','Pretendard',system-ui,sans-serif);color:var(--gray-1000,#171717)}
+  a{color:var(--blue-700)} a:hover{color:var(--blue-800)}
+  .mi{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;vertical-align:middle;display:inline-block}
+  .mono{font-family:var(--font-mono,'Geist Mono',ui-monospace,monospace);font-variant-numeric:tabular-nums}
+  .sf{font-family:-apple-system,'SF Pro Display','SF Pro Text',system-ui,'Geist Sans','Pretendard',sans-serif}
+  @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes recBlink{0%,100%{opacity:1}50%{opacity:.15}}
+  @keyframes wave{0%,100%{height:6px}50%{height:22px}}
+  @keyframes dockUp{from{transform:translateY(24px);opacity:.4}to{transform:translateY(0);opacity:1}}
+  .lbl{font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);letter-spacing:.2px}
+  .seg{width:15px;height:5px;border-radius:2px}
+  .card{background:#fff;border:1px solid var(--color-border);border-radius:12px}
+  .sechd{font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)}
+  .cbtn{width:36px;height:36px;border-radius:9999px;border:1px solid var(--gray-200);display:flex;align-items:center;justify-content:center;color:var(--gray-900)}
+  .av{border-radius:9999px;background:var(--gray-100);border:1px solid var(--color-border);display:flex;align-items:center;justify-content:center;color:var(--gray-700);flex:none}
+  .pill{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--gray-200);border-radius:9999px;padding:8px 10px 8px 20px;box-shadow:var(--shadow-popover);z-index:10;white-space:nowrap}
+  .pill>*{flex:none}
+  .qlink{background:#fff;border:1px solid var(--amber-400);border-radius:6px;padding:9px 12px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+</style>
+</helmet>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#006bff"/><g fill="#fff"><rect x="20" y="24" width="24" height="52" rx="7"/><rect x="52" y="32" width="30" height="11" rx="3"/><rect x="52" y="50" width="30" height="7" rx="3"/><rect x="52" y="62" width="20" height="7" rx="3"/></g></svg></template>
+
+<div ref="{{ rootRef }}" style="min-height:100vh;padding:20px;display:flex;justify-content:center;background:#060607;box-sizing:border-box">
+<div style="width:{{ scaledW }};height:{{ scaledH }}">
+<div ref="{{ stageRef }}" style="width:1420px;transform-origin:top left;transform:{{ scaleT }};display:flex;flex-direction:column;gap:18px;align-items:center">
+
+  <div style="display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--color-border);border-radius:9999px;padding:10px 12px 10px 22px;box-shadow:0 10px 34px rgba(0,0,0,.28)">
+    <span style="font-weight:600;font-size:15px;letter-spacing:-.2px">K7 라이브 상담 시연</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--blue-900);background:#fff;border:1px solid var(--blue-400);border-radius:9999px;padding:3px 11px"><span style="width:7px;height:7px;border-radius:9999px;background:var(--blue-700);animation:pulseDot 1.4s infinite"></span>{{ phaseLabel }}</span>
+    <span style="width:1px;height:20px;background:var(--color-border)"></span>
+    <span style="font-size:12px;color:var(--color-fg-muted)">입력</span>
+    <div style="display:flex;border:1px solid var(--color-border);border-radius:9999px;overflow:hidden">
+      <span onClick="{{ setSim }}" style="padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:{{ simBg }};color:{{ simFg }}">시뮬레이션</span>
+      <span onClick="{{ setMic }}" style="padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:{{ micBg }};color:{{ micFg }}">실제 마이크</span>
+    </div>
+    <sc-if value="{{ showSkip }}" hint-placeholder-val="{{ false }}"><span onClick="{{ skipWait }}" style="display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:17px">skip_next</span>5초 건너뛰고 요약</span></sc-if><span onClick="{{ reset }}" style="display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:17px">restart_alt</span>초기화</span>
+  </div>
+
+  <sc-if value="{{ micErr }}" hint-placeholder-val="">
+    <div style="background:#fff;border:1px solid var(--amber-400);border-radius:9999px;padding:8px 16px;font-size:12.5px;color:var(--amber-900);display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:16px">info</span>{{ micErr }}</div>
+  </sc-if>
+
+  <div style="display:flex;gap:80px;align-items:center;justify-content:center">
+
+    <div style="flex:none;width:300px;height:615px">
+      <div class="sf" style="width:432px;height:886px;transform:scale(.694);transform-origin:top left;position:relative;filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))">
+      <img src="uploads/iPhone 15 Pro - White.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;z-index:0">
+        <div style="position:absolute;left:15px;right:15px;top:13px;bottom:13px;border-radius:48px;overflow:hidden;background:#000;z-index:1">
+          <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;border-radius:20px;background:#000;z-index:50"></div>
+
+          <sc-if value="{{ phIdle }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;inset:0;background:#eef0f4;color:#1c1c1e;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 30px 0;font-size:14px;font-weight:600"><span class="mono">9:41</span><span style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:16px">signal_cellular_alt</span><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:17px">battery_full</span></span></div>
+              <div style="flex:1;display:flex;flex-direction:column;padding:0 24px 14px">
+                <div style="text-align:center;margin-top:14px">
+                  <div style="font-size:23px;font-weight:600;letter-spacing:-.3px">키움은행 고객센터</div>
+                  <div class="mono" style="font-size:15px;color:#8a8a8e;margin-top:5px">1588-0000</div>
+                </div>
+                <div style="flex:1"></div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);row-gap:13px;justify-items:center">
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">1</span><span style="height:10px"></span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">2</span><span style="font-size:8.5px;font-weight:600;letter-spacing:1.5px;color:rgba(60,60,67,.6);height:10px;margin-top:2px">ABC</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">3</span><span style="font-size:8.5px;font-weight:600;letter-spacing:1.5px;color:rgba(60,60,67,.6);height:10px;margin-top:2px">DEF</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">4</span><span style="font-size:8.5px;font-weight:600;letter-spacing:1.5px;color:rgba(60,60,67,.6);height:10px;margin-top:2px">GHI</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">5</span><span style="font-size:8.5px;font-weight:600;letter-spacing:1.5px;color:rgba(60,60,67,.6);height:10px;margin-top:2px">JKL</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">6</span><span style="font-size:8.5px;font-weight:600;letter-spacing:1.5px;color:rgba(60,60,67,.6);height:10px;margin-top:2px">MNO</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">7</span><span style="font-size:8.5px;font-weight:600;letter-spacing:1.5px;color:rgba(60,60,67,.6);height:10px;margin-top:2px">PQRS</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">8</span><span style="font-size:8.5px;font-weight:600;letter-spacing:1.5px;color:rgba(60,60,67,.6);height:10px;margin-top:2px">TUV</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">9</span><span style="font-size:8.5px;font-weight:600;letter-spacing:1.5px;color:rgba(60,60,67,.6);height:10px;margin-top:2px">WXYZ</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:30px;font-weight:500;color:#1c1c1e;line-height:1;margin-top:8px">*</span><span style="height:10px"></span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:34px;font-weight:400;color:#1c1c1e;line-height:1">0</span><span style="font-size:14px;font-weight:500;color:rgba(60,60,67,.6);height:10px;line-height:1">+</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:9999px;background:#e2e4e9"><span style="font-size:24px;font-weight:600;color:#1c1c1e;line-height:1;margin-top:6px">#</span><span style="height:10px"></span></div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);align-items:center;justify-items:center;margin-top:16px">
+                  <span></span>
+                  <div onClick="{{ startCall }}" style="width:72px;height:72px;border-radius:9999px;background:#34c759;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(52,199,89,.45)"><span class="mi" style="font-size:33px;color:#fff">call</span></div>
+                  <span class="mi" style="font-size:26px;color:#8a8a8e">backspace</span>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ phInCall }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,#3d7f9e 0%,#3f6d8c 32%,#455e78 68%,#4a586d 100%);color:#fff;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 30px 0;font-size:14px;font-weight:600"><span class="mono">9:41</span><span style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:16px">signal_cellular_alt</span><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:17px">battery_full</span></span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:0 26px 24px">
+                <div style="text-align:center;margin-top:52px">
+                  <sc-if value="{{ showTimer }}" hint-placeholder-val="{{ false }}"><div class="mono" style="font-size:17px;color:rgba(255,255,255,.85)">{{ clockStr }}</div></sc-if>
+                  <div style="font-size:30px;font-weight:600;letter-spacing:-.3px;margin-top:4px">키움은행 고객센터</div>
+                  <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;font-size:13px;color:rgba(255,255,255,.75)">
+                    <sc-if value="{{ showRecDot }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:9999px;background:#ff5a5f;animation:recBlink 1.1s infinite"></span></sc-if>
+                    {{ phoneStatus }}
+                  </div>
+                </div>
+                <sc-if value="{{ showGlass }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:26px;width:100%;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);border-radius:16px;padding:14px 16px;text-align:center;font-size:13.5px;line-height:1.55;color:#fff">{{ glassText }}</div>
+                </sc-if>
+                <sc-if value="{{ showWave }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:18px;display:flex;align-items:center;justify-content:center;gap:5px;height:24px">
+                    <span style="width:4px;height:8px;border-radius:9999px;background:rgba(255,255,255,.85);animation:wave 1s infinite"></span>
+                    <span style="width:4px;height:18px;border-radius:9999px;background:#fff;animation:wave .9s infinite .1s"></span>
+                    <span style="width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.85);animation:wave 1.1s infinite .2s"></span>
+                    <span style="width:4px;height:12px;border-radius:9999px;background:#fff;animation:wave .8s infinite .15s"></span>
+                    <span style="width:4px;height:16px;border-radius:9999px;background:rgba(255,255,255,.85);animation:wave 1s infinite .25s"></span>
+                  </div>
+                </sc-if>
+                <div style="flex:1"></div>
+                <sc-if value="{{ showControls }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:100%;display:grid;grid-template-columns:repeat(3,1fr);row-gap:20px;justify-items:center">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:7px"><span style="width:64px;height:64px;border-radius:9999px;background:rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:26px;color:#fff">volume_up</span></span><span style="font-size:12px;color:#fff">스피커</span></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:7px"><span style="width:64px;height:64px;border-radius:9999px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:26px;color:rgba(255,255,255,.7)">videocam</span></span><span style="font-size:12px;color:rgba(255,255,255,.85)">FaceTime</span></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:7px"><span style="width:64px;height:64px;border-radius:9999px;background:rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:26px;color:#fff">mic_off</span></span><span style="font-size:12px;color:#fff">소리 끔</span></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:7px"><span style="width:64px;height:64px;border-radius:9999px;background:rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:26px;color:#fff">more_horiz</span></span><span style="font-size:12px;color:#fff">더 보기</span></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:7px"><span onClick="{{ endCall }}" style="width:64px;height:64px;border-radius:9999px;background:#ff3b30;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(255,59,48,.4)"><span class="mi" style="font-size:28px;color:#fff">call_end</span></span><span style="font-size:12px;color:#fff">종료</span></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:7px"><span style="width:64px;height:64px;border-radius:9999px;background:rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:26px;color:#fff">dialpad</span></span><span style="font-size:12px;color:#fff">키패드</span></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ phEnded }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:inline-flex;align-items:center;gap:7px;font-size:14px;color:rgba(255,255,255,.85);margin-bottom:18px"><span class="mi" style="font-size:20px">check_circle</span>통화가 종료되었습니다</div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:none;width:1040px;height:679px;display:flex;align-items:center;justify-content:center"><sc-if value="{{ showWaiting }}" hint-placeholder-val="{{ true }}"><div style="width:1040px;height:640px;background:var(--background-200);border:1px solid var(--color-border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:'Geist Sans','Pretendard',system-ui,sans-serif"><sc-if value="{{ waitingSpin }}" hint-placeholder-val="{{ true }}"><span style="width:40px;height:40px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite"></span></sc-if><div style="font-size:18px;font-weight:700;color:var(--gray-1000)">{{ waitingText }}</div><div style="font-size:13px;color:var(--gray-700)">{{ waitingSub }}</div></div></sc-if><sc-if value="{{ showPrep }}" hint-placeholder-val="{{ false }}"><div style="width:1040px;height:679px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;transform:scale(0.72222);transform-origin:top left"><div style="width:1440px;height:940px;position:relative;background:var(--background-200);border:1px solid var(--gray-500);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-card)">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column">
+          <div style="height:74px;flex:none;background:#fff;border-bottom:1px solid var(--color-border);position:relative"><div class="pill" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 20px"><span style="width:9px;height:9px;border-radius:9999px;background:var(--amber-700)"></span><span style="font-weight:700;font-size:15px;color:var(--amber-900)">인입 대기 · 연결 준비</span></div></div>
+          <div style="flex:1;display:flex;gap:16px;padding:16px"><div style="width:312px;flex:none;background:#fff;border:1px solid var(--color-border);border-radius:12px"></div><div style="flex:1;background:var(--gray-100);border:1px dashed var(--color-border);border-radius:12px;display:flex;align-items:center;justify-content:center;font:400 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">고객을 선택하면 준비 카드가 열립니다</div><div style="width:372px;flex:none;background:var(--gray-100);border:1px dashed var(--color-border);border-radius:12px"></div></div>
+        </div>
+        <div style="position:absolute;inset:0;background:rgba(24,28,38,.46)"></div>
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:860px;background:#fff;border-radius:16px;box-shadow:var(--shadow-modal);overflow:hidden;display:flex;flex-direction:column">
+          <div style="padding:22px 28px 18px;border-bottom:1px solid var(--gray-200)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <span style="display:inline-flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:#fff;border:1px solid var(--blue-400);border-radius:9999px;padding:3px 10px"><span style="width:6px;height:6px;border-radius:9999px;background:var(--blue-700);animation:pulseDot 1.4s infinite"></span>인입 콜 · 우선 연결 대상</span>
+              <span style="font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:4px 10px">순번 1 · 대기 05:30</span>
+              <span class="mi" style="margin-left:auto;font-size:22px;color:var(--gray-600);cursor:pointer">close</span>
+            </div>
+            <div style="font:600 22px/1.3 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)">착오송금 반환 · 거래 확인 문의</div>
+            <div style="font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:5px">고객 김OO · 전자금융 › 착오송금 · 010-****-4821</div>
+          </div>
+          <div style="flex:1;overflow:auto;padding:18px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+              <div style="border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px">
+                <div style="display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px"><span class="mi" style="font-size:14px;color:var(--blue-700)">auto_awesome</span>AI 배정 권고</div>
+                <div style="font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">숙련 상담사 우선</div>
+                <div style="font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:4px">사고 대응 경험 3년 이상 권장</div>
+              </div>
+              <div style="border:1px solid var(--amber-400);background:#fff;border-radius:12px;padding:14px 16px">
+                <div style="font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:8px">고객 감정온도</div>
+                <div style="display:flex;align-items:center;gap:8px"><span style="display:flex;gap:2px"><span style="width:18px;height:6px;border-radius:2px;background:var(--amber-700)"></span><span style="width:18px;height:6px;border-radius:2px;background:var(--amber-700)"></span><span style="width:18px;height:6px;border-radius:2px;background:var(--gray-200)"></span></span><span style="font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)">격앙 주의</span></div>
+                <div style="font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-top:4px">불안·다급 발화 감지</div>
+              </div>
+              <div style="border:1px solid var(--red-400);background:#fff;border-radius:12px;padding:14px 16px">
+                <div style="display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);margin-bottom:8px"><span class="mi" style="font-size:14px">gpp_maybe</span>사고 징후</div>
+                <div style="font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)">주의</div>
+                <div style="font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);margin-top:4px">착오송금 위험 신호</div>
+              </div>
+            </div>
+            <div style="border:1px solid var(--gray-200);border-radius:12px;padding:16px 18px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px"><span class="mi" style="font-size:17px;color:var(--blue-700)">auto_awesome</span><span style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">AI 사전 요약</span><span style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">대기 중 고객 진술 기반 · 방금 생성됨</span></div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;gap:11px"><span style="width:3px;border-radius:2px;background:var(--blue-500);flex:none"></span><span style="font:400 13.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">오늘 오전 지인에게 30만원 이체 중 다른 계좌로 착오송금했다고 진술.</span></div>
+                <div style="display:flex;gap:11px"><span style="width:3px;border-radius:2px;background:var(--blue-500);flex:none"></span><span style="font:400 13.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">거래 시각·수취 계좌 확인 및 반환 절차 안내 요청.</span></div>
+                <div style="display:flex;gap:11px"><span style="width:3px;border-radius:2px;background:var(--blue-500);flex:none"></span><span style="font:400 13.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">보이스피싱 의심 정황 없음 · 단, 고객 불안·다급 발화 감지됨.</span></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px"><span style="font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">이번 상담 유의사항</span><span style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">상담 유형·감정온도에 따라 자동 구성 · 모두 확인해야 연결 가능</span><span style="margin-left:auto;font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)">{{ prepDone }} / 3 확인</span></div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ prepRows }}" as="r" hint-placeholder-count="3">
+                  <div onClick="{{ r.toggle }}" style-hover="border-color:var(--gray-500)" style="display:flex;gap:11px;align-items:flex-start;background:{{ r.bg }};border:1px solid {{ r.bd }};border-radius:12px;padding:11px 13px;cursor:pointer;user-select:none;transition:background .15s,border-color .15s">
+                    <span style="width:20px;height:20px;flex:none;border-radius:6px;background:{{ r.boxBg }};border:1.5px solid {{ r.boxBd }};color:#fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box;transition:background .15s"><span class="mi" style="font-size:14px">{{ r.icon }}</span></span>
+                    <div><div style="font-weight:700;font-size:13px">{{ r.title }}</div><div style="font:400 11.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)">{{ r.sub }}</div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:12px;padding:15px 24px;border-top:1px solid var(--gray-200);background:var(--background-200)">
+            <span style="display:flex;align-items:center;gap:5px;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)"><span class="mi" style="font-size:16px">info</span> {{ prepHint }}</span>
+            <div style="flex:1"></div>
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:1px solid var(--gray-500);border-radius:6px;font-size:14px;color:var(--gray-900);cursor:pointer" onClick="{{ reset }}"><span class="mi" style="font-size:17px">phone_forwarded</span> 다른 상담사에게 이관</span>
+            <span onClick="{{ answerCall }}" style="padding:10px 24px;background:{{ connectBg }};color:{{ connectFg }};border-radius:6px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;cursor:{{ connectCursor }};transition:background .15s"><span class="mi" style="font-size:18px">call</span> 통화 연결</span>
+          </div>
+        </div>
+      </div></div></div></sc-if><sc-if value="{{ showActive }}" hint-placeholder-val="{{ false }}"><div style="width:1040px;height:679px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;transform:scale(0.72222);transform-origin:top left"><div style="width:1440px;height:940px;position:relative;background:var(--background-200);border:1px solid var(--gray-500);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-card);display:flex;flex-direction:column">
+        <div style="height:74px;flex:none;background:#fff;border-bottom:1px solid var(--color-border);position:relative;z-index:5">
+          <div class="pill" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">
+            <span style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:9999px;background:var(--green-700);box-shadow:0 0 0 3px rgba(40,164,74,.2)"></span><span style="font-weight:700;font-size:15px">통화 연결됨</span></span><span style="display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800);background:#fff;border:1px solid var(--red-400);border-radius:9999px;padding:3px 9px"><span class="mi" style="font-size:13px">fiber_manual_record</span> 녹취 중</span>
+            <span style="width:1.3px;height:22px;background:var(--gray-200)"></span>
+            <span style="font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">전자금융 <span style="color:var(--gray-600)">›</span> 착오송금</span>
+            <span style="width:1.3px;height:22px;background:var(--gray-200)"></span>
+            <span style="display:flex;align-items:center;gap:6px;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)"><span class="mi" style="font-size:17px;color:var(--green-700)">call</span>010-****-4821</span>
+            <span style="font:500 15px 'Geist Mono','IBM Plex Mono',monospace">{{ clockStr }}</span>
+            <span style="width:1.3px;height:22px;background:var(--gray-200)"></span>
+            <span style="display:flex;gap:5px"><span class="cbtn" title="음소거"><span class="mi" style="font-size:19px">mic_off</span></span><span class="cbtn" title="보류"><span class="mi" style="font-size:19px">pause</span></span><span class="cbtn" title="이관"><span class="mi" style="font-size:19px">phone_forwarded</span></span></span>
+            <span title="통화 종료" onClick="{{ endCall }}" style="width:38px;height:38px;border-radius:9999px;background:var(--red-800);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer"><span class="mi" style="font-size:20px">call_end</span></span>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;gap:16px;padding:16px;min-height:0">
+          <div style="width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0">
+            <div class="card" style="padding:13px 15px;display:flex;align-items:center;gap:12px">
+              <span class="av" style="width:42px;height:42px"><span class="mi" style="font-size:22px">headset_mic</span></span>
+              <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:15px">상담사 김키움</span><span style="width:7px;height:7px;border-radius:9999px;background:var(--green-700)"></span><span style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-700)">통화 중</span></div><div style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:1px">전자금융팀 · 사번 A-2231</div></div>
+              <div style="text-align:right;flex:none;padding-left:10px;border-left:1px solid var(--gray-200)"><div style="font:700 16px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-700)">12</div><div class="lbl">오늘 후처리</div></div>
+            </div>
+            <div class="card" style="padding:16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span class="sechd">고객</span><span style="font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:#fff;border:1px solid var(--amber-400);border-radius:9999px;padding:3px 9px">고객 동의 시 열람</span></div>
+              <div style="display:flex;align-items:center;gap:12px"><span class="av" style="width:46px;height:46px"><span class="mi" style="font-size:26px">person</span></span><div><div style="font-weight:700;font-size:18px;line-height:1.2">김케이</div><div style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px">개인 고객 · <span style="font-family:'Geist Mono','IBM Plex Mono',monospace">C-10482391</span></div></div></div>
+              <sc-if value="{{ verified }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:13px;border:1px solid var(--green-400);border-radius:8px;overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--gray-200)">
+                    <span style="width:22px;height:22px;border-radius:9999px;background:var(--green-900);color:#fff;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:15px">check</span></span>
+                    <div style="flex:1"><span style="font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)">본인인증 완료</span><span style="font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--green-600);margin-left:6px">{{ authTime }}</span></div>
+                    <span onClick="{{ resetAuth }}" style="display:flex;align-items:center;gap:2px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);cursor:pointer">재인증 <span class="mi" style="font-size:15px">restart_alt</span></span>
+                  </div>
+                  <div style="padding:10px 12px;font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">{{ authMethodLabel }} · 일치 <span style="color:var(--gray-600)">(입력 자동 대조)</span></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ notVerified }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:13px;border:1px solid var(--amber-400);border-radius:8px;background:#fff;padding:12px">
+                  <div style="font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px">본인확인 · 미완료</div>
+                  <div style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px">고객이 말한 값을 입력하면 자동 대조됩니다</div>
+                  <div class="lbl" style="margin-bottom:6px">대조 방식</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px">
+                    <span onClick="{{ setAuthPhone }}" style="font:600 11.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:5px 11px;cursor:pointer;background:{{ mPhoneBg }};color:{{ mPhoneFg }};border:1px solid {{ mPhoneBd }}">연락처 뒷 4자리</span>
+                    <span onClick="{{ setAuthBirth }}" style="font:600 11.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:5px 11px;cursor:pointer;background:{{ mBirthBg }};color:{{ mBirthFg }};border:1px solid {{ mBirthBd }}">생년월일</span>
+                    <span onClick="{{ setAuthAcct }}" style="font:600 11.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:5px 11px;cursor:pointer;background:{{ mAcctBg }};color:{{ mAcctFg }};border:1px solid {{ mAcctBd }}">계좌 뒷 4자리</span>
+                  </div>
+                  <div style="display:flex;gap:7px;align-items:center">
+                    <input value="{{ authInput }}" onChange="{{ onAuthInput }}" placeholder="{{ authPlaceholder }}" inputmode="numeric" style="flex:1;min-width:0;border:1px solid var(--gray-400);border-radius:6px;padding:8px 10px;font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000)">
+                    <span onClick="{{ runVerify }}" style="flex:none;padding:9px 14px;background:var(--blue-700);color:#fff;border-radius:6px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;cursor:pointer">대조</span>
+                  </div>
+                  <sc-if value="{{ authErr }}" hint-placeholder-val="{{ false }}"><div style="margin-top:7px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)">입력값이 부족합니다 · 자릿수를 확인하세요</div></sc-if>
+                  <div style="display:flex;align-items:center;gap:5px;margin-top:9px;font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)"><span class="mi" style="font-size:13px">lock</span> 원문은 표시되지 않으며 입력값과 자동 대조됩니다</div>
+                </div>
+              </sc-if>
+              <div style="margin-top:12px">
+                <div style="font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px">고객 상세 조회 <span style="font-weight:400;color:var(--gray-600)">· 본인인증 후 열람</span></div>
+                <sc-if value="{{ verified }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:7px">
+                    <span onClick="{{ openHistory }}" class="qlink" style="border-color:var(--blue-400);background:#fff;color:var(--blue-700);font-weight:700;cursor:pointer">과거 상담 이력 <span class="mi" style="font-size:17px">open_in_new</span></span>
+                    <span onClick="{{ openAccounts }}" class="qlink" style="cursor:pointer">보유 계좌 및 카드 현황 <span class="mi" style="font-size:17px;color:var(--gray-600)">open_in_new</span></span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ notVerified }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:7px;opacity:.6">
+                    <span class="qlink" style="border-color:var(--gray-200);background:var(--gray-100);color:var(--gray-600)">과거 상담 이력 <span class="mi" style="font-size:16px">lock</span></span>
+                    <span class="qlink" style="border-color:var(--gray-200);background:var(--gray-100);color:var(--gray-600)">보유 계좌 및 카드 현황 <span class="mi" style="font-size:16px">lock</span></span>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <sc-if value="{{ verified }}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)"><span class="sechd">과거 상담 이력</span><span style="font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)">최근 6개월 · 4건</span></div>
+              <div style="overflow:auto">
+                <div style="padding:11px 14px;border-bottom:1px solid var(--gray-200)"><div style="display:flex;align-items:center;gap:8px"><span style="font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)">2026.07.02</span><span style="font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:#fff;border:1px solid var(--green-400);border-radius:9999px;padding:2px 8px">완결</span></div><div style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:4px">카드 › 분실신고</div></div>
+                <div style="padding:11px 14px;border-bottom:1px solid var(--gray-200)"><div style="display:flex;align-items:center;gap:8px"><span style="font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)">2026.05.18</span><span style="font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:#fff;border:1px solid var(--green-400);border-radius:9999px;padding:2px 8px">완결</span></div><div style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:4px">수신 › 이체한도 상향</div></div>
+                <div style="padding:11px 14px;border-bottom:1px solid var(--gray-200)"><div style="display:flex;align-items:center;gap:8px"><span style="font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)">2026.03.09</span><span style="font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:#fff;border:1px solid var(--green-400);border-radius:9999px;padding:2px 8px">완결</span></div><div style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:4px">전자금융 › OTP 재발급</div></div>
+                <div style="padding:11px 14px"><div style="display:flex;align-items:center;gap:8px"><span style="font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)">2026.02.14</span><span style="font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:#fff;border:1px solid var(--green-400);border-radius:9999px;padding:2px 8px">완결</span></div><div style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:4px">대출 › 상환일정 문의</div></div>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ notVerified }}" hint-placeholder-val="{{ true }}">
+            <div class="card" style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:16px"><div style="text-align:center"><span class="mi" style="font-size:26px;color:var(--gray-400)">lock</span><div style="font:400 12.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:6px">본인인증 후<br>과거 상담 이력이 표시됩니다</div></div></div>
+            </sc-if>
+          </div>
+
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px">
+            <div class="card" style="flex:none;padding:11px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <span style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:15px;color:var(--blue-700)">auto_awesome</span><span style="font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)">AI 배정</span><span style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">숙련 상담사 우선</span></span>
+              <span style="width:1px;height:16px;background:var(--gray-200)"></span>
+              <span style="display:flex;align-items:center;gap:7px" title="고객 감정온도"><span style="font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)">감정온도</span><span style="display:flex;gap:2px"><span class="seg" style="background:var(--amber-700)"></span><span class="seg" style="background:var(--amber-700)"></span><span class="seg" style="background:var(--gray-200)"></span></span><span style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)">격앙 주의</span></span>
+              <span style="width:1px;height:16px;background:var(--gray-200)"></span>
+              <span style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:15px;color:var(--red-700)">gpp_maybe</span><span style="font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)">사고 징후</span><span style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)">주의</span></span>
+              <div style="flex:1"></div>
+              <span style="display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)"><span class="mi" style="font-size:14px">check_circle</span> 준비 카드 확인 완료</span>
+            </div>
+            <div class="card" style="flex:none;padding:15px 17px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:9px"><span class="mi" style="font-size:17px;color:var(--blue-700)">auto_awesome</span><span style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">AI 사전 요약</span><span style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">대기 중 고객 진술 기반</span></div>
+              <div style="font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:10px">착오송금 반환 · 거래 확인 문의</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;gap:11px"><span style="width:3px;border-radius:2px;background:var(--blue-500);flex:none"></span><span style="font:400 13px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">오늘 오전 지인에게 30만원 이체 중 다른 계좌로 착오송금했다고 진술.</span></div>
+                <div style="display:flex;gap:11px"><span style="width:3px;border-radius:2px;background:var(--blue-500);flex:none"></span><span style="font:400 13px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">거래 시각·수취 계좌 확인 및 반환 절차 안내 요청.</span></div>
+                <div style="display:flex;gap:11px"><span style="width:3px;border-radius:2px;background:var(--blue-500);flex:none"></span><span style="font:400 13px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">보이스피싱 의심 정황 없음 · 단, 고객 불안·다급 발화 감지됨.</span></div>
+              </div>
+            </div>
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)"><span class="sechd" style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px">menu_book</span> 단계별 상담 스크립트</span><span style="font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">AI 추천 흐름 · 전체 표시</span></div>
+              <div style="flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ steps }}" as="st" hint-placeholder-count="4">
+                  <div style="border:1px solid var(--gray-200);background:#fff;border-radius:8px;padding:11px 13px">
+                    <div style="font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px">{{ st.title }}</div>
+                    <div style="font:400 13px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">{{ st.text }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="card" style="flex:none;height:196px;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px dashed var(--color-border)"><span class="sechd" style="display:flex;align-items:center;gap:5px"><span class="mi" style="font-size:17px">edit_note</span> 상담원 메모</span><span style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">불릿 자동 · 종료 시 후처리에 반영</span></div>
+              <div style="flex:1;overflow:auto;padding:10px 16px;display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ memoItems }}" as="m" hint-placeholder-count="0"><div style="display:flex;gap:8px;align-items:baseline"><span style="color:var(--blue-700);font-weight:700;flex:none">•</span><span style="font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">{{ m }}</span></div></sc-for>
+                <sc-if value="{{ memoEmpty }}" hint-placeholder-val="{{ true }}"><div style="font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)">특이사항을 입력하면 불릿으로 기록됩니다</div></sc-if>
+              </div>
+              <div style="flex:none;display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid var(--gray-200)"><span style="color:var(--blue-700);font-weight:700">•</span><input value="{{ memoDraft }}" onChange="{{ onMemoDraft }}" onKeyDown="{{ onMemoKey }}" placeholder="메모 입력 후 Enter" style="flex:1;border:none;outline:none;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:transparent"></div>
+            </div>
+          </div>
+
+          <div style="width:{{ regW }}px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0">
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)"><span class="sechd" style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px">gavel</span> 관련 규정 및 매뉴얼</span>
+                <sc-if value="{{ regCollapsed }}" hint-placeholder-val="{{ true }}"><span style="font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border:1px solid var(--gray-200);border-radius:9999px;padding:2px 8px">규정집 · 매뉴얼</span></sc-if>
+                <sc-if value="{{ regExpanded }}" hint-placeholder-val="{{ false }}"><span onClick="{{ closeReg }}" style="display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);border-radius:6px;padding:5px 10px;cursor:pointer"><span class="mi" style="font-size:15px">close_fullscreen</span> 축소</span></sc-if>
+              </div>
+              <sc-if value="{{ regCollapsed }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:1;min-height:0;overflow:auto">
+                <div style="padding:12px 15px;border-bottom:1px solid var(--gray-200)">
+                  <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:8px;padding:9px 12px;background:var(--background-200)"><span class="mi" style="font-size:18px;color:var(--gray-700)">search</span><span style="flex:1;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">착오송금 반환</span></div>
+                  <div style="display:flex;align-items:center;gap:5px;margin-top:7px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)"><span class="mi" style="font-size:14px">info</span> 열기를 누르면 오른쪽에서 규정집이 펼쳐집니다</div>
+                </div>
+                <div style="padding:13px 15px;display:flex;flex-direction:column;gap:14px">
+                  <div>
+                    <div style="display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:8px"><span class="mi" style="font-size:14px">auto_awesome</span> 이번 상담 예상 규정 · AI 추천</div>
+                    <div style="display:flex;flex-direction:column;gap:9px">
+                      <div style="border:1px solid var(--gray-200);border-radius:8px;padding:11px 12px"><div style="font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px">착오송금 반환지원 제도</div><div style="font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">“수취인 동의 없이 임의로 돌려드릴 수는 없고, 예금보험공사 반환지원 제도로 신청하실 수 있습니다.”</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px"><span style="font:400 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)">전자금융_업무매뉴얼.xlsx · 12행</span><span onClick="{{ openManual }}" style="display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);background:#fff;border-radius:6px;padding:4px 9px;cursor:pointer"><span class="mi" style="font-size:14px">open_in_new</span> 열기</span></div></div>
+                      <div style="border:1px solid var(--gray-200);border-radius:8px;padding:11px 12px"><div style="font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px">전자금융 이상거래(FDS) 대응</div><div style="font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">거래 시각·기기·IP 변경 이력 확인. 의심 시 사고대응팀 연계.</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px"><span style="font:400 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)">이상거래_대응지침.xlsx · 44행</span><span onClick="{{ openManual }}" style="display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);background:#fff;border-radius:6px;padding:4px 9px;cursor:pointer"><span class="mi" style="font-size:14px">open_in_new</span> 열기</span></div></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px">규정집 파일 바로가기</div>
+                    <div style="display:flex;flex-direction:column;gap:7px">
+                      <span onClick="{{ openManual }}" style="display:flex;align-items:center;gap:8px;border:1px solid var(--gray-200);border-radius:8px;padding:9px 11px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">전자금융거래 업무매뉴얼_v24.xlsx</span><span class="mi" style="font-size:16px;color:var(--gray-600)">open_in_new</span></span>
+                      <span onClick="{{ openManual }}" style="display:flex;align-items:center;gap:8px;border:1px solid var(--gray-200);border-radius:8px;padding:9px 11px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">착오송금_반환지원_안내.xlsx</span><span class="mi" style="font-size:16px;color:var(--gray-600)">open_in_new</span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </sc-if>
+              <sc-if value="{{ regExpanded }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#1f7a44;color:#fff"><span class="mi" style="font-size:18px">grid_on</span><span style="font:600 12.5px 'Geist Sans','Pretendard',sans-serif">{{ regFile }}</span><span style="font:400 11px 'Geist Mono','IBM Plex Mono',monospace;opacity:.85">· {{ regSheet }} 시트</span></div>
+                <div style="flex:1;min-height:0;overflow:auto;background:#fff">
+                  <div style="display:flex;flex-direction:column;min-width:max-content">
+                    <div style="display:flex;position:sticky;top:0"><span style="width:36px;flex:none;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300)"></span><sc-for list="{{ regCols }}" as="c" hint-placeholder-count="4"><span style="width:{{ c.w }}px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">{{ c.l }}</span></sc-for></div>
+                    <sc-for list="{{ regRows }}" as="r" hint-placeholder-count="5"><div style="display:flex"><span style="width:36px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)">{{ r.n }}</span><sc-for list="{{ r.cells }}" as="cell" hint-placeholder-count="4"><span style="width:{{ cell.w }}px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">{{ cell.text }}</span></sc-for></div></sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:2px;padding:6px 10px;background:var(--gray-100);border-top:1px solid var(--gray-300)"><span style="font:600 11.5px 'Geist Sans','Pretendard',sans-serif;background:#fff;border:1px solid var(--gray-300);border-bottom:none;border-radius:4px 4px 0 0;padding:5px 12px;color:var(--gray-1000)">{{ regSheet }}</span><span style="font:400 11.5px 'Geist Sans','Pretendard',sans-serif;padding:5px 12px;color:var(--gray-600)">Sheet2</span></div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ dockOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;bottom:0;height:430px;background:#fff;border-top:2px solid var(--blue-700);box-shadow:0 -12px 32px rgba(0,0,0,.16);z-index:30;display:flex;flex-direction:column;animation:dockUp .2s ease">
+            <div style="display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:1px solid var(--gray-200)">
+              <span class="mi" style="font-size:20px;color:var(--gray-700)">grid_on</span>
+              <span style="font:700 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">{{ dockTitle }}</span>
+              <span style="font:400 11.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)">{{ dockFile }}</span>
+              <div style="flex:1"></div>
+              <span onClick="{{ closeDock }}" style="display:inline-flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);border:1px solid var(--gray-300);border-radius:6px;padding:6px 11px;cursor:pointer"><span class="mi" style="font-size:16px">expand_more</span> 닫기</span>
+            </div>
+            <div style="flex:1;overflow:auto;background:#fff">
+              <div style="display:flex;flex-direction:column;min-width:max-content">
+                <div style="display:flex;position:sticky;top:0"><span style="width:40px;flex:none;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300)"></span><sc-for list="{{ dockCols }}" as="c" hint-placeholder-count="5"><span style="width:{{ c.w }}px;flex:none;padding:9px 12px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">{{ c.l }}</span></sc-for></div>
+                <sc-for list="{{ dockRows }}" as="r" hint-placeholder-count="5"><div style="display:flex"><span style="width:40px;flex:none;padding:9px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)">{{ r.n }}</span><sc-for list="{{ r.cells }}" as="cell" hint-placeholder-count="5"><span style="width:{{ cell.w }}px;flex:none;padding:9px 12px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">{{ cell.text }}</span></sc-for></div></sc-for>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px;padding:6px 12px;background:var(--gray-100);border-top:1px solid var(--gray-300)"><span style="font:600 11.5px 'Geist Sans','Pretendard',sans-serif;background:#fff;border:1px solid var(--gray-300);border-bottom:none;border-radius:4px 4px 0 0;padding:5px 12px;color:var(--gray-1000)">{{ dockSheet }}</span><span style="margin-left:auto;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">읽기 전용 · 고객 동의 하 열람</span></div>
+          </div>
+        </sc-if>
+      </div></div></div></sc-if><sc-if value="{{ showWrap }}" hint-placeholder-val="{{ false }}"><div style="width:1040px;height:679px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;transform:scale(0.72222);transform-origin:top left"><div style="width:1440px;height:940px;position:relative;background:var(--background-200);border:1px solid var(--gray-500);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-card);display:flex;flex-direction:column">
+        <div style="height:74px;flex:none;background:#fff;border-bottom:1px solid var(--color-border);position:relative;z-index:5">
+          <div class="pill" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">
+            <span style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:9999px;background:var(--gray-600)"></span><span style="font-weight:700;font-size:15px;color:var(--gray-1000)">통화 종료됨</span></span><span style="display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--gray-300);border-radius:9999px;padding:3px 9px"><span class="mi" style="font-size:13px;color:var(--green-700)">check_circle</span> 녹취 완료</span>
+            <span style="width:1.3px;height:22px;background:var(--gray-200)"></span>
+            <span style="font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">전자금융 <span style="color:var(--gray-600)">›</span> 착오송금</span>
+            <span style="width:1.3px;height:22px;background:var(--gray-200)"></span>
+            <span style="display:flex;align-items:center;gap:6px;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)"><span class="mi" style="font-size:17px;color:var(--gray-600)">call_end</span>010-****-4821</span>
+            <span style="font:500 15px 'Geist Mono','IBM Plex Mono',monospace">{{ clockStr }}</span>
+            <span style="width:1.3px;height:22px;background:var(--gray-200)"></span>
+            <span style="display:flex;gap:5px"><span class="cbtn" title="녹취 다시 듣기"><span class="mi" style="font-size:19px">play_arrow</span></span><span class="cbtn" title="통화 요약 복사"><span class="mi" style="font-size:19px">content_copy</span></span></span>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;gap:16px;padding:16px;min-height:0">
+          <div style="width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0">
+            <div class="card" style="padding:13px 15px;display:flex;align-items:center;gap:12px"><span class="av" style="width:42px;height:42px"><span class="mi" style="font-size:22px">headset_mic</span></span><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:15px">상담사 김키움</span><span style="width:7px;height:7px;border-radius:9999px;background:var(--amber-700)"></span><span style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)">후처리 중</span></div><div style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:1px">전자금융팀 · 사번 A-2231</div></div><div style="text-align:right;flex:none;padding-left:10px;border-left:1px solid var(--gray-200)"><div style="font:700 15px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-700)">12→13</div><div class="lbl">오늘 후처리</div></div></div>
+            <div class="card" style="padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span class="sechd">고객</span><span style="display:inline-flex;align-items:center;gap:4px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);background:#fff;border:1px solid var(--green-400);border-radius:9999px;padding:4px 10px"><span class="mi" style="font-size:14px">verified</span> 인증 완료</span></div><div style="display:flex;align-items:center;gap:12px"><span class="av" style="width:46px;height:46px"><span class="mi" style="font-size:26px">person</span></span><div><div style="font-weight:700;font-size:18px;line-height:1.2">김케이</div><div style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px">개인 고객 · <span style="font-family:'Geist Mono','IBM Plex Mono',monospace">C-10482391</span></div></div></div></div>
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)"><span class="sechd">오늘 완료한 상담</span><span style="font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)">12건</span></div><div style="overflow:auto">
+              <div style="padding:11px 14px;background:var(--gray-100);border-bottom:1px solid var(--gray-200)"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:14px">고객 · 김OO</span><span style="font:700 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-left:auto">지금 후처리 중</span></div><div style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);margin-top:4px">전자금융 › 착오송금</div></div>
+              <div style="padding:11px 14px;border-bottom:1px solid var(--gray-200)"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:14px;color:var(--gray-1000)">고객 · 정OO</span><span style="font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600);margin-left:auto">14:05</span></div><div style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);margin-top:4px">수신 › 이체한도</div></div>
+              <div style="padding:11px 14px"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:14px;color:var(--gray-1000)">고객 · 이OO</span><span style="font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600);margin-left:auto">13:40</span></div><div style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);margin-top:4px">카드 › 재발급</div></div>
+            </div></div>
+          </div>
+          <div style="flex:1;position:relative;min-width:0">
+            <sc-if value="{{ wrapLoading }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;inset:0;background:#fff;border:1px solid var(--color-border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+                <span style="width:42px;height:42px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite"></span>
+                <div style="font:700 18px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">통화 내용을 요약하고 있습니다…</div>
+                <div style="font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">녹취와 상담원 메모를 바탕으로 후처리 초안을 작성 중입니다</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ wrapReady }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ wrapSheetOpen }}" hint-placeholder-val="{{ true }}">
+                <div style="position:absolute;inset:0;background:#fff;border:1px solid var(--color-border);border-radius:12px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;overflow:visible">
+                  <div onClick="{{ toggleWrapSheet }}" style="display:flex;align-items:center;justify-content:center;padding:8px 0 4px;cursor:pointer"><span style="width:48px;height:5px;border-radius:9999px;background:var(--color-border)"></span></div>
+                  <div style="padding:4px 24px 14px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:12px">
+                    <div style="flex:1;min-width:0"><div style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:3px">{{ wrapType }} · 거래 확인 문의</div><div style="font:600 20px/1.2 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)">후처리 작성</div></div>
+                    <span style="font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:5px 11px">통화 {{ clockStr }}</span>
+                    <span style="display:inline-flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;background:#fff;color:var(--gray-800);border:1px solid var(--gray-300);padding:5px 11px;border-radius:9999px"><span class="mi" style="font-size:14px;color:var(--blue-700)">auto_awesome</span>녹취 + 메모 기반 자동 작성 · 모두 수정 가능</span>
+                    <span onClick="{{ toggleWrapSheet }}" class="mi" style="font-size:22px;color:var(--gray-500);cursor:pointer">expand_more</span>
+                  </div>
+                  <div style="flex:1;display:flex;gap:18px;padding:16px 24px;min-height:0">
+                    <div style="flex:1.5;display:flex;flex-direction:column;min-width:0;gap:14px">
+                      <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">상담 내용 요약 <span style="font-weight:400;color:var(--blue-700)">· 클릭해 편집</span></span><span style="display:inline-flex;align-items:center;gap:3px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);cursor:pointer"><span class="mi" style="font-size:15px">refresh</span> 다시 생성</span></div>
+                        <div contentEditable="true" onInput="{{ onSummary }}" style="flex:1;border:1px solid var(--gray-400);border-radius:8px;padding:15px 17px;font:400 14px/1.8 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none">고객 김케이님, 금일 오전 지인 계좌로 이체 중 착오송금 발생(30만원). 거래 시각·수취 계좌 확인 후 착오송금 반환지원 제도 안내함. 본인인증 완료 상태. 고객 불안 발화가 감지되어 안정 유도함. 반환 확정 표현은 사용하지 않음. 사고대응팀으로 이관 및 콜백 예약 처리.</div>
+                      </div>
+                      <div style="flex:none">
+                        <div style="font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:8px">후속 조치</div>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                          <sc-for list="{{ followups }}" as="f" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:8px;border:1px solid var(--gray-300);background:#fff;border-radius:8px;padding:9px 11px"><span class="mi" style="font-size:16px;color:var(--gray-700)">{{ f.icon }}</span><span style="flex:1;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">{{ f.label }}</span><span onClick="{{ f.remove }}" style="cursor:pointer;display:flex" title="삭제"><span class="mi" style="font-size:17px;color:var(--gray-500)">close</span></span></div></sc-for>
+                          <sc-if value="{{ noFollowups }}" hint-placeholder-val="{{ false }}"><div style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500);padding:2px">등록된 후속 조치가 없습니다</div></sc-if>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap"><span style="font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">추천 추가</span><sc-for list="{{ recoFollowups }}" as="f" hint-placeholder-count="2"><span onClick="{{ f.add }}" style="display:inline-flex;align-items:center;gap:3px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px dashed var(--blue-400);border-radius:9999px;padding:4px 10px;cursor:pointer"><span class="mi" style="font-size:14px">add</span>{{ f.label }}</span></sc-for></div>
+                      </div>
+                    </div>
+                    <div style="width:330px;flex:none;display:flex;flex-direction:column;gap:12px;overflow:visible">
+                      <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--gray-300);border-radius:6px;padding:7px 10px"><span class="lbl" style="width:44px;flex:none">고객</span><span contentEditable="true" style="flex:1;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);outline:none">김케이 · C-10482391</span><span class="mi" style="font-size:14px;color:var(--gray-400)">edit</span></div>
+                        <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--gray-300);border-radius:6px;padding:7px 10px"><span class="lbl" style="width:44px;flex:none">상담사</span><span contentEditable="true" style="flex:1;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);outline:none">김키움 · A-2231</span><span class="mi" style="font-size:14px;color:var(--gray-400)">edit</span></div>
+                        <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--gray-300);border-radius:6px;padding:7px 10px"><span class="lbl" style="width:44px;flex:none">일시</span><span contentEditable="true" style="flex:1;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);outline:none">2026.07.15 14:32</span><span class="mi" style="font-size:14px;color:var(--gray-400)">edit</span></div>
+                      </div>
+                      <div style="position:relative"><div class="lbl" style="margin-bottom:5px">상담 유형</div><div onClick="{{ toggleTypeMenu }}" style="display:flex;align-items:center;justify-content:space-between;border:1px solid var(--gray-400);border-radius:6px;padding:9px 11px;cursor:pointer;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">{{ wrapType }}<span class="mi" style="font-size:17px;color:var(--gray-600)">expand_more</span></div>
+                        <sc-if value="{{ typeMenu }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--gray-300);border-radius:8px;box-shadow:var(--shadow-popover);z-index:40;overflow:hidden"><sc-for list="{{ typeOpts }}" as="o" hint-placeholder-count="5"><div onClick="{{ o.pick }}" style-hover="background:var(--gray-100)" style="padding:9px 12px;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer">{{ o.label }}</div></sc-for></div></sc-if>
+                      </div>
+                      <div style="position:relative"><div class="lbl" style="margin-bottom:5px">상담 결과</div><div onClick="{{ toggleResultMenu }}" style="display:flex;align-items:center;justify-content:space-between;border:1px solid var(--gray-400);border-radius:6px;padding:9px 11px;cursor:pointer;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">{{ wrapResult }}<span class="mi" style="font-size:17px;color:var(--gray-600)">expand_more</span></div>
+                        <sc-if value="{{ resultMenu }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--gray-300);border-radius:8px;box-shadow:var(--shadow-popover);z-index:40;overflow:hidden"><sc-for list="{{ resultOpts }}" as="o" hint-placeholder-count="4"><div onClick="{{ o.pick }}" style-hover="background:var(--gray-100)" style="padding:9px 12px;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer">{{ o.label }}</div></sc-for></div></sc-if>
+                      </div>
+                      <div style="flex:1;display:flex;flex-direction:column;min-height:0"><div class="lbl" style="margin-bottom:5px">상담 메모 · 불릿</div>
+                        <div style="flex:1;border:1px solid var(--gray-300);border-radius:8px;background:var(--background-200);display:flex;flex-direction:column;overflow:hidden">
+                          <div style="flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+                            <sc-for list="{{ memoItems }}" as="m" hint-placeholder-count="0"><div style="display:flex;gap:7px;align-items:baseline"><span style="color:var(--blue-700);font-weight:700;flex:none">•</span><span style="font:400 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)">{{ m }}</span></div></sc-for>
+                            <sc-if value="{{ memoEmpty }}" hint-placeholder-val="{{ true }}"><div style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)">통화 중 작성한 메모가 없습니다</div></sc-if>
+                          </div>
+                          <div style="flex:none;display:flex;align-items:center;gap:7px;padding:8px 12px;border-top:1px solid var(--gray-200)"><span style="color:var(--blue-700);font-weight:700">•</span><input value="{{ memoDraft }}" onChange="{{ onMemoDraft }}" onKeyDown="{{ onMemoKey }}" placeholder="메모 추가 후 Enter" style="flex:1;border:none;outline:none;background:transparent;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--gray-200)"><span style="font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)">개인정보 마스킹 적용 · 저장 시 상담 이력에 기록</span><div style="flex:1"></div><span style="font:500 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);text-decoration:underline;text-underline-offset:2px;cursor:pointer">임시 저장</span><span onClick="{{ reset }}" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1px solid var(--gray-500);border-radius:6px;font-size:14px;font-weight:700;color:var(--gray-1000);cursor:pointer"><span class="mi" style="font-size:18px">coffee</span> 저장 후 휴식</span><span onClick="{{ reset }}" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--blue-700);color:#fff;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer"><span class="mi" style="font-size:18px">call</span> 저장 후 다음 콜</span></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ notWrapSheetOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:0;right:0;bottom:0;padding:15px 24px;background:#fff;border:1px solid var(--gray-300);border-radius:12px;display:flex;align-items:center;gap:12px;z-index:20"><span class="mi" style="font-size:22px;color:var(--gray-700)">expand_less</span><span style="font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)">후처리 작성 시트가 접혀 있습니다</span><div style="flex:1"></div><span onClick="{{ toggleWrapSheet }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--blue-700);color:#fff;border-radius:6px;font:700 13px 'Geist Sans','Pretendard',sans-serif;cursor:pointer"><span class="mi" style="font-size:16px">edit_note</span> 후처리 작성 열기</span></div>
+              </sc-if>
+            </sc-if>
+          </div>
+        </div>
+      </div></div></div></sc-if></div>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1885,&quot;height&quot;:1120},&quot;silenceSec1&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:2,&quot;max&quot;:15,&quot;unit&quot;:&quot;초&quot;,&quot;section&quot;:&quot;시연 타이밍&quot;},&quot;silenceSec2&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:2,&quot;max&quot;:15,&quot;unit&quot;:&quot;초&quot;,&quot;section&quot;:&quot;시연 타이밍&quot;},&quot;lineGapMs&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:2400,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:800,&quot;max&quot;:5000,&quot;unit&quot;:&quot;ms&quot;,&quot;section&quot;:&quot;시연 타이밍&quot;}}">
+class Component extends DCLogic {
+  state = { phase:'idle', mode:'sim', clock:0, emo:0, silenceLeft:0, micErr:'', scale:1, natH:0, prepChecks:[false,false,false], verified:false, authMethod:'phone', authInput:'', authErr:false, authTime:'', authMethodLabel:'', memoItems:[], memoDraft:'', dockType:null, regExpanded:false, wrapSheetOpen:true, wrapType:'전자금융 › 착오송금', wrapResult:'타 부서 이관 · 사고대응팀', typeMenu:false, resultMenu:false, followups:[{icon:'event',label:'콜백 예약 · 오늘 16:00'},{icon:'confirmation_number',label:'사고대응팀 이관 티켓 생성'}] };
+  timers=[];
+  after(ms,fn){const id=setTimeout(fn,ms);this.timers.push(id);return id;}
+  cfg(){return {s1:(this.props.silenceSec1??5), s2:(this.props.silenceSec2??5), gap:(this.props.lineGapMs??2400)};}
+  fmt(s){const m=Math.floor(s/60),r=s%60;return (m<10?'0':'')+m+':'+(r<10?'0':'')+r;}
+  clearAll(){this.timers.forEach(clearTimeout);this.timers=[];if(this.clockT){clearInterval(this.clockT);this.clockT=null;}if(this.silTimer){clearInterval(this.silTimer);this.silTimer=null;}this.silStage=null;if(this.rec){try{this.rec.onresult=null;this.rec.stop();}catch(e){}this.rec=null;}}
+  componentDidMount(){this._fit=()=>this.fit();window.addEventListener('resize',this._fit);requestAnimationFrame(()=>this.fit());}
+  fit(){const w=(this.rootEl?this.rootEl.clientWidth:window.innerWidth);const avail=Math.max(320,w-40);const sc=Math.min(1,avail/1420);const natH=this.stageEl?this.stageEl.offsetHeight:0;if(sc!==this.state.scale||natH!==this.state.natH)this.setState({scale:sc,natH});}
+  componentWillUnmount(){if(this._fit)window.removeEventListener('resize',this._fit);this.clearAll();}
+  startClock(){if(this.clockT)return;this.clockT=setInterval(()=>this.setState(s=>({clock:s.clock+1})),1000);}
+  setSim(){if(this.state.phase==='idle')this.setState({mode:'sim',micErr:''});}
+  setMic(){if(this.state.phase==='idle')this.setState({mode:'mic',micErr:''});}
+  startCall(){this.clearAll();this.setState({phase:'connecting',clock:0,emo:0,silenceLeft:0,micErr:''});this.startClock();this.after(3000,()=>this.beginRecording());}
+  beginRecording(){this.setState({phase:'recording'});this.silTimer=setInterval(()=>this.silTick(),200);this.silStage=null;if(this.state.mode==='mic')this.startMic();else this.runScript();}
+  runScript(){const emos=[1,1,2,3];const {gap}=this.cfg();emos.forEach((e,i)=>{this.after(gap*(i+1),()=>this.setState({emo:e}));});this.after(gap*(emos.length+1),()=>this.armFirst());}
+  armFirst(){this.silStage='first';this.silEnd=Date.now()+this.cfg().s1*1000;}
+  silTick(){if(!this.silStage)return;const now=Date.now();const left=Math.max(0,Math.ceil((this.silEnd-now)/1000));if(this.state.silenceLeft!==left)this.setState({silenceLeft:left});if(now<this.silEnd)return;if(this.silStage==='first'){this.silStage='confirmPause';this.silEnd=now+1600;this.setState({phase:'confirm'});}else if(this.silStage==='confirmPause'){this.silStage='second';this.silEnd=now+this.cfg().s2*1000;}else if(this.silStage==='second'){this.silStage=null;this.toPrep();}}
+  bump(){this.silStage='first';this.silEnd=Date.now()+this.cfg().s1*1000;if(this.state.phase!=='recording')this.setState({phase:'recording'});}
+  startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){this.setState({mode:'sim',micErr:'STT 미지원 — 시뮬레이션으로 진행합니다.'});this.runScript();return;}const rec=new SR();rec.lang='ko-KR';rec.continuous=true;rec.interimResults=true;this.rec=rec;rec.onresult=(e)=>{let f='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)f+=e.results[i][0].transcript;}if(f.trim()){const b=/(당황|급해|돌려|어떡|화가|왜|빨리|큰일)/.test(f)?1:0;this.setState(s=>({emo:Math.min(3,Math.max(1,s.emo+b))}));this.bump();}};rec.onerror=(ev)=>{if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){this.setState({mode:'sim',micErr:'마이크 권한 없음 — 시뮬레이션으로 진행합니다.'});this.silStage=null;this.runScript();}};try{rec.start();this.armFirst();}catch(e){this.setState({mode:'sim'});this.runScript();}}
+  toPrep(){if(this.silTimer){clearInterval(this.silTimer);this.silTimer=null;}if(this.rec){try{this.rec.stop();}catch(e){}this.rec=null;}this.setState({phase:'prep',prepChecks:[false,false,false]});}
+  skipWait(){if(this.state.phase==='recording'||this.state.phase==='confirm'){this.silStage=null;this.timers.forEach(clearTimeout);this.timers=[];this.toPrep();}}
+  answerCall(){if(this.state.prepChecks.every(Boolean))this.setState({phase:'active'});}
+  endCall(){if(this.state.phase==='active'){this.clearAll();this.setState({phase:'summarizing',wrapSheetOpen:true});this.after(3600,()=>this.setState({phase:'wrap'}));}else{this.reset();}}
+  reset(){this.clearAll();this.setState({phase:'idle',clock:0,emo:0,silenceLeft:0,micErr:'',verified:false,authInput:'',authErr:false,memoItems:[],memoDraft:'',dockType:null,regExpanded:false,wrapSheetOpen:true,followups:[{icon:'event',label:'콜백 예약 · 오늘 16:00'},{icon:'confirmation_number',label:'사고대응팀 이관 티켓 생성'}]});}
+  setAuthMethod(m){this.setState({authMethod:m,authErr:false});}
+  onAuthInput(v){this.setState({authInput:v,authErr:false});}
+  runVerify(){const m=this.state.authMethod;const need=m==='birth'?6:4;const n=(this.state.authInput||'').replace(/\D/g,'').length;if(n>=need){const now=new Date();const t=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);const lbl=m==='phone'?'연락처 뒷 4자리 대조':m==='birth'?'생년월일 대조':'계좌 뒷 4자리 대조';this.setState({verified:true,authTime:t,authMethodLabel:lbl,authErr:false});}else{this.setState({authErr:true});}}
+  resetAuth(){this.setState({verified:false,authInput:'',authErr:false});}
+  onMemoDraft(v){this.setState({memoDraft:v});}
+  addMemo(){const t=(this.state.memoDraft||'').trim();if(!t)return;this.setState(s=>({memoItems:s.memoItems.concat(t),memoDraft:''}));}
+  onMemoKey(e){if(e.key==='Enter'){e.preventDefault();this.addMemo();}}
+  openDock(t){this.setState({dockType:t});}
+  closeDock(){this.setState({dockType:null});}
+  openReg(){this.setState({regExpanded:true});}
+  closeReg(){this.setState({regExpanded:false});}
+  toggleWrapSheet(){this.setState(s=>({wrapSheetOpen:!s.wrapSheetOpen}));}
+  toggleTypeMenu(){this.setState(s=>({typeMenu:!s.typeMenu,resultMenu:false}));}
+  selectType(v){this.setState({wrapType:v,typeMenu:false});}
+  toggleResultMenu(){this.setState(s=>({resultMenu:!s.resultMenu,typeMenu:false}));}
+  selectResult(v){this.setState({wrapResult:v,resultMenu:false});}
+  removeFollowup(i){this.setState(s=>({followups:s.followups.filter((_,x)=>x!==i)}));}
+  addFollowup(f){this.setState(s=>(s.followups.some(x=>x.label===f.label)?{}:{followups:s.followups.concat(f)}));}
+  onSummary(v){this.state.wrapSummary=v;}
+  scriptData(){return [ {t:'1. 오프닝 · 공감',s:'“네 고객님, 착오송금 건으로 많이 놀라셨죠. 제가 바로 도와드리겠습니다.”'}, {t:'2. 사실 확인',s:'“이체하신 시각과 금액, 그리고 잘못 입력하신 계좌번호 뒷자리를 함께 확인해볼게요. 천천히 말씀해주셔도 됩니다.”'}, {t:'3. 절차 안내 · 반환지원 제도',s:'“수취인 동의 없이 임의로 돌려드릴 수는 없고, 예금보험공사 착오송금 반환지원 제도로 신청하실 수 있습니다. 제가 절차를 안내해 드릴게요.”'}, {t:'4. 마무리 · 후속 안내',s:'“오늘 안내드린 내용은 문자로 다시 보내드리고, 사고대응팀에서 콜백 드리도록 예약해두겠습니다. 더 궁금하신 점 있으실까요?”'} ];}
+  modalData(t){const D={history:{title:'과거 상담 이력',file:'상담이력_조회.xlsx',sheet:'2026',cols:[{l:'날짜',w:96},{l:'채널',w:64},{l:'상담 유형',w:170},{l:'결과',w:80},{l:'담당 상담사',w:100}],rows:[['2026.07.02','전화','카드 › 분실신고','완결','김하나'],['2026.05.18','챗봇','수신 › 이체한도 상향','완결','자동화'],['2026.03.09','전화','전자금융 › OTP 재발급','완결','박지성'],['2026.02.14','전화','대출 › 상환일정 문의','완결','이수민'],['2025.12.30','앱','수신 › 예금 만기 안내','완결','자동화'],['2025.11.07','전화','카드 › 한도 상향','완결','김하나']]},accounts:{title:'보유 계좌 및 카드 현황',file:'고객보유상품_조회.xlsx',sheet:'보유상품',cols:[{l:'구분',w:70},{l:'상품명',w:180},{l:'번호',w:160},{l:'상태',w:70},{l:'개설일',w:96}],rows:[['입출금','키움 주거래 통장','***-**-4821','정상','2019.03.11'],['적금','키움 자유적금','***-**-7745','정상','2022.06.01'],['체크카드','키움 체크카드','****-****-**-2231','정상','2019.03.11'],['대출','신용대출','***-**-9902','정상','2024.01.20']]},manual:{title:'전자금융거래 업무매뉴얼',file:'전자금융거래_업무매뉴얼_v24.xlsx',sheet:'착오송금 반환',cols:[{l:'조항',w:64},{l:'항목',w:130},{l:'내용',w:300},{l:'안내 멘트',w:300}],rows:[['§12-1','반환지원 대상','수취인 동의 없이 임의 반환 불가. 예금보험공사 반환지원 제도로 신청 접수.','“수취인 동의 없이 임의로 돌려드릴 수는 없고, 반환지원 제도로 신청하실 수 있습니다.”'],['§12-2','확정 표현 금지','“무조건 반환” 등 확정적 표현 사용 금지.','“반드시 돌려받는다고 말씀드리긴 어렵지만, 절차대로 최대한 도와드리겠습니다.”'],['§12-3','본인확인','반환 접수 전 본인확인 필수(연락처·생년월일·계좌 대조).','“접수를 위해 본인확인을 먼저 도와드릴게요.”'],['§12-4','정보 마스킹','수취 계좌·예금주 원문 노출 금지.','—'],['§13-1','FDS 연계','이상거래 징후 시 사고대응팀 연계 후 처리.','“안전을 위해 사고대응팀으로 연결해 드리겠습니다.”']]}};return D[t]||null;}
+  sheet(d){return d?{title:d.title,file:d.file,sheet:d.sheet,cols:d.cols,rows:d.rows.map((r,ri)=>({n:ri+1,cells:r.map((c,ci)=>({text:c,w:d.cols[ci].w}))}))}:{title:'',file:'',sheet:'',cols:[],rows:[]};}
+  renderVals(){
+    const p=this.state.phase;
+    const nv=!this.state.verified;
+    const inCall=['connecting','recording','confirm','prep','active'].includes(p);
+    const ended=(p==='wrap'||p==='summarizing');
+    const sim=this.state.mode==='sim';
+    const labelMap={idle:'대기',connecting:'자연어 접수 안내',recording:'용건 접수·요약',confirm:'추가 문의 확인',prep:'상담 준비 카드',active:'상담 통화중',summarizing:'후처리 요약 중',wrap:'후처리'};
+    const statusMap={connecting:'연결 대기 중',recording:'용건 접수 중 (녹음)',confirm:'추가 문의 확인 중',prep:'AI 요약 완료 · 우선 연결 중',active:'상담사 통화 중',summarizing:'통화 종료',wrap:'통화 종료'};
+    const glassMap={connecting:'연결 대기 중입니다. 상담사 연결 전 용건을 말씀해 주시면 더 빠르게 도와드려요. 계좌번호·비밀번호 등 민감정보는 말씀하지 마시고, 언제든 상담사 연결을 요청하실 수 있어요.',confirm:'더 말씀하실 내용이 있으신가요?',prep:'상담사에게 우선 연결하고 있습니다.'};
+    const waitingText=p==='idle'?'상담 대기 중':(p==='confirm'?'추가 문의 확인 중…':'AI가 고객 용건을 접수·요약하는 중…');
+    const waitingSub=p==='idle'?'전화가 오면 자연어 접수가 시작됩니다':'완료되면 상담 준비 카드가 표시됩니다';
+    const dk=this.sheet(this.modalData(this.state.dockType));
+    const rg=this.sheet(this.modalData('manual'));
+    const typeOptions=['전자금융 › 착오송금','전자금융 › OTP/보안','카드 › 분실·정지','수신 › 이체한도','대출 › 상환일정'];
+    const resultOptions=['타 부서 이관 · 사고대응팀','상담 완료 · 안내','재상담 예약','추가 확인 필요'];
+    const recos=[{icon:'sms',label:'고객 SMS 안내 발송'},{icon:'flag',label:'FDS 모니터링 등록'}];
+    return {
+      rootRef:(el)=>{this.rootEl=el;}, stageRef:(el)=>{this.stageEl=el;if(el&&!this._m){this._m=true;requestAnimationFrame(()=>this.fit());}},
+      scaleT:'scale('+this.state.scale+')', scaledW:(1420*this.state.scale)+'px', scaledH:this.state.natH?(this.state.natH*this.state.scale)+'px':'auto',
+      phaseLabel:labelMap[p]||p, micErr:this.state.micErr,
+      simBg:sim?'var(--blue-700)':'#fff',simFg:sim?'#fff':'var(--color-fg-secondary)',micBg:!sim?'var(--blue-700)':'#fff',micFg:!sim?'#fff':'var(--color-fg-secondary)',
+      setSim:()=>this.setSim(),setMic:()=>this.setMic(),reset:()=>this.reset(),startCall:()=>this.startCall(),answerCall:()=>this.answerCall(),endCall:()=>this.endCall(),skipWait:()=>this.skipWait(),showSkip:(p==='recording'||p==='confirm'),
+      phIdle:p==='idle', phInCall:inCall||ended, phEnded:ended,
+      clockStr:this.fmt(this.state.clock), showTimer:inCall&&p!=='connecting', showRecDot:(p==='recording'||p==='confirm'),
+      phoneStatus:statusMap[p]||'', showGlass:!!glassMap[p], glassText:glassMap[p]||'',
+      showWave:p==='recording', showControls:inCall,
+      showWaiting:['idle','connecting','recording','confirm'].includes(p), waitingText:waitingText, waitingSub:waitingSub, waitingSpin:p!=='idle',
+      showPrep:p==='prep', showActive:p==='active', showWrap:ended, wrapLoading:p==='summarizing', wrapReady:p==='wrap',
+      prepRows:[{title:'확정적 반환 표현 금지',sub:'“무조건 돌려받는다” 대신 반환지원 제도 절차로 안내'},{title:'개인정보 마스킹 유지',sub:'수취 계좌·예금주 원문 노출 금지'},{title:'녹취 고지 자동 재생 — 연결 시 자동',sub:'통화 연결과 동시에 녹취 안내 멘트가 재생됩니다'}].map((r,i)=>{const on=this.state.prepChecks[i];return Object.assign({},r,{on,toggle:()=>this.setState(s=>{const c=s.prepChecks.slice();c[i]=!c[i];return {prepChecks:c};}),boxBg:on?'var(--green-700)':'#fff',boxBd:on?'var(--green-700)':'var(--gray-500)',icon:on?'check':'',bg:on?'var(--green-100)':'var(--background-200)',bd:on?'var(--green-400)':'var(--gray-200)'});}),
+      prepDone:this.state.prepChecks.filter(Boolean).length,
+      connectBg:this.state.prepChecks.every(Boolean)?'var(--blue-700)':'var(--gray-200)',
+      connectFg:this.state.prepChecks.every(Boolean)?'#fff':'var(--gray-600)',
+      connectCursor:this.state.prepChecks.every(Boolean)?'pointer':'not-allowed',
+      prepHint:this.state.prepChecks.every(Boolean)?'유의사항 확인 완료 · 통화를 연결하세요':'유의사항 3개를 모두 확인하면 통화 연결이 활성화됩니다',
+      verified:this.state.verified, notVerified:nv,
+      setAuthPhone:()=>this.setAuthMethod('phone'), setAuthBirth:()=>this.setAuthMethod('birth'), setAuthAcct:()=>this.setAuthMethod('account'),
+      mPhoneBg:this.state.authMethod==='phone'?'var(--blue-700)':'#fff', mPhoneFg:this.state.authMethod==='phone'?'#fff':'var(--gray-800)', mPhoneBd:this.state.authMethod==='phone'?'var(--blue-700)':'var(--gray-400)',
+      mBirthBg:this.state.authMethod==='birth'?'var(--blue-700)':'#fff', mBirthFg:this.state.authMethod==='birth'?'#fff':'var(--gray-800)', mBirthBd:this.state.authMethod==='birth'?'var(--blue-700)':'var(--gray-400)',
+      mAcctBg:this.state.authMethod==='account'?'var(--blue-700)':'#fff', mAcctFg:this.state.authMethod==='account'?'#fff':'var(--gray-800)', mAcctBd:this.state.authMethod==='account'?'var(--blue-700)':'var(--gray-400)',
+      authInput:this.state.authInput, onAuthInput:(e)=>this.onAuthInput(e.target.value), runVerify:()=>this.runVerify(), resetAuth:()=>this.resetAuth(),
+      authErr:this.state.authErr, authTime:this.state.authTime, authMethodLabel:this.state.authMethodLabel,
+      authPlaceholder:this.state.authMethod==='birth'?'생년월일 6자리 (YYMMDD)':this.state.authMethod==='account'?'계좌 뒷 4자리':'연락처 뒷 4자리',
+      steps:this.scriptData().map((st)=>({title:st.t,text:st.s})),
+      memoItems:this.state.memoItems, memoEmpty:this.state.memoItems.length===0, memoDraft:this.state.memoDraft, onMemoDraft:(e)=>this.onMemoDraft(e.target.value), onMemoKey:(e)=>this.onMemoKey(e),
+      openHistory:()=>this.openDock('history'), openAccounts:()=>this.openDock('accounts'), closeDock:()=>this.closeDock(),
+      dockOpen:!!this.state.dockType, dockTitle:dk.title, dockFile:dk.file, dockSheet:dk.sheet, dockCols:dk.cols, dockRows:dk.rows,
+      openManual:()=>this.openReg(), closeReg:()=>this.closeReg(), regExpanded:this.state.regExpanded, regCollapsed:!this.state.regExpanded, regW:this.state.regExpanded?720:372, regFile:rg.file, regSheet:rg.sheet, regCols:rg.cols, regRows:rg.rows,
+      wrapSheetOpen:this.state.wrapSheetOpen, notWrapSheetOpen:!this.state.wrapSheetOpen, toggleWrapSheet:()=>this.toggleWrapSheet(),
+      wrapType:this.state.wrapType, wrapResult:this.state.wrapResult, typeMenu:this.state.typeMenu, resultMenu:this.state.resultMenu,
+      toggleTypeMenu:()=>this.toggleTypeMenu(), toggleResultMenu:()=>this.toggleResultMenu(),
+      typeOpts:typeOptions.map(o=>({label:o,pick:()=>this.selectType(o)})),
+      resultOpts:resultOptions.map(o=>({label:o,pick:()=>this.selectResult(o)})),
+      followups:this.state.followups.map((f,i)=>({icon:f.icon,label:f.label,remove:()=>this.removeFollowup(i)})), noFollowups:this.state.followups.length===0,
+      recoFollowups:recos.map(f=>({icon:f.icon,label:f.label,add:()=>this.addFollowup({icon:f.icon,label:f.label})})),
+      onSummary:(e)=>this.onSummary(e.target.innerText)
+    };
+  }
+}
+</script>
+</body>
+</html>

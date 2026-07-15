@@ -1,0 +1,162 @@
+/* Global resets + the handful of rules that can't be inline (keyframes,
+   font-face-adjacent helpers, shared class atoms used across screens).
+   Everything else is inline style via the css() helper. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100vh;
+}
+
+body {
+  background: #060607;
+  font-family: var(--font-sans, "Geist Sans", "Pretendard", system-ui, sans-serif);
+  color: var(--gray-1000, #171717);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--blue-700);
+}
+a:hover {
+  color: var(--blue-800);
+}
+
+/* Material Symbols glyph helper */
+.mi {
+  font-family: "Material Symbols Outlined";
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1;
+  vertical-align: middle;
+  display: inline-block;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";
+}
+
+.mono {
+  font-family: var(--font-mono, "Geist Mono", ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+/* iOS-flavoured system stack for the phone mockup only */
+.sf {
+  font-family: -apple-system, "SF Pro Display", "SF Pro Text", system-ui,
+    "Geist Sans", "Pretendard", sans-serif;
+}
+
+/* Shared atoms reused across desktop screens */
+.lbl {
+  font: 700 11px "Geist Sans", "Pretendard", sans-serif;
+  color: var(--gray-700);
+  letter-spacing: 0.2px;
+}
+.seg {
+  width: 15px;
+  height: 5px;
+  border-radius: 2px;
+}
+.card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.sechd {
+  font: 700 13px "Geist Sans", "Pretendard", sans-serif;
+  color: var(--gray-1000);
+}
+.cbtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  border: 1px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-900);
+  cursor: pointer;
+}
+.av {
+  border-radius: 9999px;
+  background: var(--gray-100);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-700);
+  flex: none;
+}
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 9999px;
+  padding: 8px 10px 8px 20px;
+  box-shadow: var(--shadow-popover);
+  z-index: 10;
+  white-space: nowrap;
+}
+.pill > * {
+  flex: none;
+}
+.qlink {
+  background: #fff;
+  border: 1px solid var(--amber-400);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes recBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+@keyframes wave {
+  0%,
+  100% {
+    height: 6px;
+  }
+  50% {
+    height: 22px;
+  }
+}
+@keyframes dockUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
