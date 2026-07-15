@@ -6,7 +6,7 @@
   "description": "K7 상담 시연 — 자연어 접수 → AI 요약 → 상담사 데스크톱 (Kiwoom demo)",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
