@@ -7,7 +7,7 @@
 ```text
 [이찬희 데이터 거버넌스·통합 파트 현황]
 
-lch 브랜치의 mvp-1.0 표준 계약, 모델 어댑터, Railway PostgreSQL 3테이블, 원자적 저장·재조회 코드와 React API 경계를 완성했습니다.
+lch 브랜치의 mvp-1.0 표준 계약, 모델 어댑터, Railway PostgreSQL 3테이블, 원자적 저장·재조회 코드와 React API 경계를 완성했습니다. React는 API 응답을 타입으로 단순 가정하지 않고 mvp-1.0 런타임 검증을 통과한 데이터만 상담카드에 표시합니다.
 
 희창이 형 백엔드 PR #1이 main과 Railway 운영에 반영돼 현재:
 - GET /health → database=connected, contract_version=mvp-1.0
@@ -21,6 +21,8 @@ lch 브랜치의 mvp-1.0 표준 계약, 모델 어댑터, Railway PostgreSQL 3�
 2) Vercel 소유자가 lch 통합 소스에 VITE_API_BASE_URL, VITE_USE_REAL_DATA_API=true를 적용해 /api/v1/calls 화면을 직접 재배포하기
 
 현재 감정은 실제 음성 모델이 없으므로 unavailable이 맞습니다. 텍스트 /emotion 스텁을 실제 감정처럼 사용하지 않습니다. 현재 MVP는 완성 음성 파일 일괄 처리이며 실시간 전화망·스트리밍 STT는 아닙니다.
+
+실제 Railway POST·GET 응답은 프론트 런타임 계약 검증을 모두 통과했고, 검수 데이터는 삭제해 calls/transcripts/consultation_cards 모두 0건으로 복구했습니다.
 
 두 검수 완료 후, 운영과 연결되지 않은 k7-mvp-lch-preview 검증 서비스만 삭제하면 됩니다. Postgres와 kda4-k7-backend는 삭제하거나 교체하면 안 됩니다.
 ```

@@ -68,6 +68,7 @@
 - `backend/app/database.py`: `DATABASE_URL`을 사용하는 유일한 저장소 경계, 3테이블 원자적 저장과 call_id 재조회
 - `backend/app/main.py`: `POST /api/v1/calls`, `GET /api/v1/calls/{call_id}/consultation-card`, `GET /health` 참조 구현
 - `src/services/consultation.ts`: React가 DB에 직접 접근하지 않고 POST/GET API만 호출하는 경계
+- `src/services/consultationContract.ts`: API JSON을 화면 반영 전에 `mvp-1.0` 계약으로 런타임 검증하고 버전·채널·위험·감정 조합·추가 필드 위반을 거절
 - `scripts/smoke-mvp.ps1`: 배포 API의 음성 POST→DB→GET 동일성 검증
 - `scripts/check-production-readiness.ps1`: 운영 OpenAPI·기존 경로·DB·계약 버전을 변경 없이 확인
 - `.github/workflows/production-readiness.yml`: 병합 후 GitHub Actions 버튼으로 동일 검사를 실행
@@ -163,6 +164,7 @@ calls 1건 ─ transcripts 1건 ─ consultation_cards 1건
 - 기존 STT·모델 결과 주입형 `persist_pipeline_result()` → 실제 Railway PostgreSQL 재조회 성공
 - PostgreSQL 통합 테스트는 검증 행을 `finally`에서 자동 삭제
 - 로컬 회귀검증: Python 테스트, JSON Schema, 어댑터, TypeScript, Vite build 통과
+- 프론트 런타임 계약 검증: 정상 fixture 1건 통과, 계약 위반 6건 거절, 실제 Railway 음성 POST·GET 응답 모두 통과
 - 이찬희는 이희창 운영 Railway 서비스와 이희창 저장소를 수정하지 않았음
 - `k7-mvp-lch-preview`는 공개 도메인과 사용자 정의 환경변수·DB 연결이 없고 운영에서 참조하지 않지만 실행 중인 검증 배포는 남아 있다. POST/GET 완전 동일성과 Vercel 통합 표시를 확인한 뒤 Railway 관리자가 이 서비스만 삭제한다.
 

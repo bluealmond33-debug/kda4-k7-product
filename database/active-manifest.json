@@ -40,6 +40,7 @@
   },
   "frontend": {
     "service": "src/services/consultation.ts",
+    "response_validator": "src/services/consultationContract.ts",
     "types": "src/services/types.ts",
     "upload_ui": "src/components/LiveDemo.tsx"
   }

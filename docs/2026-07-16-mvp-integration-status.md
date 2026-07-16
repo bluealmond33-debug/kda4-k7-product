@@ -51,6 +51,7 @@ flowchart LR
 | 표준화 | JSON Schema·Pydantic·TypeScript `mvp-1.0` 일치 | 완료 | 계약 변경은 PR로만 관리 |
 | 활성 자산 통제 | 매니페스트가 버전·파일·3테이블·음성·비마스킹 정책 검증 | 완료 | `active-manifest.json` 변경은 PR 필수 |
 | 모델 어댑터 | canonical 결과와 형진 모델 `summary/task_category/consulting_situation/qa_topic`을 모두 표준화 | 완료 | 실제 전체 라벨 목록으로 후처리 규칙 확인 |
+| 프론트 응답 검증 | 브라우저 경계에서 `mvp-1.0` 버전·voice 채널·UUID·위험·감정 조합·추가 필드 검사 | 완료 | 계약 위반 응답은 화면 반영 전 거절 |
 | PostgreSQL | Railway Online, UTF-8, 3테이블, 운영 `database=connected` | 운영 완료 | 참조 변수 유지 |
 | 저장 API | 운영 `POST /api/v1/calls` 201 및 call_id 반환 | 운영 완료 | 시간 정밀도 수정 반영 |
 | 조회 API | 같은 call_id로 운영 GET 200, 카드 내용 동일 | 보완 중 | `duration_sec` 3자리 정규화 |
@@ -67,7 +68,7 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 - 실제 음성 검증 call_id: `26749b14-e912-4fe3-a7d0-d6877bdc65e6`
 - 실제 STT: `안녕하세요. 주택담보대출 만기가 다음 달인데 연장이 가능한지 그리고 필요한 서류가 무엇인지 알고 싶습니다.`
 - 분류 결과: `대출 및 금융상담`, 위험도 `low`
-- POST 결과와 GET 재조회 결과 동일
+- POST·GET 상담 내용과 call_id는 동일하며 `duration_sec`만 `10.100000381469727 → 10.1` 정밀도 차이
 - 합성 음성 테스트 행 3개 정리 완료
 - 자동 PostgreSQL 통합 테스트는 임시 행을 `finally`에서 삭제
 - 형진 모델 원시 `summary/task_category/consulting_situation/qa_topic` → 표준 카드 → 실제 DB 재조회 통과
@@ -77,11 +78,14 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 - 운영 Railway deployment `09fe8b9c-ba9f-4f65-b503-95d84f4e2aa0` 상태 `SUCCESS`
 - 운영 readiness `true`: 새 POST/GET, DB, 계약 버전, 기존 8개 POST 경로 확인
 - 실제 음성 운영 POST 201·GET 200 성공
-- 운영 검증으로 생성된 `k7-mvp-test-call.wav` 행 2건 삭제, 현재 calls 0건
+- 운영 검증으로 생성된 `k7-mvp-test-call.wav` 행을 모두 삭제, 현재 3테이블 각각 0건
 - 감정온도 정책 확정: 고객 음성만 입력, 텍스트 감정은 활성 결과로 금지
 - 현재 음성 처리 방식 확정: 완성 음성 파일 일괄 처리, 실시간 전화망·스트리밍 아님
 - 통합 함수가 실제 감정 결과에 `emotion_source="audio"`를 요구하도록 코드 강제
 - 어댑터 성격 확정: 비-AI 결정론적 Python 매핑·검증 코드
+- React가 API JSON을 타입으로 단순 가정하지 않고 `mvp-1.0` 런타임 검증을 통과한 응답만 상담카드에 반영
+- 프론트 런타임 계약 검증: 정상 fixture 1건 통과, 계약 위반 6건 거절
+- 실제 Railway 한국어 WAV의 POST·GET 응답이 프론트 런타임 검증을 모두 통과
 
 검증용 `k7-mvp-lch-preview`는 공개 도메인과 `DATABASE_URL`·OpenAI·CORS 사용자 변수를 모두 제거했고 운영에서 참조하지 않습니다. 다만 실행 중인 검증 배포는 남아 있으므로, 운영 POST/GET 완전 동일성과 Vercel 통합 표시를 확인한 뒤 Railway 관리자가 이 서비스만 삭제합니다.
 
