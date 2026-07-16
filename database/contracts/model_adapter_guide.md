@@ -118,6 +118,20 @@ zero-shot 원값이나 사람 평가가 끝나지 않은 점수는 `completed` �
 
 AI Hub 71926 같은 텍스트 학습 데이터의 원본 JSON 구조를 그대로 DB에 넣지 않습니다. 모델 결과를 다음 K7 운영 값으로 변환합니다.
 
+현재 팀에서 전달 가능한 결합형 결과는 다음 임시 계약으로 먼저 검증합니다.
+
+- 입력 규격: `model_consultation_result_input.schema.json`
+- 위험정보 포함 예제: `examples/model_consultation_result_input.example.json`
+- 위험정보 미제공 예제: `examples/model_consultation_result_input_no_risk.example.json`
+
+```text
+결합형 모델 입력
+  ├─ summary·business_type·incident_risk ─→ 상담카드 정규화
+  └─ department·routing_reason ───────────→ 라우팅 후보 정규화
+```
+
+이 임시 입력은 현재 모델팀과의 연결을 위한 완충 계층입니다. 추가 필드가 와도 어댑터는 허용 목록의 필드만 사용하고 나머지는 운영 DB에 전달하지 않습니다.
+
 | 모델 결과 의미 | K7 저장 위치·계약 |
 |---|---|
 | 상담 분야·주제 | `consultation_sessions.inquiry_type` |
@@ -128,6 +142,22 @@ AI Hub 71926 같은 텍스트 학습 데이터의 원본 JSON 구조를 그대�
 | 규정 참조 ID | `consultation_card.related_manual_refs` |
 
 표준 출력은 `consultation_card.schema.json`을 따릅니다. 학습 데이터의 분류명을 K7 `inquiry_type` 코드로 바꾸는 매핑표는 모델·백엔드팀이 최종 라벨을 확정한 뒤 버전 관리합니다.
+
+### 현재 예제의 변환 기준
+
+| 현재 입력 | K7 정규화 결과 |
+|---|---|
+| `명의도용·해킹 신고` | 현재 `inquiry_type=other`; 원문 라벨은 키워드 또는 어댑터 로그에 유지 |
+| `금융사기` | `department_code=fraud_response` |
+| `고위험` | `risk_level=high` |
+| `주택담보대출 만기 연장` | `inquiry_type=loan` |
+| `대출 및 금융상담` | 현재 `department_code=general_banking` |
+
+`incident_risk`가 없거나 `null`이면 저위험으로 간주하지 않습니다. 버전이 있는 업무 규칙이 위험도·긴급도를 보완한 뒤 상담카드 저장 계약을 통과시켜야 합니다.
+
+`routing_confidence`가 없을 때 모델 신뢰도를 임의로 만들지 않습니다. MVP에서는 업무 유형과 부서의 확정 매핑이 일치할 때 라우팅 정책 결과로 저장하고, 알 수 없는 부서는 일반 상담 대기열로 보냅니다.
+
+`external_session_key`, `model_name`, `model_version`, `generated_at`이 모델 응답에 없으면 FastAPI가 요청 경로와 배포 설정에서 주입합니다. 모델 응답에도 키가 있으면 요청 경로의 키와 일치해야 합니다.
 
 ## 6. 어댑터가 처리할 것과 처리하지 않을 것
 

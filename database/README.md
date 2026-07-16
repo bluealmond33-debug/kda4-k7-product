@@ -170,6 +170,8 @@ database/
 └── contracts/
     ├── README.md              ← JSON 계약만 따로 보는 설명서
     ├── model_adapter_guide.md ← 변경 가능한 모델 출력을 연결하는 방법
+    ├── model_consultation_result_input.schema.json
+    │                           ← 현재 결합형 모델 출력의 임시 입력 규격
     ├── openapi.yaml           ← FastAPI 경로·요청·응답 명세
     ├── *.schema.json          ← JSON 검사 규칙
     └── examples/*.json        ← 전부 가상 데이터인 정상 예제
@@ -416,6 +418,7 @@ WAV·학습 JSON·CSV·embedding·세그먼트별 원시 예측은 운영 Postgr
 2. 문의 유형, 요약, 위험도, 추천 조치, 확인 항목을 만듭니다.
 3. RAG 결과는 규정 원문 전체가 아니라 규정 참조 ID 목록으로 전달합니다.
 4. `consultation_card.schema.json`을 통과하는지 확인합니다.
+5. 현재처럼 요약·업무·부서·위험이 한 JSON으로 오면 `model_consultation_result_input.schema.json`으로 먼저 검증한 뒤 FastAPI 어댑터가 상담카드와 라우팅 결과로 분리합니다.
 
 ### 라우팅팀
 

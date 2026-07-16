@@ -1,0 +1,8 @@
+{
+  "summary": "고객이 본인 모르게 인증서와 계좌가 개설된 사실을 확인하고 긴급 정지를 요청함.",
+  "business_type": "명의도용·해킹 신고",
+  "department": "금융사기",
+  "routing_reason": "명의도용 및 무단 금융거래 신고에 해당",
+  "incident_risk": "고위험",
+  "risk_reason": "본인 미승인 계좌 개설과 금융거래 정황이 확인됨"
+}

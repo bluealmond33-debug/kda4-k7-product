@@ -8,6 +8,7 @@ JSON 파일은 운영 데이터를 쌓는 저장소가 아니라 팀 간 입력�
 |---|---|---|
 | `openapi.yaml` | 백엔드·React | FastAPI 경로·상태 코드·요청·응답 계약 |
 | `model_adapter_guide.md` | 모델·백엔드·DB | 변경 가능한 모델 출력을 K7 표준 계약으로 변환하는 경계 |
+| `model_consultation_result_input.schema.json` | 분류·요약·라우팅·백엔드 | 현재 결합형 모델 결과를 받는 임시 입력 규격 |
 | `stt_utterance_input.schema.json` | STT·백엔드 | STT 원문 입력 검증 규격 |
 | `masked_utterance.schema.json` | 백엔드·후속 모델 | 마스킹 이후 전달·저장 규격 |
 | `emotion_temperature_result.schema.json` | 감정 모델·백엔드 | 모델 결과 검증 규격 |
@@ -16,6 +17,7 @@ JSON 파일은 운영 데이터를 쌓는 저장소가 아니라 팀 간 입력�
 | `consultation_card_response.schema.json` | 백엔드·React | 마스킹 고객정보·현재 주의정보·화면 통합 응답 검증 규격 |
 | `error_response.schema.json` | 백엔드·전체 클라이언트 | 공통 오류 응답 규격 |
 | `examples/emotion_temperature_result.example.json` | 감정 모델·백엔드 | 정상 입력 예시 |
+| `examples/model_consultation_result_input*.example.json` | 분류·요약·라우팅·백엔드 | 위험정보가 있거나 없는 현재 모델 출력 예시 |
 | `examples/consultation_card_response.example.json` | 백엔드·React | 화면 개발용 응답 예시 |
 
 각 `*.schema.json`에는 같은 이름의 정상 예제가 `examples/`에 있습니다. 예제는 실제 고객정보가 아닌 가상 데이터만 사용합니다.

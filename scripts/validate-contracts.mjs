@@ -18,8 +18,18 @@ const pairs = [
   ],
   ["error_response.schema.json", "examples/error_response.example.json"],
   ["masked_utterance.schema.json", "examples/masked_utterance.example.json"],
+  [
+    "model_consultation_result_input.schema.json",
+    "examples/model_consultation_result_input.example.json",
+  ],
   ["routing_candidate.schema.json", "examples/routing_candidate.example.json"],
   ["stt_utterance_input.schema.json", "examples/stt_utterance_input.example.json"],
+];
+const extraExamples = [
+  [
+    "model_consultation_result_input.schema.json",
+    "examples/model_consultation_result_input_no_risk.example.json",
+  ],
 ];
 
 const readJson = (relativePath) =>
@@ -32,6 +42,34 @@ for (const [schemaPath, examplePath] of pairs) {
   const example = readJson(examplePath);
   if (!validate(example)) {
     throw new Error(`${examplePath} failed ${schemaPath}: ${ajv.errorsText(validate.errors)}`);
+  }
+}
+
+for (const [schemaPath, examplePath] of extraExamples) {
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  addFormats(ajv);
+  const validate = ajv.compile(readJson(schemaPath));
+  const example = readJson(examplePath);
+  if (!validate(example)) {
+    throw new Error(`${examplePath} failed ${schemaPath}: ${ajv.errorsText(validate.errors)}`);
+  }
+}
+
+const provisionalInputSchema = readJson("model_consultation_result_input.schema.json");
+const provisionalInputExample = readJson(
+  "examples/model_consultation_result_input.example.json"
+);
+const provisionalAjv = new Ajv2020({ allErrors: true, strict: false });
+addFormats(provisionalAjv);
+const validateProvisionalInput = provisionalAjv.compile(provisionalInputSchema);
+const invalidProvisionalInputs = [
+  { ...provisionalInputExample, summary: "" },
+  { ...provisionalInputExample, incident_risk: "고위험", risk_reason: null },
+  { ...provisionalInputExample, routing_confidence: 1.1 },
+];
+for (const candidate of invalidProvisionalInputs) {
+  if (validateProvisionalInput(candidate)) {
+    throw new Error("invalid provisional model input accepted");
   }
 }
 
@@ -61,5 +99,5 @@ for (const [score, level] of invalidBoundaries) {
 }
 
 console.log(
-  `JSON_CONTRACTS_OK schemas=${pairs.length} examples=${pairs.length} invalid_boundaries_rejected=${invalidBoundaries.length}`
+  `JSON_CONTRACTS_OK schemas=${pairs.length} examples=${pairs.length + extraExamples.length} invalid_boundaries_rejected=${invalidBoundaries.length} invalid_provisional_inputs_rejected=${invalidProvisionalInputs.length}`
 );
