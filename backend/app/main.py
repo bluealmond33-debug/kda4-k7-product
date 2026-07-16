@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,10 +69,12 @@ def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
         audio_bytes = audio.file.read()
         if not audio_bytes:
             raise HTTPException(status_code=400, detail="audio file is empty")
+        call_id = uuid4()
         transcript = transcribe_audio(settings, audio.filename or "customer-audio.wav", audio_bytes)
         raw_model_result = request_analysis_result(settings, transcript.text)
         return persist_pipeline_result(
             settings,
+            call_id=call_id,
             audio_filename=audio.filename or "customer-audio.wav",
             transcript=transcript,
             raw_model_result=raw_model_result,

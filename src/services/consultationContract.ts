@@ -91,7 +91,6 @@ function parseEmotion(value: unknown): MvpEmotionResult {
 
   if (
     emotion.status !== "unavailable" &&
-    emotion.status !== "demo" &&
     emotion.status !== "completed"
   ) {
     fail("$.consultation_card.emotion.status", "unsupported status");
@@ -117,17 +116,37 @@ function parseEmotion(value: unknown): MvpEmotionResult {
     };
   }
 
+  if (
+    emotion.level !== "stable" &&
+    emotion.level !== "caution" &&
+    emotion.level !== "elevated"
+  ) {
+    fail(
+      "$.consultation_card.emotion.level",
+      "expected stable, caution, or elevated"
+    );
+  }
+  const score = numberInRange(
+    emotion.score,
+    "$.consultation_card.emotion.score",
+    0,
+    100
+  );
+  if (
+    (emotion.level === "stable" && score > 33) ||
+    (emotion.level === "caution" && !(score > 33 && score <= 66)) ||
+    (emotion.level === "elevated" && score <= 66)
+  ) {
+    fail(
+      "$.consultation_card.emotion",
+      "score does not match the three-level temperature band"
+    );
+  }
+
   return {
     status: emotion.status,
-    score: numberInRange(
-      emotion.score,
-      "$.consultation_card.emotion.score",
-      0,
-      100
-    ),
-    level: text(emotion.level, "$.consultation_card.emotion.level", {
-      max: 100,
-    }) as string,
+    score,
+    level: emotion.level,
     reason,
   };
 }

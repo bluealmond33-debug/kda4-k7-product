@@ -25,8 +25,13 @@ class IncidentRisk(str, Enum):
 
 class EmotionStatus(str, Enum):
     UNAVAILABLE = "unavailable"
-    DEMO = "demo"
     COMPLETED = "completed"
+
+
+class EmotionTemperatureLevel(str, Enum):
+    STABLE = "stable"
+    CAUTION = "caution"
+    ELEVATED = "elevated"
 
 
 class ModelConsultationResult(BaseModel):
@@ -72,7 +77,7 @@ class EmotionResult(BaseModel):
 
     status: EmotionStatus = EmotionStatus.UNAVAILABLE
     score: float | None = Field(default=None, ge=0, le=100)
-    level: str | None = Field(default=None, max_length=100)
+    level: EmotionTemperatureLevel | None = None
     reason: str | None = Field(default=None, max_length=2000)
 
     _validate_score = field_validator("score", mode="before")(_reject_boolean_number)
@@ -83,10 +88,26 @@ class EmotionResult(BaseModel):
             self.score is not None or self.level is not None
         ):
             raise ValueError("unavailable emotion cannot include a score or level")
-        if self.status in {EmotionStatus.DEMO, EmotionStatus.COMPLETED} and (
+        if self.status == EmotionStatus.COMPLETED and (
             self.score is None or not self.level
         ):
             raise ValueError("available emotion requires a score and level")
+        if self.score is not None and self.level is not None:
+            if (
+                self.level == EmotionTemperatureLevel.STABLE
+                and self.score > 33
+            ):
+                raise ValueError("stable emotion score must be 0..33")
+            if (
+                self.level == EmotionTemperatureLevel.CAUTION
+                and not 33 < self.score <= 66
+            ):
+                raise ValueError("caution emotion score must be >33..66")
+            if (
+                self.level == EmotionTemperatureLevel.ELEVATED
+                and self.score <= 66
+            ):
+                raise ValueError("elevated emotion score must be >66..100")
         return self
 
 

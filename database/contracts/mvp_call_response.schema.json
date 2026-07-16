@@ -60,9 +60,12 @@
           "additionalProperties": false,
           "required": ["status", "score", "level", "reason"],
           "properties": {
-            "status": { "enum": ["unavailable", "demo", "completed"] },
+            "status": { "enum": ["unavailable", "completed"] },
             "score": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
-            "level": { "type": ["string", "null"], "maxLength": 100 },
+            "level": {
+              "type": ["string", "null"],
+              "enum": ["stable", "caution", "elevated", null]
+            },
             "reason": { "type": ["string", "null"], "maxLength": 2000 }
           },
           "allOf": [
@@ -77,12 +80,59 @@
             },
             {
               "if": {
-                "properties": { "status": { "enum": ["demo", "completed"] } }
+                "properties": { "status": { "const": "completed" } }
               },
               "then": {
                 "properties": {
                   "score": { "type": "number", "minimum": 0, "maximum": 100 },
-                  "level": { "type": "string", "minLength": 1 }
+                  "level": {
+                    "type": "string",
+                    "enum": ["stable", "caution", "elevated"]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": { "const": "completed" },
+                  "level": { "const": "stable" }
+                },
+                "required": ["status", "level"]
+              },
+              "then": {
+                "properties": { "score": { "type": "number", "maximum": 33 } }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": { "const": "completed" },
+                  "level": { "const": "caution" }
+                },
+                "required": ["status", "level"]
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "type": "number",
+                    "exclusiveMinimum": 33,
+                    "maximum": 66
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": { "const": "completed" },
+                  "level": { "const": "elevated" }
+                },
+                "required": ["status", "level"]
+              },
+              "then": {
+                "properties": {
+                  "score": { "type": "number", "exclusiveMinimum": 66 }
                 }
               }
             }

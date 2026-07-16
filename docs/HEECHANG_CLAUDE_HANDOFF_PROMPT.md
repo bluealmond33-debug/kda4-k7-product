@@ -34,7 +34,7 @@
 
 고객 입력은 음성만 사용한다. 개인정보 마스킹, 고객 마스터, 권한·감사로그, 실제 상담사 자동배정은 이번 MVP 범위가 아니다. 감정·요약·라우팅·RAG의 임시 로직은 각 팀원의 실제 로직을 받으면 교체하되, 준비되지 않은 감정 점수를 실제 모델 결과처럼 만들지 않는다.
 
-현재 MVP의 음성 처리는 녹음 또는 업로드가 끝난 완성 파일 전체를 한 번에 처리한다. 통신사 전화망, WebSocket 음성 스트리밍, 발화 중 부분 STT는 구현된 것으로 보고하지 마라. 감정온도는 STT 텍스트가 아니라 고객 음성만 입력으로 사용한다. 실제 감정 모델 결과를 `persist_pipeline_result()`에 넣을 때는 `emotion_source="audio"`를 함께 전달하라. 텍스트 키워드 기반 기존 `/emotion` 결과를 활성 상담카드의 `completed` 감정으로 승격하지 마라.
+현재 MVP의 음성 처리는 녹음 또는 업로드가 끝난 완성 파일 전체를 한 번에 처리한다. 통신사 전화망, WebSocket 음성 스트리밍, 발화 중 부분 STT는 구현된 것으로 보고하지 마라. FastAPI는 분석 전에 `call_id`를 발급하고, 같은 음성을 STT→OpenAI와 음성 감정 모델 두 갈래에 전달한다. 감정 결과의 `external_session_key`가 `call_id`와 일치할 때만 `emotion_source="audio"`로 결합하라. 텍스트 키워드 기반 기존 `/emotion` 결과를 활성 상담카드의 `completed` 감정으로 승격하지 마라.
 
 `model_adapter.py`는 AI가 아니다. 학습·추론·프롬프트 호출 없이 원시 모델 JSON을 검토된 규칙으로 매핑하고 Pydantic 계약 위반이나 미매핑 라벨을 거절하는 결정론적 Python 코드다.
 
@@ -60,9 +60,11 @@
 - `database/active-manifest.json`: 활성 버전·파일·테이블·API를 기계가 읽는 단일 기준으로 고정
 - `database/mvp/schema.sql`: 활성 PostgreSQL 스키마. 정확히 `calls`, `transcripts`, `consultation_cards` 3테이블
 - `database/contracts/model_consultation_result_input.schema.json`: 교체 가능한 모델 결과 입력 경계
+- `database/contracts/emotion_temperature_result.schema.json`: 동일 원본 음성 모델의 점수·단계·음질·모델 버전과 `call_id` 결합 계약
 - `database/mvp/model_postprocessing.v1.json`: 형진 모델의 금융 분류 라벨을 K7 부서·위험도로 변환하는 버전형 규칙
 - `database/contracts/mvp_call_response.schema.json`: FastAPI·DB·React 최종 `mvp-1.0` 응답 계약
 - `backend/app/model_adapter.py`: 모델 실험 필드를 버리고 위험도 별칭을 `low | high`로 정규화하는 활성 어댑터
+- `backend/app/emotion_adapter.py`: 음성 모델 결과의 UUID·점수 구간·상태·음질을 검증하고 다른 통화 결과나 가짜 점수를 거절
 - `backend/app/integration_service.py`: 기존 STT·모델 결과를 받아 표준화·카드 조립·DB 저장만 수행하는 이식용 함수
 - `backend/app/contracts.py`: Pydantic 계약, 고위험 사유·감정 상태 조합·버전·음성 채널 검증
 - `backend/app/database.py`: `DATABASE_URL`을 사용하는 유일한 저장소 경계, 3테이블 원자적 저장과 call_id 재조회
@@ -75,6 +77,7 @@
 - `backend/tests/test_database_integration.py`: 실제 PostgreSQL UTF-8·정확히 3테이블·제약조건·한글 왕복 저장·자동 삭제 검증
 - `docs/HYUNGJIN_MODEL_HANDOFF_MESSAGE.md`: 형진 모델 서버 연결에 필요한 자료를 요청하는 Slack 메시지
 - `docs/DATA_INTEGRATION_ACCEPTANCE.md`: 이찬희 담당 데이터 경계와 운영 E2E 최종 인수 기준
+- `docs/AUDIO_TEXT_DUAL_PIPELINE.md`: STT 텍스트→OpenAI와 동일 음성→감정 모델의 두 갈래 처리·결합 명세
 
 `database/schema.sql`, `commands.sql`, `queries.sql`, `seed.sql`, `verify.sql`, `database/adapters/` 및 마스킹 중심 계약은 기존 12테이블 확장 참고 자산이다. 현재 Railway MVP에 적용하거나 import하지 마라.
 
@@ -133,8 +136,8 @@
 1. 이희창 저장소의 현재 엔드포인트·Pydantic 모델·STT 함수·분석 함수·Railway 시작 명령을 먼저 목록화하라.
 2. 기존 `/stt`, `/analyze`, `/judge`, `/rag`, `/analyze-text`, `/emotion`, `/summarize`, `/briefing` 동작을 삭제하지 마라.
 3. `lch`의 `contracts.py`, `model_adapter.py`, `database.py`와 `database/mvp/schema.sql`에서 필요한 경계만 이희창 코드 구조에 맞게 이식하라. `lch`의 전체 FastAPI 앱으로 운영 앱을 교체하지 마라.
-4. 기존 STT 결과 텍스트를 형진 모델 서버에 보내고, 받은 `summary/task_category/consulting_situation/qa_topic`을 준비하라. 같은 음성을 두 번 STT하지 마라.
-5. 직접 카드와 INSERT를 다시 작성하지 말고 `persist_pipeline_result(settings, audio_filename=..., transcript=..., raw_model_result=...)`를 호출하라. 이 함수가 어댑터·`MvpCallResponse`·DB 트랜잭션을 한 번에 처리한다.
+4. 음성을 받은 즉시 `call_id`를 하나 생성하라. 기존 STT 결과 텍스트를 OpenAI/형진 모델 서버에 보내고, 같은 원본 `audio_bytes`를 음성 감정 모델에 보낸다. 같은 음성을 두 번 STT하지 마라.
+5. 직접 카드와 INSERT를 다시 작성하지 말고 `persist_pipeline_result(settings, call_id=..., audio_filename=..., transcript=..., raw_model_result=..., raw_emotion_result=..., emotion_source="audio")`를 호출하라. 음성 모델 미연동 중에는 `raw_emotion_result`를 생략해 `unavailable`을 유지한다.
 6. `GET /api/v1/calls/{call_id}/consultation-card`는 모델을 다시 실행하지 말고 PostgreSQL에 저장된 결과만 조회해야 한다.
 7. `GET /health`가 PostgreSQL 연결 여부와 `contract_version=mvp-1.0`을 반환하게 하라.
 8. Railway 운영 백엔드 변수에 새 비밀값을 복사하지 말고 기존 Postgres 서비스 참조 `DATABASE_URL=${{Postgres.DATABASE_URL}}`를 연결하라.
@@ -164,7 +167,7 @@ calls 1건 ─ transcripts 1건 ─ consultation_cards 1건
 - 기존 STT·모델 결과 주입형 `persist_pipeline_result()` → 실제 Railway PostgreSQL 재조회 성공
 - PostgreSQL 통합 테스트는 검증 행을 `finally`에서 자동 삭제
 - 로컬 회귀검증: Python 테스트, JSON Schema, 어댑터, TypeScript, Vite build 통과
-- 프론트 런타임 계약 검증: 정상 fixture 1건 통과, 계약 위반 6건 거절, 실제 Railway 음성 POST·GET 응답 모두 통과
+- 프론트 런타임 계약 검증: 정상 fixture 1건 통과, 계약 위반 8건 거절, 실제 Railway 음성 POST·GET 응답 모두 통과
 - 이찬희는 이희창 운영 Railway 서비스와 이희창 저장소를 수정하지 않았음
 - `k7-mvp-lch-preview`는 공개 도메인과 사용자 정의 환경변수·DB 연결이 없고 운영에서 참조하지 않지만 실행 중인 검증 배포는 남아 있다. POST/GET 완전 동일성과 Vercel 통합 표시를 확인한 뒤 Railway 관리자가 이 서비스만 삭제한다.
 

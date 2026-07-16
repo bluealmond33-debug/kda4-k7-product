@@ -26,9 +26,42 @@ if (
 }
 if (
   manifest.audio_processing?.stt_input !== "audio" ||
-  manifest.audio_processing?.emotion_input !== "audio_only"
+  manifest.audio_processing?.summary_input !== "stt_text" ||
+  manifest.audio_processing?.summary_processor !== "openai" ||
+  manifest.audio_processing?.emotion_input !== "same_audio_file_only"
 ) {
-  throw new Error("STT and emotion model inputs must remain governed as audio");
+  throw new Error(
+    "text analysis must use STT text and emotion must use the same audio file"
+  );
+}
+if (
+  manifest.audio_processing?.capture_output !== "audio_file" ||
+  manifest.audio_processing?.audio_retention !==
+    "transient_request_processing" ||
+  manifest.audio_processing?.audio_object_storage !== "not_in_mvp" ||
+  manifest.audio_processing?.branching !== "after_audio_capture" ||
+  manifest.audio_processing?.correlation_key !== "call_id" ||
+  manifest.audio_processing?.call_id_created !== "before_analysis" ||
+  manifest.audio_processing?.parallel_execution_allowed !== true ||
+  manifest.audio_processing?.join_before_persist !== true
+) {
+  throw new Error("dual audio/text branches must join by a pre-created call_id");
+}
+if (
+  JSON.stringify(manifest.audio_processing?.branches?.text_analysis) !==
+    JSON.stringify(["stt", "openai_summary_classification_routing"]) ||
+  JSON.stringify(manifest.audio_processing?.branches?.audio_emotion) !==
+    JSON.stringify(["audio_emotion_model"])
+) {
+  throw new Error("active text and audio model branches have drifted");
+}
+if (
+  JSON.stringify(
+    manifest.audio_processing?.emotion_result_policy?.allowed_statuses
+  ) !== JSON.stringify(["unavailable", "completed"]) ||
+  manifest.audio_processing?.emotion_result_policy?.demo_forbidden !== true
+) {
+  throw new Error("active consultation cards must reject demo emotion results");
 }
 if (
   manifest.adapter?.implementation !== manifest.backend.model_adapter ||
@@ -44,6 +77,7 @@ const governedPaths = [
   manifest.backend.app,
   manifest.backend.pydantic_contracts,
   manifest.backend.model_adapter,
+  manifest.backend.audio_emotion_adapter,
   manifest.backend.integration_service,
   manifest.backend.database_gateway,
   ...Object.values(manifest.frontend),

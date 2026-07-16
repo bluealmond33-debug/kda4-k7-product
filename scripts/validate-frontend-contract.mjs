@@ -46,7 +46,31 @@ const rejectedCases = [
     ...fixture,
     consultation_card: {
       ...fixture.consultation_card,
+      emotion: {
+        status: "demo",
+        score: 50,
+        level: "caution",
+        reason: "demo result must not cross the active API",
+      },
+    },
+  },
+  {
+    ...fixture,
+    consultation_card: {
+      ...fixture.consultation_card,
       routing_confidence: true,
+    },
+  },
+  {
+    ...fixture,
+    consultation_card: {
+      ...fixture.consultation_card,
+      emotion: {
+        status: "completed",
+        score: 74,
+        level: "stable",
+        reason: "invalid score-level pair",
+      },
     },
   },
   {

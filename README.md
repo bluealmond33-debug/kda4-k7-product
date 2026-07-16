@@ -1,11 +1,14 @@
 # K7 음성 상담카드 MVP
 
-고객의 **음성 문의**를 실제 STT로 변환하고, 요약·업무유형·담당 부서·라우팅 근거를 표준 상담카드로 만들어 PostgreSQL에 저장한 뒤 상담사 화면에 표시하는 통합 저장소입니다.
+고객의 **통화 음성**을 동일 원본 기준으로 두 갈래 처리합니다. STT 텍스트는 OpenAI가 요약·업무유형·담당 부서·라우팅을 분석하고, 원본 음성은 음성 감정 모델이 점수를 생성합니다. 두 결과를 같은 `call_id`로 결합해 PostgreSQL에 저장한 뒤 상담사 화면에 표시하는 통합 저장소입니다.
 
 ## 한 줄 흐름
 
 ```text
-음성 파일 → FastAPI → STT → 표준 JSON → PostgreSQL → 상담카드 API → React/Vercel
+통화 음성 → call_id 선발급
+├─ STT 텍스트 → OpenAI 요약·분류·라우팅
+└─ 동일 원본 음성 → 음성 감정 모델
+→ call_id 결과 결합 → mvp-1.0 → PostgreSQL → React/Vercel
 ```
 
 ## 단일 기준
@@ -18,6 +21,8 @@
 | 활성 자산 매니페스트 | `database/active-manifest.json` |
 | API 계약 | `database/contracts/mvp_call_response.schema.json` |
 | 모델 결과 어댑터 | `backend/app/model_adapter.py` |
+| 음성 감정 어댑터 | `backend/app/emotion_adapter.py` |
+| 이중 분석 명세 | `docs/AUDIO_TEXT_DUAL_PIPELINE.md` |
 | 기존 파이프라인 연결 함수 | `backend/app/integration_service.py` |
 | 금융 모델 후처리 | `database/mvp/model_postprocessing.v1.json` |
 | Railway 설정 | `railway.toml` |
@@ -39,6 +44,8 @@ GET /health
 ```
 
 현재 Railway에 이미 배포된 `/stt`, `/analyze`, `/judge`, `/rag`, `/analyze-text`, `/emotion`, `/summarize`, `/briefing`은 기존 데모가 깨지지 않도록 호환 경로로 유지합니다. 이 경로의 감정·RAG·일부 판단은 자리채움이며, 새 개발은 `/api/v1/calls`만 사용합니다.
+
+활성 상담카드의 감정 상태는 `unavailable | completed`만 허용합니다. 실제 음성 모델이 없거나 실패하면 점수를 만들지 않고 `unavailable`로 저장하며 `demo` 결과는 활성 API와 DB에서 거절합니다.
 
 ## 프론트엔드 실행
 

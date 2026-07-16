@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from app.contracts import ModelConsultationResult, MvpCallResponse
+from app.contracts import EmotionResult, ModelConsultationResult, MvpCallResponse
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -84,6 +84,11 @@ def test_low_risk_allows_null_reason() -> None:
     assert result.risk_reason is None
 
 
+def test_active_emotion_contract_rejects_demo_status() -> None:
+    with pytest.raises(ValidationError):
+        EmotionResult(status="demo", score=50, level="caution")
+
+
 def test_active_schema_is_three_table_mvp() -> None:
     schema = (ROOT / "database/mvp/schema.sql").read_text(encoding="utf-8")
     table_statements = re.findall(r"(?m)^CREATE TABLE IF NOT EXISTS\s+", schema)
@@ -92,3 +97,7 @@ def test_active_schema_is_three_table_mvp() -> None:
     assert "access_logs" not in schema
     assert "consultation_cards_schema_version_chk" in schema
     assert "consultation_cards_available_emotion_chk" in schema
+    assert "consultation_cards_active_emotion_status_chk" in schema
+    assert "consultation_cards_emotion_level_chk" in schema
+    assert "consultation_cards_temperature_band_chk" in schema
+    assert "raw_emotion_result jsonb" in schema

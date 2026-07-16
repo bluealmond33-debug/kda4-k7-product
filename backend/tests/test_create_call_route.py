@@ -46,11 +46,10 @@ def test_post_route_passes_existing_pipeline_results_to_integration_service(
 
     def fake_persist(_settings, **kwargs):
         calls["persist"] += 1
-        assert kwargs == {
-            "audio_filename": "customer.wav",
-            "transcript": transcript,
-            "raw_model_result": raw,
-        }
+        assert kwargs["audio_filename"] == "customer.wav"
+        assert kwargs["transcript"] is transcript
+        assert kwargs["raw_model_result"] == raw
+        assert str(kwargs["call_id"])
         return expected
 
     monkeypatch.setattr("app.main.transcribe_audio", fake_stt)

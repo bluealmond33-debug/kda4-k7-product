@@ -22,6 +22,10 @@ lch 브랜치의 mvp-1.0 표준 계약, 모델 어댑터, Railway PostgreSQL 3�
 
 현재 감정은 실제 음성 모델이 없으므로 unavailable이 맞습니다. 텍스트 /emotion 스텁을 실제 감정처럼 사용하지 않습니다. 현재 MVP는 완성 음성 파일 일괄 처리이며 실시간 전화망·스트리밍 STT는 아닙니다.
 
+팀이 확정한 새 흐름도 lch에 반영했습니다. FastAPI가 call_id를 먼저 발급하고 동일 음성을 `STT→OpenAI 요약·분류·라우팅`과 `음성 감정 모델`로 나눈 뒤, `external_session_key == call_id`를 확인해 한 상담카드로 저장합니다. 음성 모델 원시 결과는 `raw_emotion_result JSONB`로 추적하고 화면에는 검증된 표준 점수만 전달합니다.
+
+감정 상태는 운영 계약에서 `unavailable | completed`만 허용하고 `demo`는 백엔드·프론트·DB에서 모두 차단했습니다. Railway PostgreSQL 실제 검증에서 두 모델 결과 결합·재조회, 잘못된 점수–단계 거절, 테스트 행 자동 삭제와 최종 0건을 확인했습니다.
+
 실제 Railway POST·GET 응답은 프론트 런타임 계약 검증을 모두 통과했고, 검수 데이터는 삭제해 calls/transcripts/consultation_cards 모두 0건으로 복구했습니다.
 Railway는 Vercel 운영 origin의 음성 POST preflight도 200으로 허용하므로, 소유자 재배포 후 브라우저 CORS를 추가로 수정할 필요는 없습니다.
 
@@ -127,7 +131,9 @@ npm run check:release
 최종 실제 음성까지 포함:
 
 ```powershell
+$env:K7_TEST_DATABASE_URL = "화면에 출력하지 않은 Railway 테스트 DB URL"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-release-gates.ps1 -AudioPath "C:\path\to\sample.wav"
+Remove-Item Env:K7_TEST_DATABASE_URL
 ```
 
-`release_ready=true`가 나온 뒤에만 데이터 통합 MVP를 최종 완료로 판정합니다.
+실제 음성 검수 행은 성공·실패 여부와 관계없이 `finally`에서 삭제됩니다. `release_ready=true`가 나온 뒤에만 데이터 통합 MVP를 최종 완료로 판정합니다.

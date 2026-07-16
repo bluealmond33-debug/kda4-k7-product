@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "external_session_key": "K7-DEMO-20260715-0001",
+  "external_session_key": "94650acb-f213-49ee-a94e-87dfd645cc40",
   "result_key": "K7-EMOTION-DEMO-0001-001",
   "model_name": "k7-emotion-temperature-model",
   "model_version": "0.1.0",

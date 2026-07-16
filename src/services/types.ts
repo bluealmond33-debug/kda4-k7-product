@@ -53,12 +53,12 @@ export interface Transcript {
 
 export type MvpCallStatus = "processing" | "ready" | "failed";
 export type MvpIncidentRisk = "low" | "high";
-export type MvpEmotionStatus = "unavailable" | "demo" | "completed";
+export type MvpEmotionStatus = "unavailable" | "completed";
 
 export interface MvpEmotionResult {
   status: MvpEmotionStatus;
   score: number | null;
-  level: string | null;
+  level: EmotionTemperatureLevel | null;
   reason: string | null;
 }
 

@@ -39,7 +39,7 @@
 5. 새 분류 라벨을 임의 부서로 추측하지 않습니다.
 6. 감정 모델이 준비되지 않았으면 `unavailable`을 사용하며 임의 점수를 만들지 않습니다.
 7. 개인정보 마스킹은 현재 MVP 범위가 아니므로 활성 계약에 몰래 추가하지 않습니다.
-8. 실제 감정온도는 고객 음성만 입력으로 사용합니다. `completed` 감정 결과는 통합 함수에 `emotion_source="audio"`를 함께 제공해야 하며 텍스트 키워드 결과는 거절합니다.
+8. FastAPI는 STT·OpenAI·음성 감정 분석 전에 `call_id`를 발급합니다. 실제 감정온도는 같은 고객 음성만 입력으로 사용하고, `external_session_key == call_id`인 결과만 `emotion_source="audio"`와 함께 결합합니다. 텍스트 키워드 결과와 다른 통화의 결과는 거절합니다.
 9. 현재 MVP는 녹음·업로드가 완료된 음성 파일 전체를 일괄 처리합니다. 실제 전화망·WebSocket·스트리밍 STT를 완료 기능으로 보고하지 않습니다.
 10. 모델 어댑터는 AI가 아닌 결정론적 코드이며 원시 JSON 매핑·검증·미매핑 거절만 담당합니다.
 
@@ -50,6 +50,8 @@
 - [x] 실제 Railway PostgreSQL UTF-8·3테이블·제약조건 검증
 - [x] 형진 원시 4필드 → 표준 카드 → 실제 DB 저장·재조회 검증
 - [x] 희창 기존 STT·모델 결과 주입형 독립 통합 서비스와 실제 DB 검증
+- [x] 같은 음성을 STT→OpenAI와 음성 감정 모델로 분기하고 선발급 `call_id`로 결합하는 계약·어댑터·실제 DB 검증
+- [x] 원시 음성 모델 결과 `raw_emotion_result JSONB` 보존과 점수–단계 DB 제약
 - [x] React·계약·FastAPI GitHub CI 통과
 - [x] 노출 가능성이 있던 Railway PostgreSQL 비밀번호 회전 및 새 연결 검증
 - [x] `lch` 변경을 이희창 운영 FastAPI에 실제 이식
@@ -79,3 +81,5 @@
 | 최종 인수 담당 | 이찬희 |
 
 운영 완료 판정은 `scripts/check-production-readiness.ps1`의 `ready=true`와 `scripts/smoke-mvp.ps1`의 실제 음성 성공이 모두 있어야 합니다.
+
+운영 음성 스모크 테스트에는 `K7_TEST_DATABASE_URL`을 화면에 출력하지 않는 환경변수로 주입하고 `-RequireCleanup`을 사용합니다. 테스트가 성공하거나 중간 검증에서 실패하더라도 생성된 `call_id`는 `finally`에서 삭제되어야 하며, 종료 후 세 활성 테이블의 테스트 행이 남지 않아야 합니다.

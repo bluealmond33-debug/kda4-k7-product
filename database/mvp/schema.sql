@@ -34,11 +34,12 @@ CREATE TABLE IF NOT EXISTS consultation_cards (
         routing_confidence IS NULL OR routing_confidence BETWEEN 0 AND 1
     ),
     emotion_status text NOT NULL DEFAULT 'unavailable'
-        CHECK (emotion_status IN ('unavailable', 'demo', 'completed')),
+        CHECK (emotion_status IN ('unavailable', 'completed')),
     emotion_score numeric(5, 2) CHECK (emotion_score IS NULL OR emotion_score BETWEEN 0 AND 100),
     emotion_level text,
     emotion_reason text,
     raw_model_result jsonb NOT NULL DEFAULT '{}'::jsonb,
+    raw_emotion_result jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT consultation_cards_schema_version_chk CHECK (schema_version = 'mvp-1.0'),
@@ -52,6 +53,18 @@ CREATE TABLE IF NOT EXISTS consultation_cards (
     CONSTRAINT consultation_cards_available_emotion_chk CHECK (
         emotion_status = 'unavailable'
         OR (emotion_score IS NOT NULL AND btrim(COALESCE(emotion_level, '')) <> '')
+    ),
+    CONSTRAINT consultation_cards_active_emotion_status_chk CHECK (
+        emotion_status IN ('unavailable', 'completed')
+    ),
+    CONSTRAINT consultation_cards_emotion_level_chk CHECK (
+        emotion_level IS NULL OR emotion_level IN ('stable', 'caution', 'elevated')
+    ),
+    CONSTRAINT consultation_cards_temperature_band_chk CHECK (
+        emotion_score IS NULL
+        OR (emotion_score <= 33 AND emotion_level = 'stable')
+        OR (emotion_score > 33 AND emotion_score <= 66 AND emotion_level = 'caution')
+        OR (emotion_score > 66 AND emotion_level = 'elevated')
     )
 );
 
@@ -59,6 +72,27 @@ CREATE TABLE IF NOT EXISTS consultation_cards (
 -- revision. CREATE TABLE IF NOT EXISTS alone cannot add new constraints.
 DO $migration$
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'consultation_cards'
+          AND column_name = 'raw_emotion_result'
+    ) THEN
+        ALTER TABLE consultation_cards
+            ADD COLUMN raw_emotion_result jsonb NOT NULL DEFAULT '{}'::jsonb;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'consultation_cards_active_emotion_status_chk'
+          AND conrelid = 'consultation_cards'::regclass
+    ) THEN
+        ALTER TABLE consultation_cards
+            ADD CONSTRAINT consultation_cards_active_emotion_status_chk
+            CHECK (emotion_status IN ('unavailable', 'completed'));
+    END IF;
+
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'calls_audio_filename_not_blank_chk'
@@ -95,6 +129,38 @@ BEGIN
             CHECK (
                 emotion_status = 'unavailable'
                 OR (emotion_score IS NOT NULL AND btrim(COALESCE(emotion_level, '')) <> '')
+            );
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'consultation_cards_emotion_level_chk'
+          AND conrelid = 'consultation_cards'::regclass
+    ) THEN
+        ALTER TABLE consultation_cards
+            ADD CONSTRAINT consultation_cards_emotion_level_chk
+            CHECK (
+                emotion_level IS NULL
+                OR emotion_level IN ('stable', 'caution', 'elevated')
+            );
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'consultation_cards_temperature_band_chk'
+          AND conrelid = 'consultation_cards'::regclass
+    ) THEN
+        ALTER TABLE consultation_cards
+            ADD CONSTRAINT consultation_cards_temperature_band_chk
+            CHECK (
+                emotion_score IS NULL
+                OR (emotion_score <= 33 AND emotion_level = 'stable')
+                OR (
+                    emotion_score > 33
+                    AND emotion_score <= 66
+                    AND emotion_level = 'caution'
+                )
+                OR (emotion_score > 66 AND emotion_level = 'elevated')
             );
     END IF;
 END

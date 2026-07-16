@@ -44,7 +44,12 @@ def ping_database(settings: Settings) -> bool:
         return False
 
 
-def save_call(settings: Settings, response: MvpCallResponse, raw_model_result: dict) -> None:
+def save_call(
+    settings: Settings,
+    response: MvpCallResponse,
+    raw_model_result: dict,
+    raw_emotion_result: dict | None = None,
+) -> None:
     card = response.consultation_card
     transcript = response.transcript
     try:
@@ -81,9 +86,12 @@ def save_call(settings: Settings, response: MvpCallResponse, raw_model_result: d
                         call_id, schema_version, summary, business_type, department,
                         routing_reason, incident_risk, risk_reason, routing_confidence,
                         emotion_status, emotion_score, emotion_level, emotion_reason,
-                        raw_model_result
+                        raw_model_result, raw_emotion_result
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s
+                    )
                     """,
                     (
                         response.call_id,
@@ -100,6 +108,7 @@ def save_call(settings: Settings, response: MvpCallResponse, raw_model_result: d
                         card.emotion.level,
                         card.emotion.reason,
                         Jsonb(raw_model_result),
+                        Jsonb(raw_emotion_result or {}),
                     ),
                 )
     except psycopg.Error as exc:

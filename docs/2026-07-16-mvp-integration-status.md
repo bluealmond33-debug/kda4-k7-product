@@ -55,7 +55,7 @@ flowchart LR
 | PostgreSQL | Railway Online, UTF-8, 3테이블, 운영 `database=connected` | 운영 완료 | 참조 변수 유지 |
 | 저장 API | 운영 `POST /api/v1/calls` 201 및 call_id 반환 | 운영 완료 | 시간 정밀도 수정 반영 |
 | 조회 API | 같은 call_id로 운영 GET 200, 카드 내용 동일 | 보완 중 | `duration_sec` 3자리 정규화 |
-| 감정 | 가짜 점수 없이 `unavailable` | MVP 완료 | 실제 모델 수령 후 함수 교체 |
+| 감정 | 음성 전용 입력 계약·어댑터·점수 구간·call_id 결합·DB 원시 결과 저장 완료, 운영은 `unavailable` | 통합 경계 완료 | 실제 음성 모델 URL·인증·응답 수령 후 호출 연결 |
 | Vercel | 사이트 200, 현재 번들에는 `/api/v1/calls`·Railway 주소가 없고 `/summarize`만 존재 | 소유자 작업 필요 | `VITE_API_BASE_URL`, `VITE_USE_REAL_DATA_API=true` 적용 후 직접 재배포 |
 
 Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포·화면 검증 체크리스트를 전달합니다.
@@ -83,10 +83,17 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 - 감정온도 정책 확정: 고객 음성만 입력, 텍스트 감정은 활성 결과로 금지
 - 현재 음성 처리 방식 확정: 완성 음성 파일 일괄 처리, 실시간 전화망·스트리밍 아님
 - 통합 함수가 실제 감정 결과에 `emotion_source="audio"`를 요구하도록 코드 강제
+- FastAPI가 분석 전에 `call_id`를 만들고 동일 음성을 STT→OpenAI와 음성 감정 모델로 분기하는 활성 매니페스트·참조 코드 완성
+- 음성 감정 `external_session_key == call_id` 검증, 점수–단계 어댑터, `raw_emotion_result JSONB`와 실제 Railway PostgreSQL 제약 적용
+- 활성 감정 상태를 `unavailable | completed`로 제한하고 `demo`는 Pydantic·JSON Schema·React·PostgreSQL에서 모두 거절
+- 실제 Railway DB에서 OpenAI 원시 결과 + 음성 감정 원시 결과 결합·저장·재조회 및 잘못된 점수–단계 INSERT 차단 확인
+- 운영 실제 음성 스모크 테스트는 성공·실패와 무관하게 생성 행을 `finally`에서 삭제하도록 자동화
 - 어댑터 성격 확정: 비-AI 결정론적 Python 매핑·검증 코드
 - React가 API JSON을 타입으로 단순 가정하지 않고 `mvp-1.0` 런타임 검증을 통과한 응답만 상담카드에 반영
-- 프론트 런타임 계약 검증: 정상 fixture 1건 통과, 계약 위반 6건 거절
+- 프론트 런타임 계약 검증: 정상 fixture 1건 통과, 계약 위반 8건 거절
+- 최신 회귀검증: Python `40 passed, 1 skipped`, 프론트 계약 위반 8건 거절
 - 실제 Railway 한국어 WAV의 POST·GET 응답이 프론트 런타임 검증을 모두 통과
+- 실제 Railway PostgreSQL: 3테이블 각각 0건, `raw_emotion_result=jsonb`, 활성 감정 제약 3개 확인
 
 검증용 `k7-mvp-lch-preview`는 공개 도메인과 `DATABASE_URL`·OpenAI·CORS 사용자 변수를 모두 제거했고 운영에서 참조하지 않습니다. 다만 실행 중인 검증 배포는 남아 있으므로, 운영 POST/GET 완전 동일성과 Vercel 통합 표시를 확인한 뒤 Railway 관리자가 이 서비스만 삭제합니다.
 
@@ -102,6 +109,7 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 8. Railway Python 모노레포 빌드 설정
 9. 활성·참고 자산 구분과 CI 매니페스트 검증
 10. 이희창·Claude용 운영 통합 인계 프롬프트
+11. 텍스트 분석·음성 감정 이중 파이프라인과 모델 인수 계약
 
 ## 검증 명령
 
@@ -137,8 +145,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 4. 전형진: 금융 모델 서버 URL·인증·정상/오류 JSON·세 분류축 전체 라벨 목록 제공
 5. 이희창: Railway에서 접근 가능한 형진 모델 서버 경로를 기존 STT 뒤에 연결
 6. 김민기: 실제 규정 파일과 RAG·브리핑카드 조립 연결
-7. Vercel 소유자: 유료 팀 공유 없이 자기 계정에서 운영 API 환경변수와 배포 반영
-8. Railway 관리자: POST/GET·Vercel 최종 검수 후 연결 해제된 `k7-mvp-lch-preview` 검증 서비스 삭제
+7. 음성 감정 담당: Railway에서 호출 가능한 모델 URL·인증·정상/실패 응답을 `emotion_temperature_result.schema.json`으로 제공
+8. 이희창: 선발급 `call_id`와 동일 `audio_bytes`를 실제 음성 모델에 전달하고 통합 함수에 결합
+9. Vercel 소유자: 유료 팀 공유 없이 자기 계정에서 운영 API 환경변수와 배포 반영
+10. Railway 관리자: POST/GET·Vercel 최종 검수 후 연결 해제된 `k7-mvp-lch-preview` 검증 서비스 삭제
 
 ## PR 상태
 

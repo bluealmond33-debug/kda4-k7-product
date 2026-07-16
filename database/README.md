@@ -7,9 +7,10 @@
 ```text
 고객 음성 파일
   → FastAPI POST /api/v1/calls
-  → 완성된 음성 파일 전체를 실제 STT에 전달
-  → STT 텍스트로 요약·업무유형·부서·라우팅 분석
-  → 고객 음성으로 감정온도 분석(실제 모델 수령 전 unavailable)
+  → 분석 전에 call_id 발급
+  ├─ 동일 음성 → STT → OpenAI 요약·업무유형·부서·라우팅
+  └─ 동일 음성 → 음성 감정 모델(실제 모델 수령 전 unavailable)
+  → external_session_key와 call_id 일치 확인 후 결과 결합
   → 비-AI 어댑터가 모델 결과를 표준화
   → PostgreSQL 3개 테이블 저장
   → GET /api/v1/calls/{call_id}/consultation-card
@@ -27,8 +28,11 @@
 | API 응답 JSON Schema | `contracts/mvp_call_response.schema.json` |
 | 정상 예제 | `contracts/examples/mvp_call_response.example.json` |
 | 원시 모델 입력 경계 | `contracts/model_consultation_result_input.schema.json` |
+| 음성 감정 결과 계약 | `contracts/emotion_temperature_result.schema.json` |
 | 금융 모델 후처리 규칙 | `mvp/model_postprocessing.v1.json` |
 | 활성 모델 어댑터 | `../backend/app/model_adapter.py` |
+| 음성 감정 어댑터 | `../backend/app/emotion_adapter.py` |
+| 이중 분석 상세 명세 | `../docs/AUDIO_TEXT_DUAL_PIPELINE.md` |
 | FastAPI | `../backend/app/` |
 | React 연결 | `../src/services/consultation.ts` |
 
@@ -37,6 +41,8 @@
 1. `calls`: 고객 음성 접수 한 건
 2. `transcripts`: STT 원문 한 건
 3. `consultation_cards`: 상담사가 볼 표준 카드 한 건
+
+`consultation_cards.raw_model_result`에는 OpenAI/분류 모델 원시 결과를, `raw_emotion_result`에는 음성 감정 모델 원시 결과를 JSONB로 보존합니다. 화면에는 검증된 표준 컬럼만 전달합니다.
 
 React와 모델 코드는 PostgreSQL에 직접 연결하지 않습니다. FastAPI만 `DATABASE_URL`을 사용합니다.
 
@@ -68,6 +74,8 @@ React와 모델 코드는 PostgreSQL에 직접 연결하지 않습니다. FastAP
   "reason": "감정 모델은 아직 MVP 통합 전입니다."
 }
 ```
+
+활성 감정 상태는 `unavailable | completed`만 허용합니다. `demo` 상태, 텍스트 기반 감정, 다른 `call_id`의 감정 결과, 점수와 단계가 맞지 않는 결과는 저장 전에 거절합니다.
 
 형진 금융 특화 모델은 표준 필드를 직접 만들 필요 없이 다음 원시 결과를 반환할 수 있습니다.
 

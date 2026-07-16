@@ -1,7 +1,8 @@
 param(
     [string]$ApiBaseUrl = "https://kda4-k7-backend-production.up.railway.app",
     [string]$FrontendUrl = "https://k7product.vercel.app",
-    [string]$AudioPath
+    [string]$AudioPath,
+    [string]$CleanupDatabaseUrlEnvironmentVariable = "K7_TEST_DATABASE_URL"
 )
 
 $ErrorActionPreference = "Stop"
@@ -115,7 +116,11 @@ if (-not $result.frontend_integrated) {
 if ($result.audio_smoke_requested) {
     try {
         $resolvedAudio = (Resolve-Path -LiteralPath $AudioPath).Path
-        & "$PSScriptRoot\smoke-mvp.ps1" -AudioPath $resolvedAudio -ApiBaseUrl $apiBase
+        & "$PSScriptRoot\smoke-mvp.ps1" `
+            -AudioPath $resolvedAudio `
+            -ApiBaseUrl $apiBase `
+            -CleanupDatabaseUrlEnvironmentVariable $CleanupDatabaseUrlEnvironmentVariable `
+            -RequireCleanup
         $result.audio_smoke_passed = $true
     } catch {
         $result.audio_smoke_passed = $false

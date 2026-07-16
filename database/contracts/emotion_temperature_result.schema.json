@@ -22,8 +22,8 @@
     "schema_version": { "const": "1.0" },
     "external_session_key": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 100
+      "format": "uuid",
+      "description": "FastAPI가 분석 전에 발급한 K7 call_id"
     },
     "result_key": { "type": "string", "minLength": 1, "maxLength": 100 },
     "model_name": { "type": "string", "minLength": 1, "maxLength": 100 },

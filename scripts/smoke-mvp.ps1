@@ -2,12 +2,25 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$AudioPath,
 
-    [string]$ApiBaseUrl = "http://localhost:8000"
+    [string]$ApiBaseUrl = "http://localhost:8000",
+
+    [string]$CleanupDatabaseUrlEnvironmentVariable = "K7_TEST_DATABASE_URL",
+
+    [switch]$RequireCleanup
 )
 
 $ErrorActionPreference = "Stop"
 $resolvedAudio = (Resolve-Path -LiteralPath $AudioPath).Path
 $baseUrl = $ApiBaseUrl.TrimEnd("/")
+$cleanupDatabaseUrl = [Environment]::GetEnvironmentVariable(
+    $CleanupDatabaseUrlEnvironmentVariable
+)
+if ($RequireCleanup -and -not $cleanupDatabaseUrl) {
+    throw (
+        "Cleanup is required before upload, but environment variable " +
+        "$CleanupDatabaseUrlEnvironmentVariable is missing"
+    )
+}
 $mimeType = switch ([IO.Path]::GetExtension($resolvedAudio).ToLowerInvariant()) {
     ".wav" { "audio/wav" }
     ".mp3" { "audio/mpeg" }
@@ -31,6 +44,9 @@ if ($health.contract_version -ne "mvp-1.0") {
 
 $createdBodyPath = [IO.Path]::GetTempFileName()
 $storedBodyPath = [IO.Path]::GetTempFileName()
+$createdCallId = $null
+$cleanupAttempted = $false
+$cleanupSucceeded = $false
 
 try {
     Write-Host "2/3 upload customer voice"
@@ -53,6 +69,7 @@ try {
     if ($created.status -ne "ready" -or !$created.call_id) {
         throw "Call creation did not return a ready call_id"
     }
+    $createdCallId = [string]$created.call_id
     if ($created.schema_version -ne "mvp-1.0") {
         throw "Create response contract version is not mvp-1.0"
     }
@@ -97,7 +114,39 @@ try {
         department = $stored.consultation_card.department
         incident_risk = $stored.consultation_card.incident_risk
         post_get_exact_match = $true
+        cleanup_required = [bool]$RequireCleanup
     } | Format-List
 } finally {
     Remove-Item -LiteralPath $createdBodyPath, $storedBodyPath -Force -ErrorAction SilentlyContinue
+
+    if ($createdCallId) {
+        if ($cleanupDatabaseUrl) {
+            $cleanupAttempted = $true
+            $python = Join-Path $PSScriptRoot "..\.venv\Scripts\python.exe"
+            if (-not (Test-Path -LiteralPath $python)) {
+                $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+                if ($null -eq $pythonCommand) {
+                    throw "Python is required to clean up the smoke-test row"
+                }
+                $python = $pythonCommand.Source
+            }
+            & $python `
+                (Join-Path $PSScriptRoot "cleanup-test-call.py") `
+                --call-id $createdCallId `
+                --database-url-env $CleanupDatabaseUrlEnvironmentVariable
+            if ($LASTEXITCODE -ne 0) {
+                throw "Smoke-test database cleanup failed for call_id=$createdCallId"
+            }
+            $cleanupSucceeded = $true
+        } elseif ($RequireCleanup) {
+            throw (
+                "Smoke test created call_id=$createdCallId but cleanup variable " +
+                "$CleanupDatabaseUrlEnvironmentVariable is missing"
+            )
+        }
+    }
+
+    if ($cleanupAttempted -and -not $cleanupSucceeded) {
+        throw "Smoke-test row cleanup was attempted but did not complete"
+    }
 }
