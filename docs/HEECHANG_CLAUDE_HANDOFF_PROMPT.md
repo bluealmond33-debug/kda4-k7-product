@@ -15,6 +15,7 @@
 - 검토 PR: `lch → main`, PR #1
 - 이희창 운영 백엔드: `https://kda4-k7-backend-production.up.railway.app`
 - 운영 API 문서: `https://kda4-k7-backend-production.up.railway.app/docs`
+- 배포 코드 읽기 전용 감사: `docs/OPERATING_BACKEND_AUDIT.md`
 
 ## 2026-07-16 통합 PR 이후 현재 상태
 
