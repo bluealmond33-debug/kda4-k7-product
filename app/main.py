@@ -1,3 +1,10 @@
+import os
+
+# faiss(RAG)와 faster-whisper/ctranslate2가 서로 다른 OpenMP 런타임(libiomp5md.dll /
+# libomp140.dll)을 링크해서 같은 프로세스에서 둘 다 쓰면 Windows에서 충돌·크래시가 난다.
+# 다른 라이브러리 import 전에 설정해야 효과가 있다. (온프레미스 모드에서만 실제로 문제됨)
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI

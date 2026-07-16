@@ -68,10 +68,7 @@ def _transcribe(filename: str, audio_bytes: bytes) -> TranscribeResult:
 
 
 def _analyze(transcript: str) -> GptAnalysis:
-    """온프레미스 스위치(settings.use_local_models) — true면 Ollama 로컬 LLM, 아니면 OpenAI GPT.
-
-    ⚠️ RAG(search_procedures)는 임베딩 때문에 이 스위치와 무관하게 아직 OpenAI를 쓴다 —
-    로컬 임베딩 모델 전환은 별도 작업으로 남겨둠."""
+    """온프레미스 스위치(settings.use_local_models) — true면 Ollama 로컬 LLM, 아니면 OpenAI GPT."""
     if settings.use_local_models:
         return analyze_transcript_local(settings, transcript)
     return analyze_transcript(_get_openai_client(), transcript)
@@ -100,9 +97,8 @@ async def judge_endpoint(body: JudgeRequest) -> JudgeResult:
 
 @router.post("/rag", response_model=RagResult)
 async def rag_endpoint(body: RagRequest) -> RagResult:
-    client = _get_openai_client()
     query = _rag_query(body.reason_codes, body.summary)
-    documents = search_procedures(client, query)
+    documents = search_procedures(settings, query)
     return RagResult(documents=documents)
 
 
@@ -165,8 +161,7 @@ async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
     gpt_result = _analyze(transcribed.text)
     emotion_result = analyze_emotion(audio_bytes)
     judgement = run_judge(gpt_result.risk_flags, emotion_result)
-    # RAG는 임베딩이 필요해 온프레미스 스위치와 무관하게 아직 OpenAI를 쓴다.
-    references = search_procedures(_get_openai_client(), _rag_query(judgement.reason_codes, gpt_result.summary))
+    references = search_procedures(settings, _rag_query(judgement.reason_codes, gpt_result.summary))
 
     return BriefingCard(
         call_id=transcribed.call_id,

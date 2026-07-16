@@ -5,19 +5,27 @@
 (실제 사내 규정·매뉴얼 인덱스, 체크리스트 로직) 도착하면 교체될 예정.
 
 Windows에 C++ 빌드 도구 없이도 설치되도록 chromadb 대신 faiss-cpu(prebuilt wheel)를 사용한다.
-임베딩은 OpenAI 임베딩 API(text-embedding-3-small)로 생성하고, 인덱스는 프로세스 메모리에 캐시한다.
+인덱스는 프로세스 메모리에 캐시한다.
+
+임베딩은 settings.use_local_models로 두 가지 중 선택:
+- false(기본): OpenAI 임베딩 API(text-embedding-3-small)
+- true(온프레미스): Ollama의 bge-m3(로컬, 다국어/한국어 지원)
+두 임베딩은 차원이 다르므로 인덱스 캐시도 모드별로 분리한다.
 
 MVP는 더미 규정 텍스트 몇 개만 넣어서 파이프라인 동작을 확인한다.
 실제 서비스에서는 사내 규정집·업무 매뉴얼 문서를 청크 단위로 적재해야 한다.
 """
 
+import httpx
 import numpy as np
 import faiss
 from openai import OpenAI
 
+from app.config import Settings
 from app.schemas import RagDocument
 
-_EMBEDDING_MODEL = "text-embedding-3-small"
+_OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+_OLLAMA_EMBEDDING_MODEL = "bge-m3"
 
 _DUMMY_DOCS = [
     {
@@ -67,39 +75,55 @@ _DUMMY_DOCS = [
     },
 ]
 
-_index: faiss.IndexFlatIP | None = None
-_doc_lookup: list[dict] = []
+_index_cache: dict[str, faiss.IndexFlatIP] = {}
+_doc_lookup: list[dict] = _DUMMY_DOCS
 
 
-def _embed(client: OpenAI, texts: list[str]) -> np.ndarray:
-    response = client.embeddings.create(model=_EMBEDDING_MODEL, input=texts)
+def _embed_openai(settings: Settings, texts: list[str]) -> np.ndarray:
+    client = OpenAI(api_key=settings.openai_api_key)
+    response = client.embeddings.create(model=_OPENAI_EMBEDDING_MODEL, input=texts)
     vectors = np.array([item.embedding for item in response.data], dtype="float32")
     faiss.normalize_L2(vectors)
     return vectors
 
 
-def _ensure_index(client: OpenAI) -> None:
-    global _index, _doc_lookup
+def _embed_ollama(settings: Settings, texts: list[str]) -> np.ndarray:
+    response = httpx.post(
+        f"{settings.ollama_base_url}/api/embed",
+        json={"model": _OLLAMA_EMBEDDING_MODEL, "input": texts},
+        timeout=60,
+    )
+    response.raise_for_status()
+    vectors = np.array(response.json()["embeddings"], dtype="float32")
+    faiss.normalize_L2(vectors)
+    return vectors
 
-    if _index is not None:
-        return
 
-    vectors = _embed(client, [doc["text"] for doc in _DUMMY_DOCS])
+def _embed(settings: Settings, texts: list[str]) -> np.ndarray:
+    if settings.use_local_models:
+        return _embed_ollama(settings, texts)
+    return _embed_openai(settings, texts)
+
+
+def _ensure_index(settings: Settings) -> faiss.IndexFlatIP:
+    cache_key = "local" if settings.use_local_models else "cloud"
+    if cache_key in _index_cache:
+        return _index_cache[cache_key]
+
+    vectors = _embed(settings, [doc["text"] for doc in _DUMMY_DOCS])
     dimension = vectors.shape[1]
 
     index = faiss.IndexFlatIP(dimension)
     index.add(vectors)
+    _index_cache[cache_key] = index
+    return index
 
-    _index = index
-    _doc_lookup = _DUMMY_DOCS
 
+def search_procedures(settings: Settings, query: str, top_k: int = 3) -> list[RagDocument]:
+    index = _ensure_index(settings)
 
-def search_procedures(client: OpenAI, query: str, top_k: int = 3) -> list[RagDocument]:
-    _ensure_index(client)
-    assert _index is not None
-
-    query_vector = _embed(client, [query])
-    scores, indices = _index.search(query_vector, top_k)
+    query_vector = _embed(settings, [query])
+    scores, indices = index.search(query_vector, top_k)
 
     documents = []
     for score, idx in zip(scores[0], indices[0]):
