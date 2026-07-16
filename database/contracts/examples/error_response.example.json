@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "error": {
+    "code": "validation_error",
+    "message": "입력 데이터가 계약과 일치하지 않습니다.",
+    "request_id": "K7-REQ-DEMO-0001",
+    "details": [
+      {
+        "field": "emotion_temperature_score",
+        "code": "out_of_range"
+      }
+    ]
+  }
+}

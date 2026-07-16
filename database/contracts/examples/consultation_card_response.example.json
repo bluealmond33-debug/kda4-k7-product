@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "data": {
+    "external_session_key": "K7-DEMO-20260715-0001",
+    "session_status": "ready",
+    "customer": {
+      "customer_number": "CUST-DEMO-001",
+      "full_name_masked": "김*준",
+      "phone_masked": "010-****-1001",
+      "account_number_masked": "110-***-000001"
+    },
+    "emotion_temperature": {
+      "status": "completed",
+      "score": 74.0,
+      "level": "elevated",
+      "label_ko": "고조",
+      "audio_quality": "normal",
+      "failure_code": null,
+      "signals": ["불안·다급 발화 감지"]
+    },
+    "consultation_card": {
+      "schema_version": "1.0",
+      "inquiry_type": "mistaken_transfer",
+      "summary": "수취인 선택 오류로 착오송금 반환 절차를 요청함",
+      "customer_request": "반환 가능 여부와 신청 절차 확인",
+      "keywords": ["착오송금", "반환신청"],
+      "risk_factors": ["금전 피해 가능성"],
+      "urgency_level": "high",
+      "risk_level": "high",
+      "related_manual_refs": ["송금-반환-01"],
+      "suggested_opening": "착오송금 문제로 많이 놀라셨겠습니다. 송금 시점부터 확인하겠습니다.",
+      "recommended_actions": ["송금내역 확인", "반환지원 절차 안내"],
+      "confirmation_items": ["송금 시각", "수취 계좌 마스킹 정보"],
+      "confirmation_status": "pending"
+    },
+    "routing_result": {
+      "department_code": "remittance",
+      "department_name": "송금지원팀",
+      "counselor_code": "AGENT002",
+      "counselor_name": "가상상담사02",
+      "recommendation_rank": 1,
+      "confidence": 0.96,
+      "rationale": "착오송금 문의 유형과 담당 업무가 일치함",
+      "selected": true
+    },
+    "recent_consultations": [
+      {
+        "inquiry_type": "general_inquiry",
+        "ai_summary": "가상 과거상담 요약",
+        "resolution_result": "안내 완료",
+        "department_name": "일반은행상담팀",
+        "risk_level": "low",
+        "consulted_at": "2026-06-12T15:00:00Z"
+      }
+    ],
+    "masked_utterances": [
+      {
+        "sequence_no": 1,
+        "speaker_type": "customer",
+        "masked_transcript": "받는 분을 잘못 선택해서 ***만원을 보냈습니다.",
+        "spoken_at": "2026-07-15T00:00:08Z"
+      }
+    ]
+  }
+}

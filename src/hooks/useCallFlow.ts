@@ -13,7 +13,10 @@ import {
 import {
   startSttSession,
   summarize,
+  getConsultationCard,
+  getDemoConsultationCard,
   type CallSummary,
+  type ConsultationCardResponse,
   type TranscriptChunk,
   type SttSession,
 } from "../services";
@@ -76,6 +79,25 @@ const PREP_ITEMS = [
   },
 ];
 
+const INQUIRY_LABELS: Record<string, string> = {
+  mistaken_transfer: "전자금융 › 착오송금",
+  voice_phishing_suspected: "금융사고 › 보이스피싱 의심",
+  lost_card: "카드 › 분실신고",
+  overseas_payment: "카드 › 해외결제",
+  account_opening: "예금 › 계좌개설",
+  payment_error: "전자금융 › 결제 오류",
+  loan: "여신 › 대출상담",
+  general_inquiry: "일반 문의",
+  other: "기타 문의",
+};
+
+const RISK_LABELS = {
+  low: "낮음",
+  medium: "주의",
+  high: "높음",
+  critical: "긴급",
+} as const;
+
 const fmt = (s: number) => {
   const m = Math.floor(s / 60);
   const r = s % 60;
@@ -117,7 +139,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [resultMenu, setResultMenu] = useState(false);
   const [followups, setFollowups] = useState<Followup[]>(DEFAULT_FOLLOWUPS);
 
-  const [, setSummary] = useState<CallSummary | null>(null);
+  const [summary, setSummary] = useState<CallSummary | null>(null);
+  const [consultationResponse, setConsultationResponse] =
+    useState<ConsultationCardResponse>(() => getDemoConsultationCard());
   const summaryText = useRef("");
 
   const [scale, setScale] = useState(1);
@@ -172,12 +196,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       .filter((c) => c.isFinal)
       .map((c) => c.text)
       .join(" ");
-    try {
-      const sum = await summarize({ chunks: transcript.current, text });
-      setSummary(sum);
-    } catch {
-      /* keep the mock summary visible on failure */
-    }
+    const [summaryResult, cardResult] = await Promise.allSettled([
+      summarize({ chunks: transcript.current, text }),
+      getConsultationCard(),
+    ]);
+    if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
+    if (cardResult.status === "fulfilled") setConsultationResponse(cardResult.value);
+    // On API failure the contract fixture remains visible, preserving the live demo.
   }, []);
 
   const toPrep = useCallback(() => {
@@ -272,6 +297,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setEmo(0);
     setSilenceLeft(0);
     setMicErr("");
+    setSummary(null);
+    setConsultationResponse(getDemoConsultationCard());
     setVerified(false);
     setAuthInput("");
     setAuthErr(false);
@@ -415,6 +442,28 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const mA = mColors(authMethod === "account");
 
   const allChecked = prepChecks.every(Boolean);
+  const integrated = consultationResponse.data;
+  const card = integrated.consultation_card;
+  const routing = integrated.routing_result;
+  const temperature = integrated.emotion_temperature;
+  const inquiryLabel = card
+    ? INQUIRY_LABELS[card.inquiry_type] ?? card.inquiry_type
+    : summary?.type ?? "상담 유형 분석 중";
+  const contractBullets = card
+    ? [card.summary, card.customer_request, ...card.risk_factors].filter(
+        (value): value is string => !!value
+      )
+    : [];
+  const prepSummaryBullets = (contractBullets.length
+    ? contractBullets
+    : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
+  ).slice(0, 4);
+  const prepDefinitions = PREP_ITEMS.map((fallback, index) => ({
+    ...fallback,
+    title: card?.confirmation_items[index] ?? fallback.title,
+  }));
+  const emotionBars =
+    temperature.level === "elevated" ? 3 : temperature.level === "caution" ? 2 : 1;
 
   return {
     // refs
@@ -473,7 +522,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     wrapLoading: p === "summarizing",
     wrapReady: p === "wrap",
     // prep card
-    prepRows: PREP_ITEMS.map((r, i) => {
+    prepRows: prepDefinitions.map((r, i) => {
       const on = prepChecks[i];
       return {
         ...r,
@@ -492,6 +541,37 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       };
     }),
     prepDone: prepChecks.filter(Boolean).length,
+    prepTotal: prepDefinitions.length,
+    prepHeadline: card?.summary ?? summary?.headline ?? "상담카드 생성 중",
+    prepCustomerLine: `${integrated.customer.full_name_masked} · ${inquiryLabel} · ${integrated.customer.phone_masked}`,
+    prepRoutingTitle:
+      routing?.counselor_name && routing.department_name
+        ? `${routing.department_name} · ${routing.counselor_name}`
+        : summary?.recommendedAgent ?? "담당 상담사 추천 중",
+    prepRoutingReason: routing?.rationale ?? "문의 유형과 담당 업무를 대조하고 있습니다",
+    prepEmotionLabel: temperature.label_ko ?? summary?.emotion.label_ko ?? "분석 중",
+    prepEmotionSignal:
+      temperature.signals.join(" · ") ||
+      summary?.emotion.signals.join(" · ") ||
+      "특이 감정 신호 없음",
+    prepEmotionBars: emotionBars,
+    prepRiskLabel: card ? RISK_LABELS[card.risk_level] : "분석 중",
+    prepRiskSignal: card?.risk_factors.join(" · ") || "특이 사고 징후 없음",
+    prepSummaryBullets,
+    externalSessionKey: integrated.external_session_key,
+    customerNameMasked: integrated.customer.full_name_masked,
+    customerNumber: integrated.customer.customer_number,
+    customerPhoneMasked: integrated.customer.phone_masked,
+    inquiryLabel,
+    wrapSummaryDefault: [
+      `${integrated.customer.full_name_masked} 고객의 ${card?.summary ?? summary?.headline ?? "상담 내용"}.`,
+      card?.customer_request ? `요청사항: ${card.customer_request}.` : "",
+      card?.recommended_actions.length
+        ? `권장 조치: ${card.recommended_actions.join(", ")}.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
     connectBg: allChecked ? "var(--blue-700)" : "var(--gray-200)",
     connectFg: allChecked ? "#fff" : "var(--gray-600)",
     connectCursor: allChecked ? "pointer" : "not-allowed",

@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k7.example/contracts/emotion-temperature-result-1.0.schema.json",
+  "title": "K7 Emotion Temperature Result",
+  "description": "음성 기반 감정온도 모델이 백엔드에 전달하는 결과 계약이다. 음성 파일 경로와 고객 개인정보는 포함하지 않는다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "external_session_key",
+    "result_key",
+    "model_name",
+    "model_version",
+    "analysis_status",
+    "emotion_temperature_score",
+    "emotion_temperature_level",
+    "audio_quality",
+    "failure_code",
+    "generated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "external_session_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "result_key": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "model_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "model_version": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "analysis_status": {
+      "type": "string",
+      "enum": ["completed", "unavailable", "failed"]
+    },
+    "emotion_temperature_score": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "emotion_temperature_level": {
+      "type": ["string", "null"],
+      "enum": ["stable", "caution", "elevated", null]
+    },
+    "voice_arousal_score": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "voice_dominance_score": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "voice_valence_score": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "negative_activation_score": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "audio_quality": {
+      "type": "string",
+      "enum": ["normal", "low_volume", "noisy", "too_short", "unavailable"]
+    },
+    "failure_code": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "generated_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "analysis_status": { "const": "completed" } },
+        "required": ["analysis_status"]
+      },
+      "then": {
+        "properties": {
+          "emotion_temperature_score": { "type": "number" },
+          "emotion_temperature_level": {
+            "type": "string",
+            "enum": ["stable", "caution", "elevated"]
+          },
+          "failure_code": { "type": "null" }
+        }
+      },
+      "else": {
+        "properties": {
+          "emotion_temperature_score": { "type": "null" },
+          "emotion_temperature_level": { "type": "null" },
+          "voice_arousal_score": { "type": "null" },
+          "voice_dominance_score": { "type": "null" },
+          "voice_valence_score": { "type": "null" },
+          "negative_activation_score": { "type": "null" },
+          "failure_code": { "type": "string", "minLength": 1, "maxLength": 100 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "analysis_status": { "const": "completed" },
+          "emotion_temperature_level": { "const": "stable" }
+        },
+        "required": ["analysis_status", "emotion_temperature_level"]
+      },
+      "then": {
+        "properties": { "emotion_temperature_score": { "maximum": 33 } }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "analysis_status": { "const": "completed" },
+          "emotion_temperature_level": { "const": "caution" }
+        },
+        "required": ["analysis_status", "emotion_temperature_level"]
+      },
+      "then": {
+        "properties": {
+          "emotion_temperature_score": { "exclusiveMinimum": 33, "maximum": 66 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "analysis_status": { "const": "completed" },
+          "emotion_temperature_level": { "const": "elevated" }
+        },
+        "required": ["analysis_status", "emotion_temperature_level"]
+      },
+      "then": {
+        "properties": { "emotion_temperature_score": { "exclusiveMinimum": 66 } }
+      }
+    }
+  ]
+}

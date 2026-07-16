@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "external_session_key": "K7-DEMO-20260715-0001",
+  "analysis_result_key": "K7-EMOTION-DEMO-0001-001",
+  "inquiry_type": "mistaken_transfer",
+  "summary": "착오송금 반환 및 거래 확인 문의",
+  "customer_request": "거래 시각과 수취 계좌 확인 후 반환 절차 안내 요청",
+  "keywords": ["착오송금", "반환지원"],
+  "risk_factors": ["금전 피해 가능성", "고객 불안 발화"],
+  "urgency_level": "high",
+  "risk_level": "high",
+  "related_manual_refs": ["전자금융거래-착오송금-12-1", "전자금융거래-정보마스킹-12-4"],
+  "suggested_opening": "착오송금 건으로 많이 놀라셨겠습니다. 거래 시각부터 확인하겠습니다.",
+  "recommended_actions": ["거래내역 확인", "반환지원 절차 안내", "필요 시 사고대응팀 이관"],
+  "confirmation_items": ["확정적 반환 표현 금지", "개인정보 마스킹 유지", "녹취 고지 확인"],
+  "confirmation_status": "pending",
+  "confirmed_at": null,
+  "model_name": "k7-card-model",
+  "model_version": "0.1.0",
+  "generated_at": "2026-07-15T00:01:00Z"
+}

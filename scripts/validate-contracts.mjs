@@ -1,0 +1,65 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import Ajv2020 from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const contracts = path.join(root, "database", "contracts");
+const pairs = [
+  ["consultation_card.schema.json", "examples/consultation_card.example.json"],
+  [
+    "consultation_card_response.schema.json",
+    "examples/consultation_card_response.example.json",
+  ],
+  [
+    "emotion_temperature_result.schema.json",
+    "examples/emotion_temperature_result.example.json",
+  ],
+  ["error_response.schema.json", "examples/error_response.example.json"],
+  ["masked_utterance.schema.json", "examples/masked_utterance.example.json"],
+  ["routing_candidate.schema.json", "examples/routing_candidate.example.json"],
+  ["stt_utterance_input.schema.json", "examples/stt_utterance_input.example.json"],
+];
+
+const readJson = (relativePath) =>
+  JSON.parse(fs.readFileSync(path.join(contracts, relativePath), "utf8"));
+
+for (const [schemaPath, examplePath] of pairs) {
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  addFormats(ajv);
+  const validate = ajv.compile(readJson(schemaPath));
+  const example = readJson(examplePath);
+  if (!validate(example)) {
+    throw new Error(`${examplePath} failed ${schemaPath}: ${ajv.errorsText(validate.errors)}`);
+  }
+}
+
+const emotionSchema = readJson("emotion_temperature_result.schema.json");
+const emotionExample = readJson("examples/emotion_temperature_result.example.json");
+const emotionAjv = new Ajv2020({ allErrors: true, strict: false });
+addFormats(emotionAjv);
+const validateEmotion = emotionAjv.compile(emotionSchema);
+
+const invalidBoundaries = [
+  [34, "stable"],
+  [33, "caution"],
+  [67, "caution"],
+  [66, "elevated"],
+  [-1, "stable"],
+  [101, "elevated"],
+];
+for (const [score, level] of invalidBoundaries) {
+  const candidate = {
+    ...emotionExample,
+    emotion_temperature_score: score,
+    emotion_temperature_level: level,
+  };
+  if (validateEmotion(candidate)) {
+    throw new Error(`invalid emotion boundary accepted: score=${score}, level=${level}`);
+  }
+}
+
+console.log(
+  `JSON_CONTRACTS_OK schemas=${pairs.length} examples=${pairs.length} invalid_boundaries_rejected=${invalidBoundaries.length}`
+);

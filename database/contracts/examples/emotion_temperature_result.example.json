@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "external_session_key": "K7-DEMO-20260715-0001",
+  "result_key": "K7-EMOTION-DEMO-0001-001",
+  "model_name": "k7-emotion-temperature-model",
+  "model_version": "0.1.0",
+  "analysis_status": "completed",
+  "emotion_temperature_score": 74.0,
+  "emotion_temperature_level": "elevated",
+  "voice_arousal_score": 70.0,
+  "voice_dominance_score": 58.0,
+  "voice_valence_score": 28.0,
+  "negative_activation_score": 50.4,
+  "audio_quality": "normal",
+  "failure_code": null,
+  "generated_at": "2026-07-15T00:00:55Z"
+}

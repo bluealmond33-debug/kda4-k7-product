@@ -21,7 +21,12 @@ export async function summarize(transcript: Transcript): Promise<CallSummary> {
       "거래 시각·수취 계좌 확인 및 반환 절차 안내 요청.",
       "보이스피싱 의심 정황 없음 · 단, 고객 불안·다급 발화 감지됨.",
     ],
-    emotion: { level: 2, label: emotionLabel(2), signals: ["불안·다급 발화 감지"] },
+    emotion: {
+      score: 56,
+      level: "caution",
+      label_ko: emotionLabel("caution"),
+      signals: ["불안·다급 발화 감지"],
+    },
     incidentRisk: "watch",
     recommendedAgent: "숙련 상담사 우선",
   };

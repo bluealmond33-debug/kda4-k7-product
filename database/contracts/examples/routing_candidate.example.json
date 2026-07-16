@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "external_session_key": "K7-DEMO-20260715-0001",
+  "department_code": "remittance",
+  "counselor_code": "AGENT002",
+  "recommendation_rank": 1,
+  "confidence": 0.96,
+  "rationale": "착오송금 문의 유형과 담당 업무가 일치함",
+  "selected": true,
+  "model_name": "k7-router",
+  "model_version": "0.1.0"
+}

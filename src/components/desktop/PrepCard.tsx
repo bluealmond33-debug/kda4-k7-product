@@ -40,10 +40,10 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <span className="mi" style={css("margin-left:auto;font-size:22px;color:var(--gray-600);cursor:pointer")}>close</span>
           </div>
           <div style={css("font:600 22px/1.3 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>
-            착오송금 반환 · 거래 확인 문의
+            {vm.prepHeadline}
           </div>
           <div style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:5px")}>
-            고객 김OO · 전자금융 › 착오송금 · 010-****-4821
+            고객 {vm.prepCustomerLine}
           </div>
         </div>
 
@@ -54,27 +54,35 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>auto_awesome</span>AI 배정 권고
               </div>
-              <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>숙련 상담사 우선</div>
-              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:4px")}>사고 대응 경험 3년 이상 권장</div>
+              <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</div>
+              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:4px")}>{vm.prepRoutingReason}</div>
             </div>
             <div style={css("border:1px solid var(--amber-400);background:#fff;border-radius:12px;padding:14px 16px")}>
               <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:8px")}>고객 감정온도</div>
               <div style={css("display:flex;align-items:center;gap:8px")}>
                 <span style={css("display:flex;gap:2px")}>
-                  <span style={css("width:18px;height:6px;border-radius:2px;background:var(--amber-700)")} />
-                  <span style={css("width:18px;height:6px;border-radius:2px;background:var(--amber-700)")} />
-                  <span style={css("width:18px;height:6px;border-radius:2px;background:var(--gray-200)")} />
+                  {[1, 2, 3].map((bar) => (
+                    <span
+                      key={bar}
+                      style={css(
+                        "width:18px;height:6px;border-radius:2px;background:" +
+                          (bar <= vm.prepEmotionBars
+                            ? "var(--amber-700)"
+                            : "var(--gray-200)")
+                      )}
+                    />
+                  ))}
                 </span>
-                <span style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>격앙 주의</span>
+                <span style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>{vm.prepEmotionLabel}</span>
               </div>
-              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-top:4px")}>불안·다급 발화 감지</div>
+              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-top:4px")}>{vm.prepEmotionSignal}</div>
             </div>
             <div style={css("border:1px solid var(--red-400);background:#fff;border-radius:12px;padding:14px 16px")}>
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);margin-bottom:8px")}>
                 <span className="mi" style={css("font-size:14px")}>gpp_maybe</span>사고 징후
               </div>
-              <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>주의</div>
-              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);margin-top:4px")}>착오송금 위험 신호</div>
+              <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>{vm.prepRiskLabel}</div>
+              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);margin-top:4px")}>{vm.prepRiskSignal}</div>
             </div>
           </div>
 
@@ -86,11 +94,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>대기 중 고객 진술 기반 · 방금 생성됨</span>
             </div>
             <div style={css("display:flex;flex-direction:column;gap:10px")}>
-              {[
-                "오늘 오전 지인에게 30만원 이체 중 다른 계좌로 착오송금했다고 진술.",
-                "거래 시각·수취 계좌 확인 및 반환 절차 안내 요청.",
-                "보이스피싱 의심 정황 없음 · 단, 고객 불안·다급 발화 감지됨.",
-              ].map((t, i) => (
+              {vm.prepSummaryBullets.map((t, i) => (
                 <div key={i} style={css("display:flex;gap:11px")}>
                   <span style={css("width:3px;border-radius:2px;background:var(--blue-500);flex:none")} />
                   <span style={css("font:400 13.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
@@ -104,7 +108,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <div style={css("display:flex;align-items:baseline;gap:8px;margin-bottom:10px")}>
               <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>이번 상담 유의사항</span>
               <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>상담 유형·감정온도에 따라 자동 구성 · 모두 확인해야 연결 가능</span>
-              <span style={css("margin-left:auto;font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{vm.prepDone} / 3 확인</span>
+              <span style={css("margin-left:auto;font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{vm.prepDone} / {vm.prepTotal} 확인</span>
             </div>
             <div style={css("display:flex;flex-direction:column;gap:9px")}>
               {vm.prepRows.map((r, i) => (
