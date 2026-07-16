@@ -66,7 +66,8 @@
 
 | 증거 | 기록값 |
 |---|---|
-| 운영 백엔드 통합 PR | `HeeChang50/kda4-k7-backend` PR #1, 저장소 접근 권한 없어 독립 diff 검토 대기 |
+| 운영 백엔드 통합 PR | `HeeChang50/kda4-k7-backend` PR #1 → `main` 머지 완료 |
+| 운영 백엔드 commit | `9f3c4da57a9cc12813f483093d51088037c23595` |
 | 운영 Railway deployment | `09fe8b9c-ba9f-4f65-b503-95d84f4e2aa0`, `SUCCESS` |
 | `lch` 기준 commit | PR #1 최신 HEAD (`duration_sec` 저장 정밀도·음성 감정 입력 정책 포함) |
 | PostgreSQL 자격증명 회전 | 2026-07-16 완료, 새 연결·UTF8·3테이블·0건 보존 확인 |
@@ -74,7 +75,7 @@
 | readiness 결과 | `true` |
 | 실제 음성 test call_id | `88df9f2e-ef4f-4d9d-b04c-b3affde47dfe` (검증 후 삭제) |
 | POST/GET 동일 | 상담 내용 동일, `duration_sec`만 `10.100000381469727 → 10.1`; `lch`에서 3자리 정규화 수정 |
-| Vercel 표시 | 대기 |
+| Vercel 표시 | 현재 배포 번들에 `/api/v1/calls`·Railway 주소 없음, 소유자 재배포 대기 |
 | 최종 인수 담당 | 이찬희 |
 
 운영 완료 판정은 `scripts/check-production-readiness.ps1`의 `ready=true`와 `scripts/smoke-mvp.ps1`의 실제 음성 성공이 모두 있어야 합니다.

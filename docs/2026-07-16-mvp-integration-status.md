@@ -21,7 +21,7 @@ flowchart LR
     G -. "Vercel 최신 배포 미반영" .-> B
 ```
 
-현재 운영 백엔드의 GitHub Source에는 `HeeChang50/kda4-k7-backend`와 `GitHub Repo not found`가 표시됩니다. `pollmap` 계정에서도 저장소가 404이므로 저장소 소유자 또는 Railway GitHub App 권한 확인이 필요합니다.
+Railway 배포 메타데이터에서 `HeeChang50/kda4-k7-backend` PR #1이 `main` commit `9f3c4da57a9cc12813f483093d51088037c23595`로 머지됐고 deployment `09fe8b9c-ba9f-4f65-b503-95d84f4e2aa0`가 `SUCCESS`임을 확인했습니다.
 
 2026-07-16 최신 공개 상태 확인에서 운영 API는 기존 8개 POST 경로와 새 `/api/v1/calls`, 상담카드 GET, `/health`를 합쳐 11개 경로를 제공합니다. `/health`는 `database=connected`, `contract_version=mvp-1.0`을 반환하며 `scripts/check-production-readiness.ps1` 결과는 `ready=true`입니다.
 
@@ -55,7 +55,7 @@ flowchart LR
 | 저장 API | 운영 `POST /api/v1/calls` 201 및 call_id 반환 | 운영 완료 | 시간 정밀도 수정 반영 |
 | 조회 API | 같은 call_id로 운영 GET 200, 카드 내용 동일 | 보완 중 | `duration_sec` 3자리 정규화 |
 | 감정 | 가짜 점수 없이 `unavailable` | MVP 완료 | 실제 모델 수령 후 함수 교체 |
-| Vercel | React 빌드 통과, 팀 공유는 유료라 사용하지 않음 | 소유자 작업 필요 | Vercel 소유자가 환경변수와 배포를 직접 반영 |
+| Vercel | 사이트 200, 현재 번들에는 `/api/v1/calls`·Railway 주소가 없고 `/summarize`만 존재 | 소유자 작업 필요 | `VITE_API_BASE_URL`, `VITE_USE_REAL_DATA_API=true` 적용 후 직접 재배포 |
 
 ## Railway 검증 결과
 
@@ -124,9 +124,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 ## 남은 팀 작업
 
-1. 이희창: `HeeChang50/kda4-k7-backend` PR #1을 이찬희가 실제 diff 검토할 수 있도록 저장소 읽기 권한 부여 또는 patch 제공
-2. 이희창: 검토 반영 후 PR #1을 운영 `main`에 머지
-3. 이희창: 운영 서비스에 `DATABASE_URL=${{Postgres.DATABASE_URL}}` 참조 설정. 회전 전 복사한 DB URL은 사용 금지
+1. 이희창: `lch` commit `00454d2`의 `duration_sec` 3자리 정규화와 `emotion_source="audio"` 검증을 운영 백엔드에 반영
+2. 이희창: 반영 후 실제 음성 스모크 테스트의 POST/GET 전체 동일성 통과
+3. Railway: 현재 `DATABASE_URL=${{Postgres.DATABASE_URL}}` 참조 연결 유지. 회전 전 복사한 DB URL은 사용 금지
 4. 전형진: 금융 모델 서버 URL·인증·정상/오류 JSON·세 분류축 전체 라벨 목록 제공
 5. 이희창: Railway에서 접근 가능한 형진 모델 서버 경로를 기존 STT 뒤에 연결
 6. 김민기: 실제 규정 파일과 RAG·브리핑카드 조립 연결

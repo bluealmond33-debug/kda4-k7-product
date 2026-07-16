@@ -20,12 +20,13 @@
 
 - 이희창 백엔드 통합 PR: `https://github.com/HeeChang50/kda4-k7-backend/pull/1`
 - 계약·DB·어댑터·POST/GET 이식과 Railway `DATABASE_URL` 연결이 운영에 반영됐다.
+- PR #1은 `main`에 머지됐으며 운영 commit은 `9f3c4da57a9cc12813f483093d51088037c23595`, Railway deployment는 `09fe8b9c-ba9f-4f65-b503-95d84f4e2aa0`이다.
 - 공개 운영 API는 기존 8개 POST 경로와 새 POST/GET, `/health`를 합쳐 11개 경로이며 readiness는 `true`다.
 - 실제 한국어 WAV로 운영 POST 201과 같은 call_id GET 200까지 성공했다.
 - STT가 반환한 `duration_sec=10.100000381469727`이 DB 저장 후 `10.1`로 조회되는 차이가 발견됐다. 이찬희 `lch`의 최신 `integration_service.py`처럼 응답 조립 전에 소수점 셋째 자리로 정규화하라.
-- `pollmap` 계정은 비공개 백엔드 저장소 접근 권한이 없어 PR diff를 독립 검토하지 못했다. 저장소 읽기 권한 또는 patch를 제공하라.
 - 화면에 노출 가능성이 있던 PostgreSQL 비밀번호는 2026-07-16 회전 완료했다. 회전 전에 복사한 `DATABASE_URL`은 무효이므로 절대 재사용하지 마라.
 - 운영 백엔드에는 비밀값을 복사하지 말고 Railway 참조 변수 `DATABASE_URL=${{Postgres.DATABASE_URL}}`만 설정하라.
+- 현재 `k7product.vercel.app`의 JavaScript 번들에는 `/api/v1/calls`와 Railway 운영 주소가 없고 기존 `/summarize`만 남아 있다. 프론트 소유자가 `VITE_API_BASE_URL`과 `VITE_USE_REAL_DATA_API=true`를 적용해 직접 재배포해야 한다.
 
 ## MVP의 확정 범위
 
