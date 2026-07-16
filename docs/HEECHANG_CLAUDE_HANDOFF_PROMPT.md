@@ -45,6 +45,7 @@
 - `database/mvp/model_postprocessing.v1.json`: 형진 모델의 금융 분류 라벨을 K7 부서·위험도로 변환하는 버전형 규칙
 - `database/contracts/mvp_call_response.schema.json`: FastAPI·DB·React 최종 `mvp-1.0` 응답 계약
 - `backend/app/model_adapter.py`: 모델 실험 필드를 버리고 위험도 별칭을 `low | high`로 정규화하는 활성 어댑터
+- `backend/app/integration_service.py`: 기존 STT·모델 결과를 받아 표준화·카드 조립·DB 저장만 수행하는 이식용 함수
 - `backend/app/contracts.py`: Pydantic 계약, 고위험 사유·감정 상태 조합·버전·음성 채널 검증
 - `backend/app/database.py`: `DATABASE_URL`을 사용하는 유일한 저장소 경계, 3테이블 원자적 저장과 call_id 재조회
 - `backend/app/main.py`: `POST /api/v1/calls`, `GET /api/v1/calls/{call_id}/consultation-card`, `GET /health` 참조 구현
@@ -113,8 +114,8 @@
 1. 이희창 저장소의 현재 엔드포인트·Pydantic 모델·STT 함수·분석 함수·Railway 시작 명령을 먼저 목록화하라.
 2. 기존 `/stt`, `/analyze`, `/judge`, `/rag`, `/analyze-text`, `/emotion`, `/summarize`, `/briefing` 동작을 삭제하지 마라.
 3. `lch`의 `contracts.py`, `model_adapter.py`, `database.py`와 `database/mvp/schema.sql`에서 필요한 경계만 이희창 코드 구조에 맞게 이식하라. `lch`의 전체 FastAPI 앱으로 운영 앱을 교체하지 마라.
-4. 기존 STT 결과 텍스트를 형진 모델 서버에 보내고, 받은 `summary/task_category/consulting_situation/qa_topic`을 `normalize_model_result(raw_result)`에 전달하라. 같은 음성을 두 번 STT하지 마라.
-5. 정규화 결과로 `MvpCallResponse`를 만들고 `save_call()`로 저장한 뒤 응답하라.
+4. 기존 STT 결과 텍스트를 형진 모델 서버에 보내고, 받은 `summary/task_category/consulting_situation/qa_topic`을 준비하라. 같은 음성을 두 번 STT하지 마라.
+5. 직접 카드와 INSERT를 다시 작성하지 말고 `persist_pipeline_result(settings, audio_filename=..., transcript=..., raw_model_result=...)`를 호출하라. 이 함수가 어댑터·`MvpCallResponse`·DB 트랜잭션을 한 번에 처리한다.
 6. `GET /api/v1/calls/{call_id}/consultation-card`는 모델을 다시 실행하지 말고 PostgreSQL에 저장된 결과만 조회해야 한다.
 7. `GET /health`가 PostgreSQL 연결 여부와 `contract_version=mvp-1.0`을 반환하게 하라.
 8. Railway 운영 백엔드 변수에 새 비밀값을 복사하지 말고 기존 Postgres 서비스 참조 `DATABASE_URL=${{Postgres.DATABASE_URL}}`를 연결하라.
@@ -141,6 +142,7 @@ calls 1건 ─ transcripts 1건 ─ consultation_cards 1건
 - public 기본 테이블: 정확히 `calls`, `transcripts`, `consultation_cards`
 - 한국어 WAV로 STT→정규화→저장→같은 call_id GET 재조회 성공
 - 형진 모델 원시 4필드→후처리 어댑터→표준 카드→실제 Railway PostgreSQL 재조회 성공
+- 기존 STT·모델 결과 주입형 `persist_pipeline_result()` → 실제 Railway PostgreSQL 재조회 성공
 - PostgreSQL 통합 테스트는 검증 행을 `finally`에서 자동 삭제
 - 로컬 회귀검증: Python 테스트, JSON Schema, 어댑터, TypeScript, Vite build 통과
 - 이찬희는 이희창 운영 Railway 서비스와 이희창 저장소를 수정하지 않았음

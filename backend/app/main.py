@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,9 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.compat import build_compat_router
 from app.contracts import (
-    CallStatus,
-    ConsultationCard,
-    EmotionResult,
     HealthResponse,
     MvpCallResponse,
 )
@@ -19,9 +15,13 @@ from app.database import (
     get_call,
     initialize_database,
     ping_database,
-    save_call,
 )
-from app.pipeline import PipelineConfigurationError, analyze_transcript, transcribe_audio
+from app.integration_service import persist_pipeline_result
+from app.pipeline import (
+    PipelineConfigurationError,
+    request_analysis_result,
+    transcribe_audio,
+)
 
 
 settings = get_settings()
@@ -70,23 +70,13 @@ def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
         if not audio_bytes:
             raise HTTPException(status_code=400, detail="audio file is empty")
         transcript = transcribe_audio(settings, audio.filename or "customer-audio.wav", audio_bytes)
-        analysis, raw_model_result = analyze_transcript(settings, transcript.text)
-        response = MvpCallResponse(
-            call_id=uuid4(),
-            status=CallStatus.READY,
+        raw_model_result = request_analysis_result(settings, transcript.text)
+        return persist_pipeline_result(
+            settings,
             audio_filename=audio.filename or "customer-audio.wav",
             transcript=transcript,
-            consultation_card=ConsultationCard(
-                **analysis.model_dump(),
-                emotion=EmotionResult(
-                    status="unavailable",
-                    reason="감정 모델은 아직 MVP 통합 전입니다.",
-                ),
-            ),
-            created_at=datetime.now(timezone.utc),
+            raw_model_result=raw_model_result,
         )
-        save_call(settings, response, raw_model_result)
-        return response
     except HTTPException:
         raise
     except (DatabaseUnavailable, PipelineConfigurationError) as exc:

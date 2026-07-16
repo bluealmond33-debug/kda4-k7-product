@@ -24,6 +24,7 @@ const governedPaths = [
   manifest.backend.app,
   manifest.backend.pydantic_contracts,
   manifest.backend.model_adapter,
+  manifest.backend.integration_service,
   manifest.backend.database_gateway,
   ...Object.values(manifest.frontend),
 ];

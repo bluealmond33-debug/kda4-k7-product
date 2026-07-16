@@ -73,9 +73,9 @@ def transcribe_audio(settings: Settings, filename: str, audio_bytes: bytes) -> T
     )
 
 
-def analyze_transcript(
-    settings: Settings, transcript: str
-) -> tuple[ModelConsultationResult, dict]:
+def request_analysis_result(settings: Settings, transcript: str) -> dict:
+    """Call the current analysis provider and return its unmodified JSON result."""
+
     response = _client(settings).chat.completions.create(
         model=settings.openai_chat_model,
         messages=[
@@ -91,5 +91,13 @@ def analyze_transcript(
             },
         },
     )
-    raw = json.loads(response.choices[0].message.content or "{}")
+    return json.loads(response.choices[0].message.content or "{}")
+
+
+def analyze_transcript(
+    settings: Settings, transcript: str
+) -> tuple[ModelConsultationResult, dict]:
+    """Compatibility helper returning both normalized and raw model results."""
+
+    raw = request_analysis_result(settings, transcript)
     return normalize_model_result(raw), raw

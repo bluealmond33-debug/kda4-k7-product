@@ -1,20 +1,11 @@
 import os
-from datetime import datetime, timezone
-from uuid import uuid4
-
 import psycopg
 import pytest
 
 from app.config import Settings
-from app.contracts import (
-    CallStatus,
-    ConsultationCard,
-    EmotionResult,
-    MvpCallResponse,
-    TranscriptResult,
-)
-from app.database import get_call, initialize_database, save_call
-from app.model_adapter import normalize_model_result
+from app.contracts import TranscriptResult
+from app.database import get_call, initialize_database
+from app.integration_service import persist_pipeline_result
 
 
 DATABASE_URL_ENV = "K7_TEST_DATABASE_URL"
@@ -34,27 +25,14 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
         "qa_topic": "주택담보대출 만기 연장",
         "model_version": "postgres-integration-test",
     }
-    normalized = normalize_model_result(raw_model_result)
-    response = MvpCallResponse(
-        call_id=uuid4(),
-        status=CallStatus.READY,
-        audio_filename="통합검증.wav",
-        transcript=TranscriptResult(
-            text="주택담보대출 만기 연장과 필요한 서류를 문의합니다.",
-            stt_model="integration-test",
-            duration_sec=3.25,
-        ),
-        consultation_card=ConsultationCard(
-            **normalized.model_dump(),
-            emotion=EmotionResult(
-                status="unavailable",
-                reason="감정 모델은 아직 MVP 통합 전입니다.",
-            ),
-        ),
-        created_at=datetime.now(timezone.utc),
+    transcript = TranscriptResult(
+        text="주택담보대출 만기 연장과 필요한 서류를 문의합니다.",
+        stt_model="integration-test",
+        duration_sec=3.25,
     )
 
     initialize_database(settings)
+    response = None
     try:
         with psycopg.connect(database_url) as connection:
             with connection.cursor() as cursor:
@@ -91,12 +69,18 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
                     "consultation_cards_available_emotion_chk",
                 } <= constraints
 
-        save_call(settings, response, raw_model_result)
+        response = persist_pipeline_result(
+            settings,
+            audio_filename="통합검증.wav",
+            transcript=transcript,
+            raw_model_result=raw_model_result,
+        )
         stored = get_call(settings, response.call_id)
 
         assert stored is not None
         assert stored.model_dump(mode="json") == response.model_dump(mode="json")
     finally:
-        with psycopg.connect(database_url) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute("DELETE FROM calls WHERE call_id = %s", (response.call_id,))
+        if response is not None:
+            with psycopg.connect(database_url) as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute("DELETE FROM calls WHERE call_id = %s", (response.call_id,))

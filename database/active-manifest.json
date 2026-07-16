@@ -18,6 +18,7 @@
     "app": "backend/app/main.py",
     "pydantic_contracts": "backend/app/contracts.py",
     "model_adapter": "backend/app/model_adapter.py",
+    "integration_service": "backend/app/integration_service.py",
     "database_gateway": "backend/app/database.py",
     "endpoints": [
       "POST /api/v1/calls",

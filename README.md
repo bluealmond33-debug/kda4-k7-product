@@ -18,6 +18,7 @@
 | 활성 자산 매니페스트 | `database/active-manifest.json` |
 | API 계약 | `database/contracts/mvp_call_response.schema.json` |
 | 모델 결과 어댑터 | `backend/app/model_adapter.py` |
+| 기존 파이프라인 연결 함수 | `backend/app/integration_service.py` |
 | 금융 모델 후처리 | `database/mvp/model_postprocessing.v1.json` |
 | Railway 설정 | `railway.toml` |
 
@@ -140,6 +141,19 @@ Remove-Item Env:K7_TEST_DATABASE_URL
 ```
 
 형진 금융 모델처럼 `summary`, `task_category`, `consulting_situation`, `qa_topic`을 반환하는 경우도 활성 어댑터가 같은 표준 결과로 변환합니다. 실제 라벨이 기존 매핑에 없으면 임의 라우팅하지 않고 명시적으로 거부합니다.
+
+희창 운영 백엔드는 기존 STT와 모델 호출을 유지한 채 다음 함수만 호출하면 됩니다.
+
+```python
+response = persist_pipeline_result(
+    settings,
+    audio_filename=audio.filename,
+    transcript=existing_stt_result,
+    raw_model_result=existing_model_result,
+)
+```
+
+이 함수가 어댑터 실행, `mvp-1.0` 상담카드 조립, PostgreSQL 트랜잭션 저장과 `call_id` 생성을 담당합니다. STT나 모델을 다시 실행하지 않습니다.
 
 감정 모델이 아직 없으면 `emotion.status=unavailable`과 `score=null`을 사용합니다. 임의 숫자를 실제 모델 결과처럼 표시하지 않습니다.
 

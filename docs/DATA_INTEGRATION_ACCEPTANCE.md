@@ -12,6 +12,7 @@
 - `database/mvp/model_postprocessing.v1.json`
 - `database/mvp/schema.sql`
 - `backend/app/model_adapter.py`
+- `backend/app/integration_service.py`
 - `backend/app/database.py`
 - `POST /api/v1/calls`
 - `GET /api/v1/calls/{call_id}/consultation-card`
@@ -45,6 +46,7 @@
 - [x] 대출·금융사기·미매핑 모델 후처리 테스트
 - [x] 실제 Railway PostgreSQL UTF-8·3테이블·제약조건 검증
 - [x] 형진 원시 4필드 → 표준 카드 → 실제 DB 저장·재조회 검증
+- [x] 희창 기존 STT·모델 결과 주입형 독립 통합 서비스와 실제 DB 검증
 - [x] React·계약·FastAPI GitHub CI 통과
 - [ ] `lch` 변경을 이희창 운영 FastAPI에 실제 이식
 - [ ] 운영 `/health`가 `database=connected`, `contract_version=mvp-1.0` 반환
