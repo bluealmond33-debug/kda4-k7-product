@@ -1,14 +1,13 @@
-# K7 금융 상담 사전접수 통합 프로젝트
+# K7 라이브 상담 시연 (kda4-k7-product)
 
-고객의 자연어 문의를 STT·AI가 분석하고, 상담사가 사전 상담카드를 확인하는 흐름을
-React와 PostgreSQL 데이터 계약으로 연결한 팀 공통 프로젝트입니다.
+키움은행 **AI 상담 접수·요약 시연**을 React로 옮긴 프로젝트입니다.
 왼쪽 아이폰에서 전화를 걸면 대기 시간 동안 고객이 용건을 말하고, AI가 이를
 요약해 오른쪽 **상담사 데스크톱**에 준비 카드로 띄워 주는 흐름을 클릭으로
 시연할 수 있습니다.
 
-현재 화면은 mock만으로도 독립 실행됩니다. FastAPI가 준비되면 동일한
-`external_session_key`와 표준 JSON 응답을 사용해 실제 STT·감정온도·상담카드·라우팅
-결과로 전환할 수 있습니다.
+> 원본은 디자인 도구(HTML)로 만든 시안이며, 이 저장소는 그것을
+> **Vite + React + TypeScript** 표준 프로젝트로 변환한 것입니다. GitHub push →
+> Vercel 배포 → 이후 백엔드(STT·RAG·감정ML) 연결까지 이어가기 위한 베이스입니다.
 
 ---
 
@@ -19,29 +18,24 @@ npm install
 npm run dev      # 로컬 개발 서버 (http://localhost:5173)
 npm run build    # 프로덕션 빌드 → dist/
 npm run preview  # 빌드 결과 미리보기
-npm run check    # JSON 계약 검증 + TypeScript/Vite 빌드
 ```
 
-Node 20.19+ 또는 22.12+가 필요합니다.
+Node 18+ 권장.
 
 ---
 
-## 전체 연결 구조
+## GitHub에 올리기
 
-```mermaid
-flowchart LR
-    STT["STT"] --> API["FastAPI"]
-    EMOTION["감정온도"] --> API
-    CARD["분류·요약·RAG"] --> API
-    ROUTING["라우팅"] --> API
-    API <--> DB["PostgreSQL"]
-    API --> UI["React 상담사 화면"]
+이 폴더(`react-app/`)를 저장소 루트로 올리는 경우:
+
+```bash
+git init
+git add .
+git commit -m "init: K7 상담 시연 (React)"
+git branch -M main
+git remote add origin https://github.com/bluealmond33-debug/kda4-k7-product.git
+git push -u origin main
 ```
-
-모든 팀은 통화 한 건을 `external_session_key`로 식별합니다. React와 모델은
-PostgreSQL에 직접 연결하지 않으며, FastAPI가 검증·마스킹·권한·조회로그를 처리합니다.
-DB 전체 사용법은 [`database/README.md`](database/README.md), API 계약은
-[`database/contracts/openapi.yaml`](database/contracts/openapi.yaml)을 기준으로 합니다.
 
 ## Vercel 배포
 
@@ -56,8 +50,8 @@ DB 전체 사용법은 [`database/README.md`](database/README.md), API 계약은
 ## 백엔드(AI) 연결 지점
 
 AI 기능은 전부 **서비스 레이어(`src/services/`)** 로 분리되어 있고, 지금은
-결정적인 **mock(시뮬레이션)** 이 기본값입니다. 요약·감정·통합 상담카드는 환경변수로
-실제 API를 선택하며, STT 실시간 오디오 전송은 별도 구현 경계로 남겨 둡니다.
+결정적인 **mock(시뮬레이션)** 이 기본값입니다. 백엔드가 준비되면 `.env`만 채우면
+됩니다 — UI 코드는 바꿀 필요가 없습니다.
 
 ```bash
 cp .env.example .env
@@ -68,26 +62,16 @@ VITE_API_BASE_URL=https://<백엔드 주소>
 VITE_USE_REAL_STT=true       # POST /stt
 VITE_USE_REAL_SUMMARY=true   # POST /summarize
 VITE_USE_REAL_EMOTION=true   # POST /emotion
-VITE_USE_REAL_DATA_API=true  # GET /api/v1/consultation-sessions/{key}/consultation-card
-VITE_DATA_API_PREFIX=/api/v1
-VITE_DATA_ACCESS_PURPOSE=consultation_preparation
-VITE_DEMO_SESSION_KEY=K7-DEMO-20260715-0001
 ```
 
 | 기능 | 파일 | mock 동작 | 실제(real) 계약 |
 | --- | --- | --- | --- |
-| STT (음성→텍스트) | `services/stt.ts` | 스크립트 발화 재생 | 실시간 오디오 스트림 연동 지점만 정의 |
+| STT (음성→텍스트) | `services/stt.ts` | 스크립트 발화 재생 | 브라우저 STT / 오디오 스트림 → 백엔드 |
 | 요약·업무유형 (RAG) | `services/summarize.ts` | 착오송금 요약 반환 | `POST /summarize` → `CallSummary` |
 | 감정온도 (ML) | `services/emotion.ts` | 키워드 휴리스틱 | `POST /emotion` → `EmotionScore` |
-| 통합 상담카드 | `services/consultation.ts` | 표준 계약 JSON | FastAPI 통합 조회 → `ConsultationCardResponse` |
 
-요청/응답 타입은 `src/services/types.ts`에 정의되어 있습니다. 통합 상담카드 mock은
-`database/contracts/examples/consultation_card_response.example.json`을 화면이 직접
-사용하므로 백엔드와 프론트의 예제 구조가 어긋나지 않습니다.
-
-실제 로그인 연동 시 인증 모듈이 `setApiAccessToken(token)`으로 단기 Bearer 토큰을
-주입합니다. 토큰은 `VITE_*` 환경변수나 저장소에 넣지 않습니다. 고객정보 조회 목적은
-`X-Access-Purpose` 헤더로 전달되어 백엔드 조회로그에 기록됩니다.
+요청/응답 타입은 `src/services/types.ts`에 정의되어 있습니다. 실제 연동 시 각
+파일의 `useReal.*` 분기 안쪽만 구현하면 됩니다(자리 표시 주석 있음).
 
 > **마이크**: 이 시연은 요구사항에 따라 **시뮬레이션 전용**입니다. 상단 "실제
 > 마이크"를 눌러도 권한/미지원 시 자동으로 시뮬레이션으로 되돌아갑니다.
@@ -115,32 +99,11 @@ src/
       PrepCard.tsx             1c 상담 준비 카드
       ActiveCall.tsx           1a 통화 중(본인인증 1d 포함)
       WrapSheet.tsx            1b 후처리
-database/
-  schema.sql / seed.sql        PostgreSQL 스키마·가상 데이터
-  queries.sql / commands.sql   조회·저장 쿼리
-  contracts/                   JSON Schema·OpenAPI·예제 응답
-  README.md                    로컬·Railway 적용과 팀별 사용법
 ```
 
 상태 흐름: `idle → connecting → recording → confirm → prep → active →
 summarizing → wrap`. 타이밍(무응답 5초·5초, 라인 간격)은
 `useCallFlow(config)`의 `silenceSec1 / silenceSec2 / lineGapMs`로 조절합니다.
-
-## PostgreSQL 빠른 실행
-
-PostgreSQL 16과 `psql`이 준비된 개발·테스트 환경에서 다음 순서로 실행합니다.
-
-```powershell
-$env:DATABASE_URL = "postgresql://postgres:password@localhost:5432/k7_consultation"
-psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f database/schema.sql
-psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f database/seed.sql
-psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f database/queries.sql
-psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f database/commands.sql
-psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f database/verify.sql
-```
-
-`seed.sql`은 개발·테스트 전용입니다. Railway 운영 DB에는 `schema.sql`만 적용하고,
-기존 DB 업그레이드는 `database/migrations/`의 순서대로 적용합니다.
 
 ## 디자인 시스템
 
