@@ -15,6 +15,8 @@ from app.contracts import CallStatus, ConsultationCard, MvpCallResponse, Transcr
 from app.database import DatabaseUnavailable, get_call, save_call
 from app.services.gpt_analysis import analyze_transcript
 from app.services.judge import judge as run_judge
+from app.services.local_llm import analyze_transcript_local
+from app.services.local_stt import transcribe_audio_local
 from app.services.mvp_adapter import to_consultation_card
 from app.services.stt import transcribe_audio
 
@@ -40,10 +42,14 @@ async def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="audio file is empty")
 
-    client = _get_openai_client()
     try:
-        transcribed = transcribe_audio(client, audio.filename or "customer-audio.wav", audio_bytes)
-        gpt_result = analyze_transcript(client, transcribed.text)
+        if settings.use_local_models:
+            transcribed = transcribe_audio_local(settings, audio.filename or "customer-audio.wav", audio_bytes)
+            gpt_result = analyze_transcript_local(settings, transcribed.text)
+        else:
+            client = _get_openai_client()
+            transcribed = transcribe_audio(client, audio.filename or "customer-audio.wav", audio_bytes)
+            gpt_result = analyze_transcript(client, transcribed.text)
         emotion_result_for_judge = _placeholder_emotion_for_judge()
         judgement = run_judge(gpt_result.risk_flags, emotion_result_for_judge)
         card: ConsultationCard = to_consultation_card(gpt_result, judgement)
@@ -54,7 +60,7 @@ async def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
             audio_filename=audio.filename or "customer-audio.wav",
             transcript=TranscriptResult(
                 text=transcribed.text,
-                stt_model="whisper-1",
+                stt_model=f"faster-whisper:{settings.local_whisper_model}" if settings.use_local_models else "whisper-1",
                 duration_sec=transcribed.duration_sec,
             ),
             consultation_card=card,
