@@ -1,0 +1,85 @@
+# K7 데이터 통합 인수 기준
+
+## 목적
+
+이 문서는 “각 기능이 따로 동작한다”가 아니라 고객 음성 한 건이 표준 계약으로 PostgreSQL에 저장되고 화면에서 다시 조회되는지를 최종 판정합니다.
+
+데이터 거버넌스·통합 담당자는 **이찬희**이며 다음 경계의 변경 검토와 최종 E2E 인수를 담당합니다.
+
+- `database/active-manifest.json`
+- `database/contracts/model_consultation_result_input.schema.json`
+- `database/contracts/mvp_call_response.schema.json`
+- `database/mvp/model_postprocessing.v1.json`
+- `database/mvp/schema.sql`
+- `backend/app/model_adapter.py`
+- `backend/app/integration_service.py`
+- `backend/app/database.py`
+- `POST /api/v1/calls`
+- `GET /api/v1/calls/{call_id}/consultation-card`
+
+소유권은 다른 팀원의 코드를 대신 작성한다는 뜻이 아닙니다. STT·모델·백엔드·React가 서로 다른 형식으로 갈라지지 않도록 공통 경계를 승인하고, 저장·재조회 결과가 같은지 검증하는 책임입니다.
+
+## 팀별 입력과 책임
+
+| 담당 | 제공할 것 | 데이터 통합 인수 조건 |
+|---|---|---|
+| 이희창 | STT·운영 FastAPI·Railway 배포 | POST/GET과 `DATABASE_URL` 연결, 기존 API 유지 |
+| 전형진 | 금융 Summary·Classification 모델 서버 | 원시 4필드, 전체 라벨, 오류 계약, 버전 제공 |
+| 김설빈 | 감정·요약·라우팅 관련 실제 로직 | 가짜 점수 없이 상태·값 의미 확정 |
+| 김민기 | RAG·브리핑카드·규정 자료 | 카드 참조값과 실제 문서 연결 |
+| UI/Vercel 소유자 | React 운영 배포 | DB 직접 접근 없이 상담카드 GET 결과 표시 |
+| 이찬희 | 계약·어댑터·PostgreSQL·인수 테스트 | 아래 완료 기준 전체 검증과 결과 기록 |
+
+## 변경 통제 규칙
+
+1. 모델 라벨이 바뀌면 DB 컬럼을 바로 바꾸지 않고 `model_postprocessing.v1.json`을 갱신합니다.
+2. API 필드가 바뀌면 JSON Schema·Pydantic·TypeScript·예제·테스트를 같은 PR에서 바꿉니다.
+3. React와 모델 서버는 PostgreSQL에 직접 접속하지 않습니다.
+4. `DATABASE_URL`과 API 키는 Railway 백엔드 변수로만 관리합니다.
+5. 새 분류 라벨을 임의 부서로 추측하지 않습니다.
+6. 감정 모델이 준비되지 않았으면 `unavailable`을 사용하며 임의 점수를 만들지 않습니다.
+7. 개인정보 마스킹은 현재 MVP 범위가 아니므로 활성 계약에 몰래 추가하지 않습니다.
+8. FastAPI는 STT·OpenAI·음성 감정 분석 전에 `call_id`를 발급합니다. 실제 감정온도는 같은 고객 음성만 입력으로 사용하고, `external_session_key == call_id`인 결과만 `emotion_source="audio"`와 함께 결합합니다. 텍스트 키워드 결과와 다른 통화의 결과는 거절합니다.
+9. 현재 MVP는 녹음·업로드가 완료된 음성 파일 전체를 일괄 처리합니다. 실제 전화망·WebSocket·스트리밍 STT를 완료 기능으로 보고하지 않습니다.
+10. 모델 어댑터는 AI가 아닌 결정론적 코드이며 원시 JSON 매핑·검증·미매핑 거절만 담당합니다.
+
+## 최종 완료 기준
+
+- [x] `lch`에 `mvp-1.0` 계약·어댑터·PostgreSQL 3테이블 구현
+- [x] 대출·금융사기·미매핑 모델 후처리 테스트
+- [x] 실제 Railway PostgreSQL UTF-8·3테이블·제약조건 검증
+- [x] 형진 원시 4필드 → 표준 카드 → 실제 DB 저장·재조회 검증
+- [x] 희창 기존 STT·모델 결과 주입형 독립 통합 서비스와 실제 DB 검증
+- [x] 같은 음성을 STT→OpenAI와 음성 감정 모델로 분기하고 선발급 `call_id`로 결합하는 계약·어댑터·실제 DB 검증
+- [x] 원시 음성 모델 결과 `raw_emotion_result JSONB` 보존과 점수–단계 DB 제약
+- [x] React·계약·FastAPI GitHub CI 통과
+- [x] 노출 가능성이 있던 Railway PostgreSQL 비밀번호 회전 및 새 연결 검증
+- [x] `lch` 변경을 이희창 운영 FastAPI에 실제 이식
+- [x] 운영 `/health`가 `database=connected`, `contract_version=mvp-1.0` 반환
+- [x] 운영 POST가 실제 한국어 음성에서 201과 call_id 반환
+- [ ] 같은 call_id의 GET이 POST와 동일한 응답 반환
+- [x] 기존 8개 호환 API 경로·HTTP 메서드 유지
+- [ ] Vercel 소유자가 실제 운영 API 응답을 상담카드에 표시
+- [ ] 연결 해제된 preview 빈 서비스 최종 정리
+
+## 최종 인수 기록
+
+운영 배포 후 이찬희 담당자가 다음 표를 실제 값으로 채우고 승인합니다. API 키·DB URL·고객 개인정보는 기록하지 않습니다.
+
+| 증거 | 기록값 |
+|---|---|
+| 운영 백엔드 통합 PR | `HeeChang50/kda4-k7-backend` PR #1 → `main` 머지 완료 |
+| 운영 백엔드 commit | `9f3c4da57a9cc12813f483093d51088037c23595` |
+| 운영 Railway deployment | `09fe8b9c-ba9f-4f65-b503-95d84f4e2aa0`, `SUCCESS` |
+| `lch` 기준 commit | PR #1 최신 HEAD (`duration_sec` 저장 정밀도·음성 감정 입력 정책 포함) |
+| PostgreSQL 자격증명 회전 | 2026-07-16 완료, 새 연결·UTF8·3테이블·0건 보존 확인 |
+| readiness 실행 시각 | 2026-07-16 16시대 KST |
+| readiness 결과 | `true` |
+| 실제 음성 test call_id | `88df9f2e-ef4f-4d9d-b04c-b3affde47dfe` (검증 후 삭제) |
+| POST/GET 동일 | 상담 내용 동일, `duration_sec`만 `10.100000381469727 → 10.1`; `lch`에서 3자리 정규화 수정 |
+| Vercel 표시 | 현재 배포 번들에 `/api/v1/calls`·Railway 주소 없음, 소유자 재배포 대기 |
+| 최종 인수 담당 | 이찬희 |
+
+운영 완료 판정은 `scripts/check-production-readiness.ps1`의 `ready=true`와 `scripts/smoke-mvp.ps1`의 실제 음성 성공이 모두 있어야 합니다.
+
+운영 음성 스모크 테스트에는 `K7_TEST_DATABASE_URL`을 화면에 출력하지 않는 환경변수로 주입하고 `-RequireCleanup`을 사용합니다. 테스트가 성공하거나 중간 검증에서 실패하더라도 생성된 `call_id`는 `finally`에서 삭제되어야 하며, 종료 후 세 활성 테이블의 테스트 행이 남지 않아야 합니다.

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k7.example/contracts/model-consultation-result-input-0.1.schema.json",
+  "title": "K7 Provisional Combined Consultation Model Input",
+  "description": "변경 중인 분류·요약·위험·라우팅 모델의 결합 결과를 FastAPI 어댑터가 받는 임시 입력 계약이다. 운영 DB 저장 계약이 아니며 알려진 핵심 필드만 검증하고 추가 필드는 어댑터가 무시한다.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["summary"],
+  "properties": {
+    "external_session_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "business_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "department": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "routing_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "incident_risk": {
+      "type": ["string", "null"],
+      "enum": ["low", "high", "낮음", "저위험", "높음", "고위험", null]
+    },
+    "risk_reason": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "routing_confidence": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "task_category": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "consulting_situation": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "qa_topic": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "model_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "model_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "anyOf": [
+    {
+      "required": ["business_type", "department", "routing_reason"]
+    },
+    {
+      "required": ["task_category", "consulting_situation", "qa_topic"]
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "required": ["incident_risk"],
+        "properties": {
+          "incident_risk": { "enum": ["high", "높음", "고위험"] }
+        }
+      },
+      "then": {
+        "required": ["risk_reason"],
+        "properties": {
+          "risk_reason": { "type": "string" }
+        }
+      }
+    }
+  ]
+}

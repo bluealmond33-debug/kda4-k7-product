@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k7.example/contracts/masked-utterance-1.0.schema.json",
+  "title": "K7 Masked Utterance",
+  "description": "FastAPI가 개인정보를 마스킹한 뒤 DB와 후속 모델에 전달하는 발화 계약이다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "external_session_key",
+    "sequence_no",
+    "speaker_type",
+    "masked_transcript",
+    "contains_sensitive_data",
+    "stt_confidence",
+    "spoken_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "external_session_key": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "sequence_no": { "type": "integer", "minimum": 1 },
+    "speaker_type": { "type": "string", "enum": ["customer", "system", "counselor"] },
+    "masked_transcript": { "type": "string", "minLength": 1, "maxLength": 10000 },
+    "contains_sensitive_data": { "type": "boolean" },
+    "stt_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "spoken_at": { "type": "string", "format": "date-time" }
+  }
+}

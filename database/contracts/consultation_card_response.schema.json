@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k7.example/contracts/consultation-card-response-1.0.schema.json",
+  "title": "K7 Consultation Card Response",
+  "description": "FastAPI가 React 상담사 화면에 반환하는 마스킹 통합 응답이다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "data"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "external_session_key",
+        "session_status",
+        "customer",
+        "customer_cautions",
+        "emotion_temperature",
+        "consultation_card",
+        "routing_result",
+        "recent_consultations",
+        "masked_utterances"
+      ],
+      "properties": {
+        "external_session_key": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "session_status": {
+          "type": "string",
+          "enum": ["waiting", "analyzing", "ready", "in_progress", "summarizing", "wrap_up", "completed", "cancelled"]
+        },
+        "customer": { "$ref": "#/$defs/customer" },
+        "customer_cautions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/customer_caution" }
+        },
+        "emotion_temperature": { "$ref": "#/$defs/emotion_temperature" },
+        "consultation_card": { "oneOf": [{ "$ref": "#/$defs/consultation_card" }, { "type": "null" }] },
+        "routing_result": { "oneOf": [{ "$ref": "#/$defs/routing_result" }, { "type": "null" }] },
+        "recent_consultations": { "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/history" } },
+        "masked_utterances": { "type": "array", "items": { "$ref": "#/$defs/utterance" } }
+      }
+    }
+  },
+  "$defs": {
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "customer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["customer_number", "full_name_masked", "phone_masked", "account_number_masked"],
+      "properties": {
+        "customer_number": { "type": "string" },
+        "full_name_masked": { "type": "string" },
+        "phone_masked": { "type": "string" },
+        "account_number_masked": { "type": ["string", "null"] }
+      }
+    },
+    "customer_caution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caution_type", "reason", "severity", "registered_at", "expires_at"],
+      "properties": {
+        "caution_type": {
+          "type": "string",
+          "enum": [
+            "fraud_suspected",
+            "identity_verification_required",
+            "vulnerable_customer",
+            "repeated_complaint",
+            "legal_dispute",
+            "transaction_restriction",
+            "other"
+          ]
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "severity": { "$ref": "#/$defs/risk_level" },
+        "registered_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "emotion_temperature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "score", "level", "label_ko", "audio_quality", "failure_code", "signals"],
+      "properties": {
+        "status": { "type": "string", "enum": ["completed", "pending", "unavailable", "failed"] },
+        "score": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "level": { "type": ["string", "null"], "enum": ["stable", "caution", "elevated", null] },
+        "label_ko": { "type": ["string", "null"], "enum": ["안정", "주의", "고조", null] },
+        "audio_quality": { "type": ["string", "null"], "enum": ["normal", "low_volume", "noisy", "too_short", "unavailable", null] },
+        "failure_code": { "type": ["string", "null"] },
+        "signals": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "consultation_card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "inquiry_type",
+        "summary",
+        "customer_request",
+        "keywords",
+        "risk_factors",
+        "urgency_level",
+        "risk_level",
+        "related_manual_refs",
+        "suggested_opening",
+        "recommended_actions",
+        "confirmation_items",
+        "confirmation_status"
+      ],
+      "properties": {
+        "schema_version": { "type": "string" },
+        "inquiry_type": { "type": "string" },
+        "summary": { "type": "string" },
+        "customer_request": { "type": ["string", "null"] },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "risk_factors": { "type": "array", "items": { "type": "string" } },
+        "urgency_level": { "$ref": "#/$defs/risk_level" },
+        "risk_level": { "$ref": "#/$defs/risk_level" },
+        "related_manual_refs": { "type": "array", "items": { "type": "string" } },
+        "suggested_opening": { "type": ["string", "null"] },
+        "recommended_actions": { "type": "array", "items": { "type": "string" } },
+        "confirmation_items": { "type": "array", "items": { "type": "string" } },
+        "confirmation_status": { "type": "string", "enum": ["pending", "confirmed", "correction_requested"] }
+      }
+    },
+    "routing_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["department_code", "department_name", "counselor_code", "counselor_name", "recommendation_rank", "confidence", "rationale", "selected"],
+      "properties": {
+        "department_code": { "type": "string" },
+        "department_name": { "type": "string" },
+        "counselor_code": { "type": ["string", "null"] },
+        "counselor_name": { "type": ["string", "null"] },
+        "recommendation_rank": { "type": "integer", "minimum": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "rationale": { "type": "string" },
+        "selected": { "type": "boolean" }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inquiry_type", "ai_summary", "resolution_result", "department_name", "risk_level", "consulted_at"],
+      "properties": {
+        "inquiry_type": { "type": "string" },
+        "ai_summary": { "type": "string" },
+        "resolution_result": { "type": "string" },
+        "department_name": { "type": "string" },
+        "risk_level": { "$ref": "#/$defs/risk_level" },
+        "consulted_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "utterance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence_no", "speaker_type", "masked_transcript", "spoken_at"],
+      "properties": {
+        "sequence_no": { "type": "integer", "minimum": 1 },
+        "speaker_type": { "type": "string", "enum": ["customer", "system", "counselor"] },
+        "masked_transcript": { "type": "string" },
+        "spoken_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

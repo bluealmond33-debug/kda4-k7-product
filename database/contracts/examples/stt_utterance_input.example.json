@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "external_session_key": "K7-DEMO-20260715-0001",
+  "sequence_no": 1,
+  "speaker_type": "customer",
+  "transcript": "받는 분을 잘못 선택해서 송금했습니다.",
+  "stt_confidence": 0.964,
+  "spoken_at": "2026-07-15T00:00:08Z"
+}

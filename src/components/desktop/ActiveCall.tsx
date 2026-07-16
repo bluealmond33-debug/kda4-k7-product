@@ -25,11 +25,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
-            전자금융 <span style={css("color:var(--gray-600)")}>›</span> 착오송금
+            {vm.inquiryLabel}
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:6px;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
-            <span className="mi" style={css("font-size:17px;color:var(--green-700)")}>call</span>010-****-4821
+            <span className="mi" style={css("font-size:17px;color:var(--green-700)")}>call</span>{vm.customerPhone}
           </span>
           <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
@@ -76,9 +76,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div style={css("display:flex;align-items:center;gap:12px")}>
               <span className="av" style={css("width:46px;height:46px")}><span className="mi" style={css("font-size:26px")}>person</span></span>
               <div>
-                <div style={css("font-weight:700;font-size:18px;line-height:1.2")}>김케이</div>
+                <div style={css("font-weight:700;font-size:18px;line-height:1.2")}>{vm.customerName}</div>
                 <div style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>
-                  개인 고객 · <span style={css("font-family:'Geist Mono','IBM Plex Mono',monospace")}>C-10482391</span>
+                  개인 고객 · <span style={css("font-family:'Geist Mono','IBM Plex Mono',monospace")}>{vm.customerNumber}</span>
                 </div>
               </div>
             </div>
@@ -188,23 +188,32 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <span style={css("display:flex;align-items:center;gap:6px")}>
               <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
               <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
-              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>숙련 상담사 우선</span>
+              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
             </span>
             <span style={css("width:1px;height:16px;background:var(--gray-200)")} />
             <span style={css("display:flex;align-items:center;gap:7px")} title="고객 감정온도">
               <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
               <span style={css("display:flex;gap:2px")}>
-                <span className="seg" style={css("background:var(--amber-700)")} />
-                <span className="seg" style={css("background:var(--amber-700)")} />
-                <span className="seg" style={css("background:var(--gray-200)")} />
+                {[1, 2, 3].map((bar) => (
+                  <span
+                    key={bar}
+                    className="seg"
+                    style={css(
+                      "background:" +
+                        (bar <= vm.prepEmotionBars
+                          ? "var(--amber-700)"
+                          : "var(--gray-200)")
+                    )}
+                  />
+                ))}
               </span>
-              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>격앙 주의</span>
+              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>{vm.prepEmotionLabel}</span>
             </span>
             <span style={css("width:1px;height:16px;background:var(--gray-200)")} />
             <span style={css("display:flex;align-items:center;gap:6px")}>
               <span className="mi" style={css("font-size:15px;color:var(--red-700)")}>gpp_maybe</span>
               <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
-              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>주의</span>
+              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>{vm.prepRiskLabel}</span>
             </span>
             <div style={css("flex:1")} />
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
@@ -218,7 +227,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>AI 사전 요약</span>
               <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>대기 중 고객 진술 기반</span>
             </div>
-            <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:10px")}>착오송금 반환 · 거래 확인 문의</div>
+            <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:10px")}>{vm.prepHeadline}</div>
             <div style={css("display:flex;flex-direction:column;gap:8px")}>
               {[
                 "오늘 오전 지인에게 30만원 이체 중 다른 계좌로 착오송금했다고 진술.",

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k7.example/contracts/mvp-call-response-1.0.schema.json",
+  "title": "K7 MVP Voice Call Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "call_id",
+    "status",
+    "source_channel",
+    "audio_filename",
+    "transcript",
+    "consultation_card",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "mvp-1.0" },
+    "call_id": { "type": "string", "format": "uuid" },
+    "status": { "enum": ["processing", "ready", "failed"] },
+    "source_channel": { "const": "voice" },
+    "audio_filename": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "transcript": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "stt_model", "duration_sec"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "stt_model": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "duration_sec": { "type": "number", "minimum": 0 }
+      }
+    },
+    "consultation_card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "business_type",
+        "department",
+        "routing_reason",
+        "incident_risk",
+        "risk_reason",
+        "routing_confidence",
+        "emotion"
+      ],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "business_type": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "department": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "routing_reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "incident_risk": { "enum": ["low", "high"] },
+        "risk_reason": { "type": ["string", "null"], "maxLength": 2000 },
+        "routing_confidence": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "emotion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "score", "level", "reason"],
+          "properties": {
+            "status": { "enum": ["unavailable", "completed"] },
+            "score": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+            "level": {
+              "type": ["string", "null"],
+              "enum": ["stable", "caution", "elevated", null]
+            },
+            "reason": { "type": ["string", "null"], "maxLength": 2000 }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "status": { "const": "unavailable" } } },
+              "then": {
+                "properties": {
+                  "score": { "type": "null" },
+                  "level": { "type": "null" }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": { "status": { "const": "completed" } }
+              },
+              "then": {
+                "properties": {
+                  "score": { "type": "number", "minimum": 0, "maximum": 100 },
+                  "level": {
+                    "type": "string",
+                    "enum": ["stable", "caution", "elevated"]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": { "const": "completed" },
+                  "level": { "const": "stable" }
+                },
+                "required": ["status", "level"]
+              },
+              "then": {
+                "properties": { "score": { "type": "number", "maximum": 33 } }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": { "const": "completed" },
+                  "level": { "const": "caution" }
+                },
+                "required": ["status", "level"]
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "type": "number",
+                    "exclusiveMinimum": 33,
+                    "maximum": 66
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": { "const": "completed" },
+                  "level": { "const": "elevated" }
+                },
+                "required": ["status", "level"]
+              },
+              "then": {
+                "properties": {
+                  "score": { "type": "number", "exclusiveMinimum": 66 }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "incident_risk": { "const": "high" } } },
+          "then": { "properties": { "risk_reason": { "type": "string", "minLength": 1 } } }
+        }
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

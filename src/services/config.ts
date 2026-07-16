@@ -1,6 +1,6 @@
 // Runtime configuration for the service layer.
 //
-// Every AI capability (STT / summary / emotion) can run in one of two modes:
+// External capabilities can run in mock or real mode:
 //   • mock  — deterministic, offline, used for the live demo (default)
 //   • real  — POSTs to the backend at VITE_API_BASE_URL
 //
@@ -9,21 +9,22 @@
 const env = import.meta.env;
 
 export const API_BASE_URL: string = (env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
-
+export const DATA_API_PREFIX: string = `/${String(env.VITE_DATA_API_PREFIX ?? "/api/v1")}`
+  .replace(/\/+/g, "/")
+  .replace(/\/$/, "");
 const flag = (v: unknown) => String(v ?? "false").toLowerCase() === "true";
 
 export const useReal = {
-  stt: flag(env.VITE_USE_REAL_STT) && !!API_BASE_URL,
-  summary: flag(env.VITE_USE_REAL_SUMMARY) && !!API_BASE_URL,
-  emotion: flag(env.VITE_USE_REAL_EMOTION) && !!API_BASE_URL,
+  data: flag(env.VITE_USE_REAL_DATA_API) && !!API_BASE_URL,
 };
 
-/** Small typed POST helper for the backend calls. */
-export async function postJSON<T>(path: string, body: unknown): Promise<T> {
+/** Typed GET helper for the active MVP API. */
+export async function getJSON<T>(
+  path: string
+): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    method: "GET",
+    headers: { Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
   return (await res.json()) as T;

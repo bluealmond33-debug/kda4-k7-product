@@ -1,0 +1,25 @@
+name: Production readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: Railway backend base URL
+        required: true
+        default: https://kda4-k7-backend-production.up.railway.app
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    name: Verify production API and database boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check OpenAPI, legacy compatibility, database and contract
+        shell: pwsh
+        run: |
+          ./scripts/check-production-readiness.ps1 -ApiBaseUrl "${{ inputs.api_base_url }}"

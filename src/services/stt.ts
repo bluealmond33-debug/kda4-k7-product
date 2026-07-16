@@ -1,5 +1,4 @@
 import type { TranscriptChunk } from "./types";
-import { useReal } from "./config";
 
 /** Scripted caller intake used by the mock STT session (the demo utterance). */
 export const DEMO_UTTERANCE: string[] = [
@@ -24,9 +23,8 @@ export interface SttHandlers {
  * Start a speech-to-text session.
  *
  * mock (default): replays DEMO_UTTERANCE on a timer — no mic access.
- * real: wire the browser SpeechRecognition API or stream mic audio to
- *       the backend at VITE_API_BASE_URL. Mic is simulation-only for the
- *       demo, so the mock path is what the demo uses.
+ * Actual customer audio uses createConsultationFromAudio() and the FastAPI
+ * POST /api/v1/calls endpoint. This timer remains only for the scripted demo.
  *
  * @param lineGapMs  gap between scripted lines (mock only).
  */
@@ -34,12 +32,6 @@ export function startSttSession(
   handlers: SttHandlers,
   lineGapMs = 2400
 ): SttSession {
-  if (useReal.stt) {
-    // Placeholder for the real integration. Implement browser STT or a
-    // WebSocket/stream to the backend here and forward fragments via onChunk.
-    // Falls back to mock so the UI keeps working until this is built.
-  }
-
   const t0 = Date.now();
   const timers: number[] = [];
   DEMO_UTTERANCE.forEach((line, i) => {

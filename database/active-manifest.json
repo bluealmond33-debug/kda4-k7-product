@@ -1,0 +1,68 @@
+{
+  "status": "active",
+  "contract_version": "mvp-1.0",
+  "source_channel": "voice",
+  "masking_enabled": false,
+  "audio_processing": {
+    "mode": "whole_file_batch",
+    "streaming": false,
+    "telephony_connected": false,
+    "capture_output": "audio_file",
+    "audio_retention": "transient_request_processing",
+    "audio_object_storage": "not_in_mvp",
+    "stt_input": "audio",
+    "summary_input": "stt_text",
+    "summary_processor": "openai",
+    "emotion_input": "same_audio_file_only",
+    "branching": "after_audio_capture",
+    "correlation_key": "call_id",
+    "call_id_created": "before_analysis",
+    "branches": {
+      "text_analysis": ["stt", "openai_summary_classification_routing"],
+      "audio_emotion": ["audio_emotion_model"]
+    },
+    "parallel_execution_allowed": true,
+    "join_before_persist": true,
+    "emotion_result_policy": {
+      "allowed_statuses": ["unavailable", "completed"],
+      "demo_forbidden": true
+    }
+  },
+  "adapter": {
+    "implementation": "backend/app/model_adapter.py",
+    "kind": "deterministic_code",
+    "uses_ai": false
+  },
+  "database": {
+    "engine": "postgresql",
+    "schema": "database/mvp/schema.sql",
+    "tables": ["calls", "transcripts", "consultation_cards"]
+  },
+  "contracts": {
+    "model_input": "database/contracts/model_consultation_result_input.schema.json",
+    "audio_emotion_result": "database/contracts/emotion_temperature_result.schema.json",
+    "audio_emotion_example": "database/contracts/examples/emotion_temperature_result.example.json",
+    "model_postprocessing": "database/mvp/model_postprocessing.v1.json",
+    "api_response": "database/contracts/mvp_call_response.schema.json",
+    "example": "database/contracts/examples/mvp_call_response.example.json"
+  },
+  "backend": {
+    "app": "backend/app/main.py",
+    "pydantic_contracts": "backend/app/contracts.py",
+    "model_adapter": "backend/app/model_adapter.py",
+    "audio_emotion_adapter": "backend/app/emotion_adapter.py",
+    "integration_service": "backend/app/integration_service.py",
+    "database_gateway": "backend/app/database.py",
+    "endpoints": [
+      "POST /api/v1/calls",
+      "GET /api/v1/calls/{call_id}/consultation-card",
+      "GET /health"
+    ]
+  },
+  "frontend": {
+    "service": "src/services/consultation.ts",
+    "response_validator": "src/services/consultationContract.ts",
+    "types": "src/services/types.ts",
+    "upload_ui": "src/components/LiveDemo.tsx"
+  }
+}

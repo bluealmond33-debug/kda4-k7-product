@@ -1,0 +1,8 @@
+{
+  "summary": "고객이 주택담보대출 만기 연장 가능 여부와 필요한 서류를 문의함.",
+  "task_category": "대출",
+  "consulting_situation": "만기 연장 문의",
+  "qa_topic": "주택담보대출 만기 연장",
+  "model_name": "financial-summary-classification",
+  "model_version": "team-hyungjin-unversioned"
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k7.example/contracts/consultation-card-1.0.schema.json",
+  "title": "K7 Consultation Card",
+  "description": "문의 분류·요약·RAG 결과를 FastAPI가 상담카드로 저장하는 계약이다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "external_session_key",
+    "analysis_result_key",
+    "inquiry_type",
+    "summary",
+    "customer_request",
+    "keywords",
+    "risk_factors",
+    "urgency_level",
+    "risk_level",
+    "related_manual_refs",
+    "suggested_opening",
+    "recommended_actions",
+    "confirmation_items",
+    "confirmation_status",
+    "confirmed_at",
+    "model_name",
+    "model_version",
+    "generated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "external_session_key": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "analysis_result_key": { "type": ["string", "null"], "minLength": 1, "maxLength": 100 },
+    "inquiry_type": {
+      "type": "string",
+      "enum": [
+        "mistaken_transfer",
+        "voice_phishing_suspected",
+        "lost_card",
+        "overseas_payment",
+        "account_opening",
+        "payment_error",
+        "loan",
+        "general_inquiry",
+        "other"
+      ]
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "customer_request": { "type": ["string", "null"], "minLength": 1, "maxLength": 2000 },
+    "keywords": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 100 }, "uniqueItems": true },
+    "risk_factors": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 300 }, "uniqueItems": true },
+    "urgency_level": { "$ref": "#/$defs/risk_level" },
+    "risk_level": { "$ref": "#/$defs/risk_level" },
+    "related_manual_refs": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 200 }, "uniqueItems": true },
+    "suggested_opening": { "type": ["string", "null"], "minLength": 1, "maxLength": 2000 },
+    "recommended_actions": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 500 } },
+    "confirmation_items": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 500 } },
+    "confirmation_status": { "type": "string", "enum": ["pending", "confirmed", "correction_requested"] },
+    "confirmed_at": { "type": ["string", "null"], "format": "date-time" },
+    "model_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "model_version": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "generated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "confirmation_status": { "const": "confirmed" } }, "required": ["confirmation_status"] },
+      "then": { "properties": { "confirmed_at": { "type": "string", "format": "date-time" } } },
+      "else": { "properties": { "confirmed_at": { "type": "null" } } }
+    }
+  ]
+}

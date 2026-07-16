@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k7.example/contracts/routing-candidate-1.0.schema.json",
+  "title": "K7 Routing Candidate",
+  "description": "라우팅 모듈이 FastAPI에 전달하는 부서·상담사 추천 후보 계약이다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "external_session_key",
+    "department_code",
+    "counselor_code",
+    "recommendation_rank",
+    "confidence",
+    "rationale",
+    "selected",
+    "model_name",
+    "model_version"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "external_session_key": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "department_code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 100 },
+    "counselor_code": { "type": ["string", "null"], "pattern": "^[A-Z0-9_-]{4,30}$" },
+    "recommendation_rank": { "type": "integer", "minimum": 1 },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "rationale": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "selected": { "type": "boolean" },
+    "model_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "model_version": { "type": "string", "minLength": 1, "maxLength": 50 }
+  }
+}

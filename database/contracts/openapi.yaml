@@ -1,0 +1,255 @@
+openapi: 3.1.0
+info:
+  title: K7 Consultation Data Contract
+  description: 참고용 12테이블 확장 계약이다. 활성 mvp-1.0 OpenAPI는 FastAPI /openapi.json을 사용한다.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /consultation-sessions:
+    post:
+      summary: 상담 세션 생성
+      operationId: createConsultationSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [external_session_key, customer_number, channel, started_at]
+              properties:
+                external_session_key: { type: string, minLength: 1, maxLength: 100 }
+                customer_number: { type: string, minLength: 6, maxLength: 30 }
+                channel: { type: string, enum: [voice, chat, web] }
+                started_at: { type: string, format: date-time }
+      responses:
+        '201':
+          description: 생성됨
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionEnvelope'
+        '200':
+          description: 동일 요청의 기존 세션
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionEnvelope'
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /consultation-sessions/{external_session_key}/utterances:
+    post:
+      summary: STT 발화 수신 및 마스킹 저장
+      operationId: createUtterance
+      parameters:
+        - $ref: '#/components/parameters/ExternalSessionKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './stt_utterance_input.schema.json'
+      responses:
+        '201': { description: 저장됨 }
+        '200': { description: 동일 재요청의 기존 발화 }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /consultation-sessions/{external_session_key}/emotion-temperature-results:
+    post:
+      summary: 감정온도 결과 저장
+      operationId: createEmotionTemperatureResult
+      parameters:
+        - $ref: '#/components/parameters/ExternalSessionKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './emotion_temperature_result.schema.json'
+      responses:
+        '201': { description: 저장됨 }
+        '200': { description: 동일 result_key의 기존 결과 }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /consultation-sessions/{external_session_key}/model-results:
+    post:
+      summary: 분류·요약 모델 결과 정규화 및 저장
+      description: 모델의 snake_case 결과를 검증하고 어댑터를 거쳐 상담카드와 라우팅 후보로 분리한다.
+      operationId: createModelConsultationResult
+      parameters:
+        - $ref: '#/components/parameters/ExternalSessionKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './model_consultation_result_input.schema.json'
+      responses:
+        '200':
+          description: 정규화 결과 저장 또는 보완 필요
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelAdapterEnvelope'
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /consultation-sessions/{external_session_key}/consultation-card:
+    put:
+      summary: 상담카드 생성 또는 교체
+      operationId: upsertConsultationCard
+      parameters:
+        - $ref: '#/components/parameters/ExternalSessionKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './consultation_card.schema.json'
+      responses:
+        '200': { description: 저장됨 }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      summary: 상담사 화면용 통합 카드 조회
+      operationId: getConsultationCard
+      parameters:
+        - $ref: '#/components/parameters/ExternalSessionKey'
+        - name: X-Access-Purpose
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200':
+          description: 마스킹 통합 응답
+          content:
+            application/json:
+              schema:
+                $ref: './consultation_card_response.schema.json'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /consultation-sessions/{external_session_key}/routing-candidates:
+    put:
+      summary: 라우팅 후보 한 건 저장 또는 교체
+      operationId: upsertRoutingCandidate
+      parameters:
+        - $ref: '#/components/parameters/ExternalSessionKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './routing_candidate.schema.json'
+      responses:
+        '200': { description: 저장됨 }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /consultation-sessions/{external_session_key}/complete:
+    post:
+      summary: 상담 종료 및 과거 상담 이력 생성
+      operationId: completeConsultationSession
+      parameters:
+        - $ref: '#/components/parameters/ExternalSessionKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [resolution_result, ended_at]
+              properties:
+                resolution_result: { type: string, minLength: 1, maxLength: 4000 }
+                ended_at: { type: string, format: date-time }
+      responses:
+        '200': { description: 종료됨 또는 동일 종료 요청 처리됨 }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ExternalSessionKey:
+      name: external_session_key
+      in: path
+      required: true
+      description: JSON 본문에도 같은 필드가 있으면 값이 반드시 일치해야 한다.
+      schema: { type: string, minLength: 1, maxLength: 100 }
+  schemas:
+    ModelAdapterEnvelope:
+      type: object
+      additionalProperties: false
+      required: [adapter_version, mapping_version, status, pending_fields, warnings, ignored_fields]
+      properties:
+        adapter_version: { type: string }
+        mapping_version: { type: string }
+        status: { type: string, enum: [ready, needs_enrichment] }
+        pending_fields:
+          type: array
+          items: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+        ignored_fields:
+          type: array
+          items: { type: string }
+        consultation_card:
+          oneOf:
+            - $ref: './consultation_card.schema.json'
+            - type: 'null'
+        routing_candidate:
+          oneOf:
+            - $ref: './routing_candidate.schema.json'
+            - type: 'null'
+    SessionEnvelope:
+      type: object
+      additionalProperties: false
+      required: [schema_version, data]
+      properties:
+        schema_version: { const: '1.0' }
+        data:
+          type: object
+          additionalProperties: false
+          required: [external_session_key, session_status, created_at]
+          properties:
+            external_session_key: { type: string }
+            session_status: { type: string }
+            created_at: { type: string, format: date-time }
+  responses:
+    ValidationError:
+      description: 계약 또는 의미 검증 실패
+      content:
+        application/json:
+          schema: { $ref: './error_response.schema.json' }
+    Conflict:
+      description: 중복 키 또는 현재 상태 충돌
+      content:
+        application/json:
+          schema: { $ref: './error_response.schema.json' }
+    Unauthorized:
+      description: 인증 정보가 없거나 유효하지 않음
+      content:
+        application/json:
+          schema: { $ref: './error_response.schema.json' }
+    Forbidden:
+      description: 조회 권한 없음
+      content:
+        application/json:
+          schema: { $ref: './error_response.schema.json' }
+    NotFound:
+      description: 세션 또는 고객을 찾을 수 없음
+      content:
+        application/json:
+          schema: { $ref: './error_response.schema.json' }
