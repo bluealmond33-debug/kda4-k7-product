@@ -164,7 +164,7 @@ calls 1건 ─ transcripts 1건 ─ consultation_cards 1건
 - PostgreSQL 통합 테스트는 검증 행을 `finally`에서 자동 삭제
 - 로컬 회귀검증: Python 테스트, JSON Schema, 어댑터, TypeScript, Vite build 통과
 - 이찬희는 이희창 운영 Railway 서비스와 이희창 저장소를 수정하지 않았음
-- `k7-mvp-lch-preview`는 도메인·환경변수·DB 연결을 해제했으며 운영 E2E 확인 후 빈 서비스 삭제만 Railway 관리자 권한 필요. 기술적 의존성은 없어 지금 삭제해도 운영에 영향 없음
+- `k7-mvp-lch-preview`는 공개 도메인과 사용자 정의 환경변수·DB 연결이 없고 운영에서 참조하지 않지만 실행 중인 검증 배포는 남아 있다. POST/GET 완전 동일성과 Vercel 통합 표시를 확인한 뒤 Railway 관리자가 이 서비스만 삭제한다.
 
 ## 통합 후 반드시 실행할 검증
 
@@ -183,7 +183,7 @@ npm run check
 5. 같은 call_id의 GET이 200
 6. POST와 GET의 전체 응답이 동일
 7. Vercel 상담 준비 카드가 mock이 아니라 이 응답을 표시
-8. 기존 9개 데모 API가 계속 응답
+8. 기존 8개 POST 데모 API가 계속 응답
 
 ## 작업 보고 형식
 

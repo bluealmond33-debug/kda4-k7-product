@@ -83,7 +83,7 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 - 통합 함수가 실제 감정 결과에 `emotion_source="audio"`를 요구하도록 코드 강제
 - 어댑터 성격 확정: 비-AI 결정론적 Python 매핑·검증 코드
 
-검증용 `k7-mvp-lch-preview`는 공개 도메인과 `DATABASE_URL`·OpenAI·CORS 변수를 모두 제거했습니다. 운영 통합 확인 후 Railway 관리자가 빈 서비스 껍데기를 삭제하면 됩니다. 기술적 의존성은 없어서 지금 삭제해도 운영에는 영향이 없습니다.
+검증용 `k7-mvp-lch-preview`는 공개 도메인과 `DATABASE_URL`·OpenAI·CORS 사용자 변수를 모두 제거했고 운영에서 참조하지 않습니다. 다만 실행 중인 검증 배포는 남아 있으므로, 운영 POST/GET 완전 동일성과 Vercel 통합 표시를 확인한 뒤 Railway 관리자가 이 서비스만 삭제합니다.
 
 ## 이찬희 담당 완료 범위
 
@@ -92,7 +92,7 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 3. PostgreSQL 최소 3테이블과 자동 스키마 적용
 4. FastAPI 저장·조회 API
 5. React 타입·서비스 호출 경계
-6. 기존 9개 API의 호환 경로
+6. 기존 8개 POST 데모 API의 호환 경로
 7. 계약·어댑터·FastAPI·DB·UTF-8·음성 E2E 검증
 8. Railway Python 모노레포 빌드 설정
 9. 활성·참고 자산 구분과 CI 매니페스트 검증
@@ -133,7 +133,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 5. 이희창: Railway에서 접근 가능한 형진 모델 서버 경로를 기존 STT 뒤에 연결
 6. 김민기: 실제 규정 파일과 RAG·브리핑카드 조립 연결
 7. Vercel 소유자: 유료 팀 공유 없이 자기 계정에서 운영 API 환경변수와 배포 반영
-8. Railway 관리자: 연결 해제된 `k7-mvp-lch-preview` 빈 서비스 삭제
+8. Railway 관리자: POST/GET·Vercel 최종 검수 후 연결 해제된 `k7-mvp-lch-preview` 검증 서비스 삭제
 
 ## PR 상태
 

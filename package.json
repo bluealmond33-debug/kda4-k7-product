@@ -11,7 +11,8 @@
     "validate:manifest": "node scripts/validate-active-manifest.mjs",
     "validate:contracts": "node scripts/validate-contracts.mjs",
     "validate:adapter": "node scripts/validate-adapter.mjs",
-    "check": "npm run validate:manifest && npm run validate:contracts && npm run validate:adapter && npm run build"
+    "check": "npm run validate:manifest && npm run validate:contracts && npm run validate:adapter && npm run build",
+    "check:release": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-release-gates.ps1"
   },
   "dependencies": {
     "react": "^18.3.1",
