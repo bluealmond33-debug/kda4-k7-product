@@ -22,10 +22,13 @@ from app.schemas import (
     ReactSummarizeRequest,
     TranscribeResult,
 )
+from app.schemas import GptAnalysis
 from app.services.emotion import analyze_emotion
 from app.services.gpt_analysis import analyze_transcript
 from app.services.judge import judge as run_judge
 from app.services.legacy_adapter import emotion_label_and_score, routing_reason, urgency_score_for
+from app.services.local_llm import analyze_transcript_local
+from app.services.local_stt import transcribe_audio_local
 from app.services.rag import search_procedures
 from app.services.react_adapter import build_call_summary, emotion_label, emotion_level_and_signals
 from app.services.stt import transcribe_audio
@@ -57,19 +60,34 @@ def _rag_query(reason_codes: list[AttentionReasonCode], summary: str) -> str:
     return f"{labels} {summary}".strip()
 
 
+def _transcribe(filename: str, audio_bytes: bytes) -> TranscribeResult:
+    """온프레미스 스위치(settings.use_local_models) — true면 faster-whisper, 아니면 OpenAI Whisper."""
+    if settings.use_local_models:
+        return transcribe_audio_local(settings, filename, audio_bytes)
+    return transcribe_audio(_get_openai_client(), filename, audio_bytes)
+
+
+def _analyze(transcript: str) -> GptAnalysis:
+    """온프레미스 스위치(settings.use_local_models) — true면 Ollama 로컬 LLM, 아니면 OpenAI GPT.
+
+    ⚠️ RAG(search_procedures)는 임베딩 때문에 이 스위치와 무관하게 아직 OpenAI를 쓴다 —
+    로컬 임베딩 모델 전환은 별도 작업으로 남겨둠."""
+    if settings.use_local_models:
+        return analyze_transcript_local(settings, transcript)
+    return analyze_transcript(_get_openai_client(), transcript)
+
+
 @router.post("/stt", response_model=TranscribeResult)
 async def stt_endpoint(audio: UploadFile) -> TranscribeResult:
-    client = _get_openai_client()
     audio_bytes = await audio.read()
-    return transcribe_audio(client, audio.filename or "audio.wav", audio_bytes)
+    return _transcribe(audio.filename or "audio.wav", audio_bytes)
 
 
 @router.post("/analyze", response_model=AnalyzeResult)
 async def analyze_endpoint(audio: UploadFile, transcript: str = Form(...)) -> AnalyzeResult:
-    client = _get_openai_client()
     audio_bytes = await audio.read()
 
-    gpt_result = analyze_transcript(client, transcript)
+    gpt_result = _analyze(transcript)
     emotion_result = analyze_emotion(audio_bytes)
 
     return AnalyzeResult(gpt=gpt_result, emotion=emotion_result)
@@ -92,9 +110,7 @@ async def rag_endpoint(body: RagRequest) -> RagResult:
 async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResponse:
     """demo_live.html용 어댑터 — 브라우저 STT로 이미 뽑힌 텍스트를 받아
     api_contract.md 스키마(summary/category/emotion/urgency_score/routing/keywords)로 응답한다."""
-    client = _get_openai_client()
-
-    gpt_result = analyze_transcript(client, body.text)
+    gpt_result = _analyze(body.text)
     emotion_result = analyze_emotion(body.text.encode("utf-8"))
     judgement = run_judge(gpt_result.risk_flags, emotion_result)
 
@@ -126,10 +142,9 @@ async def react_emotion_endpoint(body: ReactEmotionRequest) -> ReactEmotionScore
 @router.post("/summarize", response_model=ReactCallSummary)
 async def react_summarize_endpoint(body: ReactSummarizeRequest) -> ReactCallSummary:
     """kda4-k7-product 연동 — 전사문 하나로 AI 사전요약(CallSummary)을 반환한다."""
-    client = _get_openai_client()
     transcript_text = body.transcript.text
 
-    gpt_result = analyze_transcript(client, transcript_text)
+    gpt_result = _analyze(transcript_text)
     emotion_result = analyze_emotion(transcript_text.encode("utf-8"))
     judgement = run_judge(gpt_result.risk_flags, emotion_result)
 
@@ -144,14 +159,14 @@ async def react_summarize_endpoint(body: ReactSummarizeRequest) -> ReactCallSumm
 
 @router.post("/briefing", response_model=BriefingCard)
 async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
-    client = _get_openai_client()
     audio_bytes = await audio.read()
 
-    transcribed = transcribe_audio(client, audio.filename or "audio.wav", audio_bytes)
-    gpt_result = analyze_transcript(client, transcribed.text)
+    transcribed = _transcribe(audio.filename or "audio.wav", audio_bytes)
+    gpt_result = _analyze(transcribed.text)
     emotion_result = analyze_emotion(audio_bytes)
     judgement = run_judge(gpt_result.risk_flags, emotion_result)
-    references = search_procedures(client, _rag_query(judgement.reason_codes, gpt_result.summary))
+    # RAG는 임베딩이 필요해 온프레미스 스위치와 무관하게 아직 OpenAI를 쓴다.
+    references = search_procedures(_get_openai_client(), _rag_query(judgement.reason_codes, gpt_result.summary))
 
     return BriefingCard(
         call_id=transcribed.call_id,
