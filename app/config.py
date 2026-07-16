@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
     chroma_persist_dir: str = "./data/chroma"
     extra_cors_origins: str = ""
+    database_url: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
