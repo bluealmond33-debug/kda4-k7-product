@@ -44,7 +44,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             <span style={css("font-size:12px;color:var(--color-fg-muted)")}>입력</span>
             <div style={css("display:flex;border:1px solid var(--color-border);border-radius:9999px;overflow:hidden")}>
               <span onClick={vm.setSim} style={css("padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:" + vm.simBg + ";color:" + vm.simFg)}>시뮬레이션</span>
-              <span onClick={vm.setMic} style={css("padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:" + vm.micBg + ";color:" + vm.micFg)}>실제 마이크</span>
+              <span onClick={vm.setMic} style={css("padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:" + vm.micBg + ";color:" + vm.micFg)}>음성 파일</span>
             </div>
             <input
               ref={audioInputRef}
@@ -69,7 +69,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               )}
             >
               <span className="mi" style={css("font-size:17px")}>audio_file</span>
-              {vm.audioBusy ? "음성 처리 중" : "실제 음성 파일"}
+              {vm.audioBusy ? "음성 처리 중" : "음성 파일 선택"}
             </span>
             {vm.showSkip && (
               <span onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
