@@ -39,6 +39,9 @@
 5. 새 분류 라벨을 임의 부서로 추측하지 않습니다.
 6. 감정 모델이 준비되지 않았으면 `unavailable`을 사용하며 임의 점수를 만들지 않습니다.
 7. 개인정보 마스킹은 현재 MVP 범위가 아니므로 활성 계약에 몰래 추가하지 않습니다.
+8. 실제 감정온도는 고객 음성만 입력으로 사용합니다. `completed` 감정 결과는 통합 함수에 `emotion_source="audio"`를 함께 제공해야 하며 텍스트 키워드 결과는 거절합니다.
+9. 현재 MVP는 녹음·업로드가 완료된 음성 파일 전체를 일괄 처리합니다. 실제 전화망·WebSocket·스트리밍 STT를 완료 기능으로 보고하지 않습니다.
+10. 모델 어댑터는 AI가 아닌 결정론적 코드이며 원시 JSON 매핑·검증·미매핑 거절만 담당합니다.
 
 ## 최종 완료 기준
 
@@ -48,11 +51,12 @@
 - [x] 형진 원시 4필드 → 표준 카드 → 실제 DB 저장·재조회 검증
 - [x] 희창 기존 STT·모델 결과 주입형 독립 통합 서비스와 실제 DB 검증
 - [x] React·계약·FastAPI GitHub CI 통과
-- [ ] `lch` 변경을 이희창 운영 FastAPI에 실제 이식
-- [ ] 운영 `/health`가 `database=connected`, `contract_version=mvp-1.0` 반환
-- [ ] 운영 POST가 실제 한국어 음성에서 201과 call_id 반환
+- [x] 노출 가능성이 있던 Railway PostgreSQL 비밀번호 회전 및 새 연결 검증
+- [x] `lch` 변경을 이희창 운영 FastAPI에 실제 이식
+- [x] 운영 `/health`가 `database=connected`, `contract_version=mvp-1.0` 반환
+- [x] 운영 POST가 실제 한국어 음성에서 201과 call_id 반환
 - [ ] 같은 call_id의 GET이 POST와 동일한 응답 반환
-- [ ] 기존 8개 호환 API 회귀 통과
+- [x] 기존 8개 호환 API 경로·HTTP 메서드 유지
 - [ ] Vercel 소유자가 실제 운영 API 응답을 상담카드에 표시
 - [ ] 연결 해제된 preview 빈 서비스 최종 정리
 
@@ -62,12 +66,14 @@
 
 | 증거 | 기록값 |
 |---|---|
-| 운영 백엔드 commit | 대기 |
-| `lch` 기준 commit | PR #1 최신 HEAD |
-| readiness 실행 시각 | 대기 |
-| readiness 결과 | 현재 `false` |
-| 실제 음성 test call_id | 대기 |
-| POST/GET 동일 | 대기 |
+| 운영 백엔드 통합 PR | `HeeChang50/kda4-k7-backend` PR #1, 저장소 접근 권한 없어 독립 diff 검토 대기 |
+| 운영 Railway deployment | `09fe8b9c-ba9f-4f65-b503-95d84f4e2aa0`, `SUCCESS` |
+| `lch` 기준 commit | PR #1 최신 HEAD (`duration_sec` 저장 정밀도·음성 감정 입력 정책 포함) |
+| PostgreSQL 자격증명 회전 | 2026-07-16 완료, 새 연결·UTF8·3테이블·0건 보존 확인 |
+| readiness 실행 시각 | 2026-07-16 16시대 KST |
+| readiness 결과 | `true` |
+| 실제 음성 test call_id | `88df9f2e-ef4f-4d9d-b04c-b3affde47dfe` (검증 후 삭제) |
+| POST/GET 동일 | 상담 내용 동일, `duration_sec`만 `10.100000381469727 → 10.1`; `lch`에서 3자리 정규화 수정 |
 | Vercel 표시 | 대기 |
 | 최종 인수 담당 | 이찬희 |
 

@@ -6,7 +6,7 @@ model adapter, mvp-1.0 card assembly and PostgreSQL transaction boundary.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import Any, Literal, Mapping
 from uuid import uuid4
 
 from app.config import Settings
@@ -21,6 +21,23 @@ from app.database import save_call
 from app.model_adapter import normalize_model_result
 
 
+def _normalize_transcript_storage_precision(
+    transcript: TranscriptResult,
+) -> TranscriptResult:
+    """Align the API response with PostgreSQL numeric(10, 3) storage.
+
+    Some STT libraries return binary floating-point artifacts such as
+    ``10.100000381469727``. PostgreSQL correctly stores that value as ``10.100``,
+    so returning the unrounded value from POST would make the subsequent GET
+    look different even though no business data was lost.
+    """
+
+    rounded_duration = round(transcript.duration_sec, 3)
+    if rounded_duration == transcript.duration_sec:
+        return transcript
+    return transcript.model_copy(update={"duration_sec": rounded_duration})
+
+
 def persist_pipeline_result(
     settings: Settings,
     *,
@@ -28,6 +45,7 @@ def persist_pipeline_result(
     transcript: TranscriptResult,
     raw_model_result: Mapping[str, Any],
     emotion: EmotionResult | None = None,
+    emotion_source: Literal["audio"] | None = None,
     created_at: datetime | None = None,
 ) -> MvpCallResponse:
     """Normalize one pipeline result, persist it and return the stored contract.
@@ -37,12 +55,22 @@ def persist_pipeline_result(
     integrate K7 persistence without replacing or duplicating its pipeline.
     """
 
+    if (
+        emotion is not None
+        and emotion.status.value == "completed"
+        and emotion_source != "audio"
+    ):
+        raise ValueError(
+            "completed emotion must be produced from customer audio"
+        )
+
     normalized = normalize_model_result(raw_model_result)
+    persisted_transcript = _normalize_transcript_storage_precision(transcript)
     response = MvpCallResponse(
         call_id=uuid4(),
         status=CallStatus.READY,
         audio_filename=audio_filename,
-        transcript=transcript,
+        transcript=persisted_transcript,
         consultation_card=ConsultationCard(
             **normalized.model_dump(),
             emotion=emotion

@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from app.config import Settings
 from app.contracts import EmotionResult, TranscriptResult
 from app.integration_service import persist_pipeline_result
@@ -74,7 +76,57 @@ def test_existing_pipeline_can_supply_real_emotion_result(monkeypatch) -> None:
             "qa_topic": "무단 계좌 개설",
         },
         emotion=emotion,
+        emotion_source="audio",
     )
 
     assert response.consultation_card.emotion is emotion
     assert response.consultation_card.incident_risk.value == "high"
+
+
+def test_stt_duration_is_normalized_to_postgresql_precision(monkeypatch) -> None:
+    captured = {}
+
+    def fake_save_call(_settings, response, _raw_model_result):
+        captured["response"] = response
+
+    monkeypatch.setattr("app.integration_service.save_call", fake_save_call)
+    transcript = TranscriptResult(
+        text="주택담보대출 만기 연장을 문의합니다.",
+        stt_model="whisper-1",
+        duration_sec=10.100000381469727,
+    )
+
+    response = persist_pipeline_result(
+        Settings(database_url="postgresql://not-used-in-unit-test"),
+        audio_filename="customer.wav",
+        transcript=transcript,
+        raw_model_result=FINANCIAL_RESULT,
+    )
+
+    assert transcript.duration_sec == 10.100000381469727
+    assert response.transcript.duration_sec == 10.1
+    assert captured["response"].transcript.duration_sec == 10.1
+
+
+def test_completed_emotion_rejects_non_audio_source(monkeypatch) -> None:
+    monkeypatch.setattr("app.integration_service.save_call", lambda *_args: None)
+
+    with pytest.raises(
+        ValueError,
+        match="completed emotion must be produced from customer audio",
+    ):
+        persist_pipeline_result(
+            Settings(database_url="postgresql://not-used-in-unit-test"),
+            audio_filename="customer.wav",
+            transcript=TranscriptResult(
+                text="상담 문의입니다.",
+                stt_model="whisper-1",
+            ),
+            raw_model_result=FINANCIAL_RESULT,
+            emotion=EmotionResult(
+                status="completed",
+                score=55,
+                level="caution",
+                reason="텍스트 키워드 기반 결과",
+            ),
+        )

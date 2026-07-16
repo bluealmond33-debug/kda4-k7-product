@@ -16,9 +16,24 @@
 - 이희창 운영 백엔드: `https://kda4-k7-backend-production.up.railway.app`
 - 운영 API 문서: `https://kda4-k7-backend-production.up.railway.app/docs`
 
+## 2026-07-16 통합 PR 이후 현재 상태
+
+- 이희창 백엔드 통합 PR: `https://github.com/HeeChang50/kda4-k7-backend/pull/1`
+- 계약·DB·어댑터·POST/GET 이식과 Railway `DATABASE_URL` 연결이 운영에 반영됐다.
+- 공개 운영 API는 기존 8개 POST 경로와 새 POST/GET, `/health`를 합쳐 11개 경로이며 readiness는 `true`다.
+- 실제 한국어 WAV로 운영 POST 201과 같은 call_id GET 200까지 성공했다.
+- STT가 반환한 `duration_sec=10.100000381469727`이 DB 저장 후 `10.1`로 조회되는 차이가 발견됐다. 이찬희 `lch`의 최신 `integration_service.py`처럼 응답 조립 전에 소수점 셋째 자리로 정규화하라.
+- `pollmap` 계정은 비공개 백엔드 저장소 접근 권한이 없어 PR diff를 독립 검토하지 못했다. 저장소 읽기 권한 또는 patch를 제공하라.
+- 화면에 노출 가능성이 있던 PostgreSQL 비밀번호는 2026-07-16 회전 완료했다. 회전 전에 복사한 `DATABASE_URL`은 무효이므로 절대 재사용하지 마라.
+- 운영 백엔드에는 비밀값을 복사하지 말고 Railway 참조 변수 `DATABASE_URL=${{Postgres.DATABASE_URL}}`만 설정하라.
+
 ## MVP의 확정 범위
 
 고객 입력은 음성만 사용한다. 개인정보 마스킹, 고객 마스터, 권한·감사로그, 실제 상담사 자동배정은 이번 MVP 범위가 아니다. 감정·요약·라우팅·RAG의 임시 로직은 각 팀원의 실제 로직을 받으면 교체하되, 준비되지 않은 감정 점수를 실제 모델 결과처럼 만들지 않는다.
+
+현재 MVP의 음성 처리는 녹음 또는 업로드가 끝난 완성 파일 전체를 한 번에 처리한다. 통신사 전화망, WebSocket 음성 스트리밍, 발화 중 부분 STT는 구현된 것으로 보고하지 마라. 감정온도는 STT 텍스트가 아니라 고객 음성만 입력으로 사용한다. 실제 감정 모델 결과를 `persist_pipeline_result()`에 넣을 때는 `emotion_source="audio"`를 함께 전달하라. 텍스트 키워드 기반 기존 `/emotion` 결과를 활성 상담카드의 `completed` 감정으로 승격하지 마라.
+
+`model_adapter.py`는 AI가 아니다. 학습·추론·프롬프트 호출 없이 원시 모델 JSON을 검토된 규칙으로 매핑하고 Pydantic 계약 위반이나 미매핑 라벨을 거절하는 결정론적 Python 코드다.
 
 최종 흐름은 반드시 다음과 같아야 한다.
 

@@ -3,6 +3,18 @@
   "contract_version": "mvp-1.0",
   "source_channel": "voice",
   "masking_enabled": false,
+  "audio_processing": {
+    "mode": "whole_file_batch",
+    "streaming": false,
+    "telephony_connected": false,
+    "stt_input": "audio",
+    "emotion_input": "audio_only"
+  },
+  "adapter": {
+    "implementation": "backend/app/model_adapter.py",
+    "kind": "deterministic_code",
+    "uses_ai": false
+  },
   "database": {
     "engine": "postgresql",
     "schema": "database/mvp/schema.sql",

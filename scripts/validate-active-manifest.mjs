@@ -17,6 +17,26 @@ if (manifest.source_channel !== "voice") {
 if (manifest.masking_enabled !== false) {
   throw new Error("MVP masking_enabled must remain false");
 }
+if (
+  manifest.audio_processing?.mode !== "whole_file_batch" ||
+  manifest.audio_processing?.streaming !== false ||
+  manifest.audio_processing?.telephony_connected !== false
+) {
+  throw new Error("MVP audio processing must remain non-streaming whole-file batch");
+}
+if (
+  manifest.audio_processing?.stt_input !== "audio" ||
+  manifest.audio_processing?.emotion_input !== "audio_only"
+) {
+  throw new Error("STT and emotion model inputs must remain governed as audio");
+}
+if (
+  manifest.adapter?.implementation !== manifest.backend.model_adapter ||
+  manifest.adapter?.kind !== "deterministic_code" ||
+  manifest.adapter?.uses_ai !== false
+) {
+  throw new Error("active model adapter must remain deterministic non-AI code");
+}
 
 const governedPaths = [
   manifest.database.schema,

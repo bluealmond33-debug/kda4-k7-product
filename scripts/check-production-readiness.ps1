@@ -10,16 +10,16 @@ $requiredPaths = @(
     "/api/v1/calls",
     "/api/v1/calls/{call_id}/consultation-card"
 )
-$legacyPaths = @(
-    "/stt",
-    "/analyze",
-    "/judge",
-    "/rag",
-    "/analyze-text",
-    "/emotion",
-    "/summarize",
-    "/briefing"
-)
+$legacyOperations = [ordered]@{
+    "/stt" = "post"
+    "/analyze" = "post"
+    "/judge" = "post"
+    "/rag" = "post"
+    "/analyze-text" = "post"
+    "/emotion" = "post"
+    "/summarize" = "post"
+    "/briefing" = "post"
+}
 
 try {
     $openapi = Invoke-RestMethod -Uri "$baseUrl/openapi.json" -Method Get
@@ -35,7 +35,17 @@ try {
 
 $actualPaths = @($openapi.paths.PSObject.Properties.Name)
 $missingMvpPaths = @($requiredPaths | Where-Object { $_ -notin $actualPaths })
-$missingLegacyPaths = @($legacyPaths | Where-Object { $_ -notin $actualPaths })
+$missingLegacyOperations = @(
+    foreach ($operation in $legacyOperations.GetEnumerator()) {
+        $pathProperty = $openapi.paths.PSObject.Properties[$operation.Key]
+        $methodProperty = if ($null -ne $pathProperty) {
+            $pathProperty.Value.PSObject.Properties[$operation.Value]
+        }
+        if ($null -eq $pathProperty -or $null -eq $methodProperty) {
+            "$($operation.Value.ToUpperInvariant()) $($operation.Key)"
+        }
+    }
+)
 $hasPostCalls = [bool]$openapi.paths."/api/v1/calls".post
 $hasGetCard = [bool]$openapi.paths."/api/v1/calls/{call_id}/consultation-card".get
 $databaseConnected = $health.database -eq "connected"
@@ -43,7 +53,7 @@ $contractReady = $health.contract_version -eq "mvp-1.0"
 
 $ready = (
     $missingMvpPaths.Count -eq 0 -and
-    $missingLegacyPaths.Count -eq 0 -and
+    $missingLegacyOperations.Count -eq 0 -and
     $hasPostCalls -and
     $hasGetCard -and
     $databaseConnected -and
@@ -59,8 +69,9 @@ $ready = (
     get_consultation_card = $hasGetCard
     database = $health.database
     contract_version = $health.contract_version
+    legacy_operations_ready = $missingLegacyOperations.Count -eq 0
     missing_mvp_paths = $missingMvpPaths
-    missing_legacy_paths = $missingLegacyPaths
+    missing_legacy_operations = $missingLegacyOperations
 } | ConvertTo-Json -Depth 5
 
 if (-not $ready) {

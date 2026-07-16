@@ -28,7 +28,7 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
     transcript = TranscriptResult(
         text="주택담보대출 만기 연장과 필요한 서류를 문의합니다.",
         stt_model="integration-test",
-        duration_sec=3.25,
+        duration_sec=10.100000381469727,
     )
 
     initialize_database(settings)
@@ -79,6 +79,7 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
 
         assert stored is not None
         assert stored.model_dump(mode="json") == response.model_dump(mode="json")
+        assert response.transcript.duration_sec == 10.1
     finally:
         if response is not None:
             with psycopg.connect(database_url) as connection:

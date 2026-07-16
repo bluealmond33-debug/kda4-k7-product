@@ -1,6 +1,9 @@
 # K7 MVP repository rules
 
 - Active customer input is voice only. Text is an internal STT result, not a customer input mode.
+- Active MVP processing is whole-file batch processing after recording/upload completes, not live telephony or streaming STT.
+- Emotion temperature may consume customer audio only. Transcript text must not be presented as an audio-emotion model result.
+- The model adapter is deterministic non-AI Python code: it maps, validates, and rejects model JSON but does not infer new customer facts.
 - Active API contract is `database/contracts/mvp_call_response.schema.json` (`mvp-1.0`).
 - Active PostgreSQL schema is `database/mvp/schema.sql` (3 tables).
 - Do not make masking, auth, audit logs, counselor allocation, or the legacy 12-table schema an MVP dependency.
