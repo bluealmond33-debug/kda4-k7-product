@@ -8,6 +8,14 @@ param(
 $ErrorActionPreference = "Stop"
 $resolvedAudio = (Resolve-Path -LiteralPath $AudioPath).Path
 $baseUrl = $ApiBaseUrl.TrimEnd("/")
+$mimeType = switch ([IO.Path]::GetExtension($resolvedAudio).ToLowerInvariant()) {
+    ".wav" { "audio/wav" }
+    ".mp3" { "audio/mpeg" }
+    ".m4a" { "audio/mp4" }
+    ".ogg" { "audio/ogg" }
+    ".webm" { "audio/webm" }
+    default { throw "Unsupported audio extension" }
+}
 
 Write-Host "1/3 health check"
 $health = Invoke-RestMethod -Uri "$baseUrl/health" -Method Get
@@ -23,7 +31,7 @@ $createdJson = & curl.exe `
     --silent `
     --show-error `
     --fail `
-    --form "audio=@$resolvedAudio" `
+    --form "audio=@$resolvedAudio;type=$mimeType" `
     "$baseUrl/api/v1/calls"
 if ($LASTEXITCODE -ne 0) {
     throw "Audio upload failed"
@@ -35,9 +43,15 @@ if ($created.status -ne "ready" -or !$created.call_id) {
 }
 
 Write-Host "3/3 read persisted consultation card"
-$stored = Invoke-RestMethod `
-    -Uri "$baseUrl/api/v1/calls/$($created.call_id)/consultation-card" `
-    -Method Get
+$storedJson = & curl.exe `
+    --silent `
+    --show-error `
+    --fail `
+    "$baseUrl/api/v1/calls/$($created.call_id)/consultation-card"
+if ($LASTEXITCODE -ne 0) {
+    throw "Consultation card lookup failed"
+}
+$stored = $storedJson | ConvertFrom-Json
 
 if ($stored.call_id -ne $created.call_id) {
     throw "Stored call_id does not match created call_id"
