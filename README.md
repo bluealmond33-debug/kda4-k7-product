@@ -15,10 +15,12 @@
 | 프론트엔드 | `src/` — React + Vite |
 | 백엔드 | `backend/app/` — FastAPI |
 | DB | `database/mvp/schema.sql` — PostgreSQL 3테이블 |
+| 활성 자산 매니페스트 | `database/active-manifest.json` |
 | API 계약 | `database/contracts/mvp_call_response.schema.json` |
+| 모델 결과 어댑터 | `backend/app/model_adapter.py` |
 | Railway 설정 | `railway.toml` |
 
-개인정보 마스킹, 고객 마스터, 권한·감사로그, 실제 상담사 자동배정은 이번 MVP 필수가 아닙니다. 기존 12테이블 SQL과 상세 계약은 향후 확장 참고용으로 보존하며 활성 배포에는 사용하지 않습니다.
+개인정보 마스킹, 고객 마스터, 권한·감사로그, 실제 상담사 자동배정은 이번 MVP 필수가 아닙니다. 기존 12테이블 SQL과 상세 계약은 향후 확장 참고용으로 보존하며 활성 배포에는 사용하지 않습니다. CI가 `active-manifest.json`을 검사해 이 경계를 고정합니다.
 
 ## 활성 API
 
@@ -101,8 +103,10 @@ Remove-Item Env:K7_TEST_DATABASE_URL
 
 검증 대상:
 
+- 활성 자산 매니페스트와 정확히 3개 테이블
 - JSON Schema와 예제
 - 기존 모델 결과 어댑터
+- `mvp-1.0` 활성 모델 결과 어댑터
 - TypeScript와 Vite 프로덕션 빌드
 - FastAPI `mvp-1.0` Pydantic 계약
 - 비마스킹 3테이블 활성 SQL

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS calls (
     status text NOT NULL CHECK (status IN ('processing', 'ready', 'failed')),
     source_channel text NOT NULL DEFAULT 'voice' CHECK (source_channel = 'voice'),
     audio_filename text NOT NULL,
+    CONSTRAINT calls_audio_filename_not_blank_chk CHECK (btrim(audio_filename) <> ''),
     created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS transcripts (
     call_id uuid NOT NULL UNIQUE REFERENCES calls (call_id) ON DELETE CASCADE,
     transcript_text text NOT NULL CHECK (btrim(transcript_text) <> ''),
     stt_model text NOT NULL,
+    CONSTRAINT transcripts_stt_model_not_blank_chk CHECK (btrim(stt_model) <> ''),
     duration_sec numeric(10, 3) NOT NULL DEFAULT 0 CHECK (duration_sec >= 0),
     created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -39,14 +41,64 @@ CREATE TABLE IF NOT EXISTS consultation_cards (
     raw_model_result jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT consultation_cards_schema_version_chk CHECK (schema_version = 'mvp-1.0'),
     CONSTRAINT consultation_cards_high_risk_reason_chk CHECK (
         incident_risk <> 'high' OR btrim(COALESCE(risk_reason, '')) <> ''
     ),
     CONSTRAINT consultation_cards_unavailable_emotion_chk CHECK (
         emotion_status <> 'unavailable'
         OR (emotion_score IS NULL AND emotion_level IS NULL)
+    ),
+    CONSTRAINT consultation_cards_available_emotion_chk CHECK (
+        emotion_status = 'unavailable'
+        OR (emotion_score IS NOT NULL AND btrim(COALESCE(emotion_level, '')) <> '')
     )
 );
+
+-- Idempotent constraint upgrades for a database created by an earlier mvp-1.0
+-- revision. CREATE TABLE IF NOT EXISTS alone cannot add new constraints.
+DO $migration$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'calls_audio_filename_not_blank_chk'
+          AND conrelid = 'calls'::regclass
+    ) THEN
+        ALTER TABLE calls ADD CONSTRAINT calls_audio_filename_not_blank_chk
+            CHECK (btrim(audio_filename) <> '');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'transcripts_stt_model_not_blank_chk'
+          AND conrelid = 'transcripts'::regclass
+    ) THEN
+        ALTER TABLE transcripts ADD CONSTRAINT transcripts_stt_model_not_blank_chk
+            CHECK (btrim(stt_model) <> '');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'consultation_cards_schema_version_chk'
+          AND conrelid = 'consultation_cards'::regclass
+    ) THEN
+        ALTER TABLE consultation_cards ADD CONSTRAINT consultation_cards_schema_version_chk
+            CHECK (schema_version = 'mvp-1.0');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'consultation_cards_available_emotion_chk'
+          AND conrelid = 'consultation_cards'::regclass
+    ) THEN
+        ALTER TABLE consultation_cards ADD CONSTRAINT consultation_cards_available_emotion_chk
+            CHECK (
+                emotion_status = 'unavailable'
+                OR (emotion_score IS NOT NULL AND btrim(COALESCE(emotion_level, '')) <> '')
+            );
+    END IF;
+END
+$migration$;
 
 CREATE INDEX IF NOT EXISTS calls_created_at_idx ON calls (created_at DESC);
 CREATE INDEX IF NOT EXISTS consultation_cards_department_idx ON consultation_cards (department);

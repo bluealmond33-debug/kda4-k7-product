@@ -3,14 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "K7 상담 시연 — 자연어 접수 → AI 요약 → 상담사 데스크톱 (Kiwoom demo)",
+  "description": "K7 음성 상담 MVP — STT → 표준 계약 → PostgreSQL → 상담카드",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "validate:manifest": "node scripts/validate-active-manifest.mjs",
     "validate:contracts": "node scripts/validate-contracts.mjs",
     "validate:adapter": "node scripts/validate-adapter.mjs",
-    "check": "npm run validate:contracts && npm run validate:adapter && npm run build"
+    "check": "npm run validate:manifest && npm run validate:contracts && npm run validate:adapter && npm run build"
   },
   "dependencies": {
     "react": "^18.3.1",

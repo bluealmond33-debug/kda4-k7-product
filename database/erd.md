@@ -1,5 +1,7 @@
 # K7 PostgreSQL ERD
 
+> 참고용 12테이블 ERD입니다. 현재 MVP 활성 테이블은 `database/mvp/schema.sql`의 `calls`, `transcripts`, `consultation_cards` 세 개뿐입니다.
+
 ```mermaid
 erDiagram
     DEPARTMENTS {

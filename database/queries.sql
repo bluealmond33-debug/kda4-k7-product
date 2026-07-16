@@ -1,3 +1,5 @@
+-- LEGACY REFERENCE ONLY: Railway mvp-1.0 DB에 적용하지 않는다.
+-- 활성 조회 경계: backend/app/database.py
 -- KDA K7 주요 조회 쿼리
 -- 이 파일은 schema.sql -> seed.sql 실행 후 전체를 검증할 수 있도록 구성했다.
 -- PREPARE 본문의 $1, $2 ... 자리에 FastAPI DB 드라이버 바인딩 값을 전달한다.

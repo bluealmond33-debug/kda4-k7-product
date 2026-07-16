@@ -1,5 +1,7 @@
 # K7 DB·데이터 통합 계약
 
+> 참고용 확장 설계: 아래 마스킹·고객·권한·12테이블 계약은 현재 Railway MVP에 적용하지 않습니다. 활성 기준은 `database/active-manifest.json`과 `database/mvp/schema.sql`입니다.
+
 ## 1. 계약 목적과 적용 범위
 
 이 문서는 STT·감정온도·문의 분류·RAG·상담카드·라우팅·React가 같은 상담 세션을 기준으로 데이터를 교환하기 위한 공통 계약입니다.

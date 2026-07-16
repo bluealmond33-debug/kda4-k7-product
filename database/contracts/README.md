@@ -1,48 +1,45 @@
 # K7 JSON 계약
 
-## 목적
+## 먼저 확인할 운영 기준
 
-JSON 파일은 운영 데이터를 쌓는 저장소가 아니라 팀 간 입력·출력 형식을 고정하는 계약과 테스트용 예시입니다.
+현재 배포 기준은 `database/active-manifest.json`에 등록된 **음성 전용·비마스킹 `mvp-1.0`**입니다.
 
-| 파일 | 사용 주체 | 용도 |
+| 상태 | 파일 | 용도 |
 |---|---|---|
-| `openapi.yaml` | 백엔드·React | FastAPI 경로·상태 코드·요청·응답 계약 |
-| `model_adapter_guide.md` | 모델·백엔드·DB | 변경 가능한 모델 출력을 K7 표준 계약으로 변환하는 경계 |
-| `model_consultation_result_input.schema.json` | 분류·요약·라우팅·백엔드 | 현재 결합형 모델 결과를 받는 임시 입력 규격 |
-| `stt_utterance_input.schema.json` | STT·백엔드 | STT 원문 입력 검증 규격 |
-| `masked_utterance.schema.json` | 백엔드·후속 모델 | 마스킹 이후 전달·저장 규격 |
-| `emotion_temperature_result.schema.json` | 감정 모델·백엔드 | 모델 결과 검증 규격 |
-| `consultation_card.schema.json` | 분류·요약·RAG·백엔드 | 상담카드 저장 규격 |
-| `routing_candidate.schema.json` | 라우팅·백엔드 | 부서·상담사 후보 규격 |
-| `consultation_card_response.schema.json` | 백엔드·React | 마스킹 고객정보·현재 주의정보·화면 통합 응답 검증 규격 |
-| `error_response.schema.json` | 백엔드·전체 클라이언트 | 공통 오류 응답 규격 |
-| `examples/emotion_temperature_result.example.json` | 감정 모델·백엔드 | 정상 입력 예시 |
-| `examples/model_consultation_result_input*.example.json` | 분류·요약·라우팅·백엔드 | 위험정보가 있거나 없는 현재 모델 출력 예시 |
-| `examples/consultation_card_response.example.json` | 백엔드·React | 화면 개발용 응답 예시 |
+| 활성 | `model_consultation_result_input.schema.json` | 교체 가능한 팀 모델 결과가 FastAPI 어댑터로 들어오는 입력 경계 |
+| 활성 | `mvp_call_response.schema.json` | FastAPI·PostgreSQL·React가 공유하는 최종 응답 계약 |
+| 활성 | `examples/mvp_call_response.example.json` | 프런트 mock과 계약 테스트용 정상 예제 |
 
-각 `*.schema.json`에는 같은 이름의 정상 예제가 `examples/`에 있습니다. 예제는 실제 고객정보가 아닌 가상 데이터만 사용합니다.
+활성 변환 코드는 `backend/app/model_adapter.py`, Pydantic 검증은 `backend/app/contracts.py`에 있습니다. 모델의 실험 필드나 내부 데이터셋 구조를 PostgreSQL 계약으로 사용하지 않습니다.
 
-## 공통 규칙
+## 참고용 확장 계약
 
-- 필드명은 `snake_case`를 사용합니다.
-- 팀 공통 연결 키는 `external_session_key`입니다.
-- 시각은 ISO 8601 UTC 문자열로 전달합니다.
-- 모델은 로컬 `audio_file` 경로, 음성 원본, 고객 개인정보를 JSON에 넣지 않습니다.
-- 계약이 바뀌면 `schema_version`을 올리고 기존 버전과 동시에 지원할 기간을 합의합니다.
-- 재전송 가능한 결과는 같은 `external_session_key`와 멱등 키를 사용합니다.
-- 같은 멱등 키의 내용이 달라지면 덮어쓰지 않고 `409 Conflict`로 처리합니다.
-- React는 예제 JSON으로 먼저 개발하고, 이후 동일한 응답 구조의 FastAPI 호출로 교체합니다.
-- 모델 저장소의 중간 스키마를 DB 계약으로 직접 사용하지 않고 `model_adapter_guide.md`의 어댑터 경계를 사용합니다.
-- 모델 출력과 FastAPI 요청은 `model_consultation_result_input.schema.json`의 `snake_case` 필드만 공식 계약으로 사용합니다.
+아래 파일은 기존 12테이블·마스킹·감정온도·상담사 라우팅 확장 설계 자료입니다. JSON 문법과 예제는 회귀 테스트하지만 **현재 Railway MVP 저장·조회에는 사용하지 않습니다.**
 
-## 감정온도 코드
+- `openapi.yaml`
+- `stt_utterance_input.schema.json`
+- `masked_utterance.schema.json`
+- `emotion_temperature_result.schema.json`
+- `consultation_card.schema.json`
+- `routing_candidate.schema.json`
+- `consultation_card_response.schema.json`
+- `error_response.schema.json`
+- 각 파일의 `examples/` 예제
+- `model_adapter_guide.md`
 
-| 시스템 코드 | 화면 표시 | 점수 |
-|---|---|---:|
-| `stable` | 안정 | 0~33 |
-| `caution` | 주의 | 33 초과~66 |
-| `elevated` | 고조 | 66 초과~100 |
+이 확장 계약을 활성화하려면 `active-manifest.json`과 계약 버전을 변경하는 별도 PR이 필요합니다. 기존 파일을 Railway에 직접 적용하지 않습니다.
 
-JSON Schema와 PostgreSQL `CHECK` 제약조건이 같은 경계를 사용합니다.
+## `mvp-1.0` 공통 규칙
 
-시연 화면은 [K7 라이브 상담 프로토타입](https://k7product.vercel.app/)을 참고하되, 실제 연동 필드와 감정 단계는 이 계약을 우선합니다.
+- 입력 채널은 `voice`만 허용합니다.
+- 필드명은 API·DB 경계에서 `snake_case`를 사용합니다.
+- API 계약 버전은 `mvp-1.0`으로 고정합니다.
+- 개인정보 마스킹은 이번 MVP 처리 단계가 아닙니다.
+- 모델 결과는 `backend/app/model_adapter.py`를 통과한 뒤에만 저장합니다.
+- 위험도는 `low | high`로 저장하고 화면에서만 `낮음 | 높음`으로 번역합니다.
+- `high`이면 `risk_reason`이 반드시 있어야 합니다.
+- 감정 모델 미연동 상태는 `unavailable`, 점수와 단계는 `null`입니다.
+- React와 모델은 PostgreSQL에 직접 연결하지 않고 FastAPI만 `DATABASE_URL`을 사용합니다.
+- 계약 변경은 예제·Pydantic·TypeScript·SQL·테스트를 같은 PR에서 함께 바꿉니다.
+
+검증은 저장소 루트에서 `npm run check`를 실행합니다.

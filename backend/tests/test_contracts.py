@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,43 @@ def test_checked_in_example_matches_pydantic_contract() -> None:
     assert response.schema_version == "mvp-1.0"
     assert response.source_channel == "voice"
     assert response.consultation_card.department == "대출 및 금융상담"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("schema_version", "1.0"), ("source_channel", "text")],
+)
+def test_fixed_mvp_identifiers_cannot_drift(field: str, value: str) -> None:
+    payload = json.loads(
+        (ROOT / "database/contracts/examples/mvp_call_response.example.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload[field] = value
+    with pytest.raises(ValidationError):
+        MvpCallResponse.model_validate(payload)
+
+
+def test_mvp_contract_rejects_unknown_nested_fields() -> None:
+    payload = json.loads(
+        (ROOT / "database/contracts/examples/mvp_call_response.example.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload["consultation_card"]["model_experiment"] = "must not cross API boundary"
+    with pytest.raises(ValidationError):
+        MvpCallResponse.model_validate(payload)
+
+
+def test_numeric_contract_does_not_coerce_boolean() -> None:
+    with pytest.raises(ValidationError):
+        ModelConsultationResult(
+            summary="대출 문의",
+            business_type="대출",
+            department="대출 및 금융상담",
+            routing_reason="대출 상담 업무",
+            routing_confidence=True,
+        )
 
 
 def test_high_risk_requires_reason() -> None:
@@ -48,6 +86,9 @@ def test_low_risk_allows_null_reason() -> None:
 
 def test_active_schema_is_three_table_mvp() -> None:
     schema = (ROOT / "database/mvp/schema.sql").read_text(encoding="utf-8")
-    assert schema.count("CREATE TABLE IF NOT EXISTS") == 3
+    table_statements = re.findall(r"(?m)^CREATE TABLE IF NOT EXISTS\s+", schema)
+    assert len(table_statements) == 3
     assert "masked_transcript" not in schema
     assert "access_logs" not in schema
+    assert "consultation_cards_schema_version_chk" in schema
+    assert "consultation_cards_available_emotion_chk" in schema

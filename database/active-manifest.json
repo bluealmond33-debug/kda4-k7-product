@@ -1,0 +1,32 @@
+{
+  "status": "active",
+  "contract_version": "mvp-1.0",
+  "source_channel": "voice",
+  "masking_enabled": false,
+  "database": {
+    "engine": "postgresql",
+    "schema": "database/mvp/schema.sql",
+    "tables": ["calls", "transcripts", "consultation_cards"]
+  },
+  "contracts": {
+    "model_input": "database/contracts/model_consultation_result_input.schema.json",
+    "api_response": "database/contracts/mvp_call_response.schema.json",
+    "example": "database/contracts/examples/mvp_call_response.example.json"
+  },
+  "backend": {
+    "app": "backend/app/main.py",
+    "pydantic_contracts": "backend/app/contracts.py",
+    "model_adapter": "backend/app/model_adapter.py",
+    "database_gateway": "backend/app/database.py",
+    "endpoints": [
+      "POST /api/v1/calls",
+      "GET /api/v1/calls/{call_id}/consultation-card",
+      "GET /health"
+    ]
+  },
+  "frontend": {
+    "service": "src/services/consultation.ts",
+    "types": "src/services/types.ts",
+    "upload_ui": "src/components/LiveDemo.tsx"
+  }
+}

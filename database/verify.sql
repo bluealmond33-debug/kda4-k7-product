@@ -1,3 +1,5 @@
+-- LEGACY REFERENCE ONLY: Railway mvp-1.0 인수 테스트가 아니다.
+-- 활성 DB 검증: backend/tests/test_database_integration.py
 -- K7 스키마·seed·참조 무결성 검증
 -- schema.sql과 seed.sql 실행 후 사용한다. 성공 시 NOTICE만 출력한다.
 

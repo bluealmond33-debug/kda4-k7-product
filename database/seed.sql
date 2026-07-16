@@ -1,3 +1,4 @@
+-- LEGACY REFERENCE ONLY: Railway mvp-1.0 DB에 로드하지 않는다.
 -- KDA K7 테스트 전용 가상 데이터
 -- 주의: 아래 TRUNCATE는 database/schema.sql로 만든 테스트 스키마의 데이터를 초기화한다.
 

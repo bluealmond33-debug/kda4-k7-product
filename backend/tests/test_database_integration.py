@@ -57,6 +57,36 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
             with connection.cursor() as cursor:
                 cursor.execute("SHOW server_encoding")
                 assert cursor.fetchone() == ("UTF8",)
+                cursor.execute(
+                    """
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+                    """
+                )
+                assert {row[0] for row in cursor.fetchall()} == {
+                    "calls",
+                    "transcripts",
+                    "consultation_cards",
+                }
+                cursor.execute(
+                    """
+                    SELECT conname
+                    FROM pg_constraint
+                    WHERE conrelid IN (
+                        'calls'::regclass,
+                        'transcripts'::regclass,
+                        'consultation_cards'::regclass
+                    )
+                    """
+                )
+                constraints = {row[0] for row in cursor.fetchall()}
+                assert {
+                    "calls_audio_filename_not_blank_chk",
+                    "transcripts_stt_model_not_blank_chk",
+                    "consultation_cards_schema_version_chk",
+                    "consultation_cards_available_emotion_chk",
+                } <= constraints
 
         save_call(settings, response, {"source": "postgres-integration-test"})
         stored = get_call(settings, response.call_id)

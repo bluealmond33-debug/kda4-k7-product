@@ -66,12 +66,26 @@ const validateProvisionalInput = provisionalAjv.compile(provisionalInputSchema);
 const invalidProvisionalInputs = [
   { ...provisionalInputExample, summary: "" },
   { ...provisionalInputExample, incident_risk: "고위험", risk_reason: null },
+  { ...provisionalInputExample, incident_risk: "긴급해보임", risk_reason: "추측" },
   { ...provisionalInputExample, routing_confidence: 1.1 },
 ];
 for (const candidate of invalidProvisionalInputs) {
   if (validateProvisionalInput(candidate)) {
     throw new Error("invalid provisional model input accepted");
   }
+}
+
+const validLowRiskInput = {
+  ...provisionalInputExample,
+  incident_risk: "low",
+  risk_reason: null,
+};
+if (!validateProvisionalInput(validLowRiskInput)) {
+  throw new Error(
+    `valid low-risk provisional input rejected: ${provisionalAjv.errorsText(
+      validateProvisionalInput.errors
+    )}`
+  );
 }
 
 const emotionSchema = readJson("emotion_temperature_result.schema.json");

@@ -2,7 +2,7 @@
 
 ## 결론
 
-이찬희 담당 범위인 `mvp-1.0` 데이터 계약, PostgreSQL 3테이블, FastAPI 저장·조회 경계, React 음성 업로드 연결은 `lch` 브랜치에 구현됐습니다.
+이찬희 담당 범위인 `mvp-1.0` 데이터 계약, 활성 자산 매니페스트, 모델 결과 어댑터, PostgreSQL 3테이블, FastAPI 저장·조회 경계, React 음성 업로드 연결은 `lch` 브랜치에 구현됐습니다.
 
 실제 한국어 WAV로 `STT → 구조화 → PostgreSQL 저장 → call_id 재조회`를 Railway 검증 서비스에서 통과했고, 별도의 PostgreSQL 통합 테스트도 UTF-8 왕복 저장을 확인한 뒤 테스트 행을 자동 삭제합니다.
 
@@ -46,6 +46,8 @@ flowchart LR
 | STT | 실제 한국어 WAV가 정확한 한국어 텍스트로 변환됨 | 검증 완료 | 이희창 STT 유지 |
 | 요약·분류·라우팅 | MVP 구조화 결과 동작 | 임시 로직 | 전형진·김설빈 로직으로 교체 |
 | 표준화 | JSON Schema·Pydantic·TypeScript `mvp-1.0` 일치 | 완료 | 계약 변경은 PR로만 관리 |
+| 활성 자산 통제 | 매니페스트가 버전·파일·3테이블·음성·비마스킹 정책 검증 | 완료 | `active-manifest.json` 변경은 PR 필수 |
+| 모델 어댑터 | 추가 실험 필드 제거, 위험도 별칭 정규화, 고위험 사유 검증 | 완료 | 팀 모델 함수 결과를 이 경계에 연결 |
 | PostgreSQL | Railway Online, UTF-8, 3테이블 자동 생성, CRUD 통과 | 완료 | 운영 FastAPI에 참조 연결 |
 | 저장 API | `POST /api/v1/calls` 201 및 call_id 반환 | 검증 완료 | 이희창 백엔드에 통합 |
 | 조회 API | 같은 call_id로 GET 200, POST와 동일한 카드 | 검증 완료 | 이희창 백엔드에 통합 |
@@ -76,6 +78,8 @@ flowchart LR
 6. 기존 9개 API의 호환 경로
 7. 계약·어댑터·FastAPI·DB·UTF-8·음성 E2E 검증
 8. Railway Python 모노레포 빌드 설정
+9. 활성·참고 자산 구분과 CI 매니페스트 검증
+10. 이희창·Claude용 운영 통합 인계 프롬프트
 
 ## 검증 명령
 

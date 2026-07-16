@@ -2,6 +2,8 @@
 
 현재 활성 기준은 **비마스킹 MVP `mvp-1.0`**입니다.
 
+기계가 읽는 단일 기준은 `active-manifest.json`입니다. CI가 이 파일과 활성 SQL·JSON Schema·예제·백엔드·프런트 경로를 대조합니다.
+
 ```text
 고객 음성 파일
   → FastAPI POST /api/v1/calls
@@ -17,9 +19,11 @@
 | 역할 | 기준 파일 |
 |---|---|
 | PostgreSQL | `mvp/schema.sql` |
+| 활성 자산 목록 | `active-manifest.json` |
 | API 응답 JSON Schema | `contracts/mvp_call_response.schema.json` |
 | 정상 예제 | `contracts/examples/mvp_call_response.example.json` |
 | 원시 모델 입력 경계 | `contracts/model_consultation_result_input.schema.json` |
+| 활성 모델 어댑터 | `../backend/app/model_adapter.py` |
 | FastAPI | `../backend/app/` |
 | React 연결 | `../src/services/consultation.ts` |
 
@@ -62,7 +66,7 @@ React와 모델 코드는 PostgreSQL에 직접 연결하지 않습니다. FastAP
 
 ## 기존 12테이블 자산
 
-루트의 `schema.sql`, `commands.sql`, `queries.sql`, `seed.sql`, 기존 상담카드 계약과 모델 어댑터는 향후 확장 참고 및 이전 작업 보존용입니다. **Railway MVP에는 적용하지 않습니다.** 마스킹·권한·접근로그·상담사 자동배정은 현재 완료조건이 아닙니다.
+루트의 `schema.sql`, `commands.sql`, `queries.sql`, `seed.sql`, `verify.sql`, 기존 상담카드 계약과 `adapters/`는 향후 확장 참고 및 이전 작업 보존용입니다. **Railway MVP에는 적용하거나 import하지 않습니다.** 활성 어댑터는 `backend/app/model_adapter.py` 하나입니다. 마스킹·권한·접근로그·상담사 자동배정은 현재 완료조건이 아닙니다.
 
 ## 실행과 검증
 

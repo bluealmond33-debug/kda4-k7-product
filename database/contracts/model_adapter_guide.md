@@ -1,5 +1,7 @@
 # 변경 가능한 모델 결과 연동 가이드
 
+> 참고용 확장 설계: 이 문서의 12테이블·마스킹 계약과 `database/adapters/` 변환기는 현재 `mvp-1.0` 배포 경로가 아닙니다. 활성 MVP 모델 경계는 `backend/app/model_adapter.py`, 최종 응답은 `mvp_call_response.schema.json`, 활성 목록은 `database/active-manifest.json`을 따릅니다.
+
 ## 1. 목적
 
 STT·감정·분류·요약·라우팅 모델은 학습과 라벨링 과정에서 출력 필드가 바뀔 수 있습니다. PostgreSQL 스키마가 모델 실험 구조를 직접 따라가면 모델이 바뀔 때마다 DB·FastAPI·React를 함께 수정해야 합니다.

@@ -1,3 +1,5 @@
+-- LEGACY REFERENCE ONLY: Railway mvp-1.0 DB에 적용하지 않는다.
+-- 활성 저장 경계: backend/app/database.py
 -- K7 백엔드 저장 명령 카탈로그
 -- JSON 입력은 database/contracts의 JSON Schema로 먼저 검증한다.
 -- 이 파일은 PREPARE 구문을 트랜잭션에서 파싱한 뒤 ROLLBACK하므로 독립 실행해도 데이터를 변경하지 않는다.

@@ -1,3 +1,5 @@
+-- LEGACY REFERENCE ONLY: Railway mvp-1.0 DB에 적용하지 않는다.
+-- 활성 스키마: database/mvp/schema.sql
 -- KDA K7 상담 사전카드 서비스 PostgreSQL 스키마
 -- 실행 대상: PostgreSQL 15 이상
 

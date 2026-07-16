@@ -39,8 +39,7 @@
     },
     "incident_risk": {
       "type": ["string", "null"],
-      "minLength": 1,
-      "maxLength": 100
+      "enum": ["low", "high", "낮음", "저위험", "높음", "고위험", null]
     },
     "risk_reason": {
       "type": ["string", "null"],
@@ -72,7 +71,7 @@
       "if": {
         "required": ["incident_risk"],
         "properties": {
-          "incident_risk": { "type": "string" }
+          "incident_risk": { "enum": ["high", "높음", "고위험"] }
         }
       },
       "then": {

@@ -4,6 +4,7 @@ from openai import OpenAI
 
 from app.config import Settings
 from app.contracts import ModelConsultationResult, TranscriptResult
+from app.model_adapter import normalize_model_result
 
 
 _DEPARTMENTS = [
@@ -91,4 +92,4 @@ def analyze_transcript(
         },
     )
     raw = json.loads(response.choices[0].message.content or "{}")
-    return ModelConsultationResult.model_validate(raw), raw
+    return normalize_model_result(raw), raw
