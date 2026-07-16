@@ -83,6 +83,14 @@ npm run check
 .\.venv\Scripts\python.exe -m pytest backend\tests -q
 ```
 
+배포된 실제 음성 E2E 확인:
+
+```powershell
+.\scripts\smoke-mvp.ps1 `
+  -AudioPath .\samples\customer.wav `
+  -ApiBaseUrl https://<railway-backend>
+```
+
 검증 대상:
 
 - JSON Schema와 예제

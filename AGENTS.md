@@ -15,3 +15,5 @@ Before committing, run:
 npm run check
 .\.venv\Scripts\python.exe -m pytest backend\tests -q
 ```
+
+For a deployed environment, run `scripts/smoke-mvp.ps1` with a sample audio file and verify that POST and GET return the same `call_id` and card.
