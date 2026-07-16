@@ -123,6 +123,8 @@ AI Hub 71926 같은 텍스트 학습 데이터의 원본 JSON 구조를 그대�
 - 입력 규격: `model_consultation_result_input.schema.json`
 - 위험정보 포함 예제: `examples/model_consultation_result_input.example.json`
 - 위험정보 미제공 예제: `examples/model_consultation_result_input_no_risk.example.json`
+- 실행 가능한 참조 변환기: `../adapters/model_result_adapter.py`
+- 수정 가능한 업무·부서 매핑: `../adapters/model_result_mapping.v1.json`
 
 ```text
 결합형 모델 입력

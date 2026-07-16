@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "validate:contracts": "node scripts/validate-contracts.mjs",
+    "validate:adapter": "node scripts/validate-adapter.mjs",
     "check": "npm run validate:contracts && npm run build"
   },
   "dependencies": {

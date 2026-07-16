@@ -134,6 +134,7 @@ P1은 별도 테이블로 준비하며 P0 카드 생성 흐름의 선행조건�
 ### 백엔드팀
 
 - JSON Schema 또는 Pydantic으로 입력을 검증합니다.
+- 현재 결합형 모델 결과는 `database.adapters.normalize_model_result` 참조 함수를 그대로 사용하거나 같은 규칙으로 구현할 수 있습니다.
 - 전체 API 계약은 `contracts/openapi.yaml`을 기준으로 구현합니다.
 - `external_session_key`를 `session_id`로 변환합니다.
 - 문자열 조합이 아닌 바인딩 파라미터를 사용합니다.

@@ -149,6 +149,17 @@ database/contracts/examples/consultation_card_response.example.json
 5. FastAPI팀은 `commands.sql`의 저장 SQL을 사용합니다.
 6. React는 통합 상담카드 API 한 개를 호출합니다.
 
+현재 결합형 모델 JSON은 다음 명령으로 상담카드·라우팅 결과로 바로 변환할 수 있습니다.
+
+```powershell
+py -3.12 database/adapters/model_result_adapter.py `
+  --input database/contracts/examples/model_consultation_result_input.example.json `
+  --session-key K7-DEMO-20260715-0001 `
+  --generated-at 2026-07-16T00:00:00Z
+```
+
+새 업무유형·부서는 Python 코드를 고치지 않고 `database/adapters/model_result_mapping.v1.json`에 추가합니다.
+
 ---
 
 ## 5. 폴더와 파일 지도
@@ -156,6 +167,10 @@ database/contracts/examples/consultation_card_response.example.json
 ```text
 database/
 ├── README.md                  ← 지금 읽는 전체 사용설명서
+├── adapters/                  ← 모델 JSON을 표준 카드·라우팅으로 바꾸는 실행 모듈
+│   ├── README.md              ← 실행·확장 방법
+│   ├── model_result_adapter.py
+│   └── model_result_mapping.v1.json
 ├── schema.sql                ← 12개 테이블·제약조건·인덱스 생성
 ├── seed.sql                  ← 가상 고객·상담·카드 데이터 생성
 ├── queries.sql               ← 조회 쿼리와 실행 예시
@@ -187,6 +202,7 @@ database/
 | 팀끼리 주고받을 데이터 확인 | `database/integration_contract.md` |
 | FastAPI 경로 확인 | `database/contracts/openapi.yaml` |
 | 아직 바뀌는 모델 결과 연결 | `database/contracts/model_adapter_guide.md` |
+| 현재 모델 JSON을 직접 변환 | `database/adapters/README.md` |
 | React가 받을 최종 모양 확인 | `database/contracts/examples/consultation_card_response.example.json` |
 
 ---
@@ -365,6 +381,7 @@ React 빌드까지 함께 검사하려면 다음 명령을 사용합니다.
 
 ```powershell
 npm run check
+npm run validate:adapter
 ```
 
 ### 주요 계약

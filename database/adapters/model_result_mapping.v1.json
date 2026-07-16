@@ -1,0 +1,41 @@
+{
+  "adapter_version": "1.0",
+  "mapping_version": "1.0",
+  "defaults": {
+    "model_name": "k7-combined-consultation-model",
+    "model_version": "unversioned",
+    "routing_policy_name": "k7-routing-policy",
+    "routing_policy_version": "1.0"
+  },
+  "risk_labels": {
+    "저위험": "low",
+    "낮음": "low",
+    "중위험": "medium",
+    "중간": "medium",
+    "고위험": "high",
+    "높음": "high",
+    "긴급": "critical"
+  },
+  "department_aliases": {
+    "금융사기": "fraud_response",
+    "금융사기대응팀": "fraud_response",
+    "대출 및 금융상담": "general_banking",
+    "일반은행상담팀": "general_banking"
+  },
+  "business_types": {
+    "명의도용·해킹 신고": {
+      "inquiry_type": "other",
+      "department_code": "fraud_response",
+      "default_risk_level": "high",
+      "default_urgency_level": "critical",
+      "routing_confidence": 1.0
+    },
+    "주택담보대출 만기 연장": {
+      "inquiry_type": "loan",
+      "department_code": "general_banking",
+      "default_risk_level": "low",
+      "default_urgency_level": "low",
+      "routing_confidence": 1.0
+    }
+  }
+}
