@@ -50,6 +50,7 @@
 - `backend/app/main.py`: `POST /api/v1/calls`, `GET /api/v1/calls/{call_id}/consultation-card`, `GET /health` 참조 구현
 - `src/services/consultation.ts`: React가 DB에 직접 접근하지 않고 POST/GET API만 호출하는 경계
 - `scripts/smoke-mvp.ps1`: 배포 API의 음성 POST→DB→GET 동일성 검증
+- `scripts/check-production-readiness.ps1`: 운영 OpenAPI·기존 경로·DB·계약 버전을 변경 없이 확인
 - `backend/tests/test_database_integration.py`: 실제 PostgreSQL UTF-8·정확히 3테이블·제약조건·한글 왕복 저장·자동 삭제 검증
 - `docs/HYUNGJIN_MODEL_HANDOFF_MESSAGE.md`: 형진 모델 서버 연결에 필요한 자료를 요청하는 Slack 메시지
 
@@ -148,6 +149,7 @@ calls 1건 ─ transcripts 1건 ─ consultation_cards 1건
 ```powershell
 npm run check
 .\.venv\Scripts\python.exe -m pytest backend\tests -q
+.\scripts\check-production-readiness.ps1
 ```
 
 실제 PostgreSQL 테스트는 DB URL을 화면에 출력하지 않는 방식으로 실행하고, 종료 후 환경변수를 제거하라. 배포 후에는 실제 한국어 음성으로 다음을 확인하라.

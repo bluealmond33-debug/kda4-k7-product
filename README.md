@@ -102,6 +102,14 @@ Remove-Item Env:K7_TEST_DATABASE_URL
   -ApiBaseUrl https://<railway-backend>
 ```
 
+운영 백엔드가 DB 경계까지 반영됐는지 음성 호출 없이 읽기 전용으로 확인:
+
+```powershell
+.\scripts\check-production-readiness.ps1
+```
+
+`ready=true`는 새 POST/GET, 기존 8개 호환 경로, `database=connected`, `contract_version=mvp-1.0`이 모두 확인됐다는 뜻입니다.
+
 검증 대상:
 
 - 활성 자산 매니페스트와 정확히 3개 테이블

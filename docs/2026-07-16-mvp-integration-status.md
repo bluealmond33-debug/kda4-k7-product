@@ -24,6 +24,8 @@ flowchart LR
 
 현재 운영 백엔드의 GitHub Source에는 `HeeChang50/kda4-k7-backend`와 `GitHub Repo not found`가 표시됩니다. `pollmap` 계정에서도 저장소가 404이므로 저장소 소유자 또는 Railway GitHub App 권한 확인이 필요합니다.
 
+2026-07-16 최신 공개 상태 확인에서는 운영 API가 아직 `version=0.1.0`, 경로 9개이며 `/api/v1/calls`와 상담카드 GET이 없습니다. `/health`도 `status=ok`만 반환하고 DB·계약 버전은 제공하지 않습니다. 운영 연결 요청은 전달됐고 현재 배포 반영 대기 상태입니다. `scripts/check-production-readiness.ps1`의 `ready=true`가 운영 통합 완료 판정 기준입니다.
+
 ## 목표 완성 구조
 
 ```mermaid
