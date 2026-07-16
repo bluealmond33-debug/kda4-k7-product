@@ -1,5 +1,5 @@
-// Shared types for the AI service layer (STT · summary · emotion).
-// These are the contract between the frontend and the future backend.
+// Shared UI service types. Backend-facing data contracts live in
+// database/contracts and use snake_case at the API boundary.
 
 /** A single (partial or final) speech-to-text fragment. */
 export interface TranscriptChunk {
@@ -24,7 +24,7 @@ export interface EmotionScore {
 
 export type IncidentRisk = "none" | "watch" | "high";
 
-/** The AI pre-summary produced from the caller's natural-language intake. */
+/** Demo-only summary projection used when the integrated card API is disabled. */
 export interface CallSummary {
   /** 업무 유형 — extracted task type, e.g. "전자금융 › 착오송금". */
   type: string;

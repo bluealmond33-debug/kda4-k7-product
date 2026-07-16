@@ -33,6 +33,7 @@ JSON 파일은 운영 데이터를 쌓는 저장소가 아니라 팀 간 입력�
 - 같은 멱등 키의 내용이 달라지면 덮어쓰지 않고 `409 Conflict`로 처리합니다.
 - React는 예제 JSON으로 먼저 개발하고, 이후 동일한 응답 구조의 FastAPI 호출로 교체합니다.
 - 모델 저장소의 중간 스키마를 DB 계약으로 직접 사용하지 않고 `model_adapter_guide.md`의 어댑터 경계를 사용합니다.
+- 모델 출력과 FastAPI 요청은 `model_consultation_result_input.schema.json`의 `snake_case` 필드만 공식 계약으로 사용합니다.
 
 ## 감정온도 코드
 

@@ -141,6 +141,19 @@ class ModelResultAdapterTests(unittest.TestCase):
                 mapping=self.mapping,
             )
 
+    def test_canonical_english_risk_label_is_supported(self) -> None:
+        payload = read_example("model_consultation_result_input.example.json")
+        payload["incident_risk"] = "high"
+        result = normalize_model_result(
+            payload,
+            external_session_key="K7-ADAPTER-0008",
+            mapping=self.mapping,
+            generated_at="2026-07-16T00:00:00Z",
+        )
+
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(result["consultation_card"]["risk_level"], "high")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -116,7 +116,9 @@ P1은 별도 테이블로 준비하며 P0 카드 생성 흐름의 선행조건�
 
 - 입력: `external_session_key`, 마스킹된 발화
 - 출력: 문의 유형 코드, 요약, 고객 요청, 위험 근거, 추천 조치, 규정 참조값
+- 팀 간 모델 출력 필드명은 `snake_case`만 사용합니다. `businessType`, `incidentRisk`, `riskReasons`, `confidence` 같은 camelCase 모델 출력은 공식 API 계약으로 사용하지 않습니다.
 - 현재 결합형 중간 출력은 `contracts/model_consultation_result_input.schema.json`으로 먼저 검증합니다.
+- FastAPI 수신 경로는 `POST /api/v1/consultation-sessions/{external_session_key}/model-results`입니다.
 - 결합형 입력의 요약·업무·위험 필드는 상담카드로, 부서·추천 이유는 라우팅 후보로 분리합니다.
 - 위험정보가 없으면 저위험으로 간주하지 않고 업무 규칙의 보완 결과를 기다립니다.
 - 출력 계약: `contracts/consultation_card.schema.json`

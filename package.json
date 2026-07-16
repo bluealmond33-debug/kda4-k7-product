@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "validate:contracts": "node scripts/validate-contracts.mjs",
     "validate:adapter": "node scripts/validate-adapter.mjs",
-    "check": "npm run validate:contracts && npm run build"
+    "check": "npm run validate:contracts && npm run validate:adapter && npm run build"
   },
   "dependencies": {
     "react": "^18.3.1",

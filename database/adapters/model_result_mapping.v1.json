@@ -8,6 +8,8 @@
     "routing_policy_version": "1.0"
   },
   "risk_labels": {
+    "low": "low",
+    "high": "high",
     "저위험": "low",
     "낮음": "low",
     "중위험": "medium",

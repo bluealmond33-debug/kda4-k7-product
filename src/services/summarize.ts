@@ -1,17 +1,13 @@
 import type { Transcript, CallSummary } from "./types";
-import { postJSON, useReal } from "./config";
 import { emotionLabel } from "./emotion";
 
 /**
  * Produce the AI pre-summary from the caller's natural-language intake.
  *
- * mock: returns the scripted 착오송금 summary used in the demo.
- * real: POST /summarize  → CallSummary  (RAG + LLM over the transcript).
+ * This is a deterministic demo fallback only. Real model output enters through
+ * the FastAPI model-results adapter and the UI reads the integrated card API.
  */
-export async function summarize(transcript: Transcript): Promise<CallSummary> {
-  if (useReal.summary) {
-    return postJSON<CallSummary>("/summarize", { transcript });
-  }
+export async function summarize(_transcript: Transcript): Promise<CallSummary> {
   // Deterministic mock for the demo.
   return {
     type: "전자금융 › 착오송금",

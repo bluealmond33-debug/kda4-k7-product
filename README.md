@@ -60,18 +60,19 @@ cp .env.example .env
 ```
 VITE_API_BASE_URL=https://<백엔드 주소>
 VITE_USE_REAL_STT=true       # POST /stt
-VITE_USE_REAL_SUMMARY=true   # POST /summarize
 VITE_USE_REAL_EMOTION=true   # POST /emotion
+VITE_USE_REAL_DATA_API=true  # GET /api/v1/consultation-sessions/{key}/consultation-card
 ```
 
 | 기능 | 파일 | mock 동작 | 실제(real) 계약 |
 | --- | --- | --- | --- |
 | STT (음성→텍스트) | `services/stt.ts` | 스크립트 발화 재생 | 브라우저 STT / 오디오 스트림 → 백엔드 |
-| 요약·업무유형 (RAG) | `services/summarize.ts` | 착오송금 요약 반환 | `POST /summarize` → `CallSummary` |
+| 요약·업무유형 (RAG) | `features/stt-classification/` | `services/summarize.ts`의 화면 fallback | 모델 결과 POST → FastAPI 어댑터 → 통합 상담카드 GET |
 | 감정온도 (ML) | `services/emotion.ts` | 키워드 휴리스틱 | `POST /emotion` → `EmotionScore` |
 
-요청/응답 타입은 `src/services/types.ts`에 정의되어 있습니다. 실제 연동 시 각
-파일의 `useReal.*` 분기 안쪽만 구현하면 됩니다(자리 표시 주석 있음).
+백엔드 요청·응답의 공식 원본은 `database/contracts/*.schema.json`과
+`database/contracts/openapi.yaml`입니다. `src/services/types.ts`의 `CallSummary`는
+통합 API가 꺼진 데모 화면용 fallback이며 백엔드 계약으로 사용하지 않습니다.
 
 > **마이크**: 이 시연은 요구사항에 따라 **시뮬레이션 전용**입니다. 상단 "실제
 > 마이크"를 눌러도 권한/미지원 시 자동으로 시뮬레이션으로 되돌아갑니다.

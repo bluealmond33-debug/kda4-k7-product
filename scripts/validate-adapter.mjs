@@ -112,5 +112,5 @@ for (const [index, example] of cases.entries()) {
 }
 
 console.log(
-  "MODEL_ADAPTER_OK unit_tests=7 ready_cases=2 canonical_outputs_validated=4"
+  "MODEL_ADAPTER_OK unit_tests=8 ready_cases=2 canonical_outputs_validated=4"
 );

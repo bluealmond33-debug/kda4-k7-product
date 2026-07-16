@@ -76,6 +76,29 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /consultation-sessions/{external_session_key}/model-results:
+    post:
+      summary: 분류·요약 모델 결과 정규화 및 저장
+      description: 모델의 snake_case 결과를 검증하고 어댑터를 거쳐 상담카드와 라우팅 후보로 분리한다.
+      operationId: createModelConsultationResult
+      parameters:
+        - $ref: '#/components/parameters/ExternalSessionKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './model_consultation_result_input.schema.json'
+      responses:
+        '200':
+          description: 정규화 결과 저장 또는 보완 필요
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelAdapterEnvelope'
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /consultation-sessions/{external_session_key}/consultation-card:
     put:
       summary: 상담카드 생성 또는 교체
@@ -165,6 +188,31 @@ components:
       description: JSON 본문에도 같은 필드가 있으면 값이 반드시 일치해야 한다.
       schema: { type: string, minLength: 1, maxLength: 100 }
   schemas:
+    ModelAdapterEnvelope:
+      type: object
+      additionalProperties: false
+      required: [adapter_version, mapping_version, status, pending_fields, warnings, ignored_fields]
+      properties:
+        adapter_version: { type: string }
+        mapping_version: { type: string }
+        status: { type: string, enum: [ready, needs_enrichment] }
+        pending_fields:
+          type: array
+          items: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+        ignored_fields:
+          type: array
+          items: { type: string }
+        consultation_card:
+          oneOf:
+            - $ref: './consultation_card.schema.json'
+            - type: 'null'
+        routing_candidate:
+          oneOf:
+            - $ref: './routing_candidate.schema.json'
+            - type: 'null'
     SessionEnvelope:
       type: object
       additionalProperties: false

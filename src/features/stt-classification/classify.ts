@@ -24,17 +24,29 @@ export async function classifySttText(
 }
 
 function validateResult(result: SttClassificationResult): void {
-  if (!result.summary || !result.businessType || !result.department) {
+  if (
+    !result.summary?.trim() ||
+    !result.business_type?.trim() ||
+    !result.department?.trim() ||
+    !result.routing_reason?.trim()
+  ) {
     throw new Error("Invalid classification response");
   }
-  if (result.incidentRisk !== "low" && result.incidentRisk !== "high") {
-    throw new Error("incidentRisk must be low or high");
+  if (
+    result.incident_risk !== undefined &&
+    result.incident_risk !== "low" &&
+    result.incident_risk !== "high"
+  ) {
+    throw new Error("incident_risk must be low or high");
   }
-  if (!Array.isArray(result.riskReasons) || result.riskReasons.length === 0) {
-    throw new Error("riskReasons must contain at least one reason");
+  if (result.incident_risk && !result.risk_reason?.trim()) {
+    throw new Error("risk_reason is required when incident_risk is provided");
   }
-  if (result.confidence < 0 || result.confidence > 1) {
-    throw new Error("confidence must be between 0 and 1");
+  if (
+    result.routing_confidence !== undefined &&
+    (result.routing_confidence < 0 || result.routing_confidence > 1)
+  ) {
+    throw new Error("routing_confidence must be between 0 and 1");
   }
 }
 

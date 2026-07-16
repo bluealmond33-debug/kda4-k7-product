@@ -1,6 +1,6 @@
 // Runtime configuration for the service layer.
 //
-// Every AI capability (STT / summary / emotion) can run in one of two modes:
+// External capabilities can run in mock or real mode:
 //   • mock  — deterministic, offline, used for the live demo (default)
 //   • real  — POSTs to the backend at VITE_API_BASE_URL
 //
@@ -26,7 +26,6 @@ export function setApiAccessToken(token: string | null): void {
 
 export const useReal = {
   stt: flag(env.VITE_USE_REAL_STT) && !!API_BASE_URL,
-  summary: flag(env.VITE_USE_REAL_SUMMARY) && !!API_BASE_URL,
   emotion: flag(env.VITE_USE_REAL_EMOTION) && !!API_BASE_URL,
   data: flag(env.VITE_USE_REAL_DATA_API) && !!API_BASE_URL,
 };
