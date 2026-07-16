@@ -14,6 +14,9 @@ $health = Invoke-RestMethod -Uri "$baseUrl/health" -Method Get
 if ($health.status -ne "ok") {
     throw "Health check failed"
 }
+if ($health.database -ne "connected") {
+    throw "Database is not connected: $($health.database)"
+}
 
 Write-Host "2/3 upload customer voice"
 $createdJson = & curl.exe `
