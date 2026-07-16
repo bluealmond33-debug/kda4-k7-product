@@ -83,6 +83,14 @@ npm run check
 .\.venv\Scripts\python.exe -m pytest backend\tests -q
 ```
 
+실제 PostgreSQL 왕복 검증은 테스트용 DB URL을 명시한 경우에만 실행되며, 만든 행은 검증 후 자동 삭제합니다.
+
+```powershell
+$env:K7_TEST_DATABASE_URL = "postgresql://테스트용-DB-URL"
+.\.venv\Scripts\python.exe -m pytest backend\tests\test_database_integration.py -q
+Remove-Item Env:K7_TEST_DATABASE_URL
+```
+
 배포된 실제 음성 E2E 확인:
 
 ```powershell

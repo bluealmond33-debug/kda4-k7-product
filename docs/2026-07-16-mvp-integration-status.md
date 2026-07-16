@@ -2,112 +2,121 @@
 
 ## 결론
 
-현재 공개 데모는 화면과 Railway 파이프라인 골격이 동작하지만, PostgreSQL 저장·재조회까지 연결된 완성형 E2E는 아직 아닙니다.
+이찬희 담당 범위인 `mvp-1.0` 데이터 계약, PostgreSQL 3테이블, FastAPI 저장·조회 경계, React 음성 업로드 연결은 `lch` 브랜치에 구현됐습니다.
 
-`lch`에는 이를 해결하기 위한 비마스킹 `mvp-1.0` 단일 계약, FastAPI, PostgreSQL 3테이블, 실제 음성 파일 업로드 코드가 통합됐습니다. 로컬 검증은 통과했으며 GitHub 병합·Railway 재배포·Vercel 연결이 남았습니다.
+실제 한국어 WAV로 `STT → 구조화 → PostgreSQL 저장 → call_id 재조회`를 Railway 검증 서비스에서 통과했고, 별도의 PostgreSQL 통합 테스트도 UTF-8 왕복 저장을 확인한 뒤 테스트 행을 자동 삭제합니다.
 
-## 현재 공개 상태
+최종 운영 연결은 이희창 백엔드 저장소 소유자가 `lch`의 계약·DB 경계를 운영 FastAPI에 통합하고, Vercel 소유자가 배포 권한을 승인해야 완료됩니다. 이찬희 작업에서는 이희창 운영 서비스를 수정하지 않습니다.
 
-```mermaid
-flowchart LR
-    A["React/Vercel 화면"] --> B["스크립트 또는 로컬 입력"]
-    B --> C["Railway FastAPI 9개 데모 API"]
-    C --> D["실제 OpenAI STT"]
-    C --> E["GPT 요약·분류 자리채움"]
-    C --> F["감정 의사난수 스텁"]
-    C --> G["더미 규정 5개 RAG"]
-    C --> H["JSON 즉시 반환"]
-    I[("PostgreSQL Online\n아직 빈 DB")]:::pending
-
-    classDef pending fill:#fff3cd,stroke:#d39e00,color:#5f4800;
-```
-
-핵심 문제는 API 응답 후 결과가 DB에 남지 않아 `call_id`로 다시 조회할 수 없다는 점입니다.
-
-## 목표 MVP
+## 현재 팀 전체 구조
 
 ```mermaid
 flowchart LR
-    A["고객 음성 파일"] --> B["POST /api/v1/calls"]
-    B --> C["실제 STT"]
-    C --> D["요약·분류·라우팅 표준 결과"]
-    D --> E["mvp-1.0 검증"]
-    E --> F[("PostgreSQL\n3개 테이블 저장")]
-    F --> G["GET /api/v1/calls/{call_id}/consultation-card"]
-    G --> H["React/Vercel 상담카드"]
+    A["고객 음성"] --> B["Vercel React"]
+    B --> C["이희창 Railway 백엔드"]
+    C --> D["STT·임시 분석 결과 즉시 반환"]
+    E[("Railway PostgreSQL\nOnline·UTF-8·스키마 적용")]
+    F["이찬희 lch\nmvp-1.0·POST/GET·DB 코드"]
+
+    F -. "PR 검토 대기" .-> C
+    C -. "DATABASE_URL 미연결" .-> E
 ```
 
-## 단계별 현황
+현재 운영 백엔드의 GitHub Source에는 `HeeChang50/kda4-k7-backend`와 `GitHub Repo not found`가 표시됩니다. `pollmap` 계정에서도 저장소가 404이므로 저장소 소유자 또는 Railway GitHub App 권한 확인이 필요합니다.
 
-| 단계 | 현재 자산 | 실제 완료 판단 | 다음 완료조건 |
+## 목표 완성 구조
+
+```mermaid
+flowchart LR
+    A["고객 음성"] --> B["Vercel React"]
+    B --> C["POST /api/v1/calls"]
+    C --> D["이희창 실제 STT"]
+    D --> E["팀 요약·분류·라우팅"]
+    E --> F["이찬희 mvp-1.0 계약 검증"]
+    F --> G[("PostgreSQL 3테이블 저장")]
+    G --> H["GET /api/v1/calls/{call_id}/consultation-card"]
+    H --> I["상담카드 표시"]
+```
+
+## 단계별 현재 상태
+
+| 단계 | 현재 증거 | 상태 | 최종 담당 작업 |
 |---|---|---:|---|
-| 상담사 UI | React 화면, 이관·규정검색·메모·후처리 반영 | 높음 | 새 API 응답으로 실제 카드 표시 |
-| 고객 음성 입력 | `실제 음성 파일` 업로드 코드 추가 | 코드 완료·미배포 | Vercel에서 WAV 업로드 성공 |
-| STT | 이희창 Railway의 OpenAI Whisper 호출 존재 | 동작 골격 완료 | 업로드 음성이 실제 한국어 텍스트로 반환 |
-| 요약 | GPT 구조화 출력 자리채움 | MVP 대체 가능 | 전형진·김설빈 로직 수령 또는 GPT를 MVP 공식안으로 승인 |
-| 카테고리·라우팅 | 부서 taxonomy·prompt·검증 코드 존재 | 로직 교체 대기 | 표준 7필드 출력과 시나리오 테스트 |
-| 감정 | 데이터 파이프라인·실버500·라벨 UI는 존재 | 운영 모델 미완료 | MVP에서는 `unavailable`; 모델 도착 후 함수 교체 |
-| RAG | 더미 규정 5개와 UI 검색 영역 존재 | 자리채움 | 김민기의 실제 규정 파일·검색 코드 연결 |
-| 표준화 | `mvp-1.0` JSON Schema·Pydantic·TS 타입 | 로컬 완료 | 팀 승인·PR 병합 |
-| PostgreSQL | Railway 서비스 Online, 3테이블 SQL 완료 | 빈 DB | `DATABASE_URL` 연결 후 자동 생성·행 저장 확인 |
-| 상담카드 조회 API | POST/GET 구현·테스트 완료 | 로컬 완료 | Railway 배포 후 201/200 확인 |
-| 공개 E2E | 기존 즉시응답 데모만 가능 | 미완료 | Vercel 음성→DB→조회 한 번에 성공 |
+| 고객 음성 입력 | React `audio/*` 업로드 구현 | 완료 | Vercel 운영 API 주소 적용 |
+| STT | 실제 한국어 WAV가 정확한 한국어 텍스트로 변환됨 | 검증 완료 | 이희창 STT 유지 |
+| 요약·분류·라우팅 | MVP 구조화 결과 동작 | 임시 로직 | 전형진·김설빈 로직으로 교체 |
+| 표준화 | JSON Schema·Pydantic·TypeScript `mvp-1.0` 일치 | 완료 | 계약 변경은 PR로만 관리 |
+| PostgreSQL | Railway Online, UTF-8, 3테이블 자동 생성, CRUD 통과 | 완료 | 운영 FastAPI에 참조 연결 |
+| 저장 API | `POST /api/v1/calls` 201 및 call_id 반환 | 검증 완료 | 이희창 백엔드에 통합 |
+| 조회 API | 같은 call_id로 GET 200, POST와 동일한 카드 | 검증 완료 | 이희창 백엔드에 통합 |
+| 감정 | 가짜 점수 없이 `unavailable` | MVP 완료 | 실제 모델 수령 후 함수 교체 |
+| Vercel | React 빌드 통과, Vercel 팀 권한으로 배포 차단 | 외부 승인 필요 | Vercel 소유자가 `pollmap` 초대 또는 직접 배포 |
 
-## 이찬희 담당 범위
+## Railway 검증 결과
 
-### 직접 책임
+- PostgreSQL 서비스: `Postgres` (`71973777-1539-462e-b29b-7675afdb6b96`)
+- 서버 인코딩: `UTF8`
+- 활성 테이블: `calls`, `transcripts`, `consultation_cards`
+- 실제 음성 검증 call_id: `26749b14-e912-4fe3-a7d0-d6877bdc65e6`
+- 실제 STT: `안녕하세요. 주택담보대출 만기가 다음 달인데 연장이 가능한지 그리고 필요한 서류가 무엇인지 알고 싶습니다.`
+- 분류 결과: `대출 및 금융상담`, 위험도 `low`
+- POST 결과와 GET 재조회 결과 동일
+- 합성 음성 테스트 행 3개 정리 완료
+- 자동 PostgreSQL 통합 테스트는 임시 행을 `finally`에서 삭제
 
-1. `mvp-1.0` 표준 JSON과 enum 관리
-2. 모델별 출력이 표준 JSON으로 들어오는 어댑터 경계 관리
-3. PostgreSQL 최소 스키마와 `DATABASE_URL` 연결
-4. FastAPI 저장·조회 계약과 React 타입 일치 확인
-5. 계약·DB·E2E 테스트와 통합 현황 문서화
+검증용 `k7-mvp-lch-preview`는 공개 도메인과 `DATABASE_URL`·OpenAI·CORS 변수를 모두 제거했습니다. 현재 계정에는 서비스 삭제 권한이 없어 빈 서비스 껍데기 삭제만 Railway 관리자가 수행해야 합니다.
 
-### 직접 만들 필요가 없는 것
+## 이찬희 담당 완료 범위
 
-- STT 모델 또는 음성 API 자체
-- 감정 모델 학습
-- 요약 LLM 연구
-- 실제 규정 문서 수집·RAG 품질
-- 상담사 화면 디자인 전체
+1. 음성 전용 `mvp-1.0` 표준 JSON과 enum
+2. 모델 출력 → 표준 계약 경계
+3. PostgreSQL 최소 3테이블과 자동 스키마 적용
+4. FastAPI 저장·조회 API
+5. React 타입·서비스 호출 경계
+6. 기존 9개 API의 호환 경로
+7. 계약·어댑터·FastAPI·DB·UTF-8·음성 E2E 검증
+8. Railway Python 모노레포 빌드 설정
 
-이찬희의 역할은 각 기능을 하나로 연결하고, 어떤 팀 결과도 같은 계약과 DB에 들어가게 만드는 프로젝트의 척추입니다.
+## 검증 명령
 
-## 최신 팀 요청 기준 남은 일
+일반 CI:
 
-| 담당 | 확인된 현재 자산 | 이번 MVP에 줄 산출물 |
-|---|---|---|
-| 이희창 | Railway FastAPI, 실제 STT, 기존 9개 API, 전체 조립 | `lch` 표준 백엔드 검토·배포, 기존 API 호환 확인 |
-| 전형진·김설빈 | 담당 확정, 최종 코드 미수령 | `text -> 표준 7필드` Python 함수, 감정 함수, 판단 규칙과 예제 |
-| 김민기 | React 기반과 최신 UX 요구, RAG 담당 | 실제 규정 파일, 검색 함수, 카드 추천 조치 조립 코드 |
-| 박정운 | 모델링 저장소에 데이터 프로파일·실버500·라벨링 도구 존재, Slack에서는 UI 방향 확인 요청 | UI 소유권 확정; 감정 자산을 쓸 경우 배포 가능 함수와 모델 파일 전달 |
-| 이찬희 | DB·계약·통합 코드 | PR·Railway DB 연결·E2E 증거 |
+```powershell
+npm run check
+.\.venv\Scripts\python.exe -m pytest backend\tests -q
+```
 
-업무분장 문서의 이름별 최종 분장은 과거에는 미확정이었으므로, 위 표는 2026-07-16 Slack의 최신 요청을 우선합니다.
+실제 PostgreSQL 왕복 테스트:
 
-## 모델링 자산의 정확한 의미
+```powershell
+$env:K7_TEST_DATABASE_URL = "postgresql://테스트용-DB-URL"
+.\.venv\Scripts\python.exe -m pytest backend\tests\test_database_integration.py -q
+Remove-Item Env:K7_TEST_DATABASE_URL
+```
 
-- WAV 14,606개·약 23.55시간 프로파일링 자산이 있습니다.
-- 125개 원본의 clean/전화품질 250건 zero-shot 실험이 있습니다.
-- 실버 예측 500개와 개발 후보 442개가 있습니다.
-- 사람 평가 패키지는 준비됐지만 평가 완료율 문서상 0/1,500이며 `INCOMPLETE`입니다.
-- 모델카드는 현재 결과를 미보정·shadow-only로 제한합니다.
+실제 음성 E2E:
 
-따라서 감정 연구 자산은 상당하지만, Railway에서 호출할 수 있는 검증된 감정 모델은 아직 없다고 판단합니다.
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\smoke-mvp.ps1 `
+  -AudioPath .\samples\customer.wav `
+  -ApiBaseUrl https://운영-Railway-백엔드
+```
 
-## 배포 전 완료 체크
+## 남은 팀 작업
 
-- [x] 음성 전용 활성 계약
-- [x] 비마스킹 MVP 3테이블 SQL
-- [x] FastAPI POST 저장·GET 조회 구현
-- [x] 기존 Railway 9개 경로 호환 보존
-- [x] React 실제 음성 파일 업로드 연결
-- [x] JSON·React·FastAPI 로컬 테스트
-- [ ] GitHub PR 검토·병합
-- [ ] Railway 백엔드를 GitHub 소스에 연결
-- [ ] 백엔드 `DATABASE_URL`을 Postgres 참조로 설정
-- [ ] Railway에서 테이블 3개 생성 확인
-- [ ] 실제 샘플 음성으로 POST 201 확인
-- [ ] 같은 `call_id` GET 200·동일 JSON 확인
-- [ ] Vercel 환경변수 설정·재배포
-- [ ] 브라우저에서 상담카드 표시 확인
+1. 이희창: 백엔드 저장소/Railway GitHub App 접근 복구
+2. 이희창: `lch`의 계약·DB·POST/GET 경계를 운영 FastAPI에 통합
+3. 이희창: 운영 서비스에 `DATABASE_URL=${{Postgres.DATABASE_URL}}` 참조 설정
+4. 전형진·김설빈: 임시 요약·감정·분류·라우팅 함수를 실제 로직으로 교체
+5. 김민기: 실제 규정 파일과 RAG·브리핑카드 조립 연결
+6. Vercel 소유자: `pollmap` 팀 접근 승인 또는 권한 있는 계정으로 배포
+7. Railway 관리자: 연결 해제된 `k7-mvp-lch-preview` 빈 서비스 삭제
+
+## PR 상태
+
+- PR: `lch → main` #1
+- 최신 검증 기준: 현재 `lch` HEAD의 PostgreSQL 통합 테스트·현황 문서 포함
+- GitHub CI: React·계약·FastAPI·DB 계약 통과
+- 병합 가능 상태
+- Vercel 실패 원인: 코드가 아니라 Git 작성자의 Vercel 팀 접근 권한
