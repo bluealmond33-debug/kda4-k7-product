@@ -7,6 +7,7 @@ JSON 파일은 운영 데이터를 쌓는 저장소가 아니라 팀 간 입력�
 | 파일 | 사용 주체 | 용도 |
 |---|---|---|
 | `openapi.yaml` | 백엔드·React | FastAPI 경로·상태 코드·요청·응답 계약 |
+| `model_adapter_guide.md` | 모델·백엔드·DB | 변경 가능한 모델 출력을 K7 표준 계약으로 변환하는 경계 |
 | `stt_utterance_input.schema.json` | STT·백엔드 | STT 원문 입력 검증 규격 |
 | `masked_utterance.schema.json` | 백엔드·후속 모델 | 마스킹 이후 전달·저장 규격 |
 | `emotion_temperature_result.schema.json` | 감정 모델·백엔드 | 모델 결과 검증 규격 |
@@ -29,6 +30,7 @@ JSON 파일은 운영 데이터를 쌓는 저장소가 아니라 팀 간 입력�
 - 재전송 가능한 결과는 같은 `external_session_key`와 멱등 키를 사용합니다.
 - 같은 멱등 키의 내용이 달라지면 덮어쓰지 않고 `409 Conflict`로 처리합니다.
 - React는 예제 JSON으로 먼저 개발하고, 이후 동일한 응답 구조의 FastAPI 호출로 교체합니다.
+- 모델 저장소의 중간 스키마를 DB 계약으로 직접 사용하지 않고 `model_adapter_guide.md`의 어댑터 경계를 사용합니다.
 
 ## 감정온도 코드
 

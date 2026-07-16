@@ -101,6 +101,9 @@ P1은 별도 테이블로 준비하며 P0 카드 생성 흐름의 선행조건�
 
 - 규격: `contracts/emotion_temperature_result.schema.json`
 - 예시: `contracts/examples/emotion_temperature_result.example.json`
+- 모델 저장소의 원시·중간 JSON은 직접 저장하지 않고 `contracts/model_adapter_guide.md`의 FastAPI 어댑터 경계를 거칩니다.
+- 세그먼트별 원시 예측은 모델 측에 유지하고, DB에는 상담 단위로 집계·보정된 결과만 저장합니다.
+- 보정되지 않은 zero-shot 원값은 `emotion_temperature_score`로 변환하지 않습니다.
 - 같은 추론 결과의 재전송은 동일한 `result_key`를 사용합니다.
 - `analysis_status=completed`일 때만 점수·등급이 존재합니다.
 - 음성 부족·모델 장애는 `unavailable`·`failed`와 `failure_code`로 전달합니다.
@@ -114,6 +117,7 @@ P1은 별도 테이블로 준비하며 P0 카드 생성 흐름의 선행조건�
 - 입력: `external_session_key`, 마스킹된 발화
 - 출력: 문의 유형 코드, 요약, 고객 요청, 위험 근거, 추천 조치, 규정 참조값
 - 출력 계약: `contracts/consultation_card.schema.json`
+- 학습 데이터나 모델 저장소의 분류명을 직접 DB 코드로 사용하지 않고, 버전이 있는 어댑터 매핑을 통해 K7 문의 유형 코드로 변환합니다.
 - 규정 원문은 RAG 저장소에 두고 카드에는 `related_manual_refs`만 저장합니다.
 
 ### 라우팅팀

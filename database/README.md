@@ -169,6 +169,7 @@ database/
 │                               ← 이전 DB를 새 규격으로 올릴 때만 사용
 └── contracts/
     ├── README.md              ← JSON 계약만 따로 보는 설명서
+    ├── model_adapter_guide.md ← 변경 가능한 모델 출력을 연결하는 방법
     ├── openapi.yaml           ← FastAPI 경로·요청·응답 명세
     ├── *.schema.json          ← JSON 검사 규칙
     └── examples/*.json        ← 전부 가상 데이터인 정상 예제
@@ -183,6 +184,7 @@ database/
 | 컬럼 하나의 정확한 뜻 찾기 | `database/data_dictionary.md` |
 | 팀끼리 주고받을 데이터 확인 | `database/integration_contract.md` |
 | FastAPI 경로 확인 | `database/contracts/openapi.yaml` |
+| 아직 바뀌는 모델 결과 연결 | `database/contracts/model_adapter_guide.md` |
 | React가 받을 최종 모양 확인 | `database/contracts/examples/consultation_card_response.example.json` |
 
 ---
@@ -379,6 +381,16 @@ npm run check
 ---
 
 ## 9. 팀별 연결 방법
+
+### 공통 모델 어댑터 원칙
+
+모델링 저장소의 데이터 라벨·출력 JSON·필드명은 실험 과정에서 바뀔 수 있습니다. 그 구조를 PostgreSQL이나 React가 직접 따라가지 않고 FastAPI의 모델별 어댑터가 K7 표준 JSON으로 변환합니다.
+
+```text
+모델별 중간 결과 → FastAPI 어댑터 → contracts/*.schema.json → PostgreSQL
+```
+
+WAV·학습 JSON·CSV·embedding·세그먼트별 원시 예측은 운영 PostgreSQL에 넣지 않습니다. 감정 모델은 상담 단위로 보정된 최종 결과만 `model_analysis_results`에 저장하고, 문의 분류·요약 모델은 `consultation_card.schema.json` 구조로 변환합니다. 상세 규칙은 `contracts/model_adapter_guide.md`를 사용합니다.
 
 ### STT팀
 
