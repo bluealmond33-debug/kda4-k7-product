@@ -1,5 +1,4 @@
 import type { EmotionScore, EmotionTemperatureLevel } from "./types";
-import { postJSON, useReal } from "./config";
 
 const LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
 
@@ -14,12 +13,10 @@ const AGITATED = /(당황|급해|돌려|어떡|화가|왜|빨리|큰일|불안|�
  * Score the customer's emotional temperature from a piece of transcript.
  *
  * mock: keyword heuristic (used in the demo).
- * real: POST /emotion  → { score, level, label_ko, signals }.
+ * This is demo-only. The active mvp-1.0 contract reports emotion as
+ * unavailable until the team model is actually integrated.
  */
 export async function scoreEmotion(text: string): Promise<EmotionScore> {
-  if (useReal.emotion) {
-    return postJSON<EmotionScore>("/emotion", { text });
-  }
   const hits = (text.match(AGITATED) ?? []).length;
   const score = Math.min(100, hits ? 48 + hits * 13 : 24);
   const level: EmotionTemperatureLevel =

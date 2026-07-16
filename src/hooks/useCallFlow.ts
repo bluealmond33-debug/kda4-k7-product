@@ -13,7 +13,7 @@ import {
 import {
   startSttSession,
   summarize,
-  getConsultationCard,
+  createConsultationFromAudio,
   getDemoConsultationCard,
   type CallSummary,
   type ConsultationCardResponse,
@@ -66,37 +66,20 @@ const STATUS: Partial<Record<Phase, string>> = {
 };
 const GLASS: Partial<Record<Phase, string>> = {
   connecting:
-    "연결 대기 중입니다. 상담사 연결 전 용건을 말씀해 주시면 더 빠르게 도와드려요. 계좌번호·비밀번호 등 민감정보는 말씀하지 마시고, 언제든 상담사 연결을 요청하실 수 있어요.",
+    "연결 대기 중입니다. 상담사 연결 전 문의하실 내용을 음성으로 말씀해 주세요. 언제든 상담사 연결을 요청하실 수 있어요.",
   confirm: "더 말씀하실 내용이 있으신가요?",
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
 const PREP_ITEMS = [
   { title: "확정적 반환 표현 금지", sub: "“무조건 돌려받는다” 대신 반환지원 제도 절차로 안내" },
-  { title: "개인정보 마스킹 유지", sub: "수취 계좌·예금주 원문 노출 금지" },
+  { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
   {
     title: "녹취 고지 자동 재생 — 연결 시 자동",
     sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
   },
 ];
 
-const INQUIRY_LABELS: Record<string, string> = {
-  mistaken_transfer: "전자금융 › 착오송금",
-  voice_phishing_suspected: "금융사고 › 보이스피싱 의심",
-  lost_card: "카드 › 분실신고",
-  overseas_payment: "카드 › 해외결제",
-  account_opening: "예금 › 계좌개설",
-  payment_error: "전자금융 › 결제 오류",
-  loan: "여신 › 대출상담",
-  general_inquiry: "일반 문의",
-  other: "기타 문의",
-};
-
-const RISK_LABELS = {
-  low: "낮음",
-  medium: "주의",
-  high: "높음",
-  critical: "긴급",
-} as const;
+const RISK_LABELS = { low: "낮음", high: "높음" } as const;
 
 const fmt = (s: number) => {
   const m = Math.floor(s / 60);
@@ -115,6 +98,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [emo, setEmo] = useState(0);
   const [silenceLeft, setSilenceLeft] = useState(0);
   const [micErr, setMicErr] = useState("");
+  const [audioBusy, setAudioBusy] = useState(false);
 
   const [prepChecks, setPrepChecks] = useState<boolean[]>([false, false, false]);
   const [verified, setVerified] = useState(false);
@@ -196,13 +180,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       .filter((c) => c.isFinal)
       .map((c) => c.text)
       .join(" ");
-    const [summaryResult, cardResult] = await Promise.allSettled([
+    const [summaryResult] = await Promise.allSettled([
       summarize({ chunks: transcript.current, text }),
-      getConsultationCard(),
     ]);
     if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
-    if (cardResult.status === "fulfilled") setConsultationResponse(cardResult.value);
-    // On API failure the contract fixture remains visible, preserving the live demo.
+    // The standard mvp-1.0 fixture remains visible for the scripted demo.
   }, []);
 
   const toPrep = useCallback(() => {
@@ -334,6 +316,36 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }
   }, []);
 
+  const submitAudio = useCallback(
+    async (file: File) => {
+      clearAll();
+      setMode("mic");
+      setPhase("recording");
+      setClock(0);
+      setEmo(0);
+      setMicErr("");
+      setAudioBusy(true);
+      startClock();
+      try {
+        const response = await createConsultationFromAudio(file);
+        setConsultationResponse(response);
+        transcript.current = [
+          { text: response.transcript.text, at: 0, isFinal: true },
+        ];
+        setSummary(null);
+        setPrepChecks([false, false, false]);
+        setPhase("prep");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "음성 처리에 실패했습니다.";
+        setMicErr(message);
+        setPhase("idle");
+      } finally {
+        setAudioBusy(false);
+      }
+    },
+    [clearAll, startClock]
+  );
+
   // ── auth ──
   const pickAuth = useCallback((m: AuthMethod) => {
     setAuthMethod(m);
@@ -442,37 +454,25 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const mA = mColors(authMethod === "account");
 
   const allChecked = prepChecks.every(Boolean);
-  const integrated = consultationResponse.data;
-  const card = integrated.consultation_card;
-  const routing = integrated.routing_result;
-  const temperature = integrated.emotion_temperature;
-  const customerCautions = integrated.customer_cautions;
-  const inquiryLabel = card
-    ? INQUIRY_LABELS[card.inquiry_type] ?? card.inquiry_type
-    : summary?.type ?? "상담 유형 분석 중";
-  const contractBullets = card
-    ? [card.summary, card.customer_request, ...card.risk_factors].filter(
-        (value): value is string => !!value
-      )
-    : [];
+  const card = consultationResponse.consultation_card;
+  const temperature = card.emotion;
+  const inquiryLabel = card.business_type || summary?.type || "상담 유형 분석 중";
+  const contractBullets = [card.summary, card.routing_reason, card.risk_reason].filter(
+    (value): value is string => !!value
+  );
   const prepSummaryBullets = (contractBullets.length
     ? contractBullets
     : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
   ).slice(0, 4);
-  const prepDefinitions = PREP_ITEMS.map((fallback, index) => ({
-    ...fallback,
-    title: card?.confirmation_items[index] ?? fallback.title,
-  }));
-  const emotionBars =
-    temperature.level === "elevated" ? 3 : temperature.level === "caution" ? 2 : 1;
-  const riskRank = { low: 1, medium: 2, high: 3, critical: 4 } as const;
-  const highestRisk = [card?.risk_level, ...customerCautions.map((item) => item.severity)]
-    .filter((risk): risk is keyof typeof riskRank => !!risk)
-    .sort((a, b) => riskRank[b] - riskRank[a])[0];
-  const riskSignals = [
-    ...customerCautions.map((item) => item.reason),
-    ...(card?.risk_factors ?? []),
-  ];
+  const prepDefinitions = PREP_ITEMS;
+  const emotionBars = temperature.score == null
+    ? 0
+    : temperature.score > 66
+      ? 3
+      : temperature.score > 33
+        ? 2
+        : 1;
+  const riskSignals = [card.risk_reason].filter((value): value is string => !!value);
 
   return {
     // refs
@@ -485,12 +485,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // header
     phaseLabel: LABELS[p] || p,
     micErr,
+    audioBusy,
     simBg: sim ? "var(--blue-700)" : "#fff",
     simFg: sim ? "#fff" : "var(--color-fg-secondary)",
     micBg: !sim ? "var(--blue-700)" : "#fff",
     micFg: !sim ? "#fff" : "var(--color-fg-secondary)",
     setSim,
     setMic,
+    submitAudio,
     reset,
     startCall,
     answerCall,
@@ -551,33 +553,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }),
     prepDone: prepChecks.filter(Boolean).length,
     prepTotal: prepDefinitions.length,
-    prepHeadline: card?.summary ?? summary?.headline ?? "상담카드 생성 중",
-    prepCustomerLine: `${integrated.customer.full_name_masked} · ${inquiryLabel} · ${integrated.customer.phone_masked}`,
-    prepRoutingTitle:
-      routing?.counselor_name && routing.department_name
-        ? `${routing.department_name} · ${routing.counselor_name}`
-        : summary?.recommendedAgent ?? "담당 상담사 추천 중",
-    prepRoutingReason: routing?.rationale ?? "문의 유형과 담당 업무를 대조하고 있습니다",
-    prepEmotionLabel: temperature.label_ko ?? summary?.emotion.label_ko ?? "분석 중",
-    prepEmotionSignal:
-      temperature.signals.join(" · ") ||
-      summary?.emotion.signals.join(" · ") ||
-      "특이 감정 신호 없음",
+    prepHeadline: card.summary || summary?.headline || "상담카드 생성 중",
+    prepCustomerLine: `고객 · ${inquiryLabel} · 음성 접수`,
+    prepRoutingTitle: card.department || "담당 부서 분석 중",
+    prepRoutingReason: card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
+    prepEmotionLabel:
+      temperature.status === "unavailable" ? "모델 미연동" : temperature.level ?? "분석 중",
+    prepEmotionSignal: temperature.reason ?? "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
-    prepRiskLabel: highestRisk ? RISK_LABELS[highestRisk] : "낮음",
+    prepRiskLabel: RISK_LABELS[card.incident_risk],
     prepRiskSignal: riskSignals.join(" · ") || "특이 사고 징후 없음",
     prepSummaryBullets,
-    externalSessionKey: integrated.external_session_key,
-    customerNameMasked: integrated.customer.full_name_masked,
-    customerNumber: integrated.customer.customer_number,
-    customerPhoneMasked: integrated.customer.phone_masked,
+    externalSessionKey: consultationResponse.call_id,
+    customerName: "고객",
+    customerNumber: "MVP-AUTO",
+    customerPhone: "음성 접수",
     inquiryLabel,
     wrapSummaryDefault: [
-      `${integrated.customer.full_name_masked} 고객의 ${card?.summary ?? summary?.headline ?? "상담 내용"}.`,
-      card?.customer_request ? `요청사항: ${card.customer_request}.` : "",
-      card?.recommended_actions.length
-        ? `권장 조치: ${card.recommended_actions.join(", ")}.`
-        : "",
+      `고객의 ${card.summary ?? summary?.headline ?? "상담 내용"}.`,
+      `업무유형: ${card.business_type}.`,
+      `전달부서: ${card.department}.`,
     ]
       .filter(Boolean)
       .join(" "),

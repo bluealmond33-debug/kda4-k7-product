@@ -27,7 +27,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:6px;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
-            <span className="mi" style={css("font-size:17px;color:var(--gray-600)")}>call_end</span>{vm.customerPhoneMasked}
+            <span className="mi" style={css("font-size:17px;color:var(--gray-600)")}>call_end</span>{vm.customerPhone}
           </span>
           <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
@@ -67,7 +67,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <div style={css("display:flex;align-items:center;gap:12px")}>
               <span className="av" style={css("width:46px;height:46px")}><span className="mi" style={css("font-size:26px")}>person</span></span>
               <div>
-                <div style={css("font-weight:700;font-size:18px;line-height:1.2")}>{vm.customerNameMasked}</div>
+                <div style={css("font-weight:700;font-size:18px;line-height:1.2")}>{vm.customerName}</div>
                 <div style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>
                   개인 고객 · <span style={css("font-family:'Geist Mono','IBM Plex Mono',monospace")}>{vm.customerNumber}</span>
                 </div>
@@ -83,7 +83,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <div style={css("overflow:auto")}>
               <div style={css("padding:11px 14px;background:var(--gray-100);border-bottom:1px solid var(--gray-200)")}>
                 <div style={css("display:flex;align-items:center;gap:8px")}>
-                  <span style={css("font-weight:700;font-size:14px")}>고객 · {vm.customerNameMasked}</span>
+                  <span style={css("font-weight:700;font-size:14px")}>고객 · {vm.customerName}</span>
                   <span style={css("font:700 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-left:auto")}>지금 후처리 중</span>
                 </div>
                 <div style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);margin-top:4px")}>{vm.inquiryLabel}</div>
@@ -178,7 +178,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                   {/* 우: 항목 + 메모 */}
                   <div style={css("width:330px;flex:none;display:flex;flex-direction:column;gap:12px;overflow:visible")}>
                     <div style={css("display:flex;flex-direction:column;gap:8px")}>
-                      <EditRow label="고객" value={`${vm.customerNameMasked} · ${vm.customerNumber}`} />
+                      <EditRow label="고객" value={`${vm.customerName} · ${vm.customerNumber}`} />
                       <EditRow label="상담사" value="김키움 · A-2231" />
                       <EditRow label="일시" value="2026.07.15 14:32" small />
                     </div>
@@ -210,7 +210,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 </div>
 
                 <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--gray-200)")}>
-                  <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>개인정보 마스킹 적용 · 저장 시 상담 이력에 기록</span>
+                <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>MVP 상담 결과 · 저장 시 상담 이력에 기록</span>
                   <div style={css("flex:1")} />
                   <span style={css("font:500 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);text-decoration:underline;text-underline-offset:2px;cursor:pointer")}>임시 저장</span>
                   <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1px solid var(--gray-500);border-radius:6px;font-size:14px;font-weight:700;color:var(--gray-1000);cursor:pointer")}>

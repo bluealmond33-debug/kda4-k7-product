@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
 import Phone from "./Phone";
@@ -12,6 +13,7 @@ import WrapSheet from "./desktop/WrapSheet";
  */
 export default function LiveDemo(config: CallFlowConfig = {}) {
   const vm = useCallFlow(config);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div
@@ -44,6 +46,31 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               <span onClick={vm.setSim} style={css("padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:" + vm.simBg + ";color:" + vm.simFg)}>시뮬레이션</span>
               <span onClick={vm.setMic} style={css("padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:" + vm.micBg + ";color:" + vm.micFg)}>실제 마이크</span>
             </div>
+            <input
+              ref={audioInputRef}
+              type="file"
+              accept="audio/*,.wav,.mp3,.m4a,.webm"
+              hidden
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void vm.submitAudio(file);
+                event.target.value = "";
+              }}
+            />
+            <span
+              onClick={() => !vm.audioBusy && audioInputRef.current?.click()}
+              style={css(
+                "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:" +
+                  (vm.audioBusy ? "var(--gray-200)" : "var(--green-700)") +
+                  ";color:" +
+                  (vm.audioBusy ? "var(--gray-600)" : "#fff") +
+                  ";border-radius:9999px;font-size:13px;font-weight:600;cursor:" +
+                  (vm.audioBusy ? "wait" : "pointer")
+              )}
+            >
+              <span className="mi" style={css("font-size:17px")}>audio_file</span>
+              {vm.audioBusy ? "음성 처리 중" : "실제 음성 파일"}
+            </span>
             {vm.showSkip && (
               <span onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
                 <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약

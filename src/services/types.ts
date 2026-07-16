@@ -48,114 +48,42 @@ export interface Transcript {
 }
 
 // ---------------------------------------------------------------------------
-// FastAPI ↔ PostgreSQL integrated consultation contract (schema_version 1.0)
-// Source of truth: database/contracts/consultation_card_response.schema.json
+// Active MVP FastAPI ↔ PostgreSQL contract.
+// Source of truth: database/contracts/mvp_call_response.schema.json
 
-export type SessionStatus =
-  | "waiting"
-  | "analyzing"
-  | "ready"
-  | "in_progress"
-  | "summarizing"
-  | "wrap_up"
-  | "completed"
-  | "cancelled";
+export type MvpCallStatus = "processing" | "ready" | "failed";
+export type MvpIncidentRisk = "low" | "high";
+export type MvpEmotionStatus = "unavailable" | "demo" | "completed";
 
-export type RiskLevel = "low" | "medium" | "high" | "critical";
-export type AnalysisStatus = "completed" | "pending" | "unavailable" | "failed";
-
-export interface MaskedCustomer {
-  customer_number: string;
-  full_name_masked: string;
-  phone_masked: string;
-  account_number_masked: string | null;
-}
-
-export interface CustomerCaution {
-  caution_type:
-    | "fraud_suspected"
-    | "identity_verification_required"
-    | "vulnerable_customer"
-    | "repeated_complaint"
-    | "legal_dispute"
-    | "transaction_restriction"
-    | "other";
-  reason: string;
-  severity: RiskLevel;
-  registered_at: string;
-  expires_at: string | null;
-}
-
-export interface EmotionTemperature {
-  status: AnalysisStatus;
+export interface MvpEmotionResult {
+  status: MvpEmotionStatus;
   score: number | null;
-  level: EmotionTemperatureLevel | null;
-  label_ko: "안정" | "주의" | "고조" | null;
-  audio_quality:
-    | "normal"
-    | "low_volume"
-    | "noisy"
-    | "too_short"
-    | "unavailable"
-    | null;
-  failure_code: string | null;
-  signals: string[];
+  level: string | null;
+  reason: string | null;
 }
 
-export interface IntegratedConsultationCard {
-  schema_version: string;
-  inquiry_type: string;
+export interface MvpConsultationCard {
   summary: string;
-  customer_request: string | null;
-  keywords: string[];
-  risk_factors: string[];
-  urgency_level: RiskLevel;
-  risk_level: RiskLevel;
-  related_manual_refs: string[];
-  suggested_opening: string | null;
-  recommended_actions: string[];
-  confirmation_items: string[];
-  confirmation_status: "pending" | "confirmed" | "correction_requested";
-}
-
-export interface RoutingResult {
-  department_code: string;
-  department_name: string;
-  counselor_code: string | null;
-  counselor_name: string | null;
-  recommendation_rank: number;
-  confidence: number;
-  rationale: string;
-  selected: boolean;
-}
-
-export interface RecentConsultation {
-  inquiry_type: string;
-  ai_summary: string;
-  resolution_result: string;
-  department_name: string;
-  risk_level: RiskLevel;
-  consulted_at: string;
-}
-
-export interface MaskedUtterance {
-  sequence_no: number;
-  speaker_type: "customer" | "system" | "counselor";
-  masked_transcript: string;
-  spoken_at: string;
+  business_type: string;
+  department: string;
+  routing_reason: string;
+  incident_risk: MvpIncidentRisk;
+  risk_reason: string | null;
+  routing_confidence: number | null;
+  emotion: MvpEmotionResult;
 }
 
 export interface ConsultationCardResponse {
-  schema_version: "1.0";
-  data: {
-    external_session_key: string;
-    session_status: SessionStatus;
-    customer: MaskedCustomer;
-    customer_cautions: CustomerCaution[];
-    emotion_temperature: EmotionTemperature;
-    consultation_card: IntegratedConsultationCard | null;
-    routing_result: RoutingResult | null;
-    recent_consultations: RecentConsultation[];
-    masked_utterances: MaskedUtterance[];
+  schema_version: "mvp-1.0";
+  call_id: string;
+  status: MvpCallStatus;
+  source_channel: "voice";
+  audio_filename: string;
+  transcript: {
+    text: string;
+    stt_model: string;
+    duration_sec: number;
   };
+  consultation_card: MvpConsultationCard;
+  created_at: string;
 }

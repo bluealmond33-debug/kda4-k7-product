@@ -7,6 +7,7 @@ import addFormats from "ajv-formats";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contracts = path.join(root, "database", "contracts");
 const pairs = [
+  ["mvp_call_response.schema.json", "examples/mvp_call_response.example.json"],
   ["consultation_card.schema.json", "examples/consultation_card.example.json"],
   [
     "consultation_card_response.schema.json",

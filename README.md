@@ -1,119 +1,113 @@
-# K7 라이브 상담 시연 (kda4-k7-product)
+# K7 음성 상담카드 MVP
 
-키움은행 **AI 상담 접수·요약 시연**을 React로 옮긴 프로젝트입니다.
-왼쪽 아이폰에서 전화를 걸면 대기 시간 동안 고객이 용건을 말하고, AI가 이를
-요약해 오른쪽 **상담사 데스크톱**에 준비 카드로 띄워 주는 흐름을 클릭으로
-시연할 수 있습니다.
+고객의 **음성 문의**를 실제 STT로 변환하고, 요약·업무유형·담당 부서·라우팅 근거를 표준 상담카드로 만들어 PostgreSQL에 저장한 뒤 상담사 화면에 표시하는 통합 저장소입니다.
 
-> 원본은 디자인 도구(HTML)로 만든 시안이며, 이 저장소는 그것을
-> **Vite + React + TypeScript** 표준 프로젝트로 변환한 것입니다. GitHub push →
-> Vercel 배포 → 이후 백엔드(STT·RAG·감정ML) 연결까지 이어가기 위한 베이스입니다.
+## 한 줄 흐름
 
----
+```text
+음성 파일 → FastAPI → STT → 표준 JSON → PostgreSQL → 상담카드 API → React/Vercel
+```
 
-## 실행
+## 단일 기준
 
-```bash
+| 영역 | 활성 기준 |
+|---|---|
+| 프론트엔드 | `src/` — React + Vite |
+| 백엔드 | `backend/app/` — FastAPI |
+| DB | `database/mvp/schema.sql` — PostgreSQL 3테이블 |
+| API 계약 | `database/contracts/mvp_call_response.schema.json` |
+| Railway 설정 | `railway.toml` |
+
+개인정보 마스킹, 고객 마스터, 권한·감사로그, 실제 상담사 자동배정은 이번 MVP 필수가 아닙니다. 기존 12테이블 SQL과 상세 계약은 향후 확장 참고용으로 보존하며 활성 배포에는 사용하지 않습니다.
+
+## 활성 API
+
+```text
+POST /api/v1/calls
+  multipart/form-data audio=<고객 음성>
+  STT·분석·DB 저장 후 mvp-1.0 상담카드 반환
+
+GET /api/v1/calls/{call_id}/consultation-card
+  DB에 저장된 같은 상담카드 재조회
+
+GET /health
+  API·DB 연결 상태 확인
+```
+
+현재 Railway에 이미 배포된 `/stt`, `/analyze`, `/judge`, `/rag`, `/analyze-text`, `/emotion`, `/summarize`, `/briefing`은 기존 데모가 깨지지 않도록 호환 경로로 유지합니다. 이 경로의 감정·RAG·일부 판단은 자리채움이며, 새 개발은 `/api/v1/calls`만 사용합니다.
+
+## 프론트엔드 실행
+
+```powershell
 npm install
-npm run dev      # 로컬 개발 서버 (http://localhost:5173)
-npm run build    # 프로덕션 빌드 → dist/
-npm run preview  # 빌드 결과 미리보기
+Copy-Item .env.example .env
+npm run dev
 ```
 
-Node 18+ 권장.
+실제 Railway API를 사용할 때 `.env`:
 
----
-
-## GitHub에 올리기
-
-이 폴더(`react-app/`)를 저장소 루트로 올리는 경우:
-
-```bash
-git init
-git add .
-git commit -m "init: K7 상담 시연 (React)"
-git branch -M main
-git remote add origin https://github.com/bluealmond33-debug/kda4-k7-product.git
-git push -u origin main
+```dotenv
+VITE_API_BASE_URL=https://kda4-k7-backend-production.up.railway.app
+VITE_USE_REAL_DATA_API=true
+VITE_DATA_API_PREFIX=/api/v1
 ```
 
-## Vercel 배포
+상단의 `실제 음성 파일` 버튼으로 WAV·MP3·M4A 등을 업로드합니다. `VITE_USE_REAL_DATA_API=false`이면 표준 fixture로 화면만 시연합니다.
 
-1. Vercel에서 **Add New → Project → 위 저장소 import**
-2. Framework Preset: **Vite** (자동 감지) · Build: `npm run build` · Output: `dist`
-3. Deploy. 이후 `main`에 push할 때마다 자동 재배포됩니다.
-4. Pull Request를 열면 Vercel이 **미리보기 URL**을 만들어 주므로, Codex 등으로
-   수정한 브랜치를 배포 전 확인할 수 있습니다.
+## 백엔드 실행
 
----
-
-## 백엔드(AI) 연결 지점
-
-AI 기능은 전부 **서비스 레이어(`src/services/`)** 로 분리되어 있고, 지금은
-결정적인 **mock(시뮬레이션)** 이 기본값입니다. 백엔드가 준비되면 `.env`만 채우면
-됩니다 — UI 코드는 바꿀 필요가 없습니다.
-
-```bash
-cp .env.example .env
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+Copy-Item backend\.env.example .env
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload --port 8000
 ```
 
-```
-VITE_API_BASE_URL=https://<백엔드 주소>
-VITE_USE_REAL_STT=true       # POST /stt
-VITE_USE_REAL_EMOTION=true   # POST /emotion
-VITE_USE_REAL_DATA_API=true  # GET /api/v1/consultation-sessions/{key}/consultation-card
-```
+백엔드 환경변수:
 
-| 기능 | 파일 | mock 동작 | 실제(real) 계약 |
-| --- | --- | --- | --- |
-| STT (음성→텍스트) | `services/stt.ts` | 스크립트 발화 재생 | 브라우저 STT / 오디오 스트림 → 백엔드 |
-| 요약·업무유형 (RAG) | `features/stt-classification/` | `services/summarize.ts`의 화면 fallback | 모델 결과 POST → FastAPI 어댑터 → 통합 상담카드 GET |
-| 감정온도 (ML) | `services/emotion.ts` | 키워드 휴리스틱 | `POST /emotion` → `EmotionScore` |
-
-백엔드 요청·응답의 공식 원본은 `database/contracts/*.schema.json`과
-`database/contracts/openapi.yaml`입니다. `src/services/types.ts`의 `CallSummary`는
-통합 API가 꺼진 데모 화면용 fallback이며 백엔드 계약으로 사용하지 않습니다.
-
-> **마이크**: 이 시연은 요구사항에 따라 **시뮬레이션 전용**입니다. 상단 "실제
-> 마이크"를 눌러도 권한/미지원 시 자동으로 시뮬레이션으로 되돌아갑니다.
-
----
-
-## 구조
-
-```
-src/
-  main.tsx / App.tsx           진입점
-  styles/
-    tokens.css                 Dotorian 디자인 토큰(색·타입·간격·라운드·그림자)
-    global.css                 리셋 + 공용 클래스(.card/.pill/.mi 등) + keyframes
-  lib/css.ts                   인라인 CSS 문자열 → React style 변환 헬퍼
-  services/                    AI 서비스 레이어 (stt / summarize / emotion + 타입/설정)
-  data/demoContent.ts          스크립트·규정집·이력 등 시연 데이터
-  hooks/useCallFlow.ts         전체 상태머신 + 파생 뷰모델(vm)
-  components/
-    LiveDemo.tsx               전체 화면 조립(제어 바 + 폰 + 데스크톱)
-    Phone.tsx                  아이폰(키패드 / 통화 화면)
-    desktop/
-      DesktopShell.tsx         데스크톱 앱 창(1440×940 → 스케일)
-      Waiting.tsx              대기 화면
-      PrepCard.tsx             1c 상담 준비 카드
-      ActiveCall.tsx           1a 통화 중(본인인증 1d 포함)
-      WrapSheet.tsx            1b 후처리
+```dotenv
+OPENAI_API_KEY=
+OPENAI_CHAT_MODEL=gpt-4o-mini
+OPENAI_STT_MODEL=whisper-1
+DATABASE_URL=postgresql://...
+FRONTEND_ORIGIN=http://localhost:5173
+EXTRA_CORS_ORIGINS=https://k7product.vercel.app
 ```
 
-상태 흐름: `idle → connecting → recording → confirm → prep → active →
-summarizing → wrap`. 타이밍(무응답 5초·5초, 라인 간격)은
-`useCallFlow(config)`의 `silenceSec1 / silenceSec2 / lineGapMs`로 조절합니다.
+API 키와 `DATABASE_URL`은 GitHub나 Vite 환경변수에 넣지 않습니다.
 
-## 디자인 시스템
+## 검증
 
-색·타입·라운드·그림자는 **Dotorian Design System** 토큰(`src/styles/tokens.css`,
-Geist 기반)을 그대로 이식했습니다. 컴포넌트 스타일은 `var(--*)` 토큰을
-참조합니다. 폰트는 Geist Sans/Mono + Pretendard(한글) + Material Symbols(아이콘).
+```powershell
+npm run check
+.\.venv\Scripts\python.exe -m pytest backend\tests -q
+```
 
-## design-reference/
+검증 대상:
 
-원본 디자인 도구 소스(`*.dc.html`)를 참고용으로 함께 넣었습니다. 이 파일들은
-전용 런타임에서만 실행되므로 이 저장소에서 직접 구동되지는 않지만, 화면 구성과
-값(문구·수치)의 원본 기준으로 읽을 수 있습니다.
+- JSON Schema와 예제
+- 기존 모델 결과 어댑터
+- TypeScript와 Vite 프로덕션 빌드
+- FastAPI `mvp-1.0` Pydantic 계약
+- 비마스킹 3테이블 활성 SQL
+- 기존 Railway 9개 경로와 새 DB 경로의 OpenAPI 공존
+
+## 팀 연결 경계
+
+모델 팀은 다음 최소 필드를 반환하면 됩니다.
+
+```json
+{
+  "summary": "고객이 주택담보대출 만기 연장 가능 여부와 필요한 서류를 문의함.",
+  "business_type": "주택담보대출 만기 연장",
+  "department": "대출 및 금융상담",
+  "routing_reason": "대출 만기 연장 및 약정 변경 상담에 해당",
+  "incident_risk": "low",
+  "risk_reason": null,
+  "routing_confidence": 0.94
+}
+```
+
+감정 모델이 아직 없으면 `emotion.status=unavailable`과 `score=null`을 사용합니다. 임의 숫자를 실제 모델 결과처럼 표시하지 않습니다.
+
+상세 DB 설명은 `database/README.md`, STT 분류 경계는 `src/features/stt-classification/README.md`를 확인합니다.

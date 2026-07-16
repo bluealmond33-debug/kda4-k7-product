@@ -43,7 +43,7 @@ ${JSON.stringify(routingDepartments)}
 사고징후 기준:
 ${JSON.stringify(incidentRiskPolicy)}
 
-원문에 없는 사실을 만들지 않는다. 개인정보와 계좌번호는 요약에서 마스킹한다.
+원문에 없는 사실을 만들지 않는다. 개인정보 마스킹은 이 MVP 분류 모듈의 처리 단계가 아니다.
 응답 필드는 database/contracts/model_consultation_result_input.schema.json의 snake_case 계약을 따른다.
 필수 필드는 summary, business_type, department, routing_reason이다.
 incident_risk를 작성하면 risk_reason도 반드시 함께 작성한다.

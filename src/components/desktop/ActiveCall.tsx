@@ -29,7 +29,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:6px;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
-            <span className="mi" style={css("font-size:17px;color:var(--green-700)")}>call</span>{vm.customerPhoneMasked}
+            <span className="mi" style={css("font-size:17px;color:var(--green-700)")}>call</span>{vm.customerPhone}
           </span>
           <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
@@ -76,7 +76,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div style={css("display:flex;align-items:center;gap:12px")}>
               <span className="av" style={css("width:46px;height:46px")}><span className="mi" style={css("font-size:26px")}>person</span></span>
               <div>
-                <div style={css("font-weight:700;font-size:18px;line-height:1.2")}>{vm.customerNameMasked}</div>
+                <div style={css("font-weight:700;font-size:18px;line-height:1.2")}>{vm.customerName}</div>
                 <div style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>
                   개인 고객 · <span style={css("font-family:'Geist Mono','IBM Plex Mono',monospace")}>{vm.customerNumber}</span>
                 </div>

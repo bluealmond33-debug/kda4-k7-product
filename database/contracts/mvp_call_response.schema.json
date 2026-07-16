@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k7.example/contracts/mvp-call-response-1.0.schema.json",
+  "title": "K7 MVP Voice Call Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "call_id",
+    "status",
+    "source_channel",
+    "audio_filename",
+    "transcript",
+    "consultation_card",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "mvp-1.0" },
+    "call_id": { "type": "string", "format": "uuid" },
+    "status": { "enum": ["processing", "ready", "failed"] },
+    "source_channel": { "const": "voice" },
+    "audio_filename": { "type": "string", "minLength": 1 },
+    "transcript": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "stt_model", "duration_sec"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "stt_model": { "type": "string", "minLength": 1 },
+        "duration_sec": { "type": "number", "minimum": 0 }
+      }
+    },
+    "consultation_card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "business_type",
+        "department",
+        "routing_reason",
+        "incident_risk",
+        "risk_reason",
+        "routing_confidence",
+        "emotion"
+      ],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "business_type": { "type": "string", "minLength": 1 },
+        "department": { "type": "string", "minLength": 1 },
+        "routing_reason": { "type": "string", "minLength": 1 },
+        "incident_risk": { "enum": ["low", "high"] },
+        "risk_reason": { "type": ["string", "null"] },
+        "routing_confidence": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "emotion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "score", "level", "reason"],
+          "properties": {
+            "status": { "enum": ["unavailable", "demo", "completed"] },
+            "score": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+            "level": { "type": ["string", "null"] },
+            "reason": { "type": ["string", "null"] }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "status": { "const": "unavailable" } } },
+              "then": {
+                "properties": {
+                  "score": { "type": "null" },
+                  "level": { "type": "null" }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "incident_risk": { "const": "high" } } },
+          "then": { "properties": { "risk_reason": { "type": "string", "minLength": 1 } } }
+        }
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}
