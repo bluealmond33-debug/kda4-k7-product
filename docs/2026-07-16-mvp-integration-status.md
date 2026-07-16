@@ -77,6 +77,7 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 - 운영 백엔드에는 회전된 값을 복사하지 않고 `DATABASE_URL=${{Postgres.DATABASE_URL}}` 참조만 사용해야 함
 - 운영 Railway deployment `09fe8b9c-ba9f-4f65-b503-95d84f4e2aa0` 상태 `SUCCESS`
 - 운영 readiness `true`: 새 POST/GET, DB, 계약 버전, 기존 8개 POST 경로 확인
+- Vercel origin `https://k7product.vercel.app`의 POST preflight 200과 CORS 허용 헤더 확인
 - 실제 음성 운영 POST 201·GET 200 성공
 - 운영 검증으로 생성된 `k7-mvp-test-call.wav` 행을 모두 삭제, 현재 3테이블 각각 0건
 - 감정온도 정책 확정: 고객 음성만 입력, 텍스트 감정은 활성 결과로 금지

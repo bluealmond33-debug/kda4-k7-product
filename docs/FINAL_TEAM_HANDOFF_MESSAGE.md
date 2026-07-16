@@ -23,6 +23,7 @@ lch 브랜치의 mvp-1.0 표준 계약, 모델 어댑터, Railway PostgreSQL 3�
 현재 감정은 실제 음성 모델이 없으므로 unavailable이 맞습니다. 텍스트 /emotion 스텁을 실제 감정처럼 사용하지 않습니다. 현재 MVP는 완성 음성 파일 일괄 처리이며 실시간 전화망·스트리밍 STT는 아닙니다.
 
 실제 Railway POST·GET 응답은 프론트 런타임 계약 검증을 모두 통과했고, 검수 데이터는 삭제해 calls/transcripts/consultation_cards 모두 0건으로 복구했습니다.
+Railway는 Vercel 운영 origin의 음성 POST preflight도 200으로 허용하므로, 소유자 재배포 후 브라우저 CORS를 추가로 수정할 필요는 없습니다.
 
 두 검수 완료 후, 운영과 연결되지 않은 k7-mvp-lch-preview 검증 서비스만 삭제하면 됩니다. Postgres와 kda4-k7-backend는 삭제하거나 교체하면 안 됩니다.
 ```

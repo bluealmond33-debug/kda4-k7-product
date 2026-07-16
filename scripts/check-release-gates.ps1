@@ -19,6 +19,9 @@ $result = [ordered]@{
     contract_version = $null
     post_calls = $false
     get_consultation_card = $false
+    cors_preflight_status = $null
+    cors_allow_origin = $null
+    cors_ready = $false
     frontend_http_status = $null
     frontend_asset = $null
     frontend_has_integrated_calls = $false
@@ -44,6 +47,25 @@ try {
         $health.contract_version -eq "mvp-1.0" -and
         $result.post_calls -and
         $result.get_consultation_card
+    )
+
+    $frontendOrigin = ([Uri]$frontendBase).GetLeftPart(
+        [System.UriPartial]::Authority
+    )
+    $preflight = Invoke-WebRequest `
+        -Uri "$apiBase/api/v1/calls" `
+        -Method Options `
+        -Headers @{
+            Origin = $frontendOrigin
+            "Access-Control-Request-Method" = "POST"
+            "Access-Control-Request-Headers" = "content-type"
+        } `
+        -UseBasicParsing
+    $result.cors_preflight_status = [int]$preflight.StatusCode
+    $result.cors_allow_origin = $preflight.Headers["Access-Control-Allow-Origin"]
+    $result.cors_ready = (
+        $result.cors_preflight_status -eq 200 -and
+        $result.cors_allow_origin -eq $frontendOrigin
     )
 } catch {
     $result.remaining_actions += "Railway backend health/OpenAPI check failed: $($_.Exception.Message)"
@@ -82,6 +104,10 @@ if (-not $result.backend_ready) {
     $result.remaining_actions += "Railway must report database=connected, contract_version=mvp-1.0, and both MVP POST/GET operations"
 }
 
+if (-not $result.cors_ready) {
+    $result.remaining_actions += "Railway must allow the configured Vercel origin for browser POST requests"
+}
+
 if (-not $result.frontend_integrated) {
     $result.remaining_actions += "The Vercel owner must deploy the lch integration with VITE_API_BASE_URL and VITE_USE_REAL_DATA_API=true"
 }
@@ -101,6 +127,7 @@ if ($result.audio_smoke_requested) {
 
 $result.release_ready = (
     $result.backend_ready -and
+    $result.cors_ready -and
     $result.frontend_integrated -and
     ($result.audio_smoke_passed -eq $true)
 )
