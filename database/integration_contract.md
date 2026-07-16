@@ -196,6 +196,7 @@ API 구현이 아니라 백엔드팀과 합의한 데이터 경계입니다. 세
 | 화면 항목 | DB·조회 결과 | 비고 |
 |---|---|---|
 | 고객 마스킹 정보 | `customers.full_name_masked`, `phone_masked`, `account_number_masked` | 해시·암호문 노출 금지 |
+| 고객 주의정보 | 통합 조회의 `customer_cautions` | 현재 유효한 유형·사유·심각도·등록일·만료일 |
 | 문의 유형 | `consultation_sessions.inquiry_type` | 영문 코드→한글 라벨 매핑 |
 | 문의 요약 | `ai_consultation_cards.summary` | 카드 모델 결과 |
 | 감정온도 | `model_analysis_results.emotion_temperature_score`, `emotion_temperature_level` | 안정·주의·고조 |

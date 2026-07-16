@@ -15,6 +15,7 @@
         "external_session_key",
         "session_status",
         "customer",
+        "customer_cautions",
         "emotion_temperature",
         "consultation_card",
         "routing_result",
@@ -28,6 +29,10 @@
           "enum": ["waiting", "analyzing", "ready", "in_progress", "summarizing", "wrap_up", "completed", "cancelled"]
         },
         "customer": { "$ref": "#/$defs/customer" },
+        "customer_cautions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/customer_caution" }
+        },
         "emotion_temperature": { "$ref": "#/$defs/emotion_temperature" },
         "consultation_card": { "oneOf": [{ "$ref": "#/$defs/consultation_card" }, { "type": "null" }] },
         "routing_result": { "oneOf": [{ "$ref": "#/$defs/routing_result" }, { "type": "null" }] },
@@ -47,6 +52,29 @@
         "full_name_masked": { "type": "string" },
         "phone_masked": { "type": "string" },
         "account_number_masked": { "type": ["string", "null"] }
+      }
+    },
+    "customer_caution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caution_type", "reason", "severity", "registered_at", "expires_at"],
+      "properties": {
+        "caution_type": {
+          "type": "string",
+          "enum": [
+            "fraud_suspected",
+            "identity_verification_required",
+            "vulnerable_customer",
+            "repeated_complaint",
+            "legal_dispute",
+            "transaction_restriction",
+            "other"
+          ]
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "severity": { "$ref": "#/$defs/risk_level" },
+        "registered_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" }
       }
     },
     "emotion_temperature": {

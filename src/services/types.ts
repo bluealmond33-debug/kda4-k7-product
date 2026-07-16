@@ -71,6 +71,21 @@ export interface MaskedCustomer {
   account_number_masked: string | null;
 }
 
+export interface CustomerCaution {
+  caution_type:
+    | "fraud_suspected"
+    | "identity_verification_required"
+    | "vulnerable_customer"
+    | "repeated_complaint"
+    | "legal_dispute"
+    | "transaction_restriction"
+    | "other";
+  reason: string;
+  severity: RiskLevel;
+  registered_at: string;
+  expires_at: string | null;
+}
+
 export interface EmotionTemperature {
   status: AnalysisStatus;
   score: number | null;
@@ -136,6 +151,7 @@ export interface ConsultationCardResponse {
     external_session_key: string;
     session_status: SessionStatus;
     customer: MaskedCustomer;
+    customer_cautions: CustomerCaution[];
     emotion_temperature: EmotionTemperature;
     consultation_card: IntegratedConsultationCard | null;
     routing_result: RoutingResult | null;

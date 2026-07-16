@@ -12,7 +12,7 @@ JSON 파일은 운영 데이터를 쌓는 저장소가 아니라 팀 간 입력�
 | `emotion_temperature_result.schema.json` | 감정 모델·백엔드 | 모델 결과 검증 규격 |
 | `consultation_card.schema.json` | 분류·요약·RAG·백엔드 | 상담카드 저장 규격 |
 | `routing_candidate.schema.json` | 라우팅·백엔드 | 부서·상담사 후보 규격 |
-| `consultation_card_response.schema.json` | 백엔드·React | 화면 통합 응답 검증 규격 |
+| `consultation_card_response.schema.json` | 백엔드·React | 마스킹 고객정보·현재 주의정보·화면 통합 응답 검증 규격 |
 | `error_response.schema.json` | 백엔드·전체 클라이언트 | 공통 오류 응답 규격 |
 | `examples/emotion_temperature_result.example.json` | 감정 모델·백엔드 | 정상 입력 예시 |
 | `examples/consultation_card_response.example.json` | 백엔드·React | 화면 개발용 응답 예시 |

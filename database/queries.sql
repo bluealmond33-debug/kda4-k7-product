@@ -121,6 +121,32 @@ SELECT
     route.counselor_code AS recommended_counselor_code,
     route.counselor_name AS recommended_counselor_name,
     route.selected AS routing_selected,
+    (
+        SELECT COALESCE(
+            jsonb_agg(
+                jsonb_build_object(
+                    'caution_type', cc.caution_type,
+                    'reason', cc.reason,
+                    'severity', cc.severity,
+                    'registered_at', cc.registered_at,
+                    'expires_at', cc.expires_at
+                )
+                ORDER BY
+                    CASE cc.severity
+                        WHEN 'critical' THEN 1
+                        WHEN 'high' THEN 2
+                        WHEN 'medium' THEN 3
+                        ELSE 4
+                    END,
+                    cc.registered_at DESC
+            ),
+            '[]'::jsonb
+        )
+        FROM customer_cautions AS cc
+        WHERE cc.customer_id = s.customer_id
+          AND cc.caution_status = 'active'
+          AND (cc.expires_at IS NULL OR cc.expires_at > CURRENT_TIMESTAMP)
+    ) AS customer_cautions,
     history_data.recent_consultations,
     utterance_data.masked_utterances
 FROM consultation_sessions AS s
@@ -354,6 +380,32 @@ SELECT jsonb_build_object(
             'full_name_masked', c.full_name_masked,
             'phone_masked', c.phone_masked,
             'account_number_masked', c.account_number_masked
+        ),
+        'customer_cautions', (
+            SELECT COALESCE(
+                jsonb_agg(
+                    jsonb_build_object(
+                        'caution_type', cc.caution_type,
+                        'reason', cc.reason,
+                        'severity', cc.severity,
+                        'registered_at', cc.registered_at,
+                        'expires_at', cc.expires_at
+                    )
+                    ORDER BY
+                        CASE cc.severity
+                            WHEN 'critical' THEN 1
+                            WHEN 'high' THEN 2
+                            WHEN 'medium' THEN 3
+                            ELSE 4
+                        END,
+                        cc.registered_at DESC
+                ),
+                '[]'::jsonb
+            )
+            FROM customer_cautions AS cc
+            WHERE cc.customer_id = s.customer_id
+              AND cc.caution_status = 'active'
+              AND (cc.expires_at IS NULL OR cc.expires_at > CURRENT_TIMESTAMP)
         ),
         'emotion_temperature', jsonb_build_object(
             'status', COALESCE(analysis.analysis_status, 'pending'),

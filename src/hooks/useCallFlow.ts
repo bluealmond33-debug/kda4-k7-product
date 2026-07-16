@@ -446,6 +446,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const card = integrated.consultation_card;
   const routing = integrated.routing_result;
   const temperature = integrated.emotion_temperature;
+  const customerCautions = integrated.customer_cautions;
   const inquiryLabel = card
     ? INQUIRY_LABELS[card.inquiry_type] ?? card.inquiry_type
     : summary?.type ?? "상담 유형 분석 중";
@@ -464,6 +465,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }));
   const emotionBars =
     temperature.level === "elevated" ? 3 : temperature.level === "caution" ? 2 : 1;
+  const riskRank = { low: 1, medium: 2, high: 3, critical: 4 } as const;
+  const highestRisk = [card?.risk_level, ...customerCautions.map((item) => item.severity)]
+    .filter((risk): risk is keyof typeof riskRank => !!risk)
+    .sort((a, b) => riskRank[b] - riskRank[a])[0];
+  const riskSignals = [
+    ...customerCautions.map((item) => item.reason),
+    ...(card?.risk_factors ?? []),
+  ];
 
   return {
     // refs
@@ -555,8 +564,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       summary?.emotion.signals.join(" · ") ||
       "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
-    prepRiskLabel: card ? RISK_LABELS[card.risk_level] : "분석 중",
-    prepRiskSignal: card?.risk_factors.join(" · ") || "특이 사고 징후 없음",
+    prepRiskLabel: highestRisk ? RISK_LABELS[highestRisk] : "낮음",
+    prepRiskSignal: riskSignals.join(" · ") || "특이 사고 징후 없음",
     prepSummaryBullets,
     externalSessionKey: integrated.external_session_key,
     customerNameMasked: integrated.customer.full_name_masked,

@@ -52,7 +52,7 @@ React와 AI 모델은 DB에 직접 접근하지 않습니다. 모든 입력 검�
 | 세션 허브 | 모든 결과를 `external_session_key`와 `session_id`로 연결 | `consultation_sessions` |
 | 계약 검증 | 모델 출력 필드·타입·점수 경계를 통일 | JSON Schema |
 | 운영 저장 | 상담·발화·감정온도·카드·라우팅을 관계형으로 저장 | `schema.sql` |
-| 화면 조회 | React가 사용할 마스킹 통합 결과 제공 | `queries.sql`, 예제 JSON |
+| 화면 조회 | React가 사용할 마스킹 고객정보·주의정보·상담카드 통합 결과 제공 | `queries.sql`, 예제 JSON |
 | 운영 통제 | 조회 권한·감사로그·참조 무결성·인덱스 제공 | 권한·로그 테이블, 제약조건 |
 | 배포 준비 | 로컬과 Railway에서 같은 순서로 초기화 | `README.md`, `DATABASE_URL` |
 
@@ -105,7 +105,7 @@ JSON은 운영 DB의 대체재가 아닙니다.
 | 6 | 상담카드 저장 | `ai_consultation_cards` |
 | 7 | 라우팅 후보·선택 결과 저장 | `routing_recommendations` |
 | 8 | FastAPI 통합 조회 | `get_current_session_card` |
-| 9 | React 화면 표시 | `consultation_card_response.example.json` 구조 |
+| 9 | React 화면 표시 | 고객 주의정보를 포함한 `consultation_card_response.example.json` 구조 |
 | 10 | 고객정보 조회 감사기록 | `counselor_permissions`, `access_logs` |
 
 모든 단계는 같은 `external_session_key`에서 시작하며 FastAPI가 내부 `session_id`로 변환합니다.
@@ -267,6 +267,7 @@ psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f database/seed.sql
 | 프로토타입 화면 | API·DB 기준 |
 |---|---|
 | 상담 준비 카드 제목·요약 | `consultation_card.summary`, `customer_request` |
+| 고객 주의정보 | `customer_cautions`의 유형·사유·심각도·등록일·만료일 |
 | 감정온도 | `emotion_temperature.score`, `level`, `label_ko` |
 | 이번 상담 유의사항 | `risk_factors`, `confirmation_items` |
 | 숙련 상담사 우선 | `routing_result`의 부서·상담사·근거 |

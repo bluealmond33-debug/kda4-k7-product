@@ -9,6 +9,15 @@
       "phone_masked": "010-****-1001",
       "account_number_masked": "110-***-000001"
     },
+    "customer_cautions": [
+      {
+        "caution_type": "identity_verification_required",
+        "reason": "거래 확인 전 추가 본인확인 필요",
+        "severity": "medium",
+        "registered_at": "2026-07-10T03:00:00Z",
+        "expires_at": "2026-08-10T03:00:00Z"
+      }
+    ],
     "emotion_temperature": {
       "status": "completed",
       "score": 74.0,
