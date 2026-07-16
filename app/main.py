@@ -1,10 +1,22 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.database import initialize_database, ping_database
+from app.routers.mvp import router as mvp_router
 from app.routers.pipeline import router as pipeline_router
 
-app = FastAPI(title="보이스피싱 상담 브리핑 API")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if settings.database_url:
+        initialize_database(settings)
+    yield
+
+
+app = FastAPI(title="보이스피싱 상담 브리핑 API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,8 +26,13 @@ app.add_middleware(
 )
 
 app.include_router(pipeline_router)
+app.include_router(mvp_router)
 
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "database": "connected" if ping_database(settings) else "not_connected",
+        "contract_version": "mvp-1.0",
+    }
