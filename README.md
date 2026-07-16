@@ -110,6 +110,8 @@ Remove-Item Env:K7_TEST_DATABASE_URL
 
 `ready=true`는 새 POST/GET, 기존 8개 호환 경로, `database=connected`, `contract_version=mvp-1.0`이 모두 확인됐다는 뜻입니다.
 
+병합 후 GitHub의 **Actions → Production readiness → Run workflow**에서도 같은 읽기 전용 검사를 실행할 수 있습니다. 운영 백엔드가 아직 반영 전이면 누락 항목을 출력하고 실패하며, 반영 후에는 `ready=true`로 통과합니다.
+
 검증 대상:
 
 - 활성 자산 매니페스트와 정확히 3개 테이블
