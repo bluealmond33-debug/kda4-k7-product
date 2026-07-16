@@ -144,3 +144,5 @@ Remove-Item Env:K7_TEST_DATABASE_URL
 감정 모델이 아직 없으면 `emotion.status=unavailable`과 `score=null`을 사용합니다. 임의 숫자를 실제 모델 결과처럼 표시하지 않습니다.
 
 상세 DB 설명은 `database/README.md`, STT 분류 경계는 `src/features/stt-classification/README.md`를 확인합니다.
+
+운영 통합의 최종 판정과 팀별 책임은 `docs/DATA_INTEGRATION_ACCEPTANCE.md`를 따릅니다.

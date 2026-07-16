@@ -54,6 +54,7 @@
 - `.github/workflows/production-readiness.yml`: 병합 후 GitHub Actions 버튼으로 동일 검사를 실행
 - `backend/tests/test_database_integration.py`: 실제 PostgreSQL UTF-8·정확히 3테이블·제약조건·한글 왕복 저장·자동 삭제 검증
 - `docs/HYUNGJIN_MODEL_HANDOFF_MESSAGE.md`: 형진 모델 서버 연결에 필요한 자료를 요청하는 Slack 메시지
+- `docs/DATA_INTEGRATION_ACCEPTANCE.md`: 이찬희 담당 데이터 경계와 운영 E2E 최종 인수 기준
 
 `database/schema.sql`, `commands.sql`, `queries.sql`, `seed.sql`, `verify.sql`, `database/adapters/` 및 마스킹 중심 계약은 기존 12테이블 확장 참고 자산이다. 현재 Railway MVP에 적용하거나 import하지 마라.
 
