@@ -18,6 +18,7 @@
 | 활성 자산 매니페스트 | `database/active-manifest.json` |
 | API 계약 | `database/contracts/mvp_call_response.schema.json` |
 | 모델 결과 어댑터 | `backend/app/model_adapter.py` |
+| 금융 모델 후처리 | `database/mvp/model_postprocessing.v1.json` |
 | Railway 설정 | `railway.toml` |
 
 개인정보 마스킹, 고객 마스터, 권한·감사로그, 실제 상담사 자동배정은 이번 MVP 필수가 아닙니다. 기존 12테이블 SQL과 상세 계약은 향후 확장 참고용으로 보존하며 활성 배포에는 사용하지 않습니다. CI가 `active-manifest.json`을 검사해 이 경계를 고정합니다.
@@ -127,6 +128,8 @@ Remove-Item Env:K7_TEST_DATABASE_URL
   "routing_confidence": 0.94
 }
 ```
+
+형진 금융 모델처럼 `summary`, `task_category`, `consulting_situation`, `qa_topic`을 반환하는 경우도 활성 어댑터가 같은 표준 결과로 변환합니다. 실제 라벨이 기존 매핑에 없으면 임의 라우팅하지 않고 명시적으로 거부합니다.
 
 감정 모델이 아직 없으면 `emotion.status=unavailable`과 `score=null`을 사용합니다. 임의 숫자를 실제 모델 결과처럼 표시하지 않습니다.
 

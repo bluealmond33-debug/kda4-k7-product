@@ -31,6 +31,10 @@ const extraExamples = [
     "model_consultation_result_input.schema.json",
     "examples/model_consultation_result_input_no_risk.example.json",
   ],
+  [
+    "model_consultation_result_input.schema.json",
+    "examples/financial_model_result_input.example.json",
+  ],
 ];
 
 const readJson = (relativePath) =>
@@ -68,6 +72,11 @@ const invalidProvisionalInputs = [
   { ...provisionalInputExample, incident_risk: "고위험", risk_reason: null },
   { ...provisionalInputExample, incident_risk: "긴급해보임", risk_reason: "추측" },
   { ...provisionalInputExample, routing_confidence: 1.1 },
+  {
+    summary: "불완전한 금융 모델 결과",
+    task_category: "대출",
+    consulting_situation: "만기 연장",
+  },
 ];
 for (const candidate of invalidProvisionalInputs) {
   if (validateProvisionalInput(candidate)) {

@@ -23,6 +23,7 @@
 | API 응답 JSON Schema | `contracts/mvp_call_response.schema.json` |
 | 정상 예제 | `contracts/examples/mvp_call_response.example.json` |
 | 원시 모델 입력 경계 | `contracts/model_consultation_result_input.schema.json` |
+| 금융 모델 후처리 규칙 | `mvp/model_postprocessing.v1.json` |
 | 활성 모델 어댑터 | `../backend/app/model_adapter.py` |
 | FastAPI | `../backend/app/` |
 | React 연결 | `../src/services/consultation.ts` |
@@ -63,6 +64,19 @@ React와 모델 코드는 PostgreSQL에 직접 연결하지 않습니다. FastAP
   "reason": "감정 모델은 아직 MVP 통합 전입니다."
 }
 ```
+
+형진 금융 특화 모델은 표준 필드를 직접 만들 필요 없이 다음 원시 결과를 반환할 수 있습니다.
+
+```json
+{
+  "summary": "고객이 주택담보대출 만기 연장 가능 여부를 문의함.",
+  "task_category": "대출",
+  "consulting_situation": "만기 연장 문의",
+  "qa_topic": "주택담보대출 만기 연장"
+}
+```
+
+`backend/app/model_adapter.py`가 `mvp/model_postprocessing.v1.json`을 사용해 `business_type`, `department`, `incident_risk`, `risk_reason`, `routing_confidence`를 만듭니다. 여기서 `routing_confidence`는 모델 성능 점수가 아니라 검토된 업무→부서 매핑 규칙의 신뢰도입니다. 매핑되지 않은 새 라벨은 잘못된 부서를 추측하지 않고 오류로 처리하므로 실제 라벨 목록을 받으면 규칙 파일을 먼저 보완해야 합니다.
 
 ## 기존 12테이블 자산
 

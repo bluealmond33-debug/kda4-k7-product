@@ -4,9 +4,9 @@
 
 이찬희 담당 범위인 `mvp-1.0` 데이터 계약, 활성 자산 매니페스트, 모델 결과 어댑터, PostgreSQL 3테이블, FastAPI 저장·조회 경계, React 음성 업로드 연결은 `lch` 브랜치에 구현됐습니다.
 
-실제 한국어 WAV로 `STT → 구조화 → PostgreSQL 저장 → call_id 재조회`를 Railway 검증 서비스에서 통과했고, 별도의 PostgreSQL 통합 테스트도 UTF-8 왕복 저장을 확인한 뒤 테스트 행을 자동 삭제합니다.
+실제 한국어 WAV로 `STT → 구조화 → PostgreSQL 저장 → call_id 재조회`를 Railway 검증 서비스에서 통과했고, 별도의 PostgreSQL 통합 테스트도 형진 모델 원시 4필드 → 어댑터 → UTF-8 왕복 저장을 확인한 뒤 테스트 행을 자동 삭제합니다.
 
-최종 운영 연결은 이희창 백엔드 저장소 소유자가 `lch`의 계약·DB 경계를 운영 FastAPI에 통합하고, Vercel 소유자가 배포 권한을 승인해야 완료됩니다. 이찬희 작업에서는 이희창 운영 서비스를 수정하지 않습니다.
+최종 운영 연결은 이희창 백엔드 저장소 소유자가 `lch`의 계약·DB 경계를 운영 FastAPI에 통합하고, Vercel 소유자가 자기 계정으로 환경변수와 배포를 직접 반영해야 완료됩니다. 유료 Vercel 팀 권한 공유는 요구하지 않습니다. 이찬희 작업에서는 이희창 운영 서비스를 수정하지 않습니다.
 
 ## 현재 팀 전체 구조
 
@@ -47,12 +47,12 @@ flowchart LR
 | 요약·분류·라우팅 | MVP 구조화 결과 동작 | 임시 로직 | 전형진·김설빈 로직으로 교체 |
 | 표준화 | JSON Schema·Pydantic·TypeScript `mvp-1.0` 일치 | 완료 | 계약 변경은 PR로만 관리 |
 | 활성 자산 통제 | 매니페스트가 버전·파일·3테이블·음성·비마스킹 정책 검증 | 완료 | `active-manifest.json` 변경은 PR 필수 |
-| 모델 어댑터 | 추가 실험 필드 제거, 위험도 별칭 정규화, 고위험 사유 검증 | 완료 | 팀 모델 함수 결과를 이 경계에 연결 |
+| 모델 어댑터 | canonical 결과와 형진 모델 `summary/task_category/consulting_situation/qa_topic`을 모두 표준화 | 완료 | 실제 전체 라벨 목록으로 후처리 규칙 확인 |
 | PostgreSQL | Railway Online, UTF-8, 3테이블 자동 생성, CRUD 통과 | 완료 | 운영 FastAPI에 참조 연결 |
 | 저장 API | `POST /api/v1/calls` 201 및 call_id 반환 | 검증 완료 | 이희창 백엔드에 통합 |
 | 조회 API | 같은 call_id로 GET 200, POST와 동일한 카드 | 검증 완료 | 이희창 백엔드에 통합 |
 | 감정 | 가짜 점수 없이 `unavailable` | MVP 완료 | 실제 모델 수령 후 함수 교체 |
-| Vercel | React 빌드 통과, Vercel 팀 권한으로 배포 차단 | 외부 승인 필요 | Vercel 소유자가 `pollmap` 초대 또는 직접 배포 |
+| Vercel | React 빌드 통과, 팀 공유는 유료라 사용하지 않음 | 소유자 작업 필요 | Vercel 소유자가 환경변수와 배포를 직접 반영 |
 
 ## Railway 검증 결과
 
@@ -65,8 +65,9 @@ flowchart LR
 - POST 결과와 GET 재조회 결과 동일
 - 합성 음성 테스트 행 3개 정리 완료
 - 자동 PostgreSQL 통합 테스트는 임시 행을 `finally`에서 삭제
+- 형진 모델 원시 `summary/task_category/consulting_situation/qa_topic` → 표준 카드 → 실제 DB 재조회 통과
 
-검증용 `k7-mvp-lch-preview`는 공개 도메인과 `DATABASE_URL`·OpenAI·CORS 변수를 모두 제거했습니다. 현재 계정에는 서비스 삭제 권한이 없어 빈 서비스 껍데기 삭제만 Railway 관리자가 수행해야 합니다.
+검증용 `k7-mvp-lch-preview`는 공개 도메인과 `DATABASE_URL`·OpenAI·CORS 변수를 모두 제거했습니다. 운영 통합 확인 후 Railway 관리자가 빈 서비스 껍데기를 삭제하면 됩니다. 기술적 의존성은 없어서 지금 삭제해도 운영에는 영향이 없습니다.
 
 ## 이찬희 담당 완료 범위
 
@@ -112,10 +113,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 1. 이희창: 백엔드 저장소/Railway GitHub App 접근 복구
 2. 이희창: `lch`의 계약·DB·POST/GET 경계를 운영 FastAPI에 통합
 3. 이희창: 운영 서비스에 `DATABASE_URL=${{Postgres.DATABASE_URL}}` 참조 설정
-4. 전형진·김설빈: 임시 요약·감정·분류·라우팅 함수를 실제 로직으로 교체
-5. 김민기: 실제 규정 파일과 RAG·브리핑카드 조립 연결
-6. Vercel 소유자: `pollmap` 팀 접근 승인 또는 권한 있는 계정으로 배포
-7. Railway 관리자: 연결 해제된 `k7-mvp-lch-preview` 빈 서비스 삭제
+4. 전형진: 금융 모델 서버 URL·인증·정상/오류 JSON·세 분류축 전체 라벨 목록 제공
+5. 이희창: Railway에서 접근 가능한 형진 모델 서버 경로를 기존 STT 뒤에 연결
+6. 김민기: 실제 규정 파일과 RAG·브리핑카드 조립 연결
+7. Vercel 소유자: 유료 팀 공유 없이 자기 계정에서 운영 API 환경변수와 배포 반영
+8. Railway 관리자: 연결 해제된 `k7-mvp-lch-preview` 빈 서비스 삭제
 
 ## PR 상태
 
@@ -123,4 +125,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 - 최신 검증 기준: 현재 `lch` HEAD의 PostgreSQL 통합 테스트·현황 문서 포함
 - GitHub CI: React·계약·FastAPI·DB 계약 통과
 - 병합 가능 상태
-- Vercel 실패 원인: 코드가 아니라 Git 작성자의 Vercel 팀 접근 권한
+- Vercel 자동 체크 차단 원인: 코드가 아니라 유료 팀 공유를 사용하지 않아 Git 작성자에게 프로젝트 권한이 없음. 소유자가 직접 배포

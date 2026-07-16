@@ -10,6 +10,7 @@
   },
   "contracts": {
     "model_input": "database/contracts/model_consultation_result_input.schema.json",
+    "model_postprocessing": "database/mvp/model_postprocessing.v1.json",
     "api_response": "database/contracts/mvp_call_response.schema.json",
     "example": "database/contracts/examples/mvp_call_response.example.json"
   },

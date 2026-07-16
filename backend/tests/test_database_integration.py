@@ -10,11 +10,11 @@ from app.contracts import (
     CallStatus,
     ConsultationCard,
     EmotionResult,
-    IncidentRisk,
     MvpCallResponse,
     TranscriptResult,
 )
 from app.database import get_call, initialize_database, save_call
+from app.model_adapter import normalize_model_result
 
 
 DATABASE_URL_ENV = "K7_TEST_DATABASE_URL"
@@ -27,6 +27,14 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
         pytest.skip(f"{DATABASE_URL_ENV} is not configured")
 
     settings = Settings(database_url=database_url)
+    raw_model_result = {
+        "summary": "주택담보대출 만기 연장 및 필요 서류 문의",
+        "task_category": "대출",
+        "consulting_situation": "만기 연장 문의",
+        "qa_topic": "주택담보대출 만기 연장",
+        "model_version": "postgres-integration-test",
+    }
+    normalized = normalize_model_result(raw_model_result)
     response = MvpCallResponse(
         call_id=uuid4(),
         status=CallStatus.READY,
@@ -37,12 +45,7 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
             duration_sec=3.25,
         ),
         consultation_card=ConsultationCard(
-            summary="주택담보대출 만기 연장 및 필요 서류 문의",
-            business_type="주택담보대출 만기 연장",
-            department="대출 및 금융상담",
-            routing_reason="대출 만기 연장과 약정 변경 상담에 해당",
-            incident_risk=IncidentRisk.LOW,
-            routing_confidence=0.96,
+            **normalized.model_dump(),
             emotion=EmotionResult(
                 status="unavailable",
                 reason="감정 모델은 아직 MVP 통합 전입니다.",
@@ -88,7 +91,7 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
                     "consultation_cards_available_emotion_chk",
                 } <= constraints
 
-        save_call(settings, response, {"source": "postgres-integration-test"})
+        save_call(settings, response, raw_model_result)
         stored = get_call(settings, response.call_id)
 
         assert stored is not None

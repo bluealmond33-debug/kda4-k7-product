@@ -42,6 +42,7 @@
 - `database/active-manifest.json`: 활성 버전·파일·테이블·API를 기계가 읽는 단일 기준으로 고정
 - `database/mvp/schema.sql`: 활성 PostgreSQL 스키마. 정확히 `calls`, `transcripts`, `consultation_cards` 3테이블
 - `database/contracts/model_consultation_result_input.schema.json`: 교체 가능한 모델 결과 입력 경계
+- `database/mvp/model_postprocessing.v1.json`: 형진 모델의 금융 분류 라벨을 K7 부서·위험도로 변환하는 버전형 규칙
 - `database/contracts/mvp_call_response.schema.json`: FastAPI·DB·React 최종 `mvp-1.0` 응답 계약
 - `backend/app/model_adapter.py`: 모델 실험 필드를 버리고 위험도 별칭을 `low | high`로 정규화하는 활성 어댑터
 - `backend/app/contracts.py`: Pydantic 계약, 고위험 사유·감정 상태 조합·버전·음성 채널 검증
@@ -50,6 +51,7 @@
 - `src/services/consultation.ts`: React가 DB에 직접 접근하지 않고 POST/GET API만 호출하는 경계
 - `scripts/smoke-mvp.ps1`: 배포 API의 음성 POST→DB→GET 동일성 검증
 - `backend/tests/test_database_integration.py`: 실제 PostgreSQL UTF-8·정확히 3테이블·제약조건·한글 왕복 저장·자동 삭제 검증
+- `docs/HYUNGJIN_MODEL_HANDOFF_MESSAGE.md`: 형진 모델 서버 연결에 필요한 자료를 요청하는 Slack 메시지
 
 `database/schema.sql`, `commands.sql`, `queries.sql`, `seed.sql`, `verify.sql`, `database/adapters/` 및 마스킹 중심 계약은 기존 12테이블 확장 참고 자산이다. 현재 Railway MVP에 적용하거나 import하지 마라.
 
@@ -69,6 +71,19 @@
 }
 ```
 
+전형진 금융 특화 모델 서버는 다음 원시 결과를 반환해도 된다.
+
+```json
+{
+  "summary": "고객이 주택담보대출 만기 연장 가능 여부를 문의함.",
+  "task_category": "대출",
+  "consulting_situation": "만기 연장 문의",
+  "qa_topic": "주택담보대출 만기 연장"
+}
+```
+
+활성 어댑터는 이 네 필드를 `model_postprocessing.v1.json`과 대조해 `business_type`, `department`, `incident_risk`, `risk_reason`, `routing_confidence`를 만든다. `routing_confidence`는 형진 모델의 정확도나 확률이 아니라 검토된 업무→부서 매핑 규칙의 신뢰도다. 처음 보는 라벨은 일반 부서로 추측하지 말고 오류로 처리한 뒤 규칙 파일을 PR로 보완하라.
+
 규칙:
 
 - `incident_risk`: `low | high`; 입력 어댑터는 `낮음 | 저위험 | 높음 | 고위험`도 정규화 가능
@@ -79,18 +94,29 @@
 - `schema_version`은 `mvp-1.0`, `source_channel`은 `voice`로 고정
 - 감정 모델 미연동 시 `status=unavailable`, `score=null`, `level=null`
 
+형진 님에게 실제 연동 전에 반드시 받을 자료:
+
+1. 모델 서버 요청·응답 JSON 한 건
+2. `task_category`, `consulting_situation`, `qa_topic`의 전체 라벨 목록
+3. 정상·분석불가·오류 응답 각 한 건
+4. 모델 버전 식별값
+5. 서버 URL과 인증 방식
+6. 모델 자체 confidence가 있다면 필드 의미와 범위
+
+형진 모델 서버가 사내 PC나 내부망에서만 열려 있으면 Railway는 직접 호출할 수 없다. MVP 시연 시에도 Railway에서 접근 가능한 HTTPS 주소, 승인된 터널/프록시, 또는 Railway에서 실행되는 별도 모델 서비스 중 하나가 필요하다. 접근 경로가 확정되기 전에는 URL이나 인증 방식을 추측해 구현하지 마라.
+
 ## 운영 백엔드에 통합하는 순서
 
 1. 이희창 저장소의 현재 엔드포인트·Pydantic 모델·STT 함수·분석 함수·Railway 시작 명령을 먼저 목록화하라.
 2. 기존 `/stt`, `/analyze`, `/judge`, `/rag`, `/analyze-text`, `/emotion`, `/summarize`, `/briefing` 동작을 삭제하지 마라.
 3. `lch`의 `contracts.py`, `model_adapter.py`, `database.py`와 `database/mvp/schema.sql`에서 필요한 경계만 이희창 코드 구조에 맞게 이식하라. `lch`의 전체 FastAPI 앱으로 운영 앱을 교체하지 마라.
-4. 기존 STT 결과 텍스트와 팀 분석 함수 결과를 `normalize_model_result(raw_result)`에 전달하라. 같은 음성을 두 번 STT하지 마라.
+4. 기존 STT 결과 텍스트를 형진 모델 서버에 보내고, 받은 `summary/task_category/consulting_situation/qa_topic`을 `normalize_model_result(raw_result)`에 전달하라. 같은 음성을 두 번 STT하지 마라.
 5. 정규화 결과로 `MvpCallResponse`를 만들고 `save_call()`로 저장한 뒤 응답하라.
 6. `GET /api/v1/calls/{call_id}/consultation-card`는 모델을 다시 실행하지 말고 PostgreSQL에 저장된 결과만 조회해야 한다.
 7. `GET /health`가 PostgreSQL 연결 여부와 `contract_version=mvp-1.0`을 반환하게 하라.
 8. Railway 운영 백엔드 변수에 새 비밀값을 복사하지 말고 기존 Postgres 서비스 참조 `DATABASE_URL=${{Postgres.DATABASE_URL}}`를 연결하라.
 9. 기존 Postgres 서비스 하나만 사용하라. 별도 DB나 `k7-mvp-lch-preview` 서비스를 만들지 마라.
-10. Vercel origin `https://k7product.vercel.app`을 CORS 허용 목록에 유지하라.
+10. Vercel origin `https://k7product.vercel.app`을 CORS 허용 목록에 유지하라. Vercel 팀 공유는 유료이므로 소유자가 자기 계정에서 환경변수와 배포를 직접 반영한다.
 11. 로그·PR·답변에 `DATABASE_URL`이나 `OPENAI_API_KEY` 값을 출력하지 마라.
 
 ## PostgreSQL의 이유와 책임 경계
@@ -111,10 +137,11 @@ calls 1건 ─ transcripts 1건 ─ consultation_cards 1건
 - 서버 인코딩: UTF8
 - public 기본 테이블: 정확히 `calls`, `transcripts`, `consultation_cards`
 - 한국어 WAV로 STT→정규화→저장→같은 call_id GET 재조회 성공
+- 형진 모델 원시 4필드→후처리 어댑터→표준 카드→실제 Railway PostgreSQL 재조회 성공
 - PostgreSQL 통합 테스트는 검증 행을 `finally`에서 자동 삭제
 - 로컬 회귀검증: Python 테스트, JSON Schema, 어댑터, TypeScript, Vite build 통과
 - 이찬희는 이희창 운영 Railway 서비스와 이희창 저장소를 수정하지 않았음
-- `k7-mvp-lch-preview`는 도메인·환경변수·DB 연결을 해제했으며 빈 서비스 삭제만 Railway 관리자 권한 필요
+- `k7-mvp-lch-preview`는 도메인·환경변수·DB 연결을 해제했으며 운영 E2E 확인 후 빈 서비스 삭제만 Railway 관리자 권한 필요. 기술적 의존성은 없어 지금 삭제해도 운영에 영향 없음
 
 ## 통합 후 반드시 실행할 검증
 
@@ -145,7 +172,7 @@ npm run check
 - 실제 POST call_id와 GET 동일성 결과
 - 기존 API 회귀 결과
 - 아직 임시인 감정·요약·라우팅·RAG 항목
-- Vercel 권한 등 본인이 해결하지 못한 외부 차단 요소
+- 형진 모델 서버의 Railway 접근 가능 여부, Vercel 소유자 직접 배포 등 본인이 해결하지 못한 외부 차단 요소
 
 성공 기준은 “배포가 떴다”가 아니라 **기존 이희창 파이프라인을 보존하면서 실제 고객 음성이 `mvp-1.0`으로 정규화되어 PostgreSQL에 저장되고, 같은 call_id로 재조회되어 Vercel에 표시되는 것**이다.
 

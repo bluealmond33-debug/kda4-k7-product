@@ -6,7 +6,8 @@
 
 | 상태 | 파일 | 용도 |
 |---|---|---|
-| 활성 | `model_consultation_result_input.schema.json` | 교체 가능한 팀 모델 결과가 FastAPI 어댑터로 들어오는 입력 경계 |
+| 활성 | `model_consultation_result_input.schema.json` | canonical K7 결과 또는 형진 모델의 `summary/task_category/consulting_situation/qa_topic` 입력 경계 |
+| 활성 | `../mvp/model_postprocessing.v1.json` | 금융 분류 라벨을 업무유형·부서·위험도로 바꾸는 버전형 규칙 |
 | 활성 | `mvp_call_response.schema.json` | FastAPI·PostgreSQL·React가 공유하는 최종 응답 계약 |
 | 활성 | `examples/mvp_call_response.example.json` | 프런트 mock과 계약 테스트용 정상 예제 |
 
@@ -36,6 +37,8 @@
 - API 계약 버전은 `mvp-1.0`으로 고정합니다.
 - 개인정보 마스킹은 이번 MVP 처리 단계가 아닙니다.
 - 모델 결과는 `backend/app/model_adapter.py`를 통과한 뒤에만 저장합니다.
+- 처음 보는 금융 분류 라벨은 임의 부서로 보내지 않고 매핑 규칙 보완 전까지 거부합니다.
+- `routing_confidence`는 모델 정확도가 아니라 검토된 부서 매핑 규칙의 신뢰도입니다.
 - 위험도는 `low | high`로 저장하고 화면에서만 `낮음 | 높음`으로 번역합니다.
 - `high`이면 `risk_reason`이 반드시 있어야 합니다.
 - 감정 모델 미연동 상태는 `unavailable`, 점수와 단계는 `null`입니다.
