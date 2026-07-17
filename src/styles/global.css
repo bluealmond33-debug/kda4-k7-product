@@ -69,7 +69,7 @@ a:hover {
   border: none;
   border-radius: 20px;
   box-shadow: var(--sh-near, 0 2px 8px rgba(0, 0, 0, 0.06));
-  transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s;
 }
 .sechd {
   font: 700 13px "Geist Sans", "Pretendard", sans-serif;
