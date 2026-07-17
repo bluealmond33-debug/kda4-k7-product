@@ -63,11 +63,13 @@ a:hover {
   border-radius: 2px;
 }
 .card {
-  /* ONAIR: 면은 한 색, 경계는 보더가 아니라 그림자 */
+  /* ONAIR: 면은 한 색, 경계는 보더가 아니라 그림자.
+     광원(집중)이 이동하면 그림자 방향이 함께 눕는다 — 전환은 이산적 0.45s */
   background: var(--onair-surface, #fff);
   border: none;
   border-radius: 20px;
   box-shadow: var(--sh-near, 0 2px 8px rgba(0, 0, 0, 0.06));
+  transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .sechd {
   font: 700 13px "Geist Sans", "Pretendard", sans-serif;

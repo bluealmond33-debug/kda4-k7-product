@@ -51,7 +51,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       <div style={css("flex:1;display:flex;gap:16px;padding:16px;min-height:0")}>
         {/* ── 좌 컬럼 ── */}
         <div style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0")}>
-          <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px")}>
+          <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px" + (vm.verified ? ";box-shadow:var(--sh-away-l)" : ""))}>
             <span className="av" style={css("width:42px;height:42px")}><span className="mi" style={css("font-size:22px")}>headset_mic</span></span>
             <div style={css("flex:1;min-width:0")}>
               <div style={css("display:flex;align-items:center;gap:6px")}>
@@ -153,7 +153,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </div>
 
           {vm.verified ? (
-            <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
+            <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-away-l)")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">과거 상담 이력</span>
                 <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>최근 6개월 · 4건</span>
@@ -184,7 +184,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
         {/* ── 중 컬럼 ── */}
         <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
-          <div className="card" style={css("flex:none;padding:11px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap")}>
+          <div className="card" style={css("flex:none;padding:11px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap" + (vm.verified ? "" : ";box-shadow:var(--sh-away-r)"))}>
             <span style={css("display:flex;align-items:center;gap:6px")}>
               <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
               <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
@@ -221,7 +221,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </span>
           </div>
 
-          <div className="card" style={css("flex:none;padding:15px 17px")}>
+          <div className="card" style={css("flex:none;padding:15px 17px" + (vm.verified ? "" : ";box-shadow:var(--sh-away-r)"))}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
               <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>
               <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>AI 사전 요약</span>
@@ -242,7 +242,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden" + (vm.verified ? ";box-shadow:var(--sh-focus)" : ";box-shadow:var(--sh-far)"))}>
+          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden" + (vm.verified ? ";box-shadow:var(--sh-focus)" : ";box-shadow:var(--sh-away-r)"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>menu_book</span> 단계별 상담 스크립트
@@ -259,7 +259,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          <div className="card" style={css("flex:none;height:196px;display:flex;flex-direction:column")}>
+          <div className="card" style={css("flex:none;height:196px;display:flex;flex-direction:column" + (vm.verified ? "" : ";box-shadow:var(--sh-away-r)"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:5px")}>
                 <span className="mi" style={css("font-size:17px")}>edit_note</span> 상담원 메모
@@ -292,7 +292,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
         {/* ── 우 컬럼 : 규정 ── */}
         <div style={css("width:" + vm.regW + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0")}>
-          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
+          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;box-shadow:" + (vm.verified ? "var(--sh-away-r)" : "var(--sh-away-r-far)"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>gavel</span> 관련 규정 및 매뉴얼
