@@ -445,9 +445,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const rg = renderSheet(SHEETS.manual);
 
   const mColors = (active: boolean) => ({
-    bg: active ? "var(--blue-700)" : "#fff",
+    bg: active ? "var(--blue-700)" : "var(--onair-surface)",
     fg: active ? "#fff" : "var(--gray-800)",
-    bd: active ? "var(--blue-700)" : "var(--gray-400)",
+    bd: active ? "var(--blue-700)" : "var(--gray-300)",
   });
   const mP = mColors(authMethod === "phone");
   const mB = mColors(authMethod === "birth");
@@ -544,11 +544,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             next[i] = !next[i];
             return next;
           }),
-        boxBg: on ? "var(--green-700)" : "#fff",
+        boxBg: on ? "var(--green-700)" : "var(--onair-surface)",
         boxBd: on ? "var(--green-700)" : "var(--gray-500)",
         icon: on ? "check" : "",
-        bg: on ? "var(--green-100)" : "var(--background-200)",
-        bd: on ? "var(--green-400)" : "var(--gray-200)",
+        bg: on ? "var(--gray-100)" : "var(--background-200)",
+        bd: "transparent",
       };
     }),
     prepDone: prepChecks.filter(Boolean).length,

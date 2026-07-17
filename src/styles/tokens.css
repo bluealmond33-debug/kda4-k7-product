@@ -363,3 +363,67 @@
 }
 
 
+
+/* ===== onair.css ===== */
+/* ONAIR (온에어) design language v2.1 — K7 직원용 화면.
+   원칙: 빛은 그리지 않는다, 그림자가 그린다. 면은 스톤 뉴트럴 한 색,
+   위계·경계·맞물림은 그림자 4벌(focus/near/far/joint)이 만든다.
+   색은 점(신호등 램프)·글자·가는 요소에만. 반지름은 두 벌 — 패널 20px, 컨트롤 9999px.
+   아래 블록은 Dotorian 스케일의 "같은 이름"을 온에어 값으로 재정의한다. */
+
+:root {
+  /* Surfaces — 패널은 전부 석고 화이트 한 색, 바닥은 석고벽 그레이 */
+  --background-100: #f7f6f3;
+  --background-200: #e8e7e3;
+
+  /* Gray → 스톤 뉴트럴 재매핑 (누런 기 없는 회벽 계열) */
+  --gray-100: #edece8;
+  --gray-200: #e3e2dc;
+  --gray-300: #dbdad3;
+  --gray-400: #d6d5ce;
+  --gray-500: #bab8b0;
+  --gray-600: #8e8c84;
+  --gray-700: #6e6c65;
+  --gray-800: #5f5d56;
+  --gray-900: #504e49;
+  --gray-1000: #1e1c19;
+
+  /* Accents — 채도 절제. 블루=행동(전경), 앰버=켜진 램프, 빨강·초록=신호등 점 */
+  --blue-400: #b9cdf1;
+  --blue-500: #8fb0e8;
+  --blue-700: #2f5fc4;
+  --blue-800: #284fa3;
+  --blue-900: #234a9e;
+  --amber-400: #ecd39f;
+  --amber-500: #eab35c;
+  --amber-700: #e3a94e;
+  --amber-900: #7c5a15;
+  --red-400: #e5b3a9;
+  --red-700: #bc3f2b;
+  --red-800: #b03a27;
+  --red-900: #a33422;
+  --green-400: #b5d2bb;
+  --green-600: #6fa37c;
+  --green-700: #3e7a4e;
+  --green-900: #2f6b3f;
+
+  --color-border: rgba(30, 28, 25, 0.12);
+  --color-border-hover: rgba(30, 28, 25, 0.22);
+
+  /* 온에어 그림자 — 광원(=집중 지점)으로부터의 거리 */
+  --onair-surface: #f7f6f3;
+  --onair-bg: #e8e7e3;
+  --sh-focus: 0 1px 2px rgba(30, 28, 24, 0.12), 0 4px 12px -2px rgba(30, 28, 24, 0.22);
+  --sh-near: 0 7px 16px -6px rgba(30, 28, 24, 0.16), 0 1px 2px rgba(30, 28, 24, 0.05);
+  --sh-far: 0 18px 36px -16px rgba(30, 28, 24, 0.13);
+  --sh-joint: 0 -10px 18px -12px rgba(30, 28, 24, 0.26);
+  --sh-modal: 0 2px 4px rgba(30, 28, 24, 0.10), 0 24px 56px -12px rgba(30, 28, 24, 0.30);
+
+  /* 온에어 반지름 두 벌 + 기존 이름 재매핑 */
+  --radius-card: 20px;
+  --radius-md: 20px;
+  --radius-lg: 20px;
+  --shadow-card: var(--sh-near);
+  --shadow-popover: var(--sh-near);
+  --shadow-modal: var(--sh-modal);
+}

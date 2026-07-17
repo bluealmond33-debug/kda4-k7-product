@@ -12,7 +12,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
   return (
     <DesktopShell flex>
       {/* 상단 알약 (종료됨) */}
-      <div style={css("height:74px;flex:none;background:#fff;border-bottom:1px solid var(--color-border);position:relative;z-index:5")}>
+      <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)")}>
           <span style={css("display:flex;align-items:center;gap:8px")}>
             <span style={css("width:9px;height:9px;border-radius:9999px;background:var(--gray-600)")} />
@@ -60,7 +60,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
           <div className="card" style={css("padding:16px")}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;margin-bottom:12px")}>
               <span className="sechd">고객</span>
-              <span style={css("display:inline-flex;align-items:center;gap:4px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);background:#fff;border:1px solid var(--green-400);border-radius:9999px;padding:4px 10px")}>
+              <span style={css("display:inline-flex;align-items:center;gap:4px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>
                 <span className="mi" style={css("font-size:14px")}>verified</span> 인증 완료
               </span>
             </div>
@@ -104,7 +104,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
         {/* 우 영역 */}
         <div style={css("flex:1;position:relative;min-width:0")}>
           {vm.wrapLoading && (
-            <div style={css("position:absolute;inset:0;background:#fff;border:1px solid var(--color-border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px")}>
+            <div style={css("position:absolute;inset:0;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-near);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px")}>
               <span style={css("width:42px;height:42px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
               <div style={css("font:700 18px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>통화 내용을 요약하고 있습니다…</div>
               <div style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>녹취와 상담원 메모를 바탕으로 후처리 초안을 작성 중입니다</div>
@@ -113,7 +113,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 
           {vm.wrapReady &&
             (vm.wrapSheetOpen ? (
-              <div style={css("position:absolute;inset:0;background:#fff;border:1px solid var(--color-border);border-radius:12px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;overflow:visible")}>
+              <div style={css("position:absolute;inset:0;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-focus);display:flex;flex-direction:column;overflow:visible")}>
                 <div onClick={vm.toggleWrapSheet} style={css("display:flex;align-items:center;justify-content:center;padding:8px 0 4px;cursor:pointer")}>
                   <span style={css("width:48px;height:5px;border-radius:9999px;background:var(--color-border)")} />
                 </div>
@@ -123,7 +123,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                     <div style={css("font:600 20px/1.2 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>후처리 작성</div>
                   </div>
                   <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:5px 11px")}>통화 {vm.clockStr}</span>
-                  <span style={css("display:inline-flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;background:#fff;color:var(--gray-800);border:1px solid var(--gray-300);padding:5px 11px;border-radius:9999px")}>
+                  <span style={css("display:inline-flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;background:var(--gray-100);color:var(--gray-800);padding:5px 11px;border-radius:9999px")}>
                     <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>auto_awesome</span>녹취 + 메모 기반 자동 작성 · 모두 수정 가능
                   </span>
                   <span onClick={vm.toggleWrapSheet} className="mi" style={css("font-size:22px;color:var(--gray-500);cursor:pointer")}>expand_more</span>
@@ -143,7 +143,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                         contentEditable
                         suppressContentEditableWarning
                         onInput={vm.onSummary}
-                        style={css("flex:1;border:1px solid var(--gray-400);border-radius:8px;padding:15px 17px;font:400 14px/1.8 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none")}
+                        style={css("flex:1;border:1px solid var(--gray-300);border-radius:14px;padding:15px 17px;font:400 14px/1.8 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none")}
                       >
                         {vm.wrapSummaryDefault}
                       </div>
@@ -152,7 +152,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                       <div style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:8px")}>후속 조치</div>
                       <div style={css("display:flex;flex-direction:column;gap:7px")}>
                         {vm.followups.map((f, i) => (
-                          <div key={i} style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-300);background:#fff;border-radius:8px;padding:9px 11px")}>
+                          <div key={i} style={css("display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:14px;padding:9px 12px")}>
                             <span className="mi" style={css("font-size:16px;color:var(--gray-700)")}>{f.icon}</span>
                             <span style={css("flex:1;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{f.label}</span>
                             <span onClick={f.remove} style={css("cursor:pointer;display:flex")} title="삭제">
@@ -188,7 +188,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 
                     <div style={css("flex:1;display:flex;flex-direction:column;min-height:0")}>
                       <div className="lbl" style={css("margin-bottom:5px")}>상담 메모 · 불릿</div>
-                      <div style={css("flex:1;border:1px solid var(--gray-300);border-radius:8px;background:var(--background-200);display:flex;flex-direction:column;overflow:hidden")}>
+                      <div style={css("flex:1;border-radius:14px;background:var(--gray-100);display:flex;flex-direction:column;overflow:hidden")}>
                         <div style={css("flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px")}>
                           {vm.memoItems.map((m, i) => (
                             <div key={i} style={css("display:flex;gap:7px;align-items:baseline")}>
@@ -213,20 +213,20 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>MVP 상담 결과 · 저장 시 상담 이력에 기록</span>
                   <div style={css("flex:1")} />
                   <span style={css("font:500 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);text-decoration:underline;text-underline-offset:2px;cursor:pointer")}>임시 저장</span>
-                  <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1px solid var(--gray-500);border-radius:6px;font-size:14px;font-weight:700;color:var(--gray-1000);cursor:pointer")}>
+                  <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-500);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-1000);cursor:pointer")}>
                     <span className="mi" style={css("font-size:18px")}>coffee</span> 저장 후 휴식
                   </span>
-                  <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--blue-700);color:#fff;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer")}>
+                  <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
                     <span className="mi" style={css("font-size:18px")}>call</span> 저장 후 다음 콜
                   </span>
                 </div>
               </div>
             ) : (
-              <div style={css("position:absolute;left:0;right:0;bottom:0;padding:15px 24px;background:#fff;border:1px solid var(--gray-300);border-radius:12px;display:flex;align-items:center;gap:12px;z-index:20")}>
+              <div style={css("position:absolute;left:0;right:0;bottom:0;padding:15px 24px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-focus);display:flex;align-items:center;gap:12px;z-index:20")}>
                 <span className="mi" style={css("font-size:22px;color:var(--gray-700)")}>expand_less</span>
                 <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>후처리 작성 시트가 접혀 있습니다</span>
                 <div style={css("flex:1")} />
-                <span onClick={vm.toggleWrapSheet} style={css("display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--blue-700);color:#fff;border-radius:6px;font:700 13px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>
+                <span onClick={vm.toggleWrapSheet} style={css("display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 13px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>
                   <span className="mi" style={css("font-size:16px")}>edit_note</span> 후처리 작성 열기
                 </span>
               </div>
@@ -239,7 +239,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 
 function EditRow({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
-    <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-300);border-radius:6px;padding:7px 10px")}>
+    <div style={css("display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:9999px;padding:7px 12px")}>
       <span className="lbl" style={css("width:44px;flex:none")}>{label}</span>
       <span contentEditable suppressContentEditableWarning style={css("flex:1;font:600 " + (small ? "12px" : "12.5px") + " 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);outline:none")}>{value}</span>
       <span className="mi" style={css("font-size:14px;color:var(--gray-400)")}>edit</span>
@@ -263,12 +263,12 @@ function SelectField({
   return (
     <div style={css("position:relative")}>
       <div className="lbl" style={css("margin-bottom:5px")}>{label}</div>
-      <div onClick={onToggle} style={css("display:flex;align-items:center;justify-content:space-between;border:1px solid var(--gray-400);border-radius:6px;padding:9px 11px;cursor:pointer;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
+      <div onClick={onToggle} style={css("display:flex;align-items:center;justify-content:space-between;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;cursor:pointer;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
         {value}
         <span className="mi" style={css("font-size:17px;color:var(--gray-600)")}>expand_more</span>
       </div>
       {open && (
-        <div style={css("position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--gray-300);border-radius:8px;box-shadow:var(--shadow-popover);z-index:40;overflow:hidden")}>
+        <div style={css("position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--onair-surface);border-radius:14px;box-shadow:var(--sh-focus);z-index:40;overflow:hidden")}>
           {opts.map((o, i) => (
             <div key={i} onClick={o.pick} style={css("padding:9px 12px;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer")}>{o.label}</div>
           ))}

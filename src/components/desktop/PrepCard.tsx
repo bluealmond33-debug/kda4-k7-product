@@ -8,29 +8,29 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
     <DesktopShell>
       {/* 뒤 배경 (인입 대기) */}
       <div style={css("position:absolute;inset:0;display:flex;flex-direction:column")}>
-        <div style={css("height:74px;flex:none;background:#fff;border-bottom:1px solid var(--color-border);position:relative")}>
-          <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 20px")}>
-            <span style={css("width:9px;height:9px;border-radius:9999px;background:var(--amber-700)")} />
-            <span style={css("font-weight:700;font-size:15px;color:var(--amber-900)")}>인입 대기 · 연결 준비</span>
+        <div style={css("height:74px;flex:none;position:relative")}>
+          <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 20px;gap:11px")}>
+            <span className="lampdots"><i /><i className="lit-a" /><i /></span>
+            <span style={css("font-weight:700;font-size:15px;color:var(--gray-1000)")}>인입 대기 · 연결 준비</span>
           </div>
         </div>
         <div style={css("flex:1;display:flex;gap:16px;padding:16px")}>
-          <div style={css("width:312px;flex:none;background:#fff;border:1px solid var(--color-border);border-radius:12px")} />
-          <div style={css("flex:1;background:var(--gray-100);border:1px dashed var(--color-border);border-radius:12px;display:flex;align-items:center;justify-content:center;font:400 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+          <div style={css("width:312px;flex:none;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-far)")} />
+          <div style={css("flex:1;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-far);display:flex;align-items:center;justify-content:center;font:400 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
             고객을 선택하면 준비 카드가 열립니다
           </div>
-          <div style={css("width:372px;flex:none;background:var(--gray-100);border:1px dashed var(--color-border);border-radius:12px")} />
+          <div style={css("width:372px;flex:none;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-far)")} />
         </div>
       </div>
 
-      {/* dim */}
-      <div style={css("position:absolute;inset:0;background:rgba(24,28,38,.46)")} />
+      {/* dim — 광원이 모달에 있으므로 뒤는 웜 블랙으로 가라앉는다 */}
+      <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5)")} />
 
       {/* 모달 */}
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:860px;background:#fff;border-radius:16px;box-shadow:var(--shadow-modal);overflow:hidden;display:flex;flex-direction:column")}>
+      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:860px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
         <div style={css("padding:22px 28px 18px;border-bottom:1px solid var(--gray-200)")}>
           <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:12px")}>
-            <span style={css("display:inline-flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:#fff;border:1px solid var(--blue-400);border-radius:9999px;padding:3px 10px")}>
+            <span style={css("display:inline-flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
               <span style={css("width:6px;height:6px;border-radius:9999px;background:var(--blue-700);animation:pulseDot 1.4s infinite")} />
               인입 콜 · 우선 연결 대상
             </span>
@@ -50,14 +50,14 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
         <div style={css("flex:1;overflow:auto;padding:18px 24px;display:flex;flex-direction:column;gap:16px")}>
           {/* 3 지표 */}
           <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px")}>
-            <div style={css("border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px")}>
+            <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>auto_awesome</span>AI 배정 권고
               </div>
               <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</div>
               <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:4px")}>{vm.prepRoutingReason}</div>
             </div>
-            <div style={css("border:1px solid var(--amber-400);background:#fff;border-radius:12px;padding:14px 16px")}>
+            <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
               <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:8px")}>고객 감정온도</div>
               <div style={css("display:flex;align-items:center;gap:8px")}>
                 <span style={css("display:flex;gap:2px")}>
@@ -77,7 +77,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               </div>
               <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-top:4px")}>{vm.prepEmotionSignal}</div>
             </div>
-            <div style={css("border:1px solid var(--red-400);background:#fff;border-radius:12px;padding:14px 16px")}>
+            <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);margin-bottom:8px")}>
                 <span className="mi" style={css("font-size:14px")}>gpp_maybe</span>사고 징후
               </div>
@@ -87,7 +87,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           </div>
 
           {/* AI 사전 요약 */}
-          <div style={css("border:1px solid var(--gray-200);border-radius:12px;padding:16px 18px")}>
+          <div style={css("background:var(--gray-100);border-radius:14px;padding:16px 18px")}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:12px")}>
               <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>
               <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>AI 사전 요약</span>
@@ -116,16 +116,16 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                   key={i}
                   onClick={r.toggle}
                   style={css(
-                    "display:flex;gap:11px;align-items:flex-start;background:" +
+                    "display:flex;gap:11px;align-items:center;background:" +
                       r.bg +
                       ";border:1px solid " +
                       r.bd +
-                      ";border-radius:12px;padding:11px 13px;cursor:pointer;user-select:none;transition:background .15s,border-color .15s"
+                      ";border-radius:14px;padding:11px 13px;cursor:pointer;user-select:none;transition:background .15s,border-color .15s"
                   )}
                 >
                   <span
                     style={css(
-                      "width:20px;height:20px;flex:none;border-radius:6px;background:" +
+                      "width:20px;height:20px;flex:none;border-radius:9999px;background:" +
                         r.boxBg +
                         ";border:1.5px solid " +
                         r.boxBd +
@@ -144,25 +144,25 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           </div>
         </div>
 
-        <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:15px 24px;border-top:1px solid var(--gray-200);background:var(--background-200)")}>
+        <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:15px 24px;box-shadow:var(--sh-joint);background:var(--gray-100)")}>
           <span style={css("display:flex;align-items:center;gap:5px;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
             <span className="mi" style={css("font-size:16px")}>info</span> {vm.prepHint}
           </span>
           <div style={css("flex:1")} />
           <span
             onClick={vm.reset}
-            style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:1px solid var(--gray-500);border-radius:6px;font-size:14px;color:var(--gray-900);cursor:pointer")}
+            style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1px solid var(--gray-500);border-radius:9999px;font-size:14px;color:var(--gray-900);cursor:pointer;background:var(--onair-surface)")}
           >
             <span className="mi" style={css("font-size:17px")}>phone_forwarded</span> 다른 상담사에게 이관
           </span>
           <span
             onClick={vm.answerCall}
             style={css(
-              "padding:10px 24px;background:" +
+              "padding:10px 26px;background:" +
                 vm.connectBg +
                 ";color:" +
                 vm.connectFg +
-                ";border-radius:6px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;cursor:" +
+                ";border-radius:9999px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;cursor:" +
                 vm.connectCursor +
                 ";transition:background .15s"
             )}

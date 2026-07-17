@@ -34,9 +34,9 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
           }}
         >
           {/* 상단 제어 바 */}
-          <div style={css("display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--color-border);border-radius:9999px;padding:10px 12px 10px 22px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 22px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
             <span style={css("font-weight:600;font-size:15px;letter-spacing:-.2px")}>K7 라이브 상담 시연</span>
-            <span style={css("display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--blue-900);background:#fff;border:1px solid var(--blue-400);border-radius:9999px;padding:3px 11px")}>
+            <span style={css("display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
               <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--blue-700);animation:pulseDot 1.4s infinite")} />
               {vm.phaseLabel}
             </span>
@@ -82,7 +82,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
           </div>
 
           {vm.micErr && (
-            <div style={css("background:#fff;border:1px solid var(--amber-400);border-radius:9999px;padding:8px 16px;font-size:12.5px;color:var(--amber-900);display:flex;align-items:center;gap:6px")}>
+            <div style={css("background:var(--onair-surface);border-radius:9999px;padding:8px 16px;font-size:12.5px;color:var(--amber-900);box-shadow:0 10px 34px rgba(0,0,0,.28);display:flex;align-items:center;gap:6px")}>
               <span className="mi" style={css("font-size:16px")}>info</span>
               {vm.micErr}
             </div>

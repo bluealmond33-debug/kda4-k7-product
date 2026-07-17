@@ -14,14 +14,14 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   return (
     <DesktopShell flex>
       {/* 상단 알약 */}
-      <div style={css("height:74px;flex:none;background:#fff;border-bottom:1px solid var(--color-border);position:relative;z-index:5")}>
+      <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)")}>
-          <span style={css("display:flex;align-items:center;gap:8px")}>
-            <span style={css("width:9px;height:9px;border-radius:9999px;background:var(--green-700);box-shadow:0 0 0 3px rgba(40,164,74,.2)")} />
-            <span style={css("font-weight:700;font-size:15px")}>통화 연결됨</span>
+          <span style={css("display:flex;align-items:center;gap:10px")}>
+            <span className="lampdots"><i /><i className="lit-a" /><i /></span>
+            <span style={css("font-weight:700;font-size:15px")}>온에어 · 통화중</span>
           </span>
-          <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800);background:#fff;border:1px solid var(--red-400);border-radius:9999px;padding:3px 9px")}>
-            <span className="mi" style={css("font-size:13px")}>fiber_manual_record</span> 녹취 중
+          <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)")}>
+            <span className="mi" style={css("font-size:13px;animation:recBlink 1.6s infinite")}>fiber_manual_record</span> 녹취 중
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
@@ -67,11 +67,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          {/* 고객 카드 + 본인인증 (1d) */}
-          <div className="card" style={css("padding:16px")}>
+          {/* 고객 카드 + 본인인증 (1d) — 본인확인 전에는 광원이 여기에 있다 */}
+          <div className="card" style={css("padding:16px" + (vm.verified ? "" : ";box-shadow:var(--sh-focus)"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;margin-bottom:12px")}>
               <span className="sechd">고객</span>
-              <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:#fff;border:1px solid var(--amber-400);border-radius:9999px;padding:3px 9px")}>고객 동의 시 열람</span>
+              <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>고객 동의 시 열람</span>
             </div>
             <div style={css("display:flex;align-items:center;gap:12px")}>
               <span className="av" style={css("width:46px;height:46px")}><span className="mi" style={css("font-size:26px")}>person</span></span>
@@ -84,8 +84,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
 
             {vm.verified ? (
-              <div style={css("margin-top:13px;border:1px solid var(--green-400);border-radius:8px;overflow:hidden")}>
-                <div style={css("display:flex;align-items:center;gap:9px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--gray-200)")}>
+              <div style={css("margin-top:13px;background:var(--gray-100);border-radius:14px;overflow:hidden")}>
+                <div style={css("display:flex;align-items:center;gap:9px;padding:10px 12px;border-bottom:1px solid var(--gray-300)")}>
                   <span style={css("width:22px;height:22px;border-radius:9999px;background:var(--green-900);color:#fff;display:flex;align-items:center;justify-content:center")}>
                     <span className="mi" style={css("font-size:15px")}>check</span>
                   </span>
@@ -102,7 +102,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             ) : (
-              <div style={css("margin-top:13px;border:1px solid var(--amber-400);border-radius:8px;background:#fff;padding:12px")}>
+              <div style={css("margin-top:13px;background:var(--gray-100);border-radius:14px;padding:12px")}>
                 <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px")}>본인확인 · 미완료</div>
                 <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>고객이 말한 값을 입력하면 자동 대조됩니다</div>
                 <div className="lbl" style={css("margin-bottom:6px")}>대조 방식</div>
@@ -117,9 +117,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                     onChange={vm.onAuthInput}
                     placeholder={vm.authPlaceholder}
                     inputMode="numeric"
-                    style={css("flex:1;min-width:0;border:1px solid var(--gray-400);border-radius:6px;padding:8px 10px;font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000)")}
+                    style={css("flex:1;min-width:0;border:1px solid var(--gray-400);border-radius:9999px;padding:8px 14px;background:var(--onair-surface);font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000)")}
                   />
-                  <span onClick={vm.runVerify} style={css("flex:none;padding:9px 14px;background:var(--blue-700);color:#fff;border-radius:6px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>대조</span>
+                  <span onClick={vm.runVerify} style={css("flex:none;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>대조</span>
                 </div>
                 {vm.authErr && (
                   <div style={css("margin-top:7px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)")}>입력값이 부족합니다 · 자릿수를 확인하세요</div>
@@ -163,7 +163,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <div key={i} style={css("padding:11px 14px" + (i < HISTORY.length - 1 ? ";border-bottom:1px solid var(--gray-200)" : ""))}>
                     <div style={css("display:flex;align-items:center;gap:8px")}>
                       <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{h.date}</span>
-                      <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:#fff;border:1px solid var(--green-400);border-radius:9999px;padding:2px 8px")}>완결</span>
+                      <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:var(--gray-100);border-radius:9999px;padding:2px 8px")}>완결</span>
                     </div>
                     <div style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:4px")}>{h.label}</div>
                   </div>
@@ -242,7 +242,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
+          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden" + (vm.verified ? ";box-shadow:var(--sh-focus)" : ";box-shadow:var(--sh-far)"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>menu_book</span> 단계별 상담 스크립트
@@ -251,7 +251,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
             <div style={css("flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px")}>
               {vm.steps.map((st, i) => (
-                <div key={i} style={css("border:1px solid var(--gray-200);background:#fff;border-radius:8px;padding:11px 13px")}>
+                <div key={i} style={css("background:var(--gray-100);border-radius:14px;padding:11px 13px")}>
                   <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{st.title}</div>
                   <div style={css("font:400 13px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{st.text}</div>
                 </div>
@@ -300,7 +300,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               {vm.regCollapsed ? (
                 <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border:1px solid var(--gray-200);border-radius:9999px;padding:2px 8px")}>규정집 · 매뉴얼</span>
               ) : (
-                <span onClick={vm.closeReg} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);border-radius:6px;padding:5px 10px;cursor:pointer")}>
+                <span onClick={vm.closeReg} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);border-radius:9999px;padding:5px 12px;cursor:pointer")}>
                   <span className="mi" style={css("font-size:15px")}>close_fullscreen</span> 축소
                 </span>
               )}
@@ -309,7 +309,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             {vm.regCollapsed ? (
               <div style={css("flex:1;min-height:0;overflow:auto")}>
                 <div style={css("padding:12px 15px;border-bottom:1px solid var(--gray-200)")}>
-                  <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:8px;padding:9px 12px;background:var(--background-200)")}>
+                  <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;background:var(--onair-surface)")}>
                     <span className="mi" style={css("font-size:18px;color:var(--gray-700)")}>search</span>
                     <span style={css("flex:1;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>착오송금 반환</span>
                   </div>
@@ -379,7 +379,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <span style={css("font:700 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.dockTitle}</span>
             <span style={css("font:400 11.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{vm.dockFile}</span>
             <div style={css("flex:1")} />
-            <span onClick={vm.closeDock} style={css("display:inline-flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);border:1px solid var(--gray-300);border-radius:6px;padding:6px 11px;cursor:pointer")}>
+            <span onClick={vm.closeDock} style={css("display:inline-flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);border:1px solid var(--gray-300);border-radius:9999px;padding:6px 13px;cursor:pointer")}>
               <span className="mi" style={css("font-size:16px")}>expand_more</span> 닫기
             </span>
           </div>
@@ -413,12 +413,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
 function RegReco({ vm, title, body, file }: { vm: CallFlowVM; title: string; body: string; file: string }) {
   return (
-    <div style={css("border:1px solid var(--gray-200);border-radius:8px;padding:11px 12px")}>
+    <div style={css("background:var(--gray-100);border-radius:14px;padding:11px 13px")}>
       <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{title}</div>
       <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{body}</div>
       <div style={css("display:flex;align-items:center;justify-content:space-between;margin-top:8px")}>
         <span style={css("font:400 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{file}</span>
-        <span onClick={vm.openManual} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);background:#fff;border-radius:6px;padding:4px 9px;cursor:pointer")}>
+        <span onClick={vm.openManual} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);background:var(--onair-surface);border-radius:9999px;padding:4px 11px;cursor:pointer")}>
           <span className="mi" style={css("font-size:14px")}>open_in_new</span> 열기
         </span>
       </div>
@@ -428,7 +428,7 @@ function RegReco({ vm, title, body, file }: { vm: CallFlowVM; title: string; bod
 
 function RegFile({ vm, name }: { vm: CallFlowVM; name: string }) {
   return (
-    <span onClick={vm.openManual} style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-200);border-radius:8px;padding:9px 11px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer")}>
+    <span onClick={vm.openManual} style={css("display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:9999px;padding:9px 14px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer")}>
       <span style={css("flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>{name}</span>
       <span className="mi" style={css("font-size:16px;color:var(--gray-600)")}>open_in_new</span>
     </span>
