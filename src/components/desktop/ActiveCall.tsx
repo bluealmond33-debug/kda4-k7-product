@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import DesktopShell from "./DesktopShell";
@@ -11,25 +12,41 @@ const HISTORY = [
 
 /** 1a — 통화 중. 좌: 상담사·고객(본인인증 1d)·이력 / 중: 요약·스크립트·메모 / 우: 규정. */
 export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
+  const [showHistory, setShowHistory] = useState(false);
   return (
     <DesktopShell flex>
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)")}>
-          <span style={css("display:flex;align-items:center;gap:10px")}>
-            <span className="lampdots"><i className="r" /><i className="a lit" /><i className="g" /></span>
-            <span style={css("font-weight:700;font-size:15px")}>온에어 · 통화중</span>
-          </span>
+          <span className="lampdots" title="온에어 · 통화중"><i className="r" /><i className="a lit" /><i className="g" /></span>
           <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)")}>
             <span className="mi" style={css("font-size:13px;animation:recBlink 1.6s infinite")}>fiber_manual_record</span> 녹취 중
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
-            {vm.inquiryLabel}
+          <span style={css("display:flex;align-items:center;gap:6px")}>
+            <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
+            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
+            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          <span style={css("display:flex;align-items:center;gap:6px;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
-            <span className="mi" style={css("font-size:17px;color:var(--green-700)")}>call</span>{vm.customerPhone}
+          <span style={css("display:flex;align-items:center;gap:7px")} title="고객 감정온도">
+            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
+            <span style={css("display:flex;gap:2px")}>
+              {[1, 2, 3].map((bar) => (
+                <span key={bar} className="seg" style={css("background:" + (bar <= vm.prepEmotionBars ? "var(--amber-700)" : "var(--gray-200)"))} />
+              ))}
+            </span>
+            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>{vm.prepEmotionLabel}</span>
+          </span>
+          <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
+          <span style={css("display:flex;align-items:center;gap:5px")}>
+            <span className="mi" style={css("font-size:15px;color:var(--red-700)")}>gpp_maybe</span>
+            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
+            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>{vm.prepRiskLabel}</span>
+          </span>
+          <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
+          <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
+            <span className="mi" style={css("font-size:14px")}>check_circle</span> 준비 카드 확인
           </span>
           <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
@@ -136,8 +153,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
               {vm.verified ? (
                 <div style={css("display:flex;flex-direction:column;gap:7px")}>
-                  <span onClick={vm.openHistory} className="qlink" style={css("border-color:var(--blue-400);background:#fff;color:var(--blue-700);font-weight:700;cursor:pointer")}>
-                    과거 상담 이력 <span className="mi" style={css("font-size:17px")}>open_in_new</span>
+                  <span onClick={() => setShowHistory((prev) => !prev)} className="qlink" style={css("border-color:var(--blue-400);background:var(--onair-surface);color:var(--blue-700);font-weight:700;cursor:pointer")}>
+                    과거 상담 이력 <span className="mi" style={css("font-size:17px")}>{showHistory ? "expand_less" : "expand_more"}</span>
                   </span>
                   <span onClick={vm.openAccounts} className="qlink" style={css("cursor:pointer")}>
                     보유 계좌 및 카드 현황 <span className="mi" style={css("font-size:17px;color:var(--gray-600)")}>open_in_new</span>
@@ -152,8 +169,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          {vm.verified ? (
-            <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-away-l);opacity:.93")}>
+          {vm.verified && showHistory && (
+            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-away-l);animation:dockUp .25s ease")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">과거 상담 이력</span>
                 <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>최근 6개월 · 4건</span>
@@ -170,57 +187,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 ))}
               </div>
             </div>
-          ) : (
-            <div className="card" style={css("flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:16px")}>
-              <div style={css("text-align:center")}>
-                <span className="mi" style={css("font-size:26px;color:var(--gray-400)")}>lock</span>
-                <div style={css("font:400 12.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:6px")}>
-                  본인인증 후<br />과거 상담 이력이 표시됩니다
-                </div>
-              </div>
-            </div>
           )}
         </div>
 
         {/* ── 중 컬럼 ── */}
         <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
-          <div className="card" style={css("flex:none;padding:11px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap" + (vm.verified ? "" : ";box-shadow:var(--sh-away-r)"))}>
-            <span style={css("display:flex;align-items:center;gap:6px")}>
-              <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
-              <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
-              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
-            </span>
-            <span style={css("width:1px;height:16px;background:var(--gray-200)")} />
-            <span style={css("display:flex;align-items:center;gap:7px")} title="고객 감정온도">
-              <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
-              <span style={css("display:flex;gap:2px")}>
-                {[1, 2, 3].map((bar) => (
-                  <span
-                    key={bar}
-                    className="seg"
-                    style={css(
-                      "background:" +
-                        (bar <= vm.prepEmotionBars
-                          ? "var(--amber-700)"
-                          : "var(--gray-200)")
-                    )}
-                  />
-                ))}
-              </span>
-              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>{vm.prepEmotionLabel}</span>
-            </span>
-            <span style={css("width:1px;height:16px;background:var(--gray-200)")} />
-            <span style={css("display:flex;align-items:center;gap:6px")}>
-              <span className="mi" style={css("font-size:15px;color:var(--red-700)")}>gpp_maybe</span>
-              <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
-              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>{vm.prepRiskLabel}</span>
-            </span>
-            <div style={css("flex:1")} />
-            <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
-              <span className="mi" style={css("font-size:14px")}>check_circle</span> 준비 카드 확인 완료
-            </span>
-          </div>
-
           <div className="card" style={css("flex:none;padding:15px 17px" + (vm.verified ? "" : ";box-shadow:var(--sh-away-r)"))}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
               <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>
@@ -229,11 +200,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
             <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:10px")}>{vm.prepHeadline}</div>
             <div style={css("display:flex;flex-direction:column;gap:8px")}>
-              {[
-                "오늘 오전 지인에게 30만원 이체 중 다른 계좌로 착오송금했다고 진술.",
-                "거래 시각·수취 계좌 확인 및 반환 절차 안내 요청.",
-                "보이스피싱 의심 정황 없음 · 단, 고객 불안·다급 발화 감지됨.",
-              ].map((t, i) => (
+              {vm.prepSummaryBullets.map((t, i) => (
                 <div key={i} style={css("display:flex;gap:11px")}>
                   <span style={css("width:3px;border-radius:2px;background:var(--blue-500);flex:none")} />
                   <span style={css("font:400 13px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
@@ -292,7 +259,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
         {/* ── 우 컬럼 : 규정 ── */}
         <div style={css("width:" + vm.regW + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0")}>
-          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;box-shadow:" + (vm.verified ? "var(--sh-away-r);opacity:.95" : "var(--sh-away-r-far);opacity:.9"))}>
+          <div className="card" style={css("flex:" + (vm.regCollapsed ? "none" : "1") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden;box-shadow:" + (vm.verified ? "var(--sh-away-r);opacity:.95" : "var(--sh-away-r-far);opacity:.9"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>gavel</span> 관련 규정 및 매뉴얼

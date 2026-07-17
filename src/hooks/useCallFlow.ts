@@ -71,6 +71,10 @@ const GLASS: Partial<Record<Phase, string>> = {
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
 const PREP_ITEMS = [
+  {
+    title: "본인확인 우선 진행",
+    sub: "연결 직후 연락처·생년월일 등으로 본인확인 — 완료 전에는 고객 상세 조회가 잠깁니다",
+  },
   { title: "확정적 반환 표현 금지", sub: "“무조건 돌려받는다” 대신 반환지원 제도 절차로 안내" },
   { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
   {
@@ -100,7 +104,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [micErr, setMicErr] = useState("");
   const [audioBusy, setAudioBusy] = useState(false);
 
-  const [prepChecks, setPrepChecks] = useState<boolean[]>([false, false, false]);
+  const [prepChecks, setPrepChecks] = useState<boolean[]>(PREP_ITEMS.map(() => false));
   const [verified, setVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
@@ -197,7 +201,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       stt.current = null;
     }
     setPhase("prep");
-    setPrepChecks([false, false, false]);
+    setPrepChecks(PREP_ITEMS.map(() => false));
     void runSummary();
   }, [runSummary]);
 
@@ -581,7 +585,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     connectCursor: allChecked ? "pointer" : "not-allowed",
     prepHint: allChecked
       ? "유의사항 확인 완료 · 통화를 연결하세요"
-      : "유의사항 3개를 모두 확인하면 통화 연결이 활성화됩니다",
+      : `유의사항 ${PREP_ITEMS.length}개를 모두 확인하면 통화 연결이 활성화됩니다`,
     // auth (1d)
     verified,
     notVerified: nv,
