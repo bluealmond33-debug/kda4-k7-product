@@ -123,20 +123,22 @@ a:hover {
 /* ONAIR 신호등 램프 — 3점 고정, 하나만 채워진다. 글로우 없음, 라벨 동반 */
 .lampdots {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   flex: none;
 }
 .lampdots i {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 9999px;
-  border: 1.5px solid var(--gray-500);
-  box-sizing: border-box;
 }
-.lampdots i.lit-r { background: var(--red-700); border: none; }
-.lampdots i.lit-a { background: var(--amber-700); border: none; }
-.lampdots i.lit-g { background: var(--green-700); border: none; }
+/* 꺼진 점 — 빈 윤곽이 아니라 제 색을 흐리게 머금은 원 (진짜 신호등처럼) */
+.lampdots i.r { background: rgba(188, 63, 43, 0.18); }
+.lampdots i.a { background: rgba(223, 163, 72, 0.28); }
+.lampdots i.g { background: rgba(62, 122, 78, 0.2); }
+.lampdots i.lit.r { background: var(--red-700); }
+.lampdots i.lit.a { background: var(--amber-700); }
+.lampdots i.lit.g { background: var(--green-700); }
 
 @keyframes pulseDot {
   0%,

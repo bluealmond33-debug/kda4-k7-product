@@ -10,7 +10,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       <div style={css("position:absolute;inset:0;display:flex;flex-direction:column")}>
         <div style={css("height:74px;flex:none;position:relative")}>
           <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 20px;gap:11px")}>
-            <span className="lampdots"><i /><i className="lit-a" /><i /></span>
+            <span className="lampdots"><i className="r" /><i className="a lit" /><i className="g" /></span>
             <span style={css("font-weight:700;font-size:15px;color:var(--gray-1000)")}>인입 대기 · 연결 준비</span>
           </div>
         </div>
