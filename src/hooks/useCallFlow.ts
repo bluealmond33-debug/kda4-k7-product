@@ -120,7 +120,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [dockType, setDockType] = useState<DockType | null>(null);
   const [regExpanded, setRegExpanded] = useState(false);
 
-  const [wrapSheetOpen, setWrapSheetOpen] = useState(true);
+  const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
   const [wrapType, setWrapType] = useState(WRAP_TYPE_OPTIONS[0]);
   const [wrapResult, setWrapResult] = useState(WRAP_RESULT_OPTIONS[0]);
   const [typeMenu, setTypeMenu] = useState(false);
@@ -292,7 +292,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setMemoDraft("");
     setDockType(null);
     setRegExpanded(false);
-    setWrapSheetOpen(true);
+    setWrapSheetOpen(false);
     setFollowups(DEFAULT_FOLLOWUPS);
   }, [clearAll]);
 
@@ -300,7 +300,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     if (phaseRef.current === "active") {
       clearAll();
       setPhase("summarizing");
-      setWrapSheetOpen(true);
+      setWrapSheetOpen(false);
       after(3600, () => setPhase("wrap"));
     } else {
       reset();

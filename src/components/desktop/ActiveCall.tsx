@@ -17,7 +17,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     <DesktopShell flex>
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
-        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)")}>
+        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1004px")}>
           <span className="lampdots" title="온에어 · 통화중"><i className="r" /><i className="a lit" /><i className="g" /></span>
           <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)")}>
             <span className="mi" style={css("font-size:13px;animation:recBlink 1.6s infinite")}>fiber_manual_record</span> 녹취 중
@@ -48,7 +48,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
             <span className="mi" style={css("font-size:14px")}>check_circle</span> 준비 카드 확인
           </span>
-          <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
+          <span style={css("margin-left:auto;font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;gap:5px")}>
             <span className="cbtn" title="음소거"><span className="mi" style={css("font-size:19px")}>mic_off</span></span>
@@ -85,7 +85,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </div>
 
           {/* 고객 카드 + 본인인증 (1d) — 본인확인 전에는 광원이 여기에 있다 */}
-          <div className="card" style={css("padding:16px" + (vm.verified ? "" : ";box-shadow:var(--sh-focus)"))}>
+          <div className="card" style={css("padding:16px;min-height:418px" + (vm.verified ? "" : ";box-shadow:var(--sh-focus)"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;margin-bottom:12px")}>
               <span className="sechd">고객</span>
               <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>고객 동의 시 열람</span>
@@ -132,6 +132,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <input
                     value={vm.authInput}
                     onChange={vm.onAuthInput}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") vm.runVerify();
+                    }}
                     placeholder={vm.authPlaceholder}
                     inputMode="numeric"
                     style={css("flex:1;min-width:0;border:1px solid var(--gray-400);border-radius:9999px;padding:8px 14px;background:var(--onair-surface);font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000)")}

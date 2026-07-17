@@ -103,6 +103,8 @@ a:hover {
   background: var(--onair-surface, #fff);
   border: none;
   border-radius: 9999px;
+  height: 54px;
+  box-sizing: border-box;
   padding: 8px 10px 8px 20px;
   box-shadow: var(--sh-focus, var(--shadow-popover));
   z-index: 10;

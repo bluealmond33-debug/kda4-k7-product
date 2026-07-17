@@ -37,7 +37,6 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>
               순번 1 · 대기 05:30
             </span>
-            <span className="mi" style={css("margin-left:auto;font-size:22px;color:var(--gray-600);cursor:pointer")}>close</span>
           </div>
           <div style={css("font:600 22px/1.3 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>
             {vm.prepHeadline}
