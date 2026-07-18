@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, CalendarClock, GraduationCap, History, PhoneIncoming, Users } from "lucide-react";
+import { Bell, CalendarClock, GraduationCap, History, PhoneIncoming } from "lucide-react";
 import { css } from "../../lib/css";
 import { AGENT, SHEETS } from "../../data/demoContent";
 
@@ -451,45 +451,42 @@ export default function Standby() {
       {!view && (
         /* ── 대기(시계) 화면 ── */
         <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0")}>
-          {/* 시계 모듈 — 콜론은 원형 점 2개(알약 언어), 초는 조용한 칩. 큰 텍스트가 아니라 계기판 */}
+          {/* 시계 모듈 — 화면의 주인. 가로폭이 아래 타일 줄보다 넓다 */}
           <div style={css("display:flex;align-items:center" + (onBreak ? ";opacity:.55" : ""))}>
-            <span className="bignum" style={css("font-size:104px;color:var(--gray-1000)")}>{hh}</span>
-            <span style={css("display:flex;flex-direction:column;gap:16px;margin:0 20px")}>
-              <span style={css("width:11px;height:11px;border-radius:9999px;background:var(--gray-500)")} />
-              <span style={css("width:11px;height:11px;border-radius:9999px;background:var(--gray-500)")} />
+            <span className="bignum" style={css("font-size:200px;color:var(--gray-1000)")}>{hh}</span>
+            <span style={css("display:flex;flex-direction:column;gap:30px;margin:0 26px")}>
+              <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
+              <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
             </span>
-            <span className="bignum" style={css("font-size:104px;color:var(--gray-1000)")}>{mm}</span>
-            <span style={css("margin-left:18px;background:var(--gray-100);border-radius:8px;padding:7px 11px")}>
-              <span className="bignum" style={css("font-size:22px;color:var(--gray-800)")}>{ss}</span>
+            <span className="bignum" style={css("font-size:200px;color:var(--gray-1000)")}>{mm}</span>
+            <span style={css("margin-left:22px;background:var(--gray-100);border-radius:8px;padding:9px 13px")}>
+              <span className="bignum" style={css("font-size:27px;color:var(--gray-800)")}>{ss}</span>
             </span>
           </div>
-          {/* 상태 줄 — 직원 화면의 언어는 설명이 아니라 상태 */}
-          <div style={css("margin-top:18px;display:flex;align-items:center;gap:8px;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+          {/* 상태 줄 — 운영 신호(대기열·콜백)를 한 줄에 흡수. 팀 현황은 관리자 정보라 뺐다 */}
+          <div style={css("margin-top:20px;display:flex;align-items:center;gap:9px;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
             <span style={css("width:8px;height:8px;border-radius:9999px;background:" + (onBreak ? "var(--amber-700)" : "var(--green-700)"))} />
-            {onBreak ? "휴식 중 — 복귀하면 수신 대기로 전환됩니다" : "수신 대기 중"}
-            {!onBreak && (
-              <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-                — 전화가 오면 준비 카드가 이 자리에 도착합니다
-              </span>
+            {onBreak ? (
+              "휴식 중 — 복귀하면 수신 대기로 전환됩니다"
+            ) : (
+              <>
+                수신 대기 중
+                <span style={css("width:1.3px;height:13px;background:var(--gray-300)")} />
+                <span style={css("display:flex;align-items:center;gap:5px")}>
+                  <PhoneIncoming size={14} color="var(--gray-600)" strokeWidth={2} />
+                  대기열 <span className="bignum" style={css("font-size:13.5px")}>0</span>건
+                </span>
+                <span style={css("width:1.3px;height:13px;background:var(--gray-300)")} />
+                <span style={css("display:flex;align-items:center;gap:5px")}>
+                  <CalendarClock size={14} color="var(--gray-600)" strokeWidth={2} />
+                  다음 콜백 <span className="bignum" style={css("font-size:13.5px")}>11:00</span>
+                </span>
+              </>
             )}
           </div>
-          {/* 운영 현황 스트립 — 대기 중에도 일이 보인다 */}
           {!onBreak && (
-            <div style={css("margin-top:22px;display:flex;align-items:center;gap:18px;background:var(--onair-surface);border-radius:9999px;padding:10px 22px;box-shadow:var(--sh-near)")}>
-              <span style={css("display:flex;align-items:center;gap:7px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
-                <PhoneIncoming size={15} color="var(--gray-600)" strokeWidth={2} />
-                내 대기열 <span className="bignum" style={css("font-size:13.5px")}>0</span>건
-              </span>
-              <span style={css("width:1.3px;height:15px;background:var(--gray-200)")} />
-              <span style={css("display:flex;align-items:center;gap:7px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
-                <Users size={15} color="var(--gray-600)" strokeWidth={2} />
-                팀 수신 가능 <span className="bignum" style={css("font-size:13.5px")}>4</span>명
-              </span>
-              <span style={css("width:1.3px;height:15px;background:var(--gray-200)")} />
-              <span style={css("display:flex;align-items:center;gap:7px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
-                <CalendarClock size={15} color="var(--gray-600)" strokeWidth={2} />
-                다음 콜백 <span className="bignum" style={css("font-size:13.5px")}>11:00</span>
-              </span>
+            <div style={css("margin-top:7px;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>
+              전화가 오면 준비 카드가 이 자리에 도착합니다
             </div>
           )}
           {onBreak ? (
@@ -502,38 +499,38 @@ export default function Standby() {
               <span className="mi" style={css("font-size:19px")}>play_arrow</span>복귀하기
             </span>
           ) : (
-            <div style={css("margin-top:36px;display:flex;gap:12px")}>
+            <div style={css("margin-top:34px;display:flex;gap:10px")}>
               {/* 처리 내역 */}
-              <div onClick={() => setView("today")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
+              <div onClick={() => setView("today")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
                 <div style={css("display:flex;align-items:center;justify-content:space-between")}>
-                  <History size={24} color="var(--blue-700)" strokeWidth={1.8} />
-                  <span className="bignum" style={css("font-size:15px;color:var(--gray-1000)")}>{TODAY.count}<span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>건</span></span>
+                  <History size={20} color="var(--blue-700)" strokeWidth={1.8} />
+                  <span className="bignum" style={css("font-size:13.5px;color:var(--gray-1000)")}>{TODAY.count}<span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>건</span></span>
                 </div>
-                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>처리 내역</span>
-                <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>후처리 {TODAY.wrapDone}건 완료</span>
+                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>처리 내역</span>
+                <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>후처리 {TODAY.wrapDone}건 완료</span>
               </div>
               {/* 매뉴얼 — 아이콘 유지 */}
-              <div onClick={() => setView("manual")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
-                <span className="mi" style={css("font-size:24px;color:var(--blue-700)")}>menu_book</span>
-                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>매뉴얼</span>
-                <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>규정·업무 가이드</span>
+              <div onClick={() => setView("manual")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
+                <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>menu_book</span>
+                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>매뉴얼</span>
+                <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>규정·업무 가이드</span>
               </div>
               {/* 코칭·리뷰 */}
-              <div onClick={() => setView("coach")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
-                <GraduationCap size={24} color="var(--blue-700)" strokeWidth={1.8} />
-                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>코칭·리뷰</span>
-                <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>어제 피드백 · 워밍업</span>
+              <div onClick={() => setView("coach")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
+                <GraduationCap size={20} color="var(--blue-700)" strokeWidth={1.8} />
+                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>코칭·리뷰</span>
+                <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>어제 피드백 · 워밍업</span>
               </div>
               {/* 알림 — 카운트는 종 아이콘 우상단 배지로 */}
-              <div onClick={() => setView("alerts")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
-                <span style={css("position:relative;display:inline-flex;width:24px")}>
-                  <Bell size={24} color="var(--blue-700)" strokeWidth={1.8} />
+              <div onClick={() => setView("alerts")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
+                <span style={css("position:relative;display:inline-flex;width:20px")}>
+                  <Bell size={20} color="var(--blue-700)" strokeWidth={1.8} />
                   {unreadCount > 0 && (
-                    <span style={css("position:absolute;top:-5px;right:-8px;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 10px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
+                    <span style={css("position:absolute;top:-5px;right:-8px;min-width:15px;height:15px;padding:0 4px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 9.5px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
                   )}
                 </span>
-                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>알림</span>
-                <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>사고대응팀 회신 · 콜백 예약</span>
+                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>알림</span>
+                <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>사고대응팀 회신 · 콜백 예약</span>
               </div>
             </div>
           )}
