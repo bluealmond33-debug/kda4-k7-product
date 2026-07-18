@@ -137,9 +137,9 @@ a:hover {
   border-radius: 9999px;
 }
 /* 꺼진 점 — 빈 윤곽이 아니라 제 색을 흐리게 머금은 원 (진짜 신호등처럼) */
-.lampdots i.r { background: rgba(188, 63, 43, 0.18); }
-.lampdots i.a { background: rgba(223, 163, 72, 0.28); }
-.lampdots i.g { background: rgba(62, 122, 78, 0.2); }
+.lampdots i.r { background: rgba(188, 63, 43, 0.4); }
+.lampdots i.a { background: rgba(223, 163, 72, 0.52); }
+.lampdots i.g { background: rgba(62, 122, 78, 0.42); }
 .lampdots i.lit.r { background: var(--red-700); }
 .lampdots i.lit.a { background: var(--amber-700); }
 .lampdots i.lit.g { background: var(--green-700); }

@@ -4,6 +4,7 @@ import {
   SCRIPTS,
   REG_RECOS,
   REG_QUERY,
+  SUMMARY_POINTS,
   CUSTOMER,
   SHEETS,
   URGENT_RESPONSE,
@@ -652,6 +653,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
         : "확신도 산출 전 · 상담사 확인 필요",
     transcriptQuote: consultationResponse.transcript.text,
+    // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
+    summaryPoints: SUMMARY_POINTS[incoming],
     prepSummaryBullets,
     externalSessionKey: consultationResponse.call_id,
     // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다

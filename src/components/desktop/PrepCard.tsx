@@ -90,18 +90,30 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <div style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:7px")}>
                 {vm.prepCustomerLine}
               </div>
-              {/* 감사 흔적 — 요약의 근거가 된 고객 발화 원문 */}
-              <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:6px")}>
-                근거 발화 · <span style={css("font-style:italic")}>“{vm.transcriptQuote}”</span>
-              </div>
             </div>
           </div>
-          {/* 첫 응대 문장 — 이 문장으로 통화를 연다 (제품 논지의 한 줄) */}
-          <div style={css("display:flex;align-items:baseline;gap:10px;margin-top:14px;background:var(--gray-100);border-radius:8px;padding:12px 16px")}>
-            <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
-            <div>
-              <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>첫 응대 문장 — 이 문장으로 여세요</div>
-              <div style={css("font:500 14.5px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
+          {/* 요약 본문 — 발화 원문(감사 흔적) + AI가 분해한 요구사항. 이관 판단이 가능한 수준 */}
+          <div style={css("display:flex;gap:12px;margin-top:14px")}>
+            <div style={css("flex:1.2;background:var(--gray-100);border-radius:8px;padding:12px 15px")}>
+              <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>
+                <span className="mi" style={css("font-size:14px")}>format_quote</span>고객 발화 원문
+              </div>
+              <div style={css("font:400 13.5px/1.6 'Geist Sans','Pretendard',sans-serif;font-style:italic;color:var(--gray-900)")}>
+                “{vm.transcriptQuote}”
+              </div>
+            </div>
+            <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:12px 15px")}>
+              <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
+                <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>checklist</span>요구사항 분해
+              </div>
+              <div style={css("display:flex;flex-direction:column;gap:5px")}>
+                {vm.summaryPoints.map((p, i) => (
+                  <div key={i} style={css("display:flex;gap:8px;align-items:baseline")}>
+                    <span style={css("font:700 11px 'Geist Mono',monospace;color:var(--blue-900);flex:none")}>{i + 1}</span>
+                    <span style={css("font:400 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{p}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -172,44 +184,52 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          {/* 유의사항 체크 */}
+          {/* 유의사항 — 순차 확인: 한 번에 하나만, 클릭할 때마다 게이지가 찬다.
+              4/4가 되면 이 자리가 첫 응대 문장으로 바뀌며 통화 연결이 열린다 */}
           <div>
-            <div style={css("display:flex;align-items:baseline;gap:8px;margin-bottom:10px")}>
+            <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:9px")}>
               <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>이번 상담 유의사항</span>
-              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>상담 유형·감정온도에 따라 자동 구성 · 모두 확인해야 연결 가능</span>
-              <span style={css("margin-left:auto;font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{vm.prepDone} / {vm.prepTotal} 확인</span>
+              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>클릭해 하나씩 확인 · 모두 확인하면 연결 가능</span>
+              <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
+                <span style={css("display:flex;gap:3px")}>
+                  {vm.prepRows.map((r, i) => (
+                    <span key={i} style={css("width:22px;height:5px;border-radius:2px;transition:background .25s;background:" + (r.on ? "var(--green-700)" : "var(--gray-200)"))} />
+                  ))}
+                </span>
+                <span style={css("font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{vm.prepDone}/{vm.prepTotal}</span>
+              </span>
             </div>
-            <div style={css("display:flex;flex-direction:column;gap:9px")}>
-              {vm.prepRows.map((r, i) => (
-                <div
-                  key={i}
-                  onClick={r.toggle}
-                  style={css(
-                    "display:flex;gap:11px;align-items:center;background:" +
-                      r.bg +
-                      ";border:1px solid " +
-                      r.bd +
-                      ";border-radius:8px;padding:11px 13px;cursor:pointer;user-select:none;transition:background .15s,border-color .15s"
-                  )}
-                >
-                  <span
+            {vm.prepDone < vm.prepTotal ? (
+              (() => {
+                const cur = vm.prepRows[vm.prepDone];
+                return (
+                  <div
+                    onClick={cur.toggle}
                     style={css(
-                      "width:20px;height:20px;flex:none;border-radius:9999px;background:" +
-                        r.boxBg +
-                        ";border:1.5px solid " +
-                        r.boxBd +
-                        ";color:#fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box;transition:background .15s"
+                      "display:flex;gap:12px;align-items:center;background:var(--background-200);border-radius:8px;padding:13px 15px;cursor:pointer;user-select:none"
                     )}
                   >
-                    <span className="mi" style={css("font-size:14px")}>{r.icon}</span>
-                  </span>
-                  <div>
-                    <div style={css("font-weight:700;font-size:13px")}>{r.title}</div>
-                    <div style={css("font:400 11.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{r.sub}</div>
+                    <span style={css("width:22px;height:22px;flex:none;border-radius:9999px;border:1.5px solid var(--gray-500);background:var(--onair-surface);box-sizing:border-box")} />
+                    <div style={css("flex:1")}>
+                      <div style={css("font-weight:700;font-size:14.5px;color:var(--gray-1000)")}>{cur.title}</div>
+                      <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{cur.sub}</div>
+                    </div>
+                    <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);flex:none")}>
+                      확인 <span className="mi" style={css("font-size:16px")}>check</span>
+                    </span>
                   </div>
+                );
+              })()
+            ) : (
+              /* 4/4 완료 — 유의사항 자리가 첫 응대 문장이 된다 */
+              <div style={css("display:flex;align-items:baseline;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
+                <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
+                <div>
+                  <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>확인 완료 — 이 문장으로 통화를 여세요</div>
+                  <div style={css("font:500 15px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 

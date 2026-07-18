@@ -159,6 +159,25 @@ export const REG_RECOS: Record<IncomingKind, { title: string; body: string; file
   ],
 };
 
+/** 유형별 요구사항 분해 — AI가 발화에서 뽑은 불릿. 이관 판단이 가능한 수준의 요약 본문 */
+export const SUMMARY_POINTS: Record<IncomingKind, string[]> = {
+  normal: [
+    "주택담보대출 만기 연장 가능 여부 확인 요청",
+    "연장 시 필요한 서류 안내 요청",
+    "비대면 진행 가능 여부에 관심",
+  ],
+  urgent: [
+    "본인 미신청 대출 실행 문자 수신 — 사실 확인 요청",
+    "즉시 지급정지 등 긴급 조치 요구",
+    "명의도용 여부 확인 필요",
+  ],
+  transfer: [
+    "전세자금대출 금리·만기 조건변경 문의",
+    "중도상환수수료 면제 조건 확인 요청",
+    "재약정 절차를 오늘 안에 안내받기 원함",
+  ],
+};
+
 /** 유형별 규정 검색어 (우측 패널 검색창 데모 값) */
 export const REG_QUERY: Record<IncomingKind, string> = {
   normal: "주담대 만기 연장",
