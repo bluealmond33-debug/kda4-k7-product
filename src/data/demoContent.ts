@@ -46,15 +46,20 @@ export const URGENT_RESPONSE = {
     incident_risk: "high",
     risk_reason: "명의도용·대출사기 의심 · 사고대응팀 공조 필요",
     routing_confidence: 0.91,
+    // 데모 더미값 — 감정 모델 연동 시 실값으로 대체
     emotion: {
-      status: "unavailable",
-      score: null,
-      level: null,
-      reason: "감정 모델은 아직 MVP 통합 전입니다.",
+      status: "completed",
+      score: 84,
+      level: "elevated",
+      reason: "다급·불안 발화 반복 감지",
     },
   },
   created_at: "2026-07-18T07:00:00Z",
 } as const;
+
+/** 긴급 카드가 대기열 맨 앞으로 온 이유 — 카드가 스스로 설명한다 (라우팅 기준 후보 문서 ①금전 피해 진행 중) */
+export const URGENT_PRIORITY_REASON =
+  "금전 피해 진행 가능성(본인 미신청 대출 실행) — 긴급 기준 해당, 대기열 맨 앞으로 배정됨";
 
 /** 이관 수신 픽스처 — 초보 상담사가 넘긴 복합 문의 */
 export const TRANSFER_RESPONSE = {
@@ -76,11 +81,12 @@ export const TRANSFER_RESPONSE = {
     incident_risk: "low",
     risk_reason: null,
     routing_confidence: 0.89,
+    // 데모 더미값 — 감정 모델 연동 시 실값으로 대체
     emotion: {
-      status: "unavailable",
-      score: null,
-      level: null,
-      reason: "감정 모델은 아직 MVP 통합 전입니다.",
+      status: "completed",
+      score: 48,
+      level: "caution",
+      reason: "긴 상담으로 답답함 표현",
     },
   },
   created_at: "2026-07-18T07:10:00Z",

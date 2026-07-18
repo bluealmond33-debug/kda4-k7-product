@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
-import { AGENT } from "../../data/demoContent";
+import { AGENT, URGENT_PRIORITY_REASON } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
 /** 1c — 상담 준비 카드 (dim 배경 + 모달). 유의사항 확인 시 통화 연결 활성화.
@@ -68,6 +68,13 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               {vm.isUrgent ? "우선 배정 · 대기열 1순위" : vm.isTransfer ? "이관 인계 · 우선 배정" : "순번 1 · 대기 05:30"}
             </span>
           </div>
+          {/* 긴급이 맨 앞에 온 이유 — 배지만이 아니라 근거를 카드가 직접 말한다 */}
+          {vm.isUrgent && (
+            <div style={css("display:flex;align-items:center;gap:6px;margin:-6px 0 14px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>
+              <span className="mi" style={css("font-size:15px")}>move_up</span>
+              {URGENT_PRIORITY_REASON}
+            </div>
+          )}
           {/* AI 사전 요약 = 이 카드의 히어로. 요약 문장은 여기 단 한 번만 등장한다 */}
           <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
             <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>

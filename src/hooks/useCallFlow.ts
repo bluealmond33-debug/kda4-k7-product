@@ -90,6 +90,7 @@ const PREP_ITEMS = [
 ];
 
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
+const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
 
 const fmt = (s: number) => {
   const m = Math.floor(s / 60);
@@ -615,7 +616,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepRoutingTitle: card.department || "담당 부서 분석 중",
     prepRoutingReason: card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
     prepEmotionLabel:
-      temperature.status === "unavailable" ? "모델 미연동" : temperature.level ?? "분석 중",
+      temperature.status === "unavailable"
+        ? "모델 미연동"
+        : temperature.level
+        ? EMOTION_LABELS[temperature.level]
+        : "분석 중",
     prepEmotionSignal: temperature.reason ?? "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
     prepRiskLabel: RISK_LABELS[card.incident_risk],
