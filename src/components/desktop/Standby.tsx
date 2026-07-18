@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, GraduationCap, History } from "lucide-react";
+import { Bell, CalendarClock, GraduationCap, History, PhoneIncoming, Users } from "lucide-react";
 import { css } from "../../lib/css";
 import { AGENT, SHEETS } from "../../data/demoContent";
 
@@ -451,23 +451,47 @@ export default function Standby() {
       {!view && (
         /* ── 대기(시계) 화면 ── */
         <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0")}>
-          {/* 시계 — .bignum 규칙(Geist Sans 600 · tabular · 자간 -2%), 콜론 양옆 숨 쉴 간격 */}
-          <div
-            className="bignum"
-            style={css(
-              "display:flex;align-items:baseline;" + (onBreak ? "color:var(--gray-600)" : "color:var(--gray-1000)")
+          {/* 시계 모듈 — 콜론은 원형 점 2개(알약 언어), 초는 조용한 칩. 큰 텍스트가 아니라 계기판 */}
+          <div style={css("display:flex;align-items:center" + (onBreak ? ";opacity:.55" : ""))}>
+            <span className="bignum" style={css("font-size:104px;color:var(--gray-1000)")}>{hh}</span>
+            <span style={css("display:flex;flex-direction:column;gap:16px;margin:0 20px")}>
+              <span style={css("width:11px;height:11px;border-radius:9999px;background:var(--gray-500)")} />
+              <span style={css("width:11px;height:11px;border-radius:9999px;background:var(--gray-500)")} />
+            </span>
+            <span className="bignum" style={css("font-size:104px;color:var(--gray-1000)")}>{mm}</span>
+            <span style={css("margin-left:18px;background:var(--gray-100);border-radius:8px;padding:7px 11px")}>
+              <span className="bignum" style={css("font-size:22px;color:var(--gray-800)")}>{ss}</span>
+            </span>
+          </div>
+          {/* 상태 줄 — 직원 화면의 언어는 설명이 아니라 상태 */}
+          <div style={css("margin-top:18px;display:flex;align-items:center;gap:8px;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+            <span style={css("width:8px;height:8px;border-radius:9999px;background:" + (onBreak ? "var(--amber-700)" : "var(--green-700)"))} />
+            {onBreak ? "휴식 중 — 복귀하면 수신 대기로 전환됩니다" : "수신 대기 중"}
+            {!onBreak && (
+              <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                — 전화가 오면 준비 카드가 이 자리에 도착합니다
+              </span>
             )}
-          >
-            <span style={css("font-size:108px")}>{hh}</span>
-            <span style={css("font-size:92px;margin:0 10px;transform:translateY(-6px);color:var(--gray-500)")}>:</span>
-            <span style={css("font-size:108px")}>{mm}</span>
-            <span style={css("font-size:36px;color:var(--gray-500);margin-left:16px")}>{ss}</span>
           </div>
-          <div style={css("margin-top:16px;font:500 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
-            {onBreak
-              ? "휴식 중입니다 — 복귀하면 다시 수신 대기로 전환됩니다"
-              : "전화가 오면 AI가 용건을 정리해, 준비 카드가 이 자리에 도착합니다"}
-          </div>
+          {/* 운영 현황 스트립 — 대기 중에도 일이 보인다 */}
+          {!onBreak && (
+            <div style={css("margin-top:22px;display:flex;align-items:center;gap:18px;background:var(--onair-surface);border-radius:9999px;padding:10px 22px;box-shadow:var(--sh-near)")}>
+              <span style={css("display:flex;align-items:center;gap:7px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+                <PhoneIncoming size={15} color="var(--gray-600)" strokeWidth={2} />
+                내 대기열 <span className="bignum" style={css("font-size:13.5px")}>0</span>건
+              </span>
+              <span style={css("width:1.3px;height:15px;background:var(--gray-200)")} />
+              <span style={css("display:flex;align-items:center;gap:7px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+                <Users size={15} color="var(--gray-600)" strokeWidth={2} />
+                팀 수신 가능 <span className="bignum" style={css("font-size:13.5px")}>4</span>명
+              </span>
+              <span style={css("width:1.3px;height:15px;background:var(--gray-200)")} />
+              <span style={css("display:flex;align-items:center;gap:7px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+                <CalendarClock size={15} color="var(--gray-600)" strokeWidth={2} />
+                다음 콜백 <span className="bignum" style={css("font-size:13.5px")}>11:00</span>
+              </span>
+            </div>
+          )}
           {onBreak ? (
             <span
               onClick={() => setOnBreak(false)}
