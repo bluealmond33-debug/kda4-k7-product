@@ -25,7 +25,7 @@ const KEYS: { d: string; sub: string }[] = [
 
 /** 실제 아이폰 통화 화면의 2×3 그리드 — 종료 버튼은 그리드가 아니라 하단 중앙 별도 */
 const CONTROLS = [
-  { icon: "volume_off", label: "소리 끔" },
+  { icon: "mic_off", label: "소리 끔" }, /* iOS 음소거 = 마이크 사선 (스피커 사선 아님) */
   { icon: "dialpad", label: "키패드" },
   { icon: "volume_up", label: "스피커" },
   { icon: "add_call", label: "통화 추가" },
@@ -212,10 +212,10 @@ function InCallScreen({ vm }: { vm: CallFlowVM }) {
 
         {vm.showControls && (
           <div style={css("width:100%;display:flex;flex-direction:column")}>
-            {/* 2×3 컨트롤 그리드 */}
-            <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:14px")}>
+            {/* 2×3 컨트롤 그리드 — 실기 비율: 세로 간격은 라벨 포함 여유 있게 */}
+            <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:20px")}>
               {CONTROLS.map((c) => (
-                <div key={c.label} style={css("display:flex;flex-direction:column;align-items:center;gap:6px")}>
+                <div key={c.label} style={css("display:flex;flex-direction:column;align-items:center;gap:7px")}>
                   <span
                     style={css(
                       "width:75px;height:75px;border-radius:9999px;background:#e4e4e6;display:flex;align-items:center;justify-content:center"
