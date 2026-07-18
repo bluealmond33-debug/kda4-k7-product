@@ -15,7 +15,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
       {/* 상단 알약 — 통화 알약과 같은 고정 기하(1004×54)라 전환 시 움직이지 않는다 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1004px")}>
-          <span className="lampdots" title="통화 종료 — 온에어 소등"><i className="r" /><i className="a" /><i className="g" /></span>
+          <span className="onairdot off" title="통화 종료 — 온에어 소등" />
           <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
             <span className="mi" style={css("font-size:14px;color:var(--green-700)")}>check_circle</span> 녹취 완료
           </span>

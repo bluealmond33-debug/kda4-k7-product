@@ -36,18 +36,32 @@ const ALERTS = [
     sub: "명의도용 의심 건 — 지급정지 처리 완료, 고객 안내 필요",
     time: "10분 전",
     unread: true,
+    today: true,
+    action: "안내 전화 걸기",
   },
   {
     title: "예약 콜백 · 오늘 11:00",
     sub: "착오송금 반환 절차 안내 — 고객과 약속한 회신 전화",
     time: "예정",
     unread: true,
+    today: true,
+    action: "콜백 시작",
   },
   {
     title: "여신 업무매뉴얼 v25 개정",
     sub: "중도상환수수료 면제 기준 일부 변경",
     time: "어제",
     unread: false,
+    today: false,
+    action: "",
+  },
+  {
+    title: "품질 평가 결과 도착 · 6월",
+    sub: "상담 품질 A등급 — 상세는 코칭·리뷰에서",
+    time: "그저께",
+    unread: false,
+    today: false,
+    action: "",
   },
 ];
 
@@ -56,6 +70,16 @@ const COACH = {
     { label: "어제 처리", value: "12콜" },
     { label: "감정온도", value: "안정 유지" },
     { label: "이관", value: "0건" },
+  ],
+  /* 최근 7일 처리량 — 막대 미니 차트용 */
+  trend: [
+    { day: "토", n: 8 },
+    { day: "일", n: 0 },
+    { day: "월", n: 11 },
+    { day: "화", n: 9 },
+    { day: "수", n: 13 },
+    { day: "목", n: 10 },
+    { day: "금", n: 12 },
   ],
   warmup: [
     { label: "오프닝 멘트 3종 낭독 — 공감·사실확인·마무리", meta: "3분" },
@@ -74,11 +98,12 @@ const MANUAL_ROWS = [
 function Lamp({ tone, label }: { tone: "g" | "a"; label: string }) {
   return (
     <span style={css("display:inline-flex;align-items:center;gap:8px")}>
-      <span className="lampdots">
-        <i className="r" />
-        <i className={"a" + (tone === "a" ? " lit" : "")} />
-        <i className={"g" + (tone === "g" ? " lit" : "")} />
-      </span>
+      <span
+        style={css(
+          "width:9px;height:9px;border-radius:9999px;flex:none;background:" +
+            (tone === "g" ? "var(--green-700)" : "var(--amber-700)")
+        )}
+      />
       <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{label}</span>
     </span>
   );
@@ -107,6 +132,13 @@ export default function Standby() {
   const [now, setNow] = useState(() => new Date());
   const [view, setView] = useState<PrepKey | null>(null);
   const [onBreak, setOnBreak] = useState(false);
+  // 알림 읽음 처리 + 필터 (읽으면 타일 배지도 줄어든다)
+  const [readSet, setReadSet] = useState<Set<number>>(new Set());
+  const [alertFilter, setAlertFilter] = useState<"all" | "unread">("all");
+  // 워밍업 체크
+  const [warmDone, setWarmDone] = useState<Set<number>>(new Set());
+  const isUnread = (i: number) => ALERTS[i].unread && !readSet.has(i);
+  const unreadCount = ALERTS.filter((_, i) => isUnread(i)).length;
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 1000);
@@ -192,24 +224,77 @@ export default function Standby() {
 
       {view === "alerts" && (
         <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0")}>
-          <SubHead onBack={back} title="알림" sub={`읽지 않음 ${ALERTS.filter((a) => a.unread).length}건`} />
-          <div style={css("display:flex;flex-direction:column;gap:8px")}>
-            {ALERTS.map((a, i) => (
-              <div
-                key={i}
+          <SubHead onBack={back} title="알림" sub={unreadCount > 0 ? `읽지 않음 ${unreadCount}건` : "모두 읽음"} />
+          {/* 필터 칩 + 모두 읽음 */}
+          <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:12px")}>
+            {([
+              ["all", "전체"],
+              ["unread", `안 읽음 ${unreadCount}`],
+            ] as const).map(([key, label]) => (
+              <span
+                key={key}
+                onClick={() => setAlertFilter(key)}
                 style={css(
-                  "display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:8px;" +
-                    (a.unread ? "background:var(--onair-surface);box-shadow:var(--sh-near)" : "background:var(--background-200);opacity:.75")
+                  "padding:6px 14px;border-radius:9999px;font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;" +
+                    (alertFilter === key
+                      ? "background:var(--gray-1000);color:var(--onair-surface)"
+                      : "background:var(--gray-100);color:var(--gray-800)")
                 )}
               >
-                <span style={css("width:8px;height:8px;border-radius:9999px;margin-top:5px;flex:none;background:" + (a.unread ? "var(--blue-700)" : "var(--gray-300)"))} />
-                <div style={css("flex:1")}>
-                  <div style={css("font:700 13.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{a.title}</div>
-                  <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>{a.sub}</div>
-                </div>
-                <span style={css("font:600 11px 'Geist Mono',monospace;color:var(--gray-600);flex:none")}>{a.time}</span>
-              </div>
+                {label}
+              </span>
             ))}
+            {unreadCount > 0 && (
+              <span
+                onClick={() => setReadSet(new Set(ALERTS.map((_, i) => i)))}
+                style={css("margin-left:auto;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);cursor:pointer")}
+              >
+                모두 읽음 처리
+              </span>
+            )}
+          </div>
+          {/* 오늘 / 이전 섹션 */}
+          <div style={css("flex:1;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:14px")}>
+            {([
+              ["오늘", ALERTS.map((a, i) => ({ a, i })).filter(({ a }) => a.today)],
+              ["이전", ALERTS.map((a, i) => ({ a, i })).filter(({ a }) => !a.today)],
+            ] as const).map(([label, items]) => {
+              const visible = items.filter(({ i }) => alertFilter === "all" || isUnread(i));
+              if (!visible.length) return null;
+              return (
+                <div key={label}>
+                  <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.4px;margin-bottom:7px")}>{label}</div>
+                  <div style={css("display:flex;flex-direction:column;gap:8px")}>
+                    {visible.map(({ a, i }) => {
+                      const un = isUnread(i);
+                      return (
+                        <div
+                          key={i}
+                          onClick={() => setReadSet((s) => new Set(s).add(i))}
+                          style={css(
+                            "display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-radius:8px;cursor:pointer;transition:opacity .25s,box-shadow .25s;" +
+                              (un ? "background:var(--onair-surface);box-shadow:var(--sh-near)" : "background:var(--background-200);opacity:.72")
+                          )}
+                        >
+                          <span style={css("width:8px;height:8px;border-radius:9999px;margin-top:5px;flex:none;transition:background .25s;background:" + (un ? "var(--blue-700)" : "var(--gray-300)"))} />
+                          <div style={css("flex:1")}>
+                            <div style={css("font:700 13.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{a.title}</div>
+                            <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>{a.sub}</div>
+                          </div>
+                          {a.action && un && (
+                            <span style={css("flex:none;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:9999px;border:1px solid var(--blue-400);color:var(--blue-700);font:600 11.5px 'Geist Sans','Pretendard',sans-serif")}>
+                              <span className="mi" style={css("font-size:14px")}>call</span>
+                              {a.action}
+                            </span>
+                          )}
+                          <span style={css("font:600 11px 'Geist Mono',monospace;color:var(--gray-600);flex:none;margin-top:2px")}>{a.time}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -217,36 +302,100 @@ export default function Standby() {
       {view === "coach" && (
         <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0")}>
           <SubHead onBack={back} title="코칭·리뷰" sub="어제 성과 + 오늘의 워밍업" />
-          {/* 성과 스탯 3장 */}
-          <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px")}>
-            {COACH.stats.map((s) => (
-              <div key={s.label} style={css("background:var(--background-200);border-radius:8px;padding:14px 16px")}>
-                <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{s.label}</div>
-                <div style={css("font:700 18px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:4px")}>{s.value}</div>
+          <div style={css("flex:1;display:flex;gap:14px;min-height:0")}>
+            {/* 좌 — 성과: 스탯 + 7일 추이 + AI 코칭 */}
+            <div style={css("flex:1.3;display:flex;flex-direction:column;gap:12px;min-width:0")}>
+              <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px")}>
+                {COACH.stats.map((s) => (
+                  <div key={s.label} style={css("background:var(--background-200);border-radius:8px;padding:13px 16px")}>
+                    <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{s.label}</div>
+                    <div className="bignum" style={css("font-size:19px;color:var(--gray-1000);margin-top:4px")}>{s.value}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          {/* AI 코칭 두 줄 */}
-          <div style={css("display:flex;flex-direction:column;gap:7px;margin-bottom:14px")}>
-            <div style={css("display:flex;align-items:baseline;gap:8px")}>
-              <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);flex:none")}>잘한 점</span>
-              <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.good}</span>
-            </div>
-            <div style={css("display:flex;align-items:baseline;gap:8px")}>
-              <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);flex:none")}>개선</span>
-              <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.improve}</span>
-            </div>
-          </div>
-          {/* 오늘의 워밍업 */}
-          <div style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:8px")}>오늘의 워밍업</div>
-          <div style={css("display:flex;flex-direction:column;gap:8px")}>
-            {COACH.warmup.map((w, i) => (
-              <div key={i} style={css("display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--background-200);border-radius:8px")}>
-                <span style={css("width:18px;height:18px;border-radius:9999px;border:1.5px solid var(--gray-500);flex:none;box-sizing:border-box")} />
-                <span style={css("flex:1;font:500 13.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{w.label}</span>
-                <span style={css("font:600 12px 'Geist Mono',monospace;color:var(--gray-700)")}>{w.meta}</span>
+              {/* 최근 7일 처리량 — 막대 미니 차트 */}
+              <div style={css("background:var(--background-200);border-radius:8px;padding:14px 16px")}>
+                <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:12px")}>최근 7일 처리량</div>
+                <div style={css("display:flex;align-items:flex-end;gap:10px;height:64px")}>
+                  {COACH.trend.map((d, i) => {
+                    const max = Math.max(...COACH.trend.map((x) => x.n));
+                    const isLast = i === COACH.trend.length - 1;
+                    return (
+                      <div key={i} style={css("flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end")}>
+                        <span className="bignum" style={css("font-size:10.5px;color:" + (isLast ? "var(--gray-1000)" : "var(--gray-600)"))}>{d.n || ""}</span>
+                        <span style={css("width:100%;border-radius:3px 3px 0 0;background:" + (isLast ? "var(--blue-700)" : "var(--gray-400)") + ";height:" + Math.max(3, Math.round((d.n / max) * 38)) + "px")} />
+                        <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.day}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
+              {/* AI 코칭 */}
+              <div style={css("background:var(--background-200);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px")}>
+                <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 코칭 — 어제 12콜 기반</div>
+                <div style={css("display:flex;align-items:baseline;gap:8px")}>
+                  <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);flex:none")}>잘한 점</span>
+                  <span style={css("font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.good}</span>
+                </div>
+                <div style={css("display:flex;align-items:baseline;gap:8px")}>
+                  <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);flex:none")}>개선</span>
+                  <span style={css("font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.improve}</span>
+                </div>
+              </div>
+            </div>
+            {/* 우 — 오늘의 워밍업 (체크 인터랙션 + 게이지) */}
+            <div style={css("flex:1;display:flex;flex-direction:column;min-width:0")}>
+              <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:8px")}>
+                <span style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>오늘의 워밍업</span>
+                <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
+                  <span style={css("display:flex;gap:3px")}>
+                    {COACH.warmup.map((_, i) => (
+                      <span key={i} style={css("width:20px;height:5px;border-radius:2px;transition:background .25s;background:" + (warmDone.has(i) ? "var(--green-700)" : "var(--gray-200)"))} />
+                    ))}
+                  </span>
+                  <span style={css("font:600 11px 'Geist Mono',monospace;color:var(--gray-700)")}>{warmDone.size}/{COACH.warmup.length}</span>
+                </span>
+              </div>
+              <div style={css("display:flex;flex-direction:column;gap:8px")}>
+                {COACH.warmup.map((w, i) => {
+                  const on = warmDone.has(i);
+                  return (
+                    <div
+                      key={i}
+                      onClick={() =>
+                        setWarmDone((s) => {
+                          const next = new Set(s);
+                          if (on) next.delete(i);
+                          else next.add(i);
+                          return next;
+                        })
+                      }
+                      style={css(
+                        "display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:8px;cursor:pointer;user-select:none;transition:background .2s;background:" +
+                          (on ? "var(--gray-100)" : "var(--background-200)")
+                      )}
+                    >
+                      <span
+                        style={css(
+                          "width:19px;height:19px;border-radius:9999px;flex:none;box-sizing:border-box;display:flex;align-items:center;justify-content:center;transition:background .2s;" +
+                            (on ? "background:var(--green-700);color:#fff" : "border:1.5px solid var(--gray-500);background:var(--onair-surface)")
+                        )}
+                      >
+                        {on && <span className="mi" style={css("font-size:13px")}>check</span>}
+                      </span>
+                      <span style={css("flex:1;font:500 13.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)" + (on ? ";text-decoration:line-through;opacity:.6" : ""))}>{w.label}</span>
+                      <span style={css("font:600 12px 'Geist Mono',monospace;color:var(--gray-700)")}>{w.meta}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {warmDone.size === COACH.warmup.length && (
+                <div style={css("margin-top:10px;display:flex;align-items:center;gap:6px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
+                  <span className="mi" style={css("font-size:16px")}>check_circle</span>
+                  워밍업 완료 — 첫 콜 받을 준비가 됐어요
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -355,7 +504,9 @@ export default function Standby() {
               <div onClick={() => setView("alerts")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
                 <span style={css("position:relative;display:inline-flex;width:24px")}>
                   <Bell size={24} color="var(--blue-700)" strokeWidth={1.8} />
-                  <span style={css("position:absolute;top:-5px;right:-8px;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 10px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{ALERTS.filter((a) => a.unread).length}</span>
+                  {unreadCount > 0 && (
+                    <span style={css("position:absolute;top:-5px;right:-8px;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 10px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
+                  )}
                 </span>
                 <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>알림</span>
                 <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>사고대응팀 회신 · 콜백 예약</span>

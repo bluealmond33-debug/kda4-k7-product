@@ -131,16 +131,10 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
                 <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>고객 감정온도</div>
                 <div style={css("display:flex;align-items:center;gap:7px")}>
-                  <span style={css("display:flex;gap:2px")}>
-                    {[1, 2, 3].map((bar) => (
-                      <span
-                        key={bar}
-                        style={css(
-                          "width:16px;height:6px;border-radius:2px;background:" +
-                            (bar <= vm.prepEmotionBars ? vm.prepEmotionBar : "var(--gray-200)")
-                        )}
-                      />
-                    ))}
+                  <span className="lampdots">
+                    <i className={"g" + (vm.prepEmotionBars === 1 ? " lit" : "")} />
+                    <i className={"a" + (vm.prepEmotionBars === 2 ? " lit" : "")} />
+                    <i className={"r" + (vm.prepEmotionBars >= 3 ? " lit" : "")} />
                   </span>
                   <span style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
                 </div>

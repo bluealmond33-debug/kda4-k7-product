@@ -27,17 +27,10 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
         <div style={css("display:flex;align-items:center;gap:22px;margin-top:10px;background:var(--onair-surface);border-radius:9999px;padding:10px 22px;box-shadow:var(--sh-far)")}>
           <span style={css("display:flex;align-items:center;gap:8px")} title="실시간 감정온도">
             <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
-            <span style={css("display:flex;gap:2px")}>
-              {[1, 2, 3].map((bar) => (
-                <span
-                  key={bar}
-                  className="seg"
-                  style={css(
-                    "transition:background .4s;background:" +
-                      (bar <= vm.emo ? (vm.emo >= 3 ? "var(--red-700)" : "var(--amber-700)") : "var(--gray-200)")
-                  )}
-                />
-              ))}
+            <span className="lampdots">
+              <i className={"g" + (vm.emo === 1 ? " lit" : "")} />
+              <i className={"a" + (vm.emo === 2 ? " lit" : "")} />
+              <i className={"r" + (vm.emo >= 3 ? " lit" : "")} />
             </span>
             <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--gray-700)"))}>
               {vm.emo >= 3 ? "고조" : vm.emo >= 1 ? "상승 중" : "안정"}

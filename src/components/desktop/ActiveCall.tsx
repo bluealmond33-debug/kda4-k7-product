@@ -44,17 +44,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1004px")}>
-          <span className="lampdots" title={vm.isUrgent ? "온에어 · 긴급 통화중" : "온에어 · 통화중"}>
-            <i className={"r" + (vm.isUrgent ? " lit" : "")} />
-            <i className={"a" + (vm.isUrgent ? "" : " lit")} />
-            <i className="g" />
+          <span style={css("display:flex;align-items:center;gap:7px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")} title="온에어 — 통화·녹취 중">
+            <span className="onairdot" /> 녹취 중
           </span>
           {vm.isUrgent && (
             <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:#fff;background:var(--red-800);border-radius:9999px;padding:3px 9px")}>긴급</span>
           )}
-          <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)")}>
-            <span className="mi" style={css("font-size:13px;animation:recBlink 1.6s infinite")}>fiber_manual_record</span> 녹취 중
-          </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:6px")}>
             <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
@@ -64,10 +59,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:7px")} title="고객 감정온도">
             <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
-            <span style={css("display:flex;gap:2px")}>
-              {[1, 2, 3].map((bar) => (
-                <span key={bar} className="seg" style={css("background:" + (bar <= vm.prepEmotionBars ? vm.prepEmotionBar : "var(--gray-200)"))} />
-              ))}
+            <span className="lampdots">
+              <i className={"g" + (vm.prepEmotionBars === 1 ? " lit" : "")} />
+              <i className={"a" + (vm.prepEmotionBars === 2 ? " lit" : "")} />
+              <i className={"r" + (vm.prepEmotionBars >= 3 ? " lit" : "")} />
             </span>
             <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
           </span>

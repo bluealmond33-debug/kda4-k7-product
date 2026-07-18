@@ -124,7 +124,19 @@ a:hover {
   align-items: center;
 }
 
-/* ONAIR 신호등 램프 — 3점 고정, 하나만 채워진다. 글로우 없음, 라벨 동반 */
+/* 온에어 램프 — 방송 스튜디오처럼 빨간 점 하나. 켜짐 = 통화·녹취 중, 그 외엔 꺼진 잔상 */
+.onairdot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: var(--red-700);
+  flex: none;
+}
+.onairdot.off {
+  background: rgba(188, 63, 43, 0.22);
+}
+
+/* 신호등(3점)은 오직 고객 감정온도에만 — 안정(초록)·주의(앰버)·고조(빨강), 하나만 점등 */
 .lampdots {
   display: inline-flex;
   gap: 5px;
