@@ -55,6 +55,23 @@
   src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.2.6/files/geist-mono-latin-500-normal.woff2") format("woff2");
 }
 
+/* Space Grotesk — 대형 시계 숫자 전용 디스플레이 폰트 (각진 1·열린 6/9, 숫자에 캐릭터).
+   본문·소형 숫자는 계속 Geist — 시계에만 쓴다. */
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.2.5/files/space-grotesk-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.2.5/files/space-grotesk-latin-600-normal.woff2") format("woff2");
+}
+
 /* Pretendard — Korean fallback only (weight 45–920 variable) */
 @font-face {
   font-family: "Pretendard";

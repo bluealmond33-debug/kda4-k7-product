@@ -55,8 +55,8 @@ export default function Phone({ vm }: { vm: CallFlowVM }) {
 
         {/* 스크린 */}
         <div style={css("position:absolute;inset:17px;border-radius:53px;overflow:hidden;background:#f5f5f7")}>
-          {/* Dynamic Island */}
-          <div style={css("position:absolute;top:11px;left:50%;transform:translateX(-50%);width:125px;height:37px;border-radius:12px;background:#000;z-index:50")} />
+          {/* Dynamic Island — 완전한 알약(반지름은 항상 높이/2 이상, 패널 반지름 정책과 무관) */}
+          <div style={css("position:absolute;top:11px;left:50%;transform:translateX(-50%);width:122px;height:35px;border-radius:9999px;background:#000;z-index:50")} />
 
           {vm.phIdle && <IdleScreen vm={vm} />}
           {vm.phInCall && <InCallScreen vm={vm} />}

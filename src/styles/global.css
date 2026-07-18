@@ -172,12 +172,21 @@ a:hover {
   box-shadow: var(--sh-near);
 }
 
-/* ONAIR 대형 숫자(시계·카운터) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
+/* ONAIR 대형 숫자(카운터·스탯) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
 .bignum {
   font-family: "Geist Sans", "Pretendard", sans-serif;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* ONAIR 시계 숫자 — Space Grotesk: 각진 1, 열린 6·9. 시계(대형 디스플레이)에만 쓴다 */
+.clocknum {
+  font-family: "Space Grotesk", "Geist Sans", "Pretendard", sans-serif;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
   line-height: 1;
 }
 

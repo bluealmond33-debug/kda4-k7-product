@@ -453,14 +453,14 @@ export default function Standby() {
         <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0")}>
           {/* 시계 모듈 — 화면의 주인. 가로폭이 아래 타일 줄보다 넓다 */}
           <div style={css("display:flex;align-items:center" + (onBreak ? ";opacity:.55" : ""))}>
-            <span className="bignum" style={css("font-size:200px;color:var(--gray-1000)")}>{hh}</span>
+            <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{hh}</span>
             <span style={css("display:flex;flex-direction:column;gap:30px;margin:0 26px")}>
               <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
               <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
             </span>
-            <span className="bignum" style={css("font-size:200px;color:var(--gray-1000)")}>{mm}</span>
+            <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{mm}</span>
             <span style={css("margin-left:22px;background:var(--gray-100);border-radius:8px;padding:9px 13px")}>
-              <span className="bignum" style={css("font-size:27px;color:var(--gray-800)")}>{ss}</span>
+              <span className="clocknum" style={css("font-size:27px;color:var(--gray-800)")}>{ss}</span>
             </span>
           </div>
           {/* 상태 줄 — 운영 신호(대기열·콜백)를 한 줄에 흡수. 팀 현황은 관리자 정보라 뺐다 */}
