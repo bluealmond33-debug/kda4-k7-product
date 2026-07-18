@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, GraduationCap, History } from "lucide-react";
 import { css } from "../../lib/css";
-import { AGENT } from "../../data/demoContent";
+import { AGENT, SHEETS } from "../../data/demoContent";
 
 /**
  * 아침 대기 화면 (phase === "idle") — "기다리는 콜센터 → 준비되는 콜센터".
@@ -19,11 +19,14 @@ type PrepKey = "today" | "alerts" | "coach" | "manual";
 const TODAY = {
   count: 12,
   wrapDone: 11,
+  avgTalk: "03:42",
   rows: [
     { time: "14:05", type: "수신 › 이체한도 상향", status: "후처리 완료" },
     { time: "13:40", type: "카드 › 재발급", status: "후처리 완료" },
     { time: "11:52", type: "대출 › 상환일정 문의", status: "후처리 완료" },
     { time: "10:14", type: "전자금융 › OTP 재발급", status: "콜백 예약" },
+    { time: "09:47", type: "대출 › 중도상환수수료", status: "후처리 완료" },
+    { time: "09:12", type: "수신 › 예금 만기 안내", status: "후처리 완료" },
   ],
 };
 
@@ -81,12 +84,18 @@ function Lamp({ tone, label }: { tone: "g" | "a"; label: string }) {
   );
 }
 
-/** 서브 화면 공통 헤더 (뒤로가기 + 제목 + 부제) */
+/** 서브 화면 공통 헤더 — 뒤로가기는 각진 버튼(원형은 프로필 아바타와 충돌) */
 function SubHead({ onBack, title, sub }: { onBack: () => void; title: string; sub: string }) {
   return (
     <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:16px")}>
-      <span className="cbtn" onClick={onBack} title="대기 화면으로" style={css("cursor:pointer")}>
-        <span className="mi" style={css("font-size:20px")}>arrow_back</span>
+      <span
+        onClick={onBack}
+        title="대기 화면으로"
+        style={css(
+          "width:34px;height:34px;border-radius:8px;border:1px solid var(--gray-300);background:var(--onair-surface);display:flex;align-items:center;justify-content:center;color:var(--gray-900);cursor:pointer"
+        )}
+      >
+        <span className="mi" style={css("font-size:19px")}>arrow_back</span>
       </span>
       <span style={css("font:700 20px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{title}</span>
       <span style={css("margin-left:8px;font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{sub}</span>
@@ -154,19 +163,29 @@ export default function Standby() {
 
       {view === "today" && (
         <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0")}>
-          <SubHead onBack={back} title="오늘 처리 내역" sub={`${TODAY.count}건 처리 · 후처리 ${TODAY.wrapDone}건 완료`} />
+          <SubHead onBack={back} title="처리 내역" sub="오늘" />
+          {/* 요약 스탯 3장 */}
+          <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px")}>
+            {[
+              { label: "처리", value: `${TODAY.count}건` },
+              { label: "후처리 완료", value: `${TODAY.wrapDone}건` },
+              { label: "평균 통화", value: TODAY.avgTalk },
+            ].map((s) => (
+              <div key={s.label} style={css("background:var(--background-200);border-radius:8px;padding:13px 16px")}>
+                <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{s.label}</div>
+                <div className="bignum" style={css("font-size:19px;color:var(--gray-1000);margin-top:4px")}>{s.value}</div>
+              </div>
+            ))}
+          </div>
           {/* 시간축 리스트 — 최근 콜이 위 */}
-          <div style={css("background:var(--background-200);border-radius:8px;overflow:hidden")}>
+          <div style={css("background:var(--background-200);border-radius:8px;overflow:auto;min-height:0")}>
             {TODAY.rows.map((r, i) => (
-              <div key={i} style={css("display:flex;align-items:center;gap:14px;padding:13px 18px" + (i < TODAY.rows.length - 1 ? ";border-bottom:1px solid var(--gray-200)" : ""))}>
+              <div key={i} style={css("display:flex;align-items:center;gap:14px;padding:12px 18px" + (i < TODAY.rows.length - 1 ? ";border-bottom:1px solid var(--gray-200)" : ""))}>
                 <span style={css("font:600 12.5px 'Geist Mono',monospace;color:var(--gray-700);width:44px;flex:none")}>{r.time}</span>
                 <span style={css("flex:1;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.type}</span>
                 <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:" + (r.status === "후처리 완료" ? "var(--green-900)" : "var(--amber-900)"))}>{r.status}</span>
               </div>
             ))}
-          </div>
-          <div style={css("margin-top:10px;font:500 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-            최근 4건 표시 · 전체 내역은 후처리 화면에서
           </div>
         </div>
       )}
@@ -235,21 +254,47 @@ export default function Standby() {
       {view === "manual" && (
         <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0")}>
           <SubHead onBack={back} title="매뉴얼" sub="규정·업무 가이드" />
-          {/* 검색 우선 — 매뉴얼은 찾는 화면 */}
-          <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:9999px;padding:11px 16px;background:var(--onair-surface);margin-bottom:12px")}>
-            <span className="mi" style={css("font-size:18px;color:var(--gray-700)")}>search</span>
-            <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>규정·절차 검색</span>
-          </div>
-          <div style={css("display:flex;flex-direction:column;gap:8px")}>
-            {MANUAL_ROWS.map((r, i) => (
-              <div key={i} style={css("display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--background-200);border-radius:8px")}>
-                <span className="av" style={css("width:36px;height:36px;font-size:17px;background:var(--onair-surface)")}>
-                  <span className="mi">{r.icon}</span>
-                </span>
-                <span style={css("flex:1;font:500 13.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.label}</span>
-                <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{r.meta}</span>
+          {/* 좌: 검색+목록(고정폭) / 우: 규정집 시트가 바로 펼쳐진다 */}
+          <div style={css("flex:1;display:flex;gap:14px;min-height:0")}>
+            <div style={css("width:330px;flex:none;display:flex;flex-direction:column;gap:8px")}>
+              <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;background:var(--onair-surface);margin-bottom:2px")}>
+                <span className="mi" style={css("font-size:17px;color:var(--gray-700)")}>search</span>
+                <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>규정·절차 검색</span>
               </div>
-            ))}
+              {MANUAL_ROWS.map((r, i) => (
+                <div key={i} className="ptile" style={css("display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--background-200);border-radius:8px;box-shadow:none")}>
+                  <span className="mi" style={css("font-size:18px;color:var(--gray-700);flex:none")}>{r.icon}</span>
+                  <span style={css("flex:1;font:500 13px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.label}</span>
+                  <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);flex:none")}>{r.meta}</span>
+                </div>
+              ))}
+            </div>
+            {/* 우: 엑셀 시트 뷰 (통화 화면의 규정 확장과 같은 문법) */}
+            <div style={css("flex:1;min-width:0;background:var(--onair-surface);border-radius:8px;box-shadow:var(--sh-near);overflow:hidden;display:flex;flex-direction:column")}>
+              <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-1000);color:#fff;flex:none")}>
+                <span className="mi" style={css("font-size:17px")}>grid_on</span>
+                <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif")}>{SHEETS.manual.file}</span>
+                <span style={css("font:400 11px 'Geist Mono',monospace;opacity:.8")}>· {SHEETS.manual.sheet} 시트</span>
+              </div>
+              <div style={css("flex:1;min-height:0;overflow:auto;background:#fff")}>
+                <div style={css("display:flex;flex-direction:column;min-width:max-content")}>
+                  <div style={css("display:flex;position:sticky;top:0")}>
+                    <span style={css("width:34px;flex:none;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300)")} />
+                    {SHEETS.manual.cols.map((c, i) => (
+                      <span key={i} style={css("width:" + c.w + "px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}</span>
+                    ))}
+                  </div>
+                  {SHEETS.manual.rows.map((row, ri) => (
+                    <div key={ri} style={css("display:flex")}>
+                      <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono',monospace;color:var(--gray-600)")}>{ri + 1}</span>
+                      {row.map((cell, ci) => (
+                        <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{cell}</span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -257,17 +302,17 @@ export default function Standby() {
       {!view && (
         /* ── 대기(시계) 화면 ── */
         <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0")}>
-          {/* 시계 — Geist Sans 고정폭 숫자 (모노의 슬래시 제로 회피) */}
+          {/* 시계 — .bignum 규칙(Geist Sans 600 · tabular · 자간 -2%), 콜론 양옆 숨 쉴 간격 */}
           <div
+            className="bignum"
             style={css(
-              "display:flex;align-items:baseline;gap:4px;line-height:1;font-family:'Geist Sans','Pretendard',sans-serif;font-weight:600;letter-spacing:-4px;font-variant-numeric:tabular-nums;" +
-                (onBreak ? "color:var(--gray-600)" : "color:var(--gray-1000)")
+              "display:flex;align-items:baseline;" + (onBreak ? "color:var(--gray-600)" : "color:var(--gray-1000)")
             )}
           >
             <span style={css("font-size:108px")}>{hh}</span>
-            <span style={css("font-size:96px;transform:translateY(-8px)")}>:</span>
+            <span style={css("font-size:92px;margin:0 10px;transform:translateY(-6px);color:var(--gray-500)")}>:</span>
             <span style={css("font-size:108px")}>{mm}</span>
-            <span style={css("font-size:38px;color:var(--gray-500);margin-left:10px;letter-spacing:-1px")}>{ss}</span>
+            <span style={css("font-size:36px;color:var(--gray-500);margin-left:16px")}>{ss}</span>
           </div>
           <div style={css("margin-top:16px;font:500 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
             {onBreak
@@ -285,35 +330,35 @@ export default function Standby() {
             </span>
           ) : (
             <div style={css("margin-top:36px;display:flex;gap:12px")}>
-              {/* 오늘 처리 내역 */}
-              <div onClick={() => setView("today")} className="card" style={css("width:170px;padding:18px 16px;cursor:pointer;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
+              {/* 처리 내역 */}
+              <div onClick={() => setView("today")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
                 <div style={css("display:flex;align-items:center;justify-content:space-between")}>
                   <History size={24} color="var(--blue-700)" strokeWidth={1.8} />
-                  <span style={css("font:700 15px 'Geist Sans',sans-serif;font-variant-numeric:tabular-nums;color:var(--gray-1000)")}>{TODAY.count}<span style={css("font:600 11px;color:var(--gray-600)")}>건</span></span>
+                  <span className="bignum" style={css("font-size:15px;color:var(--gray-1000)")}>{TODAY.count}<span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>건</span></span>
                 </div>
-                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>오늘 처리 내역</span>
+                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>처리 내역</span>
                 <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>후처리 {TODAY.wrapDone}건 완료</span>
               </div>
-              {/* 알림 */}
-              <div onClick={() => setView("alerts")} className="card" style={css("width:170px;padding:18px 16px;cursor:pointer;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
-                <div style={css("display:flex;align-items:center;justify-content:space-between")}>
-                  <Bell size={24} color="var(--blue-700)" strokeWidth={1.8} />
-                  <span style={css("width:18px;height:18px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 10.5px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center")}>{ALERTS.filter((a) => a.unread).length}</span>
-                </div>
-                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>알림</span>
-                <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>사고대응팀 회신 · 콜백 예약</span>
+              {/* 매뉴얼 — 아이콘 유지 */}
+              <div onClick={() => setView("manual")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
+                <span className="mi" style={css("font-size:24px;color:var(--blue-700)")}>menu_book</span>
+                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>매뉴얼</span>
+                <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>규정·업무 가이드</span>
               </div>
               {/* 코칭·리뷰 */}
-              <div onClick={() => setView("coach")} className="card" style={css("width:170px;padding:18px 16px;cursor:pointer;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
+              <div onClick={() => setView("coach")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
                 <GraduationCap size={24} color="var(--blue-700)" strokeWidth={1.8} />
                 <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>코칭·리뷰</span>
                 <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>어제 피드백 · 워밍업</span>
               </div>
-              {/* 매뉴얼 — 아이콘 유지 */}
-              <div onClick={() => setView("manual")} className="card" style={css("width:170px;padding:18px 16px;cursor:pointer;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
-                <span className="mi" style={css("font-size:24px;color:var(--blue-700)")}>menu_book</span>
-                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>매뉴얼</span>
-                <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>규정·업무 가이드</span>
+              {/* 알림 — 카운트는 종 아이콘 우상단 배지로 */}
+              <div onClick={() => setView("alerts")} className="card ptile" style={css("width:170px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--sh-far)")}>
+                <span style={css("position:relative;display:inline-flex;width:24px")}>
+                  <Bell size={24} color="var(--blue-700)" strokeWidth={1.8} />
+                  <span style={css("position:absolute;top:-5px;right:-8px;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 10px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{ALERTS.filter((a) => a.unread).length}</span>
+                </span>
+                <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>알림</span>
+                <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>사고대응팀 회신 · 콜백 예약</span>
               </div>
             </div>
           )}

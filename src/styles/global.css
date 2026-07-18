@@ -144,6 +144,31 @@ a:hover {
 .lampdots i.lit.a { background: var(--amber-700); }
 .lampdots i.lit.g { background: var(--green-700); }
 
+/* ONAIR 인터랙티브 타일 — 호버는 빛이 아니라 그림자가 깊어진다 (+1px 부상).
+   클릭 가능한 카드형 타일 공통 규칙. */
+.ptile {
+  cursor: pointer;
+  transition: box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ptile:hover {
+  box-shadow: var(--sh-focus);
+  transform: translateY(-2px);
+}
+.ptile:active {
+  transform: translateY(0);
+  box-shadow: var(--sh-near);
+}
+
+/* ONAIR 대형 숫자(시계·카운터) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
+.bignum {
+  font-family: "Geist Sans", "Pretendard", sans-serif;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
 /* 본인확인 입력 — 입력값은 모노·자간, placeholder는 가는 산세리프로 분리 */
 .authin::placeholder {
   font: 400 12.5px "Geist Sans", "Pretendard", sans-serif;
