@@ -63,8 +63,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               })}
             </div>
             <span style={css("width:1px;height:20px;background:var(--color-border)")} />
-            <span style={css("display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
-              <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--blue-700);animation:pulseDot 1.4s infinite")} />
+            <span style={css("display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
               {vm.phaseLabel}
             </span>
             {/* 다음 인입 콜 유형 (대기 중에만 선택 가능) */}

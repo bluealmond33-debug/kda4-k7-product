@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
-import { AGENT, URGENT_PRIORITY_REASON } from "../../data/demoContent";
+import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
 /** 1c — 상담 준비 카드 (dim 배경 + 모달). 유의사항 확인 시 통화 연결 활성화.
@@ -36,11 +36,6 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
         <div style={css("padding:22px 28px 20px;border-bottom:1px solid var(--gray-200)")}>
           <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:14px")}>
-            <span className="lampdots" title={vm.isUrgent ? "온에어 · 긴급 인입" : "온에어 · 인입 대기"}>
-              <i className={"r" + (vm.isUrgent ? " lit" : "")} />
-              <i className={"a" + (vm.isUrgent ? "" : " lit")} />
-              <i className="g" />
-            </span>
             {vm.isUrgent ? (
               <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:#fff;background:var(--red-800);border-radius:9999px;padding:4px 11px")}>
                 <span className="mi" style={css("font-size:13px")}>priority_high</span>
@@ -53,7 +48,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               </span>
             ) : (
               <span style={css("display:inline-flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
-                <span style={css("width:6px;height:6px;border-radius:9999px;background:var(--blue-700);animation:pulseDot 1.4s infinite")} />
+                <span style={css("width:6px;height:6px;border-radius:9999px;background:var(--blue-700)")} />
                 인입 콜 · 우선 연결 대상
               </span>
             )}
@@ -68,51 +63,15 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               {vm.isUrgent ? "우선 배정 · 대기열 1순위" : vm.isTransfer ? "이관 인계 · 우선 배정" : "순번 1 · 대기 05:30"}
             </span>
           </div>
-          {/* 긴급이 맨 앞에 온 이유 — 배지만이 아니라 근거를 카드가 직접 말한다 */}
-          {vm.isUrgent && (
-            <div style={css("display:flex;align-items:center;gap:6px;margin:-6px 0 14px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>
-              <span className="mi" style={css("font-size:15px")}>move_up</span>
-              {URGENT_PRIORITY_REASON}
-            </div>
-          )}
-          {/* AI 사전 요약 = 이 카드의 히어로. 요약 문장은 여기 단 한 번만 등장한다 */}
-          <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
-            <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>
-            <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>AI 사전 요약</span>
-            <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>대기 중 고객 진술 기반 · 방금 생성됨</span>
-          </div>
+          {/* 헤드라인 — 라벨 없이 한 줄이 곧 요약 */}
           <div style={css("display:flex;gap:13px")}>
             <span style={css("width:4px;border-radius:2px;background:var(--blue-500);flex:none")} />
             <div>
               <div style={css("font:600 23px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>
                 {vm.prepHeadline}
               </div>
-              <div style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:7px")}>
-                {vm.prepCustomerLine}
-              </div>
-            </div>
-          </div>
-          {/* 요약 본문 — 발화 원문(감사 흔적) + AI가 분해한 요구사항. 이관 판단이 가능한 수준 */}
-          <div style={css("display:flex;gap:12px;margin-top:14px")}>
-            <div style={css("flex:1.2;background:var(--gray-100);border-radius:8px;padding:12px 15px")}>
-              <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>
-                <span className="mi" style={css("font-size:14px")}>format_quote</span>고객 발화 원문
-              </div>
-              <div style={css("font:400 13.5px/1.6 'Geist Sans','Pretendard',sans-serif;font-style:italic;color:var(--gray-900)")}>
-                “{vm.transcriptQuote}”
-              </div>
-            </div>
-            <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:12px 15px")}>
-              <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
-                <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>checklist</span>요구사항 분해
-              </div>
-              <div style={css("display:flex;flex-direction:column;gap:5px")}>
-                {vm.summaryPoints.map((p, i) => (
-                  <div key={i} style={css("display:flex;gap:8px;align-items:baseline")}>
-                    <span style={css("font:700 11px 'Geist Mono',monospace;color:var(--blue-900);flex:none")}>{i + 1}</span>
-                    <span style={css("font:400 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{p}</span>
-                  </div>
-                ))}
+              <div style={css("font:400 12.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:7px")}>
+                근거 발화 · <span style={css("font-style:italic;color:var(--gray-800)")}>“{vm.transcriptQuote}”</span>
               </div>
             </div>
           </div>
@@ -146,41 +105,54 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
           )}
 
-          {/* 3 지표 */}
-          <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px")}>
-            <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
-              <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
-                <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>auto_awesome</span>AI 배정 권고
+          {/* 요약 2/3 + 신호 1/3 — 왼쪽은 읽는 영역, 오른쪽은 훑는 영역 */}
+          <div style={css("display:flex;gap:12px")}>
+            {/* 좌 2/3 — 요구사항 분해 + AI 배정(한 줄로 흡수) */}
+            <div style={css("flex:2;background:var(--gray-100);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column")}>
+              <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
+                <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>checklist</span>요구사항 분해
               </div>
-              <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</div>
-              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:4px")}>{vm.prepRoutingReason}</div>
-              {/* AI는 참고, 판단은 사람 — 확신도와 '후보' 상태를 드러낸다 */}
-              <div style={css("font:600 10.5px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900);margin-top:6px")}>{vm.prepConfidence}</div>
+              <div style={css("display:flex;flex-direction:column;gap:6px")}>
+                {vm.summaryPoints.map((p, i) => (
+                  <div key={i} style={css("display:flex;gap:9px;align-items:baseline")}>
+                    <span style={css("font:700 11px 'Geist Mono',monospace;color:var(--blue-900);flex:none")}>{i + 1}</span>
+                    <span style={css("font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{p}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={css("margin-top:auto;padding-top:10px;border-top:1px solid var(--gray-200);display:flex;align-items:baseline;gap:7px;flex-wrap:wrap")}>
+                <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
+                <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
+                <span style={css("font:600 10.5px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900)")}>{vm.prepConfidence}</span>
+              </div>
             </div>
-            <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
-              <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>고객 감정온도</div>
-              <div style={css("display:flex;align-items:center;gap:8px")}>
-                <span style={css("display:flex;gap:2px")}>
-                  {[1, 2, 3].map((bar) => (
-                    <span
-                      key={bar}
-                      style={css(
-                        "width:18px;height:6px;border-radius:2px;background:" +
-                          (bar <= vm.prepEmotionBars ? vm.prepEmotionBar : "var(--gray-200)")
-                      )}
-                    />
-                  ))}
-                </span>
-                <span style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
+            {/* 우 1/3 — 감정온도 + 사고징후 스택 */}
+            <div style={css("flex:1;display:flex;flex-direction:column;gap:10px")}>
+              <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
+                <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>고객 감정온도</div>
+                <div style={css("display:flex;align-items:center;gap:7px")}>
+                  <span style={css("display:flex;gap:2px")}>
+                    {[1, 2, 3].map((bar) => (
+                      <span
+                        key={bar}
+                        style={css(
+                          "width:16px;height:6px;border-radius:2px;background:" +
+                            (bar <= vm.prepEmotionBars ? vm.prepEmotionBar : "var(--gray-200)")
+                        )}
+                      />
+                    ))}
+                  </span>
+                  <span style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
+                </div>
+                <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:3px")}>{vm.prepEmotionSignal}</div>
               </div>
-              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:4px")}>{vm.prepEmotionSignal}</div>
-            </div>
-            <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
-              <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
-                <span className="mi" style={css("font-size:14px;color:" + vm.prepRiskFg)}>gpp_maybe</span>사고 징후
+              <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
+                <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>
+                  <span className="mi" style={css("font-size:14px;color:" + vm.prepRiskFg)}>gpp_maybe</span>사고 징후
+                </div>
+                <div style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</div>
+                <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg + ";margin-top:3px")}>{vm.prepRiskSignal}</div>
               </div>
-              <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</div>
-              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg + ";margin-top:4px")}>{vm.prepRiskSignal}</div>
             </div>
           </div>
 
