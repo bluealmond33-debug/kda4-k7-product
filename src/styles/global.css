@@ -67,7 +67,7 @@ a:hover {
      광원(집중)이 이동하면 그림자 방향이 함께 눕는다 — 전환은 이산적 0.45s */
   background: var(--onair-surface, #fff);
   border: none;
-  border-radius: 20px;
+  border-radius: 12px;
   box-shadow: var(--sh-near, 0 2px 8px rgba(0, 0, 0, 0.06));
   transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s;
 }

@@ -21,11 +21,11 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       {/* 뒤 배경 (인입 대기) — 상태는 모달 배지 줄이 말하므로 여기는 침묵 */}
       <div style={css("position:absolute;inset:0;display:flex;flex-direction:column")}>
         <div style={css("flex:1;display:flex;gap:16px;padding:16px")}>
-          <div style={css("width:312px;flex:none;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-away-l-far)")} />
-          <div style={css("flex:1;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-far);display:flex;align-items:center;justify-content:center;font:400 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+          <div style={css("width:312px;flex:none;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-away-l-far)")} />
+          <div style={css("flex:1;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-far);display:flex;align-items:center;justify-content:center;font:400 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
             고객을 선택하면 준비 카드가 열립니다
           </div>
-          <div style={css("width:372px;flex:none;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-away-r-far)")} />
+          <div style={css("width:372px;flex:none;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-away-r-far)")} />
         </div>
       </div>
 
@@ -33,7 +33,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5)")} />
 
       {/* 모달 */}
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
+      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
         <div style={css("padding:22px 28px 20px;border-bottom:1px solid var(--gray-200)")}>
           <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:14px")}>
             <span className="lampdots" title={vm.isUrgent ? "온에어 · 긴급 인입" : "온에어 · 인입 대기"}>
@@ -97,7 +97,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
           {/* 첫 응대 문장 — 이 문장으로 통화를 연다 (제품 논지의 한 줄) */}
-          <div style={css("display:flex;align-items:baseline;gap:10px;margin-top:14px;background:var(--gray-100);border-radius:14px;padding:12px 16px")}>
+          <div style={css("display:flex;align-items:baseline;gap:10px;margin-top:14px;background:var(--gray-100);border-radius:8px;padding:12px 16px")}>
             <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
             <div>
               <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>첫 응대 문장 — 이 문장으로 여세요</div>
@@ -109,7 +109,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
         <div style={css("flex:1;overflow:auto;padding:18px 24px;display:flex;flex-direction:column;gap:16px")}>
           {/* 인수인계 블록 — 이관 수신 시에만. 메모는 사람이 아니라 AI가 전임 통화를 요약해 작성 */}
           {vm.isTransfer && (
-            <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
+            <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
               <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:10px")}>
                 <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>sync_alt</span>
                 <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
@@ -136,7 +136,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
           {/* 3 지표 */}
           <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px")}>
-            <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
+            <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>auto_awesome</span>AI 배정 권고
               </div>
@@ -145,7 +145,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               {/* AI는 참고, 판단은 사람 — 확신도와 '후보' 상태를 드러낸다 */}
               <div style={css("font:600 10.5px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900);margin-top:6px")}>{vm.prepConfidence}</div>
             </div>
-            <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
+            <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
               <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>고객 감정온도</div>
               <div style={css("display:flex;align-items:center;gap:8px")}>
                 <span style={css("display:flex;gap:2px")}>
@@ -163,7 +163,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               </div>
               <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:4px")}>{vm.prepEmotionSignal}</div>
             </div>
-            <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
+            <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 <span className="mi" style={css("font-size:14px;color:" + vm.prepRiskFg)}>gpp_maybe</span>사고 징후
               </div>
@@ -189,7 +189,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                       r.bg +
                       ";border:1px solid " +
                       r.bd +
-                      ";border-radius:14px;padding:11px 13px;cursor:pointer;user-select:none;transition:background .15s,border-color .15s"
+                      ";border-radius:8px;padding:11px 13px;cursor:pointer;user-select:none;transition:background .15s,border-color .15s"
                   )}
                 >
                   <span
@@ -226,7 +226,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <span className="mi" style={css("font-size:17px")}>phone_forwarded</span> 다른 상담사에게 이관
             </span>
             {pickerOpen && (
-              <div style={css("position:absolute;bottom:52px;right:0;width:290px;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);padding:12px;z-index:20;animation:dockUp .18s ease")}>
+              <div style={css("position:absolute;bottom:52px;right:0;width:290px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:12px;z-index:20;animation:dockUp .18s ease")}>
                 <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:3px")}>부서 내 경력 상담사에게 이관</div>
                 <div style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>AI 인계 메모가 자동 작성되어 함께 전달됩니다</div>
                 <div style={css("display:flex;flex-direction:column;gap:6px")}>
@@ -234,7 +234,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                     <span
                       key={t.name}
                       onClick={() => sendTo(t.name)}
-                      style={css("display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:12px;background:var(--gray-100);cursor:pointer")}
+                      style={css("display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;background:var(--gray-100);cursor:pointer")}
                     >
                       <span className="av" style={css("width:30px;height:30px;font-size:15px;background:var(--onair-surface)")}><span className="mi">headset_mic</span></span>
                       <span style={css("flex:1")}>

@@ -342,9 +342,10 @@
   --sh-away-l-far: -18px 12px 20px -8px rgba(15, 18, 24, 0.18);
 
   /* 온에어 반지름 두 벌 + 기존 이름 재매핑 */
-  --radius-card: 20px;
-  --radius-md: 20px;
-  --radius-lg: 20px;
+  --radius-card: 12px;
+  --radius-md: 12px;
+  --radius-lg: 12px;
+  --radius-inner: 8px;
   --shadow-card: var(--sh-near);
   --shadow-popover: var(--sh-near);
   --shadow-modal: var(--sh-modal);

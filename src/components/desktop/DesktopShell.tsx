@@ -17,7 +17,7 @@ export default function DesktopShell({
       <div style={css("position:absolute;top:0;left:0;transform:scale(0.76389);transform-origin:top left")}>
         <div
           style={css(
-            "width:1440px;height:900px;position:relative;background:var(--onair-bg);border:none;border-radius:20px;overflow:hidden;box-shadow:var(--sh-near)" +
+            "width:1440px;height:900px;position:relative;background:var(--onair-bg);border:none;border-radius:12px;overflow:hidden;box-shadow:var(--sh-near)" +
               (flex ? ";display:flex;flex-direction:column" : "")
           )}
         >

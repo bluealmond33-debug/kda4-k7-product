@@ -56,7 +56,7 @@ export default function Phone({ vm }: { vm: CallFlowVM }) {
         {/* 스크린 */}
         <div style={css("position:absolute;inset:17px;border-radius:53px;overflow:hidden;background:#f5f5f7")}>
           {/* Dynamic Island */}
-          <div style={css("position:absolute;top:11px;left:50%;transform:translateX(-50%);width:125px;height:37px;border-radius:20px;background:#000;z-index:50")} />
+          <div style={css("position:absolute;top:11px;left:50%;transform:translateX(-50%);width:125px;height:37px;border-radius:12px;background:#000;z-index:50")} />
 
           {vm.phIdle && <IdleScreen vm={vm} />}
           {vm.phInCall && <InCallScreen vm={vm} />}

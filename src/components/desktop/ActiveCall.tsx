@@ -129,7 +129,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </span>
             {/* 오클릭 방지 — 종료는 한 번 더 묻는다 */}
             {endConfirm && (
-              <div style={css("position:absolute;top:48px;right:0;width:220px;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);padding:13px 14px;z-index:40;animation:dockUp .15s ease")}>
+              <div style={css("position:absolute;top:48px;right:0;width:220px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:13px 14px;z-index:40;animation:dockUp .15s ease")}>
                 <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:9px")}>통화를 종료할까요?</div>
                 <div style={css("display:flex;gap:6px")}>
                   <span onClick={vm.endCall} style={css("flex:1;text-align:center;padding:7px 0;border-radius:9999px;background:var(--red-800);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>종료</span>
@@ -178,7 +178,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
 
             {vm.verified ? (
-              <div style={css("margin-top:13px;background:var(--gray-100);border-radius:14px;overflow:hidden")}>
+              <div style={css("margin-top:13px;background:var(--gray-100);border-radius:8px;overflow:hidden")}>
                 <div style={css("display:flex;align-items:center;gap:9px;padding:10px 12px;border-bottom:1px solid var(--gray-300)")}>
                   <span style={css("width:22px;height:22px;border-radius:9999px;background:var(--green-900);color:#fff;display:flex;align-items:center;justify-content:center")}>
                     <span className="mi" style={css("font-size:15px")}>check</span>
@@ -196,7 +196,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             ) : (
-              <div style={css("margin-top:13px;background:var(--gray-100);border-radius:14px;padding:12px")}>
+              <div style={css("margin-top:13px;background:var(--gray-100);border-radius:8px;padding:12px")}>
                 <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px")}>본인확인 · 미완료</div>
                 <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>고객이 말한 값을 입력하면 자동 대조됩니다</div>
                 <div className="lbl" style={css("margin-bottom:6px")}>대조 방식</div>
@@ -335,7 +335,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
             <div style={css("flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px")}>
               {vm.steps.map((st, i) => (
-                <div key={i} style={css("background:var(--gray-100);border-radius:14px;padding:11px 13px")}>
+                <div key={i} style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
                   <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{st.title}</div>
                   <div style={css("font:400 13px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{st.text}</div>
                 </div>
@@ -463,7 +463,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
 function RegReco({ vm, title, body, file }: { vm: CallFlowVM; title: string; body: string; file: string }) {
   return (
-    <div style={css("background:var(--gray-100);border-radius:14px;padding:11px 13px")}>
+    <div style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
       <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{title}</div>
       <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{body}</div>
       <div style={css("display:flex;align-items:center;justify-content:space-between;margin-top:8px")}>

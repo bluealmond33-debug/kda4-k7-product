@@ -80,7 +80,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
         {/* 우 영역 */}
         <div style={css("flex:1;position:relative;min-width:0")}>
           {vm.wrapLoading && (
-            <div style={css("position:absolute;inset:0;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-near);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px")}>
+            <div style={css("position:absolute;inset:0;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px")}>
               <span style={css("width:42px;height:42px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
               <div style={css("font:700 18px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>통화 내용을 요약하고 있습니다…</div>
               <div style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>녹취와 상담원 메모를 바탕으로 후처리 초안을 작성 중입니다</div>
@@ -145,7 +145,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 
           {/* 바텀업 시트 — 열리면 재료 패널 위로 올라온다 */}
           {vm.wrapReady && vm.wrapSheetOpen && (
-            <div style={css("position:absolute;left:0;right:0;bottom:0;top:44px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-modal);display:flex;flex-direction:column;overflow:visible;z-index:25;animation:dockUp .3s ease")}>
+            <div style={css("position:absolute;left:0;right:0;bottom:0;top:44px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);display:flex;flex-direction:column;overflow:visible;z-index:25;animation:dockUp .3s ease")}>
               <div onClick={vm.toggleWrapSheet} style={css("display:flex;align-items:center;justify-content:center;padding:8px 0 4px;cursor:pointer")} title="시트 접기">
                 <span style={css("width:48px;height:5px;border-radius:9999px;background:var(--color-border)")} />
               </div>
@@ -175,7 +175,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                       contentEditable
                       suppressContentEditableWarning
                       onInput={vm.onSummary}
-                      style={css("flex:1;border:1px solid var(--gray-300);border-radius:14px;padding:15px 17px;font:400 14px/1.8 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none")}
+                      style={css("flex:1;border:1px solid var(--gray-300);border-radius:8px;padding:15px 17px;font:400 14px/1.8 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none")}
                     >
                       {vm.wrapSummaryDefault}
                     </div>
@@ -184,7 +184,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                     <div style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:8px")}>후속 조치</div>
                     <div style={css("display:flex;flex-direction:column;gap:7px")}>
                       {vm.followups.map((f, i) => (
-                        <div key={i} style={css("display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:14px;padding:9px 12px")}>
+                        <div key={i} style={css("display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:8px;padding:9px 12px")}>
                           <span className="mi" style={css("font-size:16px;color:var(--gray-700)")}>{f.icon}</span>
                           <span style={css("flex:1;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{f.label}</span>
                           <span onClick={f.remove} style={css("cursor:pointer;display:flex")} title="삭제">
@@ -220,7 +220,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 
                   <div style={css("flex:1;display:flex;flex-direction:column;min-height:0")}>
                     <div className="lbl" style={css("margin-bottom:5px")}>상담 메모 · 불릿</div>
-                    <div style={css("flex:1;border-radius:14px;background:var(--gray-100);display:flex;flex-direction:column;overflow:hidden")}>
+                    <div style={css("flex:1;border-radius:8px;background:var(--gray-100);display:flex;flex-direction:column;overflow:hidden")}>
                       <div style={css("flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px")}>
                         {vm.memoItems.map((m, i) => (
                           <div key={i} style={css("display:flex;gap:7px;align-items:baseline")}>
@@ -257,7 +257,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 
           {/* 접힌 상태 바 */}
           {vm.wrapReady && !vm.wrapSheetOpen && (
-            <div style={css("position:absolute;left:0;right:0;bottom:0;padding:15px 24px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-focus);display:flex;align-items:center;gap:12px;z-index:20")}>
+            <div style={css("position:absolute;left:0;right:0;bottom:0;padding:15px 24px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-focus);display:flex;align-items:center;gap:12px;z-index:20")}>
               <span className="mi" style={css("font-size:22px;color:var(--gray-700)")}>expand_less</span>
               <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>후처리 작성 시트가 접혀 있습니다</span>
               <div style={css("flex:1")} />
@@ -306,7 +306,7 @@ function SelectField({
         <>
           {/* 바깥 클릭 시 닫힘 */}
           <div onClick={onToggle} style={css("position:fixed;inset:-2000px;z-index:39")} />
-          <div style={css("position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--onair-surface);border-radius:14px;box-shadow:var(--sh-modal);z-index:40;overflow:hidden")}>
+          <div style={css("position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--onair-surface);border-radius:8px;box-shadow:var(--sh-modal);z-index:40;overflow:hidden")}>
             {opts.map((o, i) => (
               <div
                 key={i}
