@@ -209,7 +209,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 {/* 우: 항목 + 메모 */}
                 <div style={css("width:330px;flex:none;display:flex;flex-direction:column;gap:12px;overflow:visible")}>
                   <div style={css("display:flex;flex-direction:column;gap:8px")}>
-                    <EditRow label="고객" value={`${vm.customerName} · ${vm.customerNumber}`} />
+                    <EditRow label="고객" value={`${vm.customerName} · ${vm.customerPhone}`} />
                     <EditRow label="상담사" value="김키움 · A-2231" />
                     <EditRow label="일시" value="2026.07.15 14:32" small />
                   </div>

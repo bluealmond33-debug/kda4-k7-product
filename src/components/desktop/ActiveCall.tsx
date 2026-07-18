@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
+import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
 const HISTORY = [
@@ -10,15 +11,44 @@ const HISTORY = [
   { date: "2026.02.14", label: "대출 › 상환일정 문의" },
 ];
 
+const ACCOUNTS = [
+  { kind: "입출금", name: "키움 주거래 통장", no: "***-**-4821", opened: "2019.03.11" },
+  { kind: "적금", name: "키움 자유적금", no: "***-**-7745", opened: "2022.06.01" },
+  { kind: "체크카드", name: "키움 체크카드", no: "****-****-**-2231", opened: "2019.03.11" },
+  { kind: "대출", name: "신용대출", no: "***-**-9902", opened: "2024.01.20" },
+];
+
 /** 1a — 통화 중. 좌: 상담사·고객(본인인증 1d)·이력 / 중: 요약·스크립트·메모 / 우: 규정. */
 export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [showHistory, setShowHistory] = useState(false);
+  const [showAccounts, setShowAccounts] = useState(false);
+
+  // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
+  const leftColRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!showHistory && !showAccounts) return;
+    const onDown = (e: MouseEvent) => {
+      if (leftColRef.current && !leftColRef.current.contains(e.target as Node)) {
+        setShowHistory(false);
+        setShowAccounts(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [showHistory, showAccounts]);
   return (
     <DesktopShell flex>
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1004px")}>
-          <span className="lampdots" title="온에어 · 통화중"><i className="r" /><i className="a lit" /><i className="g" /></span>
+          <span className="lampdots" title={vm.isUrgent ? "온에어 · 긴급 통화중" : "온에어 · 통화중"}>
+            <i className={"r" + (vm.isUrgent ? " lit" : "")} />
+            <i className={"a" + (vm.isUrgent ? "" : " lit")} />
+            <i className="g" />
+          </span>
+          {vm.isUrgent && (
+            <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:#fff;background:var(--red-800);border-radius:9999px;padding:3px 9px")}>긴급</span>
+          )}
           <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)")}>
             <span className="mi" style={css("font-size:13px;animation:recBlink 1.6s infinite")}>fiber_manual_record</span> 녹취 중
           </span>
@@ -50,10 +80,22 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </span>
           <span style={css("margin-left:auto;font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
+          {vm.transferReserved && (
+            <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
+              <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · 종료 시 인계
+            </span>
+          )}
           <span style={css("display:flex;gap:5px")}>
             <span className="cbtn" title="음소거"><span className="mi" style={css("font-size:19px")}>mic_off</span></span>
             <span className="cbtn" title="보류"><span className="mi" style={css("font-size:19px")}>pause</span></span>
-            <span className="cbtn" title="이관"><span className="mi" style={css("font-size:19px")}>phone_forwarded</span></span>
+            <span
+              className="cbtn"
+              title={vm.transferReserved ? "이관 예약 취소" : "이관 예약 — 통화를 끊지 않고 종료 시 인계"}
+              onClick={vm.toggleTransferReserve}
+              style={vm.transferReserved ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : undefined}
+            >
+              <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
+            </span>
           </span>
           <span
             title="통화 종료"
@@ -67,16 +109,16 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
       <div style={css("flex:1;display:flex;gap:16px;padding:16px;min-height:0")}>
         {/* ── 좌 컬럼 ── */}
-        <div style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0")}>
+        <div ref={leftColRef} style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden")}>
           <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px" + (vm.verified ? ";box-shadow:var(--sh-away-l);opacity:.93" : ""))}>
             <span className="av" style={css("width:42px;height:42px")}><span className="mi" style={css("font-size:22px")}>headset_mic</span></span>
             <div style={css("flex:1;min-width:0")}>
               <div style={css("display:flex;align-items:center;gap:6px")}>
-                <span style={css("font-weight:700;font-size:15px")}>상담사 김키움</span>
+                <span style={css("font-weight:700;font-size:15px")}>{AGENT.role} {AGENT.name}</span>
                 <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--green-700)")} />
                 <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-700)")}>통화 중</span>
               </div>
-              <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:1px")}>전자금융팀 · 사번 A-2231</div>
+              <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:1px")}>{AGENT.dept} · {AGENT.tenure} · {AGENT.id}</div>
             </div>
             <div style={css("text-align:right;flex:none;padding-left:10px;border-left:1px solid var(--gray-200)")}>
               <div style={css("font:700 16px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-700)")}>12</div>
@@ -85,7 +127,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </div>
 
           {/* 고객 카드 + 본인인증 (1d) — 본인확인 전에는 광원이 여기에 있다 */}
-          <div className="card" style={css("padding:16px;min-height:418px" + (vm.verified ? "" : ";box-shadow:var(--sh-focus)"))}>
+          {/* 인증 전에는 인증 폼 높이(≈418px) 고정으로 흔들림 방지, 인증 후에는 내용만큼 */}
+          <div className="card" style={css("padding:16px" + (vm.verified ? "" : ";min-height:418px;box-shadow:var(--sh-focus)"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;margin-bottom:12px")}>
               <span className="sechd">고객</span>
               <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>고객 동의 시 열람</span>
@@ -95,7 +138,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <div>
                 <div style={css("font-weight:700;font-size:18px;line-height:1.2")}>{vm.customerName}</div>
                 <div style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>
-                  개인 고객 · <span style={css("font-family:'Geist Mono','IBM Plex Mono',monospace")}>{vm.customerNumber}</span>
+                  {vm.customerType} · 발신 <span style={css("font-family:'Geist Mono','IBM Plex Mono',monospace")}>{vm.customerPhone}</span>
                 </div>
               </div>
             </div>
@@ -130,6 +173,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
                 <div style={css("display:flex;gap:7px;align-items:center")}>
                   <input
+                    className="authin"
                     value={vm.authInput}
                     onChange={vm.onAuthInput}
                     onKeyDown={(e) => {
@@ -156,11 +200,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
               {vm.verified ? (
                 <div style={css("display:flex;flex-direction:column;gap:7px")}>
-                  <span onClick={() => setShowHistory((prev) => !prev)} className="qlink" style={css("border-color:var(--blue-400);background:var(--onair-surface);color:var(--blue-700);font-weight:700;cursor:pointer")}>
-                    과거 상담 이력 <span className="mi" style={css("font-size:17px")}>{showHistory ? "expand_less" : "expand_more"}</span>
+                  <span onClick={() => setShowHistory((prev) => !prev)} className="qlink" style={css("cursor:pointer" + (showHistory ? ";border-color:var(--blue-400);color:var(--blue-700);font-weight:700" : ""))}>
+                    과거 상담 이력 <span className="mi" style={css("font-size:17px" + (showHistory ? "" : ";color:var(--gray-600)"))}>{showHistory ? "expand_less" : "expand_more"}</span>
                   </span>
-                  <span onClick={vm.openAccounts} className="qlink" style={css("cursor:pointer")}>
-                    보유 계좌 및 카드 현황 <span className="mi" style={css("font-size:17px;color:var(--gray-600)")}>open_in_new</span>
+                  <span onClick={() => setShowAccounts((prev) => !prev)} className="qlink" style={css("cursor:pointer" + (showAccounts ? ";border-color:var(--blue-400);color:var(--blue-700);font-weight:700" : ""))}>
+                    보유 계좌 및 카드 현황 <span className="mi" style={css("font-size:17px" + (showAccounts ? "" : ";color:var(--gray-600)"))}>{showAccounts ? "expand_less" : "expand_more"}</span>
                   </span>
                 </div>
               ) : (
@@ -176,18 +220,51 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-away-l);animation:dockUp .25s ease")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">과거 상담 이력</span>
-                <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>최근 6개월 · 4건</span>
+                <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>최근 6개월 · {HISTORY.length}건</span>
               </div>
-              <div style={css("overflow:auto")}>
+              {/* 타임라인 — 불릿이 세로선으로 이어져 시간의 흐름을 만든다 */}
+              <div style={css("overflow:auto;padding:6px 15px 4px")}>
                 {HISTORY.map((h, i) => (
-                  <div key={i} style={css("padding:11px 14px" + (i < HISTORY.length - 1 ? ";border-bottom:1px solid var(--gray-200)" : ""))}>
-                    <div style={css("display:flex;align-items:center;gap:8px")}>
-                      <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{h.date}</span>
-                      <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:var(--gray-100);border-radius:9999px;padding:2px 8px")}>완결</span>
+                  <div key={i} style={css("display:flex;gap:11px")}>
+                    <div style={css("display:flex;flex-direction:column;align-items:center;width:9px;flex:none")}>
+                      <span style={css("width:9px;height:9px;border-radius:9999px;flex:none;margin-top:13px;box-sizing:border-box;" + (i === 0 ? "background:var(--blue-700)" : "border:1.5px solid var(--gray-500);background:var(--onair-surface)"))} />
+                      {i < HISTORY.length - 1 && <span style={css("width:1.5px;flex:1;background:var(--gray-300)")} />}
                     </div>
-                    <div style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:4px")}>{h.label}</div>
+                    <div style={css("flex:1;padding:8px 0 14px")}>
+                      <div style={css("display:flex;align-items:center;gap:8px")}>
+                        <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{h.date}</span>
+                        <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:var(--gray-100);border-radius:9999px;padding:2px 8px")}>완결</span>
+                      </div>
+                      <div style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:3px")}>{h.label}</div>
+                    </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {vm.verified && showAccounts && (
+            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-away-l);animation:dockUp .25s ease")}>
+              <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
+                <span className="sechd">보유 계좌 및 카드</span>
+                <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{ACCOUNTS.length}건 · 정상</span>
+              </div>
+              <div style={css("overflow:auto")}>
+                {ACCOUNTS.map((a, i) => (
+                  <div key={i} style={css("padding:10px 14px" + (i < ACCOUNTS.length - 1 ? ";border-bottom:1px solid var(--gray-200)" : ""))}>
+                    <div style={css("display:flex;align-items:center;gap:7px")}>
+                      <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border-radius:9999px;padding:2px 8px;flex:none")}>{a.kind}</span>
+                      <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{a.name}</span>
+                      <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto")}>정상</span>
+                    </div>
+                    <div style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700);margin-top:4px;padding-left:2px")}>
+                      {a.no} · 개설 {a.opened}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={css("padding:8px 15px;border-top:1px solid var(--gray-200);font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                읽기 전용 · 고객 동의 하 열람
               </div>
             </div>
           )}
@@ -341,42 +418,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         </div>
       </div>
 
-      {/* 상세조회 dock */}
-      {vm.dockOpen && (
-        <div style={css("position:absolute;left:0;right:0;bottom:0;height:430px;background:#fff;border-top:2px solid var(--blue-700);box-shadow:0 -12px 32px rgba(0,0,0,.16);z-index:30;display:flex;flex-direction:column;animation:dockUp .2s ease")}>
-          <div style={css("display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:1px solid var(--gray-200)")}>
-            <span className="mi" style={css("font-size:20px;color:var(--gray-700)")}>grid_on</span>
-            <span style={css("font:700 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.dockTitle}</span>
-            <span style={css("font:400 11.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{vm.dockFile}</span>
-            <div style={css("flex:1")} />
-            <span onClick={vm.closeDock} style={css("display:inline-flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);border:1px solid var(--gray-300);border-radius:9999px;padding:6px 13px;cursor:pointer")}>
-              <span className="mi" style={css("font-size:16px")}>expand_more</span> 닫기
-            </span>
-          </div>
-          <div style={css("flex:1;overflow:auto;background:#fff")}>
-            <div style={css("display:flex;flex-direction:column;min-width:max-content")}>
-              <div style={css("display:flex;position:sticky;top:0")}>
-                <span style={css("width:40px;flex:none;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300)")} />
-                {vm.dockCols.map((c, i) => (
-                  <span key={i} style={css("width:" + c.w + "px;flex:none;padding:9px 12px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}</span>
-                ))}
-              </div>
-              {vm.dockRows.map((r) => (
-                <div key={r.n} style={css("display:flex")}>
-                  <span style={css("width:40px;flex:none;padding:9px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{r.n}</span>
-                  {r.cells.map((cell, ci) => (
-                    <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:9px 12px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{cell.text}</span>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={css("display:flex;align-items:center;gap:2px;padding:6px 12px;background:var(--gray-100);border-top:1px solid var(--gray-300)")}>
-            <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;background:#fff;border:1px solid var(--gray-300);border-bottom:none;border-radius:4px 4px 0 0;padding:5px 12px;color:var(--gray-1000)")}>{vm.dockSheet}</span>
-            <span style={css("margin-left:auto;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>읽기 전용 · 고객 동의 하 열람</span>
-          </div>
-        </div>
-      )}
     </DesktopShell>
   );
 }

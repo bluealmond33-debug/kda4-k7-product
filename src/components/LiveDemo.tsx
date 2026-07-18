@@ -33,18 +33,65 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             alignItems: "center",
           }}
         >
-          {/* 상단 제어 바 */}
-          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 22px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
-            <span style={css("font-weight:600;font-size:15px;letter-spacing:-.2px")}>K7 라이브 상담 시연</span>
+          {/* 상단 제어 바 — 4단계 스테퍼 + 현재 단계 상세 + 데모 조작 */}
+          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+            <div style={css("display:flex;align-items:center;gap:10px")}>
+              {["접수", "준비", "통화", "후처리"].map((label, i) => {
+                const n = i + 1;
+                const active = vm.stepIndex === n;
+                const done = vm.stepIndex > n;
+                return (
+                  <span key={label} style={css("display:inline-flex;align-items:center;gap:10px")}>
+                    {i > 0 && <span style={css("width:14px;height:1.5px;background:" + (done || active ? "var(--gray-500)" : "var(--gray-300)"))} />}
+                    <span style={css("display:inline-flex;align-items:center;gap:6px")}>
+                      <span
+                        style={css(
+                          "width:21px;height:21px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px 'Geist Mono',monospace;" +
+                            (active
+                              ? "background:var(--blue-700);color:#fff"
+                              : done
+                              ? "background:var(--gray-1000);color:#fff"
+                              : "background:var(--gray-100);color:var(--gray-600)")
+                        )}
+                      >
+                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : n}
+                      </span>
+                      <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+            <span style={css("width:1px;height:20px;background:var(--color-border)")} />
             <span style={css("display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
               <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--blue-700);animation:pulseDot 1.4s infinite")} />
               {vm.phaseLabel}
             </span>
-            <span style={css("width:1px;height:20px;background:var(--color-border)")} />
-            <span style={css("font-size:12px;color:var(--color-fg-muted)")}>입력</span>
+            {/* 다음 인입 콜 유형 (대기 중에만 선택 가능) */}
+            <span style={css("font-size:12px;color:var(--color-fg-muted)")}>다음 콜</span>
             <div style={css("display:flex;border:1px solid var(--color-border);border-radius:9999px;overflow:hidden")}>
-              <span onClick={vm.setSim} style={css("padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:" + vm.simBg + ";color:" + vm.simFg)}>시뮬레이션</span>
-              <span onClick={vm.setMic} style={css("padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:" + vm.micBg + ";color:" + vm.micFg)}>음성 파일</span>
+              {([
+                ["normal", "일반", vm.pickNormal],
+                ["urgent", "긴급", vm.pickUrgent],
+                ["transfer", "이관 수신", vm.pickTransfer],
+              ] as const).map(([key, label, pick]) => {
+                const on = vm.incoming === key;
+                const accent = key === "urgent" ? "var(--red-800)" : "var(--blue-700)";
+                return (
+                  <span
+                    key={key}
+                    onClick={pick}
+                    style={css(
+                      "padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;background:" +
+                        (on ? accent : "#fff") +
+                        ";color:" +
+                        (on ? "#fff" : "var(--color-fg-secondary)")
+                    )}
+                  >
+                    {label}
+                  </span>
+                );
+              })}
             </div>
             <input
               ref={audioInputRef}

@@ -2,6 +2,111 @@
 // and the spreadsheet-style reference tables (manual / history / accounts).
 // In production these would come from a CMS / knowledge base / core banking API.
 
+/** 로그인한 상담사 프로필 — 대기 화면·통화 화면 프로필 영역에서 공유.
+ *  level 은 부서 내 숙련도(경력/초보) — 이관 방향(초보→경력)의 기준. */
+export const AGENT = {
+  name: "김키움",
+  role: "상담사",
+  dept: "대출·금융상담팀",
+  tenure: "4년차",
+  level: "경력" as "경력" | "초보",
+  id: "K7-1042",
+} as const;
+
+/** 데모 고객 — 본인인증 전에는 마스킹된 이름만, 인증 후 실명 열람.
+ *  전화번호는 항상 마스킹(최소 표시 원칙). */
+export const CUSTOMER = {
+  name: "이정민",
+  masked: "이*민",
+  phoneMasked: "010-****-4821",
+  type: "개인 고객",
+} as const;
+
+/** 데모 인입 콜 유형 — 라우팅 기준 후보 문서(vault 07 Outputs 2026-07-18) 참조.
+ *  urgent = 장면 A(인입 시 긴급, 대기열 우선) · transfer = 부서 내 초보→경력 이관 수신 */
+export type IncomingKind = "normal" | "urgent" | "transfer";
+
+/** 긴급 콜 픽스처 — 명의도용 의심(사고 징후 high), 대기열 맨 앞 점프 */
+export const URGENT_RESPONSE = {
+  schema_version: "mvp-1.0",
+  call_id: "demo-urgent-0001",
+  status: "ready",
+  source_channel: "voice",
+  audio_filename: "demo-urgent.wav",
+  transcript: {
+    text: "제가 신청한 적 없는 대출이 실행됐다는 문자를 받았어요. 지금 바로 확인해주세요.",
+    stt_model: "whisper-1",
+    duration_sec: 6.8,
+  },
+  consultation_card: {
+    summary: "고객이 본인이 신청하지 않은 대출 실행 문자를 받았다며 긴급 확인을 요청함.",
+    business_type: "명의도용 의심 대출",
+    department: "대출 및 금융상담",
+    routing_reason: "본인 미신청 대출 실행 정황 — 긴급 확인 대상",
+    incident_risk: "high",
+    risk_reason: "명의도용·대출사기 의심 · 사고대응팀 공조 필요",
+    routing_confidence: 0.91,
+    emotion: {
+      status: "unavailable",
+      score: null,
+      level: null,
+      reason: "감정 모델은 아직 MVP 통합 전입니다.",
+    },
+  },
+  created_at: "2026-07-18T07:00:00Z",
+} as const;
+
+/** 이관 수신 픽스처 — 초보 상담사가 넘긴 복합 문의 */
+export const TRANSFER_RESPONSE = {
+  schema_version: "mvp-1.0",
+  call_id: "demo-transfer-0001",
+  status: "ready",
+  source_channel: "voice",
+  audio_filename: "demo-transfer.wav",
+  transcript: {
+    text: "전세자금대출 금리랑 만기를 바꾸고 싶은데 중도상환수수료가 어떻게 되는지도 알고 싶어요.",
+    stt_model: "whisper-1",
+    duration_sec: 9.6,
+  },
+  consultation_card: {
+    summary: "고객이 전세자금대출 조건변경(금리·만기)과 중도상환수수료를 복합 문의함.",
+    business_type: "전세자금대출 조건변경",
+    department: "대출 및 금융상담",
+    routing_reason: "약정 변경·심사 조건 상담에 해당",
+    incident_risk: "low",
+    risk_reason: null,
+    routing_confidence: 0.89,
+    emotion: {
+      status: "unavailable",
+      score: null,
+      level: null,
+      reason: "감정 모델은 아직 MVP 통합 전입니다.",
+    },
+  },
+  created_at: "2026-07-18T07:10:00Z",
+} as const;
+
+/** 이관 인수인계 — 사람이 쓰지 않는다. 전임 상담사의 통화를 AI가 요약해 자동 작성 */
+export const TRANSFER_HANDOVER = {
+  from: "박민지",
+  fromLevel: "초보" as const,
+  fromTenure: "1년차",
+  talkTime: "07:24",
+  verified: true,
+  aiMemo: [
+    "금리 인하 요구권 안내까지 진행됨",
+    "중도상환수수료 면제 조건에서 막힘 — 약정서 특약 확인 필요",
+    "고객이 재약정 절차를 오늘 안에 알고 싶어 함",
+  ],
+  remaining: "수수료 면제 조건 확정 · 재약정 절차 안내",
+} as const;
+
+/** 부서 내 이관 가능한 경력 상담사 — 이관 방향은 초보→경력 */
+export const TRANSFER_TARGETS = [
+  { name: "이수진", level: "경력", tenure: "6년차", state: "대기 중" },
+  { name: "정해원", level: "경력", tenure: "9년차", state: "통화 중 · 예약 가능" },
+] as const;
+
 export interface ScriptStep {
   title: string;
   text: string;

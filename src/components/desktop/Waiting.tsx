@@ -1,8 +1,11 @@
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
+import Standby from "./Standby";
 
-/** Desktop placeholder shown while there is no active consultation. */
+/** Desktop placeholder shown while there is no active consultation.
+ *  idle → 아침 대기 화면(Standby). connecting/recording/confirm → AI 접수 처리 중. */
 export default function Waiting({ vm }: { vm: CallFlowVM }) {
+  if (vm.phIdle) return <Standby />;
   return (
     <div
       style={css(

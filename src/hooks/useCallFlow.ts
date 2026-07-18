@@ -2,7 +2,13 @@ import type * as React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   CALL_SCRIPT,
+  CUSTOMER,
   SHEETS,
+  URGENT_RESPONSE,
+  TRANSFER_RESPONSE,
+  TRANSFER_HANDOVER,
+  TRANSFER_TARGETS,
+  type IncomingKind,
   renderSheet,
   WRAP_TYPE_OPTIONS,
   WRAP_RESULT_OPTIONS,
@@ -98,6 +104,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [mode, setMode] = useState<Mode>("sim");
+  // 다음 인입 콜 유형 (데모) — normal | urgent(장면 A) | transfer(이관 수신)
+  const [incoming, setIncoming] = useState<IncomingKind>("normal");
+  // 통화 중 "이관 예약" — 통화를 끊지 않고 걸어두면 종료 시 인계된다
+  const [transferReserved, setTransferReserved] = useState(false);
   const [clock, setClock] = useState(0);
   const [emo, setEmo] = useState(0);
   const [silenceLeft, setSilenceLeft] = useState(0);
@@ -252,8 +262,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }, [runScript, silTick]);
 
   // ── public actions ──
+  const incomingRef = useRef<IncomingKind>("normal");
+  incomingRef.current = incoming;
+
   const startCall = useCallback(() => {
     clearAll();
+    // 인입 유형에 맞는 상담카드 픽스처 선택 (데모)
+    const kind = incomingRef.current;
+    setConsultationResponse(
+      kind === "urgent"
+        ? (structuredClone(URGENT_RESPONSE) as unknown as ConsultationCardResponse)
+        : kind === "transfer"
+        ? (structuredClone(TRANSFER_RESPONSE) as unknown as ConsultationCardResponse)
+        : getDemoConsultationCard()
+    );
+    setTransferReserved(false);
     setPhase("connecting");
     setClock(0);
     setEmo(0);
@@ -262,6 +285,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     startClock();
     after(3000, () => beginRecording());
   }, [after, beginRecording, clearAll, startClock]);
+
+  const pickIncoming = useCallback((k: IncomingKind) => {
+    if (phaseRef.current === "idle") setIncoming(k);
+  }, []);
 
   const skipWait = useCallback(() => {
     if (phaseRef.current === "recording" || phaseRef.current === "confirm") {
@@ -294,6 +321,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setRegExpanded(false);
     setWrapSheetOpen(false);
     setFollowups(DEFAULT_FOLLOWUPS);
+    setTransferReserved(false);
+    setIncoming("normal");
   }, [clearAll]);
 
   const endCall = useCallback(() => {
@@ -461,7 +490,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const card = consultationResponse.consultation_card;
   const temperature = card.emotion;
   const inquiryLabel = card.business_type || summary?.type || "상담 유형 분석 중";
-  const contractBullets = [card.summary, card.routing_reason, card.risk_reason].filter(
+  // 요약 문장은 헤드라인 한 곳에만 — 불릿에는 근거만 남겨 중복을 없앤다.
+  const contractBullets = [card.routing_reason, card.risk_reason].filter(
     (value): value is string => !!value
   );
   const prepSummaryBullets = (contractBullets.length
@@ -488,6 +518,28 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,
+    // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
+    stepIndex:
+      p === "idle"
+        ? 0
+        : ["connecting", "recording", "confirm"].includes(p)
+        ? 1
+        : p === "prep"
+        ? 2
+        : p === "active"
+        ? 3
+        : 4,
+    // 인입 유형 (데모 제어) — idle에서만 변경 가능
+    incoming,
+    pickNormal: () => pickIncoming("normal"),
+    pickUrgent: () => pickIncoming("urgent"),
+    pickTransfer: () => pickIncoming("transfer"),
+    isUrgent: incoming === "urgent",
+    isTransfer: incoming === "transfer",
+    handover: TRANSFER_HANDOVER,
+    transferTargets: TRANSFER_TARGETS,
+    transferReserved,
+    toggleTransferReserve: () => setTransferReserved((v) => !v),
     micErr,
     audioBusy,
     simBg: sim ? "var(--blue-700)" : "#fff",
@@ -558,7 +610,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepDone: prepChecks.filter(Boolean).length,
     prepTotal: prepDefinitions.length,
     prepHeadline: card.summary || summary?.headline || "상담카드 생성 중",
-    prepCustomerLine: `고객 · ${inquiryLabel} · 음성 접수`,
+    // 문의유형은 배정권고 타일이 담당 — 여기 반복하지 않는다
+    prepCustomerLine: `발신 ${CUSTOMER.phoneMasked} · 음성 접수`,
     prepRoutingTitle: card.department || "담당 부서 분석 중",
     prepRoutingReason: card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
     prepEmotionLabel:
@@ -569,9 +622,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepRiskSignal: riskSignals.join(" · ") || "특이 사고 징후 없음",
     prepSummaryBullets,
     externalSessionKey: consultationResponse.call_id,
-    customerName: "고객",
-    customerNumber: "MVP-AUTO",
-    customerPhone: "음성 접수",
+    // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다
+    customerName: verified ? `${CUSTOMER.name} 고객` : `${CUSTOMER.masked} 고객`,
+    customerType: CUSTOMER.type,
+    customerPhone: CUSTOMER.phoneMasked,
     inquiryLabel,
     wrapSummaryDefault: [
       `고객의 ${card.summary ?? summary?.headline ?? "상담 내용"}.`,
@@ -610,10 +664,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     authMethodLabel,
     authPlaceholder:
       authMethod === "birth"
-        ? "생년월일 6자리 (YYMMDD)"
+        ? "고객이 말한 6자리 (YYMMDD)"
         : authMethod === "account"
-        ? "계좌 뒷 4자리"
-        : "연락처 뒷 4자리",
+        ? "고객이 말한 계좌 뒷 4자리"
+        : "고객이 말한 뒷 4자리",
     // script + memo
     steps: CALL_SCRIPT.map((st) => ({ title: st.title, text: st.text })),
     memoItems,

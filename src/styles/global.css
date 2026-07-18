@@ -144,6 +144,13 @@ a:hover {
 .lampdots i.lit.a { background: var(--amber-700); }
 .lampdots i.lit.g { background: var(--green-700); }
 
+/* 본인확인 입력 — 입력값은 모노·자간, placeholder는 가는 산세리프로 분리 */
+.authin::placeholder {
+  font: 400 12.5px "Geist Sans", "Pretendard", sans-serif;
+  letter-spacing: 0;
+  color: var(--gray-600);
+}
+
 @keyframes pulseDot {
   0%,
   100% {
