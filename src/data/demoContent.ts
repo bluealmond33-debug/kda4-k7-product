@@ -3,13 +3,13 @@
 // In production these would come from a CMS / knowledge base / core banking API.
 
 /** 로그인한 상담사 프로필 — 대기 화면·통화 화면 프로필 영역에서 공유.
- *  level 은 부서 내 숙련도(경력/초보) — 이관 방향(초보→경력)의 기준. */
+ *  level 은 부서 내 숙련도(시니어/주니어) — 이관 방향(주니어→시니어)의 기준. */
 export const AGENT = {
   name: "김키움",
   role: "상담사",
   dept: "대출·금융상담팀",
   tenure: "4년차",
-  level: "경력" as "경력" | "초보",
+  level: "시니어" as "시니어" | "주니어",
   id: "K7-1042",
 } as const;
 
@@ -25,7 +25,7 @@ export const CUSTOMER = {
 } as const;
 
 /** 데모 인입 콜 유형 — 라우팅 기준 후보 문서(vault 07 Outputs 2026-07-18) 참조.
- *  urgent = 장면 A(인입 시 긴급, 대기열 우선) · transfer = 부서 내 초보→경력 이관 수신 */
+ *  urgent = 장면 A(인입 시 긴급, 대기열 우선) · transfer = 부서 내 주니어→시니어 이관 수신 */
 export type IncomingKind = "normal" | "urgent" | "transfer";
 
 /** 긴급 콜 픽스처 — 명의도용 의심(사고 징후 high), 대기열 맨 앞 점프 */
@@ -63,7 +63,7 @@ export const URGENT_RESPONSE = {
 export const URGENT_PRIORITY_REASON =
   "금전 피해 진행 가능성(본인 미신청 대출 실행) — 긴급 기준 해당, 대기열 맨 앞으로 배정됨";
 
-/** 이관 수신 픽스처 — 초보 상담사가 넘긴 복합 문의 */
+/** 이관 수신 픽스처 — 주니어 상담사가 넘긴 복합 문의 */
 export const TRANSFER_RESPONSE = {
   schema_version: "mvp-1.0",
   call_id: "demo-transfer-0001",
@@ -97,7 +97,7 @@ export const TRANSFER_RESPONSE = {
 /** 이관 인수인계 — 사람이 쓰지 않는다. 전임 상담사의 통화를 AI가 요약해 자동 작성 */
 export const TRANSFER_HANDOVER = {
   from: "박민지",
-  fromLevel: "초보" as const,
+  fromLevel: "주니어" as const,
   fromTenure: "1년차",
   talkTime: "07:24",
   verified: true,
@@ -109,10 +109,10 @@ export const TRANSFER_HANDOVER = {
   remaining: "수수료 면제 조건 확정 · 재약정 절차 안내",
 } as const;
 
-/** 부서 내 이관 가능한 경력 상담사 — 이관 방향은 초보→경력 */
+/** 부서 내 이관 가능한 시니어 상담사 — 이관 방향은 주니어→시니어 */
 export const TRANSFER_TARGETS = [
-  { name: "이수진", level: "경력", tenure: "6년차", state: "대기 중" },
-  { name: "정해원", level: "경력", tenure: "9년차", state: "통화 중 · 예약 가능" },
+  { name: "이수진", level: "시니어", tenure: "6년차", state: "대기 중" },
+  { name: "정해원", level: "시니어", tenure: "9년차", state: "통화 중 · 예약 가능" },
 ] as const;
 
 export interface ScriptStep {

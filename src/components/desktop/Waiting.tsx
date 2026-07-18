@@ -44,6 +44,11 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
             </span>
           </span>
           <span style={css("width:1.3px;height:18px;background:var(--gray-200)")} />
+          {/* 접수 경과 = 고객이 기다린 시간 — 길어지면 상담사가 개입을 판단한다 */}
+          <span style={css("display:flex;align-items:center;gap:5px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+            접수 경과 <span className="mono" style={css("color:var(--gray-1000)")}>{vm.clockStr}</span>
+          </span>
+          <span style={css("width:1.3px;height:18px;background:var(--gray-200)")} />
           <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
             {vm.silenceLeft > 0 ? (
               <>무음 <span className="mono" style={css("color:var(--gray-1000)")}>{vm.silenceLeft}초</span> 후 요약 시작</>

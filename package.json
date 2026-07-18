@@ -16,6 +16,7 @@
     "check:release": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-release-gates.ps1"
   },
   "dependencies": {
+    "lucide-react": "^1.25.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

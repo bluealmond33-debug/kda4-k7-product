@@ -247,7 +247,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </span>
             {pickerOpen && (
               <div style={css("position:absolute;bottom:52px;right:0;width:290px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:12px;z-index:20;animation:dockUp .18s ease")}>
-                <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:3px")}>부서 내 경력 상담사에게 이관</div>
+                <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:3px")}>부서 내 시니어 상담사에게 이관</div>
                 <div style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>AI 인계 메모가 자동 작성되어 함께 전달됩니다</div>
                 <div style={css("display:flex;flex-direction:column;gap:6px")}>
                   {vm.transferTargets.map((t) => (
