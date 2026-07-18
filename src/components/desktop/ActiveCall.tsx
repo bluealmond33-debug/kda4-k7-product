@@ -72,10 +72,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
             <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</span>
           </span>
-          <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
-            <span className="mi" style={css("font-size:14px")}>check_circle</span> 준비 카드 확인
-          </span>
           <span style={css("margin-left:auto;font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           {vm.transferReserved && (
@@ -403,7 +399,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                     </div>
                     <div style={css("display:flex;flex-direction:column;gap:9px")}>
                       {vm.regRecos.map((r) => (
-                        <RegReco key={r.title} vm={vm} title={r.title} body={r.body} file={r.file} />
+                        <RegReco key={r.title} vm={vm} title={r.title} body={r.body} file={r.file} row={r.row} />
                       ))}
                     </div>
                   </div>
@@ -432,14 +428,18 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                         <span key={i} style={css("width:" + c.w + "px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}</span>
                       ))}
                     </div>
-                    {vm.regRows.map((r) => (
-                      <div key={r.n} style={css("display:flex")}>
-                        <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{r.n}</span>
-                        {r.cells.map((cell, ci) => (
-                          <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{cell.text}</span>
-                        ))}
-                      </div>
-                    ))}
+                    {vm.regRows.map((r) => {
+                      /* '열기'로 진입한 조항은 행 전체가 강조된다 */
+                      const hit = vm.regTargetRow != null && r.n === vm.regTargetRow + 1;
+                      return (
+                        <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 3px 0 0 var(--blue-700)" : ""))}>
+                          <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--blue-900)" : "var(--gray-600)") + ";background:" + (hit ? "var(--blue-100)" : "var(--gray-100)"))}>{r.n}</span>
+                          {r.cells.map((cell, ci) => (
+                            <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--blue-100)" : "transparent"))}>{cell.text}</span>
+                          ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <div style={css("display:flex;align-items:center;gap:2px;padding:6px 10px;background:var(--gray-100);border-top:1px solid var(--gray-300)")}>
@@ -456,14 +456,15 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   );
 }
 
-function RegReco({ vm, title, body, file }: { vm: CallFlowVM; title: string; body: string; file: string }) {
+function RegReco({ vm, title, body, file, row }: { vm: CallFlowVM; title: string; body: string; file: string; row: number }) {
   return (
     <div style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
       <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{title}</div>
       <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{body}</div>
       <div style={css("display:flex;align-items:center;justify-content:space-between;margin-top:8px")}>
         <span style={css("font:400 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{file}</span>
-        <span onClick={vm.openManual} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);background:var(--onair-surface);border-radius:9999px;padding:4px 11px;cursor:pointer")}>
+        {/* 열기 = 규정집 확장 + 해당 조항 행 강조 */}
+        <span onClick={() => vm.openManualAt(row)} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);background:var(--onair-surface);border-radius:9999px;padding:4px 11px;cursor:pointer")}>
           <span className="mi" style={css("font-size:14px")}>open_in_new</span> 열기
         </span>
       </div>

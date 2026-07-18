@@ -119,6 +119,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [incoming, setIncoming] = useState<IncomingKind>("normal");
   // 통화 중 "이관 예약" — 통화를 끊지 않고 걸어두면 종료 시 인계된다
   const [transferReserved, setTransferReserved] = useState(false);
+  // 감정온도는 고정값이 아니라 실시간 신호 — 데모에선 통화 20초 후 안정으로 하강(상담 효과 연출)
+  const [emoDrift, setEmoDrift] = useState<{ score: number; level: "stable" | "caution" | "elevated"; reason: string } | null>(null);
   const [clock, setClock] = useState(0);
   const [emo, setEmo] = useState(0);
   const [silenceLeft, setSilenceLeft] = useState(0);
@@ -141,6 +143,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const [dockType, setDockType] = useState<DockType | null>(null);
   const [regExpanded, setRegExpanded] = useState(false);
+  // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
+  const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
   const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
   const [wrapType, setWrapType] = useState(WRAP_TYPE_OPTIONS[0]);
@@ -289,6 +293,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         : getDemoConsultationCard()
     );
     setTransferReserved(false);
+    setEmoDrift(null);
     setPhase("connecting");
     setClock(0);
     setEmo(0);
@@ -312,8 +317,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }, [toPrep]);
 
   const answerCall = useCallback(() => {
-    if (prepChecks.every(Boolean)) setPhase("active");
-  }, [prepChecks]);
+    if (prepChecks.every(Boolean)) {
+      setPhase("active");
+      // 상담이 진행되며 고객이 진정되는 흐름 — 감정온도가 살아있는 신호임을 보여준다
+      after(20000, () =>
+        setEmoDrift({ score: 22, level: "stable", reason: "상담 진행 후 안정 — 응대 톤 유지" })
+      );
+    }
+  }, [after, prepChecks]);
 
   const reset = useCallback(() => {
     clearAll();
@@ -334,6 +345,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setWrapSheetOpen(false);
     setFollowups(DEFAULT_FOLLOWUPS);
     setTransferReserved(false);
+    setEmoDrift(null);
     setIncoming("normal");
   }, [clearAll]);
 
@@ -509,7 +521,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const allChecked = prepChecks.every(Boolean);
   const card = consultationResponse.consultation_card;
-  const temperature = card.emotion;
+  // 통화 중 드리프트가 있으면 실시간 값이 카드 초기값을 덮는다
+  const temperature =
+    p === "active" && emoDrift
+      ? { status: "completed" as const, score: emoDrift.score, level: emoDrift.level, reason: emoDrift.reason }
+      : card.emotion;
   const inquiryLabel = card.business_type || summary?.type || "상담 유형 분석 중";
   // 요약 문장은 헤드라인 한 곳에만 — 불릿에는 근거만 남겨 중복을 없앤다.
   const contractBullets = [card.routing_reason, card.risk_reason].filter(
@@ -726,7 +742,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     dockRows: dk.rows,
     // regulations panel
     openManual: () => setRegExpanded(true),
-    closeReg: () => setRegExpanded(false),
+    openManualAt: (row: number) => {
+      setRegTargetRow(row);
+      setRegExpanded(true);
+    },
+    closeReg: () => {
+      setRegExpanded(false);
+      setRegTargetRow(null);
+    },
+    regTargetRow,
     regExpanded,
     regCollapsed: !regExpanded,
     regW: regExpanded ? 720 : 372,

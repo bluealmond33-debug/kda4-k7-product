@@ -34,7 +34,9 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
           }}
         >
           {/* 상단 제어 바 — 4단계 스테퍼 + 현재 단계 상세 + 데모 조작 */}
-          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 20px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+            <span style={css("font:700 15px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")} title="옹기 — 상담 콘솔">옹기</span>
+            <span style={css("width:1px;height:20px;background:var(--color-border)")} />
             <div style={css("display:flex;align-items:center;gap:10px")}>
               {["접수", "준비", "통화", "후처리"].map((label, i) => {
                 const n = i + 1;
