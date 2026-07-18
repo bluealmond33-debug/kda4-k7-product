@@ -1,5 +1,6 @@
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
+import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
 const DONE_LIST = [
@@ -38,11 +39,11 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <span className="av" style={css("width:42px;height:42px")}><span className="mi" style={css("font-size:22px")}>headset_mic</span></span>
             <div style={css("flex:1;min-width:0")}>
               <div style={css("display:flex;align-items:center;gap:6px")}>
-                <span style={css("font-weight:700;font-size:15px")}>상담사 김키움</span>
+                <span style={css("font-weight:700;font-size:15px")}>{AGENT.role} {AGENT.name}</span>
                 <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--amber-700)")} />
                 <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>후처리 중</span>
               </div>
-              <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:1px")}>전자금융팀 · 사번 A-2231</div>
+              <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:1px")}>{AGENT.dept} · {AGENT.tenure} · {AGENT.id}</div>
             </div>
             <div style={css("text-align:right;flex:none;padding-left:10px;border-left:1px solid var(--gray-200)")}>
               <div style={css("font:700 15px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-700)")}>12→13</div>
@@ -58,7 +59,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <div style={css("overflow:auto")}>
               <div style={css("padding:11px 14px;background:var(--gray-100);border-bottom:1px solid var(--gray-200)")}>
                 <div style={css("display:flex;align-items:center;gap:8px")}>
-                  <span style={css("font-weight:700;font-size:14px")}>고객 · {vm.customerName}</span>
+                  <span style={css("font-weight:700;font-size:14px")}>{vm.customerName}</span>
                   <span style={css("font:700 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-left:auto")}>지금 후처리 중</span>
                 </div>
                 <div style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);margin-top:4px")}>{vm.inquiryLabel}</div>
@@ -210,7 +211,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 <div style={css("width:330px;flex:none;display:flex;flex-direction:column;gap:12px;overflow:visible")}>
                   <div style={css("display:flex;flex-direction:column;gap:8px")}>
                     <EditRow label="고객" value={`${vm.customerName} · ${vm.customerPhone}`} />
-                    <EditRow label="상담사" value="김키움 · A-2231" />
+                    <EditRow label="상담사" value={`${AGENT.name} · ${AGENT.id}`} />
                     <EditRow label="일시" value="2026.07.15 14:32" small />
                   </div>
 
