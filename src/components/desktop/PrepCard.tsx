@@ -33,7 +33,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5)")} />
 
       {/* 모달 */}
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:860px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
+      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
         <div style={css("padding:22px 28px 20px;border-bottom:1px solid var(--gray-200)")}>
           <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:14px")}>
             <span className="lampdots" title={vm.isUrgent ? "온에어 · 긴급 인입" : "온에어 · 인입 대기"}>

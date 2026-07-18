@@ -18,7 +18,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
   return (
     <div
       ref={vm.rootRef}
-      style={css("min-height:100vh;padding:20px;display:flex;justify-content:center;background:#060607;box-sizing:border-box")}
+      style={css("min-height:100vh;padding:20px;display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box")}
     >
       <div style={{ width: vm.scaledW, height: vm.scaledH }}>
         <div
@@ -135,10 +135,10 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             </div>
           )}
 
-          {/* 폰 + 데스크톱 */}
-          <div style={css("display:flex;gap:80px;align-items:center;justify-content:center")}>
+          {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율 */}
+          <div style={css("display:flex;gap:40px;align-items:center;justify-content:center")}>
             <Phone vm={vm} />
-            <div style={css("flex:none;width:1040px;height:679px;display:flex;align-items:center;justify-content:center")}>
+            <div style={css("flex:none;width:1100px;height:688px;display:flex;align-items:center;justify-content:center")}>
               {vm.showWaiting && <Waiting vm={vm} />}
               {vm.showPrep && <PrepCard vm={vm} />}
               {vm.showActive && <ActiveCall vm={vm} />}

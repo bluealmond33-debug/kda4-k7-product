@@ -9,7 +9,7 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
   return (
     <div
       style={css(
-        "width:1040px;height:640px;background:var(--onair-bg);border-radius:20px;box-shadow:var(--sh-near);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:'Geist Sans','Pretendard',system-ui,sans-serif"
+        "width:1100px;height:688px;background:var(--onair-bg);border-radius:20px;box-shadow:var(--sh-near);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:'Geist Sans','Pretendard',system-ui,sans-serif"
       )}
     >
       {vm.waitingSpin && (

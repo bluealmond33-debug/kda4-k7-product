@@ -104,7 +104,7 @@ export default function Standby() {
   return (
     <div
       style={css(
-        "width:1040px;height:640px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-near);display:flex;flex-direction:column;font-family:'Geist Sans','Pretendard',system-ui,sans-serif;overflow:hidden"
+        "width:1100px;height:688px;background:var(--onair-surface);border-radius:20px;box-shadow:var(--sh-near);display:flex;flex-direction:column;font-family:'Geist Sans','Pretendard',system-ui,sans-serif;overflow:hidden"
       )}
     >
       {/* ── 상단: 프로필 + 날짜/상태 ── */}
