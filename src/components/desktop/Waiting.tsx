@@ -21,6 +21,38 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
       )}
       <div style={css("font-size:18px;font-weight:700;color:var(--gray-1000)")}>{vm.waitingText}</div>
       <div style={css("font-size:13px;color:var(--gray-700)")}>{vm.waitingSub}</div>
+
+      {/* 라이브 신호 — 접수 중에도 상담사 화면이 살아 있다: 감정온도 상승 + 무음 카운트다운 */}
+      {vm.waitingSpin && (
+        <div style={css("display:flex;align-items:center;gap:22px;margin-top:10px;background:var(--onair-surface);border-radius:9999px;padding:10px 22px;box-shadow:var(--sh-far)")}>
+          <span style={css("display:flex;align-items:center;gap:8px")} title="실시간 감정온도">
+            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
+            <span style={css("display:flex;gap:2px")}>
+              {[1, 2, 3].map((bar) => (
+                <span
+                  key={bar}
+                  className="seg"
+                  style={css(
+                    "transition:background .4s;background:" +
+                      (bar <= vm.emo ? (vm.emo >= 3 ? "var(--red-700)" : "var(--amber-700)") : "var(--gray-200)")
+                  )}
+                />
+              ))}
+            </span>
+            <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--gray-700)"))}>
+              {vm.emo >= 3 ? "고조" : vm.emo >= 1 ? "상승 중" : "안정"}
+            </span>
+          </span>
+          <span style={css("width:1.3px;height:18px;background:var(--gray-200)")} />
+          <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+            {vm.silenceLeft > 0 ? (
+              <>무음 <span className="mono" style={css("color:var(--gray-1000)")}>{vm.silenceLeft}초</span> 후 요약 시작</>
+            ) : (
+              "고객 발화 수신 중"
+            )}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

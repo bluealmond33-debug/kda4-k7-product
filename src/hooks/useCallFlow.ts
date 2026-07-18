@@ -1,7 +1,9 @@
 import type * as React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  CALL_SCRIPT,
+  SCRIPTS,
+  REG_RECOS,
+  REG_QUERY,
   CUSTOMER,
   SHEETS,
   URGENT_RESPONSE,
@@ -91,6 +93,13 @@ const PREP_ITEMS = [
 
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
 const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
+// 색은 값에 바인딩 — 낮음이 빨갛게, 주의가 늘 앰버로 보이는 거짓말을 막는다
+const EMOTION_COLORS = {
+  stable: { fg: "var(--green-900)", bar: "var(--green-700)" },
+  caution: { fg: "var(--amber-900)", bar: "var(--amber-700)" },
+  elevated: { fg: "var(--red-900)", bar: "var(--red-700)" },
+} as const;
+const RISK_COLORS = { low: "var(--green-900)", high: "var(--red-900)" } as const;
 
 const fmt = (s: number) => {
   const m = Math.floor(s / 60);
@@ -120,6 +129,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
   const [authErr, setAuthErr] = useState(false);
+  const [authErrMsg, setAuthErrMsg] = useState("");
   const [authTime, setAuthTime] = useState("");
   const [authMethodLabel, setAuthMethodLabel] = useState("");
 
@@ -391,8 +401,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }, []);
   const runVerify = useCallback(() => {
     const need = authMethod === "birth" ? 6 : 4;
-    const n = (authInput || "").replace(/\D/g, "").length;
-    if (n >= need) {
+    const digits = (authInput || "").replace(/\D/g, "");
+    if (digits.length < need) {
+      setAuthErrMsg(`자릿수가 부족합니다 — ${need}자리를 입력하세요`);
+      setAuthErr(true);
+      return;
+    }
+    // 고객 진술값과 대조 — 불일치는 인증 실패 (은행 툴의 핵심 경로)
+    if (digits.slice(-need) !== CUSTOMER.authAnswers[authMethod]) {
+      setAuthErrMsg("고객 진술과 불일치 — 값을 다시 확인하거나 다른 대조 방식을 사용하세요");
+      setAuthErr(true);
+      return;
+    }
+    {
       const now = new Date();
       const t =
         ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2);
@@ -406,8 +427,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAuthTime(t);
       setAuthMethodLabel(lbl);
       setAuthErr(false);
-    } else {
-      setAuthErr(true);
     }
   }, [authInput, authMethod]);
   const resetAuth = useCallback(() => {
@@ -623,8 +642,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         : "분석 중",
     prepEmotionSignal: temperature.reason ?? "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
+    prepEmotionFg: temperature.level ? EMOTION_COLORS[temperature.level].fg : "var(--gray-700)",
+    prepEmotionBar: temperature.level ? EMOTION_COLORS[temperature.level].bar : "var(--gray-500)",
     prepRiskLabel: RISK_LABELS[card.incident_risk],
+    prepRiskFg: RISK_COLORS[card.incident_risk],
     prepRiskSignal: riskSignals.join(" · ") || "특이 사고 징후 없음",
+    prepConfidence:
+      card.routing_confidence != null
+        ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
+        : "확신도 산출 전 · 상담사 확인 필요",
+    transcriptQuote: consultationResponse.transcript.text,
     prepSummaryBullets,
     externalSessionKey: consultationResponse.call_id,
     // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다
@@ -665,6 +692,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     runVerify,
     resetAuth,
     authErr,
+    authErrMsg,
     authTime,
     authMethodLabel,
     authPlaceholder:
@@ -673,8 +701,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         : authMethod === "account"
         ? "고객이 말한 계좌 뒷 4자리"
         : "고객이 말한 뒷 4자리",
-    // script + memo
-    steps: CALL_SCRIPT.map((st) => ({ title: st.title, text: st.text })),
+    // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
+    steps: SCRIPTS[incoming].map((st) => ({ title: st.title, text: st.text })),
+    firstLine: SCRIPTS[incoming][0].text,
+    regRecos: REG_RECOS[incoming],
+    regQuery: REG_QUERY[incoming],
     memoItems,
     memoEmpty: memoItems.length === 0,
     memoDraft,

@@ -90,6 +90,18 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <div style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:7px")}>
                 {vm.prepCustomerLine}
               </div>
+              {/* 감사 흔적 — 요약의 근거가 된 고객 발화 원문 */}
+              <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:6px")}>
+                근거 발화 · <span style={css("font-style:italic")}>“{vm.transcriptQuote}”</span>
+              </div>
+            </div>
+          </div>
+          {/* 첫 응대 문장 — 이 문장으로 통화를 연다 (제품 논지의 한 줄) */}
+          <div style={css("display:flex;align-items:baseline;gap:10px;margin-top:14px;background:var(--gray-100);border-radius:14px;padding:12px 16px")}>
+            <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
+            <div>
+              <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>첫 응대 문장 — 이 문장으로 여세요</div>
+              <div style={css("font:500 14.5px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
             </div>
           </div>
         </div>
@@ -130,9 +142,11 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               </div>
               <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</div>
               <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:4px")}>{vm.prepRoutingReason}</div>
+              {/* AI는 참고, 판단은 사람 — 확신도와 '후보' 상태를 드러낸다 */}
+              <div style={css("font:600 10.5px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900);margin-top:6px")}>{vm.prepConfidence}</div>
             </div>
             <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
-              <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:8px")}>고객 감정온도</div>
+              <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>고객 감정온도</div>
               <div style={css("display:flex;align-items:center;gap:8px")}>
                 <span style={css("display:flex;gap:2px")}>
                   {[1, 2, 3].map((bar) => (
@@ -140,23 +154,21 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                       key={bar}
                       style={css(
                         "width:18px;height:6px;border-radius:2px;background:" +
-                          (bar <= vm.prepEmotionBars
-                            ? "var(--amber-700)"
-                            : "var(--gray-200)")
+                          (bar <= vm.prepEmotionBars ? vm.prepEmotionBar : "var(--gray-200)")
                       )}
                     />
                   ))}
                 </span>
-                <span style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>{vm.prepEmotionLabel}</span>
+                <span style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
               </div>
-              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-top:4px")}>{vm.prepEmotionSignal}</div>
+              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:4px")}>{vm.prepEmotionSignal}</div>
             </div>
             <div style={css("background:var(--gray-100);border-radius:14px;padding:14px 16px")}>
-              <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);margin-bottom:8px")}>
-                <span className="mi" style={css("font-size:14px")}>gpp_maybe</span>사고 징후
+              <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
+                <span className="mi" style={css("font-size:14px;color:" + vm.prepRiskFg)}>gpp_maybe</span>사고 징후
               </div>
-              <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>{vm.prepRiskLabel}</div>
-              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);margin-top:4px")}>{vm.prepRiskSignal}</div>
+              <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</div>
+              <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg + ";margin-top:4px")}>{vm.prepRiskSignal}</div>
             </div>
           </div>
 

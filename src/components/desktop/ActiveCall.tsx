@@ -22,6 +22,9 @@ const ACCOUNTS = [
 export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [showHistory, setShowHistory] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [held, setHeld] = useState(false);
+  const [endConfirm, setEndConfirm] = useState(false);
 
   // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
   const leftColRef = useRef<HTMLDivElement | null>(null);
@@ -63,16 +66,16 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
             <span style={css("display:flex;gap:2px")}>
               {[1, 2, 3].map((bar) => (
-                <span key={bar} className="seg" style={css("background:" + (bar <= vm.prepEmotionBars ? "var(--amber-700)" : "var(--gray-200)"))} />
+                <span key={bar} className="seg" style={css("background:" + (bar <= vm.prepEmotionBars ? vm.prepEmotionBar : "var(--gray-200)"))} />
               ))}
             </span>
-            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>{vm.prepEmotionLabel}</span>
+            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:5px")}>
-            <span className="mi" style={css("font-size:15px;color:var(--red-700)")}>gpp_maybe</span>
+            <span className="mi" style={css("font-size:15px;color:" + vm.prepRiskFg)}>gpp_maybe</span>
             <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
-            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>{vm.prepRiskLabel}</span>
+            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</span>
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
@@ -85,9 +88,28 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · 종료 시 인계
             </span>
           )}
+          {held && (
+            <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
+              <span className="mi" style={css("font-size:13px")}>pause</span> 보류 중 · 고객에게 대기 안내
+            </span>
+          )}
           <span style={css("display:flex;gap:5px")}>
-            <span className="cbtn" title="음소거"><span className="mi" style={css("font-size:19px")}>mic_off</span></span>
-            <span className="cbtn" title="보류"><span className="mi" style={css("font-size:19px")}>pause</span></span>
+            <span
+              className="cbtn"
+              title={muted ? "음소거 해제" : "음소거"}
+              onClick={() => setMuted((v) => !v)}
+              style={muted ? { background: "var(--gray-1000)", color: "#fff", borderColor: "var(--gray-1000)" } : undefined}
+            >
+              <span className="mi" style={css("font-size:19px")}>{muted ? "mic_off" : "mic"}</span>
+            </span>
+            <span
+              className="cbtn"
+              title={held ? "보류 해제" : "보류 — 고객에게 대기 멘트"}
+              onClick={() => setHeld((v) => !v)}
+              style={held ? { background: "var(--amber-700)", color: "#fff", borderColor: "var(--amber-700)" } : undefined}
+            >
+              <span className="mi" style={css("font-size:19px")}>{held ? "play_arrow" : "pause"}</span>
+            </span>
             <span
               className="cbtn"
               title={vm.transferReserved ? "이관 예약 취소" : "이관 예약 — 통화를 끊지 않고 종료 시 인계"}
@@ -97,12 +119,24 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
             </span>
           </span>
-          <span
-            title="통화 종료"
-            onClick={vm.endCall}
-            style={css("width:38px;height:38px;border-radius:9999px;background:var(--red-800);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer")}
-          >
-            <span className="mi" style={css("font-size:20px")}>call_end</span>
+          <span style={css("position:relative")}>
+            <span
+              title="통화 종료"
+              onClick={() => setEndConfirm((v) => !v)}
+              style={css("width:38px;height:38px;border-radius:9999px;background:var(--red-800);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer")}
+            >
+              <span className="mi" style={css("font-size:20px")}>call_end</span>
+            </span>
+            {/* 오클릭 방지 — 종료는 한 번 더 묻는다 */}
+            {endConfirm && (
+              <div style={css("position:absolute;top:48px;right:0;width:220px;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);padding:13px 14px;z-index:40;animation:dockUp .15s ease")}>
+                <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:9px")}>통화를 종료할까요?</div>
+                <div style={css("display:flex;gap:6px")}>
+                  <span onClick={vm.endCall} style={css("flex:1;text-align:center;padding:7px 0;border-radius:9999px;background:var(--red-800);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>종료</span>
+                  <span onClick={() => setEndConfirm(false)} style={css("flex:1;text-align:center;padding:7px 0;border-radius:9999px;background:var(--gray-100);color:var(--gray-900);font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>계속 통화</span>
+                </div>
+              </div>
+            )}
           </span>
         </div>
       </div>
@@ -186,7 +220,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <span onClick={vm.runVerify} style={css("flex:none;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>대조</span>
                 </div>
                 {vm.authErr && (
-                  <div style={css("margin-top:7px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)")}>입력값이 부족합니다 · 자릿수를 확인하세요</div>
+                  <div style={css("margin-top:7px;display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--red-800)")}>
+                    <span className="mi" style={css("font-size:13px")}>error</span>
+                    {vm.authErrMsg}
+                  </div>
                 )}
                 <div style={css("display:flex;align-items:center;gap:5px;margin-top:9px;font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
                   <span className="mi" style={css("font-size:13px")}>lock</span> 원문은 표시되지 않으며 입력값과 자동 대조됩니다
@@ -358,7 +395,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 <div style={css("padding:12px 15px;border-bottom:1px solid var(--gray-200)")}>
                   <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;background:var(--onair-surface)")}>
                     <span className="mi" style={css("font-size:18px;color:var(--gray-700)")}>search</span>
-                    <span style={css("flex:1;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>착오송금 반환</span>
+                    <span style={css("flex:1;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.regQuery}</span>
                   </div>
                   <div style={css("display:flex;align-items:center;gap:5px;margin-top:7px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
                     <span className="mi" style={css("font-size:14px")}>info</span> 열기를 누르면 오른쪽에서 규정집이 펼쳐집니다
@@ -370,8 +407,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       <span className="mi" style={css("font-size:14px")}>auto_awesome</span> 이번 상담 예상 규정 · AI 추천
                     </div>
                     <div style={css("display:flex;flex-direction:column;gap:9px")}>
-                      <RegReco vm={vm} title="착오송금 반환지원 제도" body="“수취인 동의 없이 임의로 돌려드릴 수는 없고, 예금보험공사 반환지원 제도로 신청하실 수 있습니다.”" file="전자금융_업무매뉴얼 · 12행" />
-                      <RegReco vm={vm} title="전자금융 이상거래(FDS) 대응" body="거래 시각·기기·IP 변경 이력 확인. 의심 시 사고대응팀 연계." file="이상거래_대응지침 · 44행" />
+                      {vm.regRecos.map((r) => (
+                        <RegReco key={r.title} vm={vm} title={r.title} body={r.body} file={r.file} />
+                      ))}
                     </div>
                   </div>
                   <div>
@@ -385,7 +423,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             ) : (
               <>
-                <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:#1f7a44;color:#fff")}>
+                {/* 엑셀 크롬 — 채도 높은 초록 대신 쿨 뉴트럴 잉크 (온에어: 면은 한 색) */}
+                <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-1000);color:#fff")}>
                   <span className="mi" style={css("font-size:18px")}>grid_on</span>
                   <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif")}>{vm.regFile}</span>
                   <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;opacity:.85")}>· {vm.regSheet} 시트</span>
