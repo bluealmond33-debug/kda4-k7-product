@@ -173,6 +173,15 @@ a:hover {
   box-shadow: var(--sh-near);
 }
 
+/* 메모 행 수정·삭제 — 올렸을 때만 드러난다. 상시 노출이면 기록이 산만해진다 */
+.memorow .memoact {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.memorow:hover .memoact {
+  opacity: 1;
+}
+
 /* ONAIR 대형 숫자(카운터·스탯) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
 .bignum {
   font-family: "Geist Sans", "Pretendard", sans-serif;

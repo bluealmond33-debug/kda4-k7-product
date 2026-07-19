@@ -464,6 +464,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     },
     [addMemo]
   );
+  // 기록된 불릿의 수정·삭제 — 당연한 기능: 오타 메모를 지우거나 고칠 수 있어야 한다
+  const updateMemo = useCallback((i: number, text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    setMemoItems((items) => items.map((m, x) => (x === i ? t : m)));
+  }, []);
+  const removeMemo = useCallback((i: number) => {
+    setMemoItems((items) => items.filter((_, x) => x !== i));
+  }, []);
 
   // ── followups ──
   const removeFollowup = useCallback((i: number) => {
@@ -730,6 +739,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     memoDraft,
     onMemoDraft: (e: React.ChangeEvent<HTMLInputElement>) => setMemoDraft(e.target.value),
     onMemoKey,
+    updateMemo,
+    removeMemo,
     // dock (detail lookups)
     openHistory: () => setDockType("history"),
     openAccounts: () => setDockType("accounts"),
@@ -753,7 +764,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     regTargetRow,
     regExpanded,
     regCollapsed: !regExpanded,
-    regW: regExpanded ? 720 : 372,
+    // 확장 폭 640 — 시트가 3컬럼 리플로우라 640이면 잘림 없이 들어가고, 중앙 스크립트 압착도 덜하다
+    regW: regExpanded ? 640 : 372,
     regFile: rg.file,
     regSheet: rg.sheet,
     regCols: rg.cols,

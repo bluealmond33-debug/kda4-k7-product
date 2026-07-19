@@ -25,6 +25,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [muted, setMuted] = useState(false);
   const [held, setHeld] = useState(false);
   const [endConfirm, setEndConfirm] = useState(false);
+  // 메모 인라인 수정 — editIdx 행이 input으로 바뀐다
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const memoInputRef = useRef<HTMLInputElement | null>(null);
 
   // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
   const leftColRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +43,33 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [showHistory, showAccounts]);
+
+  // 키보드 단축키 — 입력 중에는 무시(Esc 제외). M 음소거 / H 보류 / T 이관 예약 / R 규정집 / N 메모
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement;
+      const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      if (e.key === "Escape") {
+        setEndConfirm(false);
+        setEditIdx(null);
+        if (typing) el.blur();
+        return;
+      }
+      if (typing) return;
+      const k = e.key.toLowerCase();
+      if (k === "m") setMuted((v) => !v);
+      else if (k === "h") setHeld((v) => !v);
+      else if (k === "t") vm.toggleTransferReserve();
+      else if (k === "r") (vm.regCollapsed ? vm.openManual : vm.closeReg)();
+      else if (k === "n") {
+        e.preventDefault();
+        memoInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [vm]);
   return (
     <DesktopShell flex>
       {/* 상단 알약 */}
@@ -87,7 +118,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <span style={css("display:flex;gap:5px")}>
             <span
               className="cbtn"
-              title={muted ? "음소거 해제" : "음소거"}
+              title={(muted ? "음소거 해제" : "음소거") + " · 단축키 M"}
               onClick={() => setMuted((v) => !v)}
               style={muted ? { background: "var(--gray-1000)", color: "#fff", borderColor: "var(--gray-1000)" } : undefined}
             >
@@ -95,7 +126,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </span>
             <span
               className="cbtn"
-              title={held ? "보류 해제" : "보류 — 고객에게 대기 멘트"}
+              title={(held ? "보류 해제" : "보류 — 고객에게 대기 멘트") + " · 단축키 H"}
               onClick={() => setHeld((v) => !v)}
               style={held ? { background: "var(--amber-700)", color: "#fff", borderColor: "var(--amber-700)" } : undefined}
             >
@@ -103,7 +134,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </span>
             <span
               className="cbtn"
-              title={vm.transferReserved ? "이관 예약 취소" : "이관 예약 — 통화를 끊지 않고 종료 시 인계"}
+              title={(vm.transferReserved ? "이관 예약 취소" : "이관 예약 — 통화를 끊지 않고 종료 시 인계") + " · 단축키 T"}
               onClick={vm.toggleTransferReserve}
               style={vm.transferReserved ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : undefined}
             >
@@ -343,9 +374,45 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
             <div style={css("flex:1;overflow:auto;padding:10px 16px;display:flex;flex-direction:column;gap:6px")}>
               {vm.memoItems.map((m, i) => (
-                <div key={i} style={css("display:flex;gap:8px;align-items:baseline")}>
+                <div key={i} className="memorow" style={css("display:flex;gap:8px;align-items:baseline")}>
                   <span style={css("color:var(--blue-700);font-weight:700;flex:none")}>•</span>
-                  <span style={css("font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{m}</span>
+                  {editIdx === i ? (
+                    <input
+                      autoFocus
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          vm.updateMemo(i, editText);
+                          setEditIdx(null);
+                        }
+                      }}
+                      onBlur={() => setEditIdx(null)}
+                      style={css("flex:1;min-width:0;border:none;outline:none;border-bottom:1px solid var(--blue-400);font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:transparent;padding:0")}
+                    />
+                  ) : (
+                    <>
+                      <span style={css("flex:1;min-width:0;font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{m}</span>
+                      {/* 수정·삭제 — 행에 올렸을 때만 드러난다 (memorow:hover) */}
+                      <span className="memoact" style={css("display:flex;gap:2px;flex:none;align-self:center")}>
+                        <span
+                          className="mi"
+                          title="수정 · Enter 저장, Esc 취소"
+                          onClick={() => {
+                            setEditIdx(i);
+                            setEditText(m);
+                          }}
+                          style={css("font-size:15px;color:var(--gray-600);cursor:pointer;padding:2px")}
+                        >edit</span>
+                        <span
+                          className="mi"
+                          title="삭제"
+                          onClick={() => vm.removeMemo(i)}
+                          style={css("font-size:15px;color:var(--gray-600);cursor:pointer;padding:2px")}
+                        >close</span>
+                      </span>
+                    </>
+                  )}
                 </div>
               ))}
               {vm.memoEmpty && (
@@ -355,10 +422,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div style={css("flex:none;display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid var(--gray-200)")}>
               <span style={css("color:var(--blue-700);font-weight:700")}>•</span>
               <input
+                ref={memoInputRef}
                 value={vm.memoDraft}
                 onChange={vm.onMemoDraft}
                 onKeyDown={vm.onMemoKey}
-                placeholder="메모 입력 후 Enter"
+                placeholder="메모 입력 후 Enter · 단축키 N"
                 style={css("flex:1;border:none;outline:none;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:transparent")}
               />
             </div>
@@ -375,7 +443,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               {vm.regCollapsed ? (
                 <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border:1px solid var(--gray-200);border-radius:9999px;padding:2px 8px")}>규정집 · 매뉴얼</span>
               ) : (
-                <span onClick={vm.closeReg} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);border-radius:9999px;padding:5px 12px;cursor:pointer")}>
+                <span onClick={vm.closeReg} title="규정집 축소 · 단축키 R" style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);border-radius:9999px;padding:5px 12px;cursor:pointer")}>
                   <span className="mi" style={css("font-size:15px")}>close_fullscreen</span> 축소
                 </span>
               )}
@@ -420,23 +488,32 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif")}>{vm.regFile}</span>
                   <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;opacity:.85")}>· {vm.regSheet} 시트</span>
                 </div>
-                <div style={css("flex:1;min-height:0;overflow:auto;background:#fff")}>
-                  <div style={css("display:flex;flex-direction:column;min-width:max-content")}>
-                    <div style={css("display:flex;position:sticky;top:0")}>
+                {/* 3컬럼 리플로우 — 안내 멘트는 별도 컬럼이 아니라 내용 아래 인용 줄로.
+                    가로 스크롤 없이 패널 폭에 맞는다 */}
+                <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
+                  <div style={css("display:flex;flex-direction:column")}>
+                    <div style={css("display:flex;position:sticky;top:0;z-index:1")}>
                       <span style={css("width:36px;flex:none;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300)")} />
-                      {vm.regCols.map((c, i) => (
-                        <span key={i} style={css("width:" + c.w + "px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}</span>
+                      {vm.regCols.slice(0, 3).map((c, i) => (
+                        <span key={i} style={css((i === 2 ? "flex:1;min-width:0" : "width:" + c.w + "px;flex:none") + ";padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}{i === 2 ? " · 안내 멘트" : ""}</span>
                       ))}
                     </div>
                     {vm.regRows.map((r) => {
                       /* '열기'로 진입한 조항은 행 전체가 강조된다 */
                       const hit = vm.regTargetRow != null && r.n === vm.regTargetRow + 1;
+                      const ment = r.cells[3] && r.cells[3].text !== "—" ? r.cells[3].text : null;
                       return (
                         <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 3px 0 0 var(--blue-700)" : ""))}>
                           <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--blue-900)" : "var(--gray-600)") + ";background:" + (hit ? "var(--blue-100)" : "var(--gray-100)"))}>{r.n}</span>
-                          {r.cells.map((cell, ci) => (
+                          {r.cells.slice(0, 2).map((cell, ci) => (
                             <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--blue-100)" : "transparent"))}>{cell.text}</span>
                           ))}
+                          <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);background:" + (hit ? "var(--blue-100)" : "transparent"))}>
+                            <span style={css("display:block;font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.cells[2].text}</span>
+                            {ment && (
+                              <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{ment}</span>
+                            )}
+                          </span>
                         </div>
                       );
                     })}
