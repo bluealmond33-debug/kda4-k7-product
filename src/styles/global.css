@@ -63,8 +63,9 @@ a:hover {
   border-radius: 2px;
 }
 .card {
-  /* ONAIR: 면은 한 색, 경계는 보더가 아니라 그림자.
-     광원(집중)이 이동하면 그림자 방향이 함께 눕는다 — 전환은 이산적 0.45s */
+  /* ONAIR v2.9: 면은 한 색, 경계는 보더가 아니라 그림자.
+     그림자는 높이만 인코딩(2단) — 초점 패널만 sh-focus로 들리고 나머지는 전부 sh-near.
+     거리는 잉크 opacity가 맡는다. 초점 이동 전환은 이산적 0.45s */
   background: var(--onair-surface, #fff);
   border: none;
   border-radius: 12px;

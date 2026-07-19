@@ -342,21 +342,16 @@
   --color-border: rgba(20, 23, 28, 0.12);
   --color-border-hover: rgba(20, 23, 28, 0.22);
 
-  /* 온에어 그림자 — 광원(=집중 지점)으로부터의 거리 */
+  /* 온에어 그림자 v2.9 — 승강 모델: 그림자는 높이만 인코딩(2단).
+     초점 패널만 위로 들려 큰 균등 드롭, 나머지는 전부 똑같은 낮은 드롭.
+     거리(대기 원근)는 잉크 opacity가 맡는다 — 역할 분리: 그림자=높이, 잉크=거리. */
   --onair-surface: #f8f9f9;
   --onair-bg: #e9eaeb;
-  --sh-focus: 0 1px 2px rgba(15, 18, 24, 0.20), 0 4px 8px -2px rgba(15, 18, 24, 0.32);
+  --sh-focus: 0 2px 4px rgba(15, 18, 24, 0.16), 0 14px 30px -10px rgba(15, 18, 24, 0.32);
   --sh-near: 0 3px 8px -3px rgba(15, 18, 24, 0.25), 0 1px 2px rgba(15, 18, 24, 0.10);
-  --sh-far: 0 10px 20px -10px rgba(15, 18, 24, 0.20);
+  --sh-far: var(--sh-near); /* v2.9: 거리별 그림자 폐기 — 균등 낮은 드롭으로 수렴 */
   --sh-joint: 0 -8px 14px -10px rgba(15, 18, 24, 0.30);
   --sh-modal: 0 2px 4px rgba(15, 18, 24, 0.14), 0 18px 40px -10px rgba(15, 18, 24, 0.35);
-
-  /* 광원 반대 방향 그림자 — 집중 패널이 발광체인 것처럼, 주변 패널의 그림자가
-     광원에서 멀어지는 쪽으로 눕는다. r = 광원이 왼쪽에 있을 때(그림자 오른쪽으로) */
-  --sh-away-r: 10px 8px 14px -6px rgba(15, 18, 24, 0.22), 1px 1px 2px rgba(15, 18, 24, 0.08);
-  --sh-away-r-far: 18px 12px 20px -8px rgba(15, 18, 24, 0.18);
-  --sh-away-l: -10px 8px 14px -6px rgba(15, 18, 24, 0.22), -1px 1px 2px rgba(15, 18, 24, 0.08);
-  --sh-away-l-far: -18px 12px 20px -8px rgba(15, 18, 24, 0.18);
 
   /* 온에어 반지름 두 벌 + 기존 이름 재매핑 */
   --radius-card: 12px;

@@ -21,11 +21,11 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       {/* 뒤 배경 (인입 대기) — 상태는 모달 배지 줄이 말하므로 여기는 침묵 */}
       <div style={css("position:absolute;inset:0;display:flex;flex-direction:column")}>
         <div style={css("flex:1;display:flex;gap:16px;padding:16px")}>
-          <div style={css("width:312px;flex:none;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-away-l-far)")} />
+          <div style={css("width:312px;flex:none;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near)")} />
           <div style={css("flex:1;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-far);display:flex;align-items:center;justify-content:center;font:400 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
             고객을 선택하면 준비 카드가 열립니다
           </div>
-          <div style={css("width:372px;flex:none;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-away-r-far)")} />
+          <div style={css("width:372px;flex:none;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near)")} />
         </div>
       </div>
 
