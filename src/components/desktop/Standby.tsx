@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CalendarClock, GraduationCap, History, PhoneIncoming } from "lucide-react";
 import { css } from "../../lib/css";
+import { highlight } from "../../lib/highlight";
 import { AGENT, SHEETS } from "../../data/demoContent";
 
 /**
@@ -453,7 +454,7 @@ export default function Standby() {
                     <div key={ri} style={css("display:flex")}>
                       <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono',monospace;color:var(--gray-600)")}>{ri + 1}</span>
                       {row.map((cell, ci) => (
-                        <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{cell}</span>
+                        <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(cell, manualSearch)}</span>
                       ))}
                     </div>
                   ))}

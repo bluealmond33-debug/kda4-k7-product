@@ -539,10 +539,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     ? rg.rows.filter((r) => r.cells.some((c) => c.text.toLowerCase().includes(regNeedle)))
     : rg.rows;
 
-  // 실제 CSV/XLSX 파일을 읽어 규정 시트를 교체 — 첫 시트, 첫 행 = 헤더
-  const loadManualFile = useCallback(async (file: File) => {
+  // CSV/XLSX 버퍼 → SheetData (첫 시트, 첫 행 = 헤더). 업로드·레포 파일 공용 파서
+  const parseSheetBuffer = useCallback(async (buf: ArrayBuffer, filename: string): Promise<SheetData | null> => {
     const XLSX = await import("xlsx");
-    const wb = XLSX.read(await file.arrayBuffer());
+    const wb = XLSX.read(buf);
     const sheetName = wb.SheetNames[0];
     const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {
       header: 1,
@@ -551,19 +551,53 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     const filled = aoa
       .map((r) => r.map((c) => String(c ?? "").trim()))
       .filter((r) => r.some((c) => c));
-    if (filled.length < 2) return; // 헤더+본문이 없으면 무시
+    if (filled.length < 2) return null; // 헤더+본문이 없으면 무시
     const [head, ...rows] = filled;
     const widths = [64, 130, 300, 300];
-    setManualData({
-      title: file.name.replace(/\.(xlsx|xls|csv)$/i, ""),
-      file: file.name,
+    return {
+      title: filename.replace(/\.(xlsx|xls|csv)$/i, ""),
+      file: filename,
       sheet: sheetName,
       cols: head.map((l, i) => ({ l, w: widths[i] ?? 200 })),
       rows: rows.map((r) => head.map((_, i) => r[i] ?? "")),
-    });
-    setRegTargetRow(null);
-    setRegSearch("");
+    };
   }, []);
+
+  // 실제 CSV/XLSX 파일을 읽어 규정 시트를 교체 (수동 업로드)
+  const loadManualFile = useCallback(
+    async (file: File) => {
+      const data = await parseSheetBuffer(await file.arrayBuffer(), file.name);
+      if (!data) return;
+      setManualData(data);
+      setRegTargetRow(null);
+      setRegSearch("");
+    },
+    [parseSheetBuffer]
+  );
+
+  // 레포에 실파일을 커밋하면 더미를 자동 대체 — public/manual.xlsx 또는 public/manual.csv
+  // (없으면 조용히 더미 유지. content-type 방어: SPA 폴백이 index.html을 줄 때 오파싱 방지)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      for (const path of ["/manual.xlsx", "/manual.csv"]) {
+        try {
+          const res = await fetch(path);
+          if (!res.ok) continue;
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("text/html")) continue;
+          const data = await parseSheetBuffer(await res.arrayBuffer(), path.slice(1));
+          if (data && alive) setManualData(data);
+          break;
+        } catch {
+          /* 더미 유지 */
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [parseSheetBuffer]);
 
   const mColors = (active: boolean) => ({
     bg: active ? "var(--blue-700)" : "var(--onair-surface)",

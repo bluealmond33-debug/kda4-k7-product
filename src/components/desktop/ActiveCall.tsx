@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
+import { highlight } from "../../lib/highlight";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
@@ -624,12 +625,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                         <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--blue-700);position:relative;z-index:1" : ""))}>
                           <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--blue-900)" : "var(--gray-600)") + ";background:" + (hit ? "var(--blue-100)" : "var(--gray-100)"))}>{r.n}</span>
                           {r.cells.slice(0, 2).map((cell, ci) => (
-                            <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--blue-100)" : "transparent"))}>{cell.text}</span>
+                            <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--blue-100)" : "transparent"))}>{highlight(cell.text, vm.regSearch)}</span>
                           ))}
                           <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);background:" + (hit ? "var(--blue-100)" : "transparent"))}>
-                            <span style={css("display:block;font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.cells[2].text}</span>
+                            <span style={css("display:block;font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(r.cells[2].text, vm.regSearch)}</span>
                             {ment && (
-                              <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{ment}</span>
+                              <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
                             )}
                           </span>
                         </div>
