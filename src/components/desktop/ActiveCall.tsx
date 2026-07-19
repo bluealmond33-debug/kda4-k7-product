@@ -293,17 +293,27 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <span onClick={vm.setAuthAcct} style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:5px 11px;cursor:pointer;background:" + vm.mAcctBg + ";color:" + vm.mAcctFg + ";border:1px solid " + vm.mAcctBd)}>계좌 뒷 4자리</span>
                 </div>
                 <div style={css("display:flex;gap:7px;align-items:center")}>
-                  <input
-                    className="authin"
-                    value={vm.authInput}
-                    onChange={vm.onAuthInput}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") vm.runVerify();
-                    }}
-                    placeholder={vm.authPlaceholder}
-                    inputMode="numeric"
-                    style={css("flex:1;min-width:0;border:1px solid var(--gray-400);border-radius:9999px;padding:8px 14px;background:var(--onair-surface);font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000)")}
-                  />
+                  {/* 마스킹 '구멍' 입력 — 마스킹된 실제 데이터 모양 안에 입력 칸만 뚫려 있다 */}
+                  <label style={css("flex:1;min-width:0;display:flex;align-items:center;border:1px solid var(--gray-400);border-radius:9999px;padding:8px 14px;background:var(--onair-surface);cursor:text")}>
+                    {vm.authPrefix && (
+                      <span style={css("font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;color:var(--gray-500);white-space:nowrap;flex:none")}>{vm.authPrefix}</span>
+                    )}
+                    <input
+                      className="authin"
+                      value={vm.authInput}
+                      onChange={vm.onAuthInput}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") vm.runVerify();
+                      }}
+                      placeholder={vm.authHolePlaceholder}
+                      maxLength={vm.authMaxLen}
+                      inputMode="numeric"
+                      style={css("width:" + (vm.authMaxLen === 6 ? "110px" : "78px") + ";border:none;background:transparent;font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000);padding:0")}
+                    />
+                    {vm.authHint && (
+                      <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500);white-space:nowrap;margin-left:auto")}>{vm.authHint}</span>
+                    )}
+                  </label>
                   <span onClick={vm.runVerify} style={css("flex:none;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>대조</span>
                 </div>
                 {vm.authErr && (
@@ -341,7 +351,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </div>
 
           {vm.verified && showHistory && (
-            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockUp .25s cubic-bezier(0.2,0.8,0.2,1)")}>
+            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockDown .25s cubic-bezier(0.2,0.8,0.2,1)")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">과거 상담 이력</span>
                 <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>최근 6개월 · {HISTORY.length}건</span>
@@ -368,7 +378,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           )}
 
           {vm.verified && showAccounts && (
-            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockUp .25s cubic-bezier(0.2,0.8,0.2,1)")}>
+            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockDown .25s cubic-bezier(0.2,0.8,0.2,1)")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">보유 계좌 및 카드</span>
                 <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{ACCOUNTS.length}건 · 정상</span>
@@ -521,9 +531,21 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             {vm.regCollapsed ? (
               <div style={css("flex:1;min-height:0;overflow:auto")}>
                 <div style={css("padding:12px 15px;border-bottom:1px solid var(--gray-200)")}>
+                  {/* 실검색 — 입력하면 시트가 필터링된다. AI 추천 검색어는 placeholder로 */}
                   <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;background:var(--onair-surface)")}>
                     <span className="mi" style={css("font-size:18px;color:var(--gray-700)")}>search</span>
-                    <span style={css("flex:1;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.regQuery}</span>
+                    <input
+                      value={vm.regSearch}
+                      onChange={vm.onRegSearch}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") vm.openManual();
+                      }}
+                      placeholder={vm.regQuery}
+                      style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}
+                    />
+                    {vm.regSearch && (
+                      <span className="mi" onClick={vm.clearRegSearch} style={css("font-size:16px;color:var(--gray-500);cursor:pointer")}>close</span>
+                    )}
                   </div>
                   <div style={css("display:flex;align-items:center;gap:5px;margin-top:7px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
                     <span className="mi" style={css("font-size:14px")}>info</span> 열기를 누르면 오른쪽에서 규정집이 펼쳐집니다
@@ -551,11 +573,38 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             ) : (
               <>
-                {/* 엑셀 크롬 — 채도 높은 초록 대신 쿨 뉴트럴 잉크 (온에어: 면은 한 색) */}
-                <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-1000);color:#fff")}>
+                {/* 엑셀 크롬 — 실물 메타포는 실물의 색(엑셀 초록). 검색·파일 업로드가 여기 산다 */}
+                <div style={css("display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--excel-green);color:#fff")}>
                   <span className="mi" style={css("font-size:18px")}>grid_on</span>
                   <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif")}>{vm.regFile}</span>
                   <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;opacity:.85")}>· {vm.regSheet} 시트</span>
+                  <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
+                    <span style={css("display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.16);border-radius:9999px;padding:4px 10px")}>
+                      <span className="mi" style={css("font-size:14px")}>search</span>
+                      <input
+                        value={vm.regSearch}
+                        onChange={vm.onRegSearch}
+                        placeholder="시트 검색"
+                        style={css("width:110px;border:none;outline:none;background:transparent;color:#fff;font:400 11.5px 'Geist Sans','Pretendard',sans-serif")}
+                      />
+                      {vm.regSearch && (
+                        <span className="mi" onClick={vm.clearRegSearch} style={css("font-size:13px;cursor:pointer;opacity:.8")}>close</span>
+                      )}
+                    </span>
+                    <label title="실제 규정 파일 열기 (CSV·XLSX)" style={css("display:flex;align-items:center;gap:4px;cursor:pointer;background:rgba(255,255,255,.16);border-radius:9999px;padding:4px 10px;font:600 11px 'Geist Sans','Pretendard',sans-serif")}>
+                      <span className="mi" style={css("font-size:14px")}>folder_open</span>파일 열기
+                      <input
+                        type="file"
+                        accept=".csv,.xlsx,.xls"
+                        hidden
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void vm.loadManualFile(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </span>
                 </div>
                 {/* 3컬럼 리플로우 — 안내 멘트는 별도 컬럼이 아니라 내용 아래 인용 줄로.
                     가로 스크롤 없이 패널 폭에 맞는다 */}
@@ -572,7 +621,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       const hit = vm.regTargetRow != null && r.n === vm.regTargetRow + 1;
                       const ment = r.cells[3] && r.cells[3].text !== "—" ? r.cells[3].text : null;
                       return (
-                        <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 3px 0 0 var(--blue-700)" : ""))}>
+                        <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--blue-700);position:relative;z-index:1" : ""))}>
                           <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--blue-900)" : "var(--gray-600)") + ";background:" + (hit ? "var(--blue-100)" : "var(--gray-100)"))}>{r.n}</span>
                           {r.cells.slice(0, 2).map((cell, ci) => (
                             <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--blue-100)" : "transparent"))}>{cell.text}</span>
@@ -586,6 +635,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                         </div>
                       );
                     })}
+                    {vm.regRows.length === 0 && (
+                      <div style={css("padding:26px 0;text-align:center;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                        “{vm.regSearch}” 검색 결과 없음 · 전체 {vm.regRowsTotal}행
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={css("display:flex;align-items:center;gap:2px;padding:6px 10px;background:var(--gray-100);border-top:1px solid var(--gray-300)")}>

@@ -12,6 +12,7 @@ import {
   TRANSFER_HANDOVER,
   TRANSFER_TARGETS,
   type IncomingKind,
+  type SheetData,
   renderSheet,
   WRAP_TYPE_OPTIONS,
   WRAP_RESULT_OPTIONS,
@@ -145,6 +146,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const [dockType, setDockType] = useState<DockType | null>(null);
   const [regExpanded, setRegExpanded] = useState(false);
+  // 규정집 실검색 — 비어 있으면 전체, 입력하면 조항·항목·내용·멘트를 훑는다
+  const [regSearch, setRegSearch] = useState("");
+  // 업로드한 실제 파일(CSV/XLSX)이 더미 시트를 대체한다 — 세션 동안 유지
+  const [manualData, setManualData] = useState<SheetData | null>(null);
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
@@ -409,12 +414,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // ── auth ──
   const pickAuth = useCallback((m: AuthMethod) => {
     setAuthMethod(m);
+    // 방식이 바뀌면 자릿수 규칙도 바뀐다 — 넘치는 입력은 잘라낸다
+    setAuthInput((v) => v.slice(0, m === "birth" ? 6 : 4));
     setAuthErr(false);
   }, []);
-  const onAuthInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setAuthInput(e.target.value);
-    setAuthErr(false);
-  }, []);
+  const onAuthInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      // 숫자만, 방식별 자릿수까지만 — 4자리 칸에는 4자리만 들어간다
+      const max = authMethod === "birth" ? 6 : 4;
+      setAuthInput(e.target.value.replace(/\D/g, "").slice(0, max));
+      setAuthErr(false);
+    },
+    [authMethod]
+  );
   const runVerify = useCallback(() => {
     const need = authMethod === "birth" ? 6 : 4;
     const digits = (authInput || "").replace(/\D/g, "");
@@ -520,7 +532,38 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const nv = !verified;
 
   const dk = renderSheet(SHEETS[dockType ?? "history"]);
-  const rg = renderSheet(SHEETS.manual);
+  const rg = renderSheet(manualData ?? SHEETS.manual);
+  // 검색 필터 — r.n(원본 행 번호)은 유지되므로 '열기' 강조(regTargetRow)와 충돌하지 않는다
+  const regNeedle = regSearch.trim().toLowerCase();
+  const rgRows = regNeedle
+    ? rg.rows.filter((r) => r.cells.some((c) => c.text.toLowerCase().includes(regNeedle)))
+    : rg.rows;
+
+  // 실제 CSV/XLSX 파일을 읽어 규정 시트를 교체 — 첫 시트, 첫 행 = 헤더
+  const loadManualFile = useCallback(async (file: File) => {
+    const XLSX = await import("xlsx");
+    const wb = XLSX.read(await file.arrayBuffer());
+    const sheetName = wb.SheetNames[0];
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {
+      header: 1,
+      defval: "",
+    }) as unknown as (string | number)[][];
+    const filled = aoa
+      .map((r) => r.map((c) => String(c ?? "").trim()))
+      .filter((r) => r.some((c) => c));
+    if (filled.length < 2) return; // 헤더+본문이 없으면 무시
+    const [head, ...rows] = filled;
+    const widths = [64, 130, 300, 300];
+    setManualData({
+      title: file.name.replace(/\.(xlsx|xls|csv)$/i, ""),
+      file: file.name,
+      sheet: sheetName,
+      cols: head.map((l, i) => ({ l, w: widths[i] ?? 200 })),
+      rows: rows.map((r) => head.map((_, i) => r[i] ?? "")),
+    });
+    setRegTargetRow(null);
+    setRegSearch("");
+  }, []);
 
   const mColors = (active: boolean) => ({
     bg: active ? "var(--blue-700)" : "var(--onair-surface)",
@@ -738,12 +781,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     authErrMsg,
     authTime,
     authMethodLabel,
-    authPlaceholder:
-      authMethod === "birth"
-        ? "고객이 말한 6자리 (YYMMDD)"
-        : authMethod === "account"
-        ? "고객이 말한 계좌 뒷 4자리"
-        : "고객이 말한 뒷 4자리",
+    // 마스킹 '구멍' 입력 — 실제 데이터 모양 속에 입력 칸만 뚫려 있다
+    // phone: 010 - **** - [    ] / birth: [      ] (YYMMDD) / account: ***-**-[    ]
+    authPrefix: authMethod === "birth" ? "" : authMethod === "account" ? "***-**-" : "010 - **** - ",
+    authMaxLen: authMethod === "birth" ? 6 : 4,
+    authHolePlaceholder: authMethod === "birth" ? "●●●●●●" : "●●●●",
+    authHint: authMethod === "birth" ? "생년월일 6자리 (YYMMDD)" : "",
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
     steps: SCRIPTS[incoming].map((st) => ({ title: st.title, text: st.text })),
     firstLine: SCRIPTS[incoming][0].text,
@@ -779,12 +822,18 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     regTargetRow,
     regExpanded,
     regCollapsed: !regExpanded,
+    // 실검색 — 입력은 자유, AI 추천 검색어는 placeholder로 강등
+    regSearch,
+    onRegSearch: (e: React.ChangeEvent<HTMLInputElement>) => setRegSearch(e.target.value),
+    clearRegSearch: () => setRegSearch(""),
+    loadManualFile,
     // 확장 폭 640 — 시트가 3컬럼 리플로우라 640이면 잘림 없이 들어가고, 중앙 스크립트 압착도 덜하다
     regW: regExpanded ? 640 : 372,
     regFile: rg.file,
     regSheet: rg.sheet,
     regCols: rg.cols,
-    regRows: rg.rows,
+    regRows: rgRows,
+    regRowsTotal: rg.rows.length,
     // wrap sheet
     wrapSheetOpen,
     notWrapSheetOpen: !wrapSheetOpen,

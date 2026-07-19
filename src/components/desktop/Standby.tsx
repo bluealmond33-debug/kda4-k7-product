@@ -135,6 +135,7 @@ export default function Standby() {
   // 알림 읽음 처리 + 필터 (읽으면 타일 배지도 줄어든다)
   const [readSet, setReadSet] = useState<Set<number>>(new Set());
   const [alertFilter, setAlertFilter] = useState<"all" | "unread">("all");
+  const [manualSearch, setManualSearch] = useState(""); // 매뉴얼 실검색 — 우측 시트 필터
   // 워밍업 체크
   const [warmDone, setWarmDone] = useState<Set<number>>(new Set());
   const isUnread = (i: number) => ALERTS[i].unread && !readSet.has(i);
@@ -406,9 +407,18 @@ export default function Standby() {
           {/* 좌: 검색+목록(고정폭) / 우: 규정집 시트가 바로 펼쳐진다 */}
           <div style={css("flex:1;display:flex;gap:14px;min-height:0")}>
             <div style={css("width:330px;flex:none;display:flex;flex-direction:column;gap:8px")}>
+              {/* 실검색 — 오른쪽 시트가 바로 필터링된다 */}
               <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;background:var(--onair-surface);margin-bottom:2px")}>
                 <span className="mi" style={css("font-size:17px;color:var(--gray-700)")}>search</span>
-                <span style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>규정·절차 검색</span>
+                <input
+                  value={manualSearch}
+                  onChange={(e) => setManualSearch(e.target.value)}
+                  placeholder="규정·절차 검색"
+                  style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}
+                />
+                {manualSearch && (
+                  <span className="mi" onClick={() => setManualSearch("")} style={css("font-size:15px;color:var(--gray-500);cursor:pointer")}>close</span>
+                )}
               </div>
               {MANUAL_ROWS.map((r, i) => (
                 <div key={i} className="ptile" style={css("display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--background-200);border-radius:8px;box-shadow:none")}>
@@ -418,9 +428,9 @@ export default function Standby() {
                 </div>
               ))}
             </div>
-            {/* 우: 엑셀 시트 뷰 (통화 화면의 규정 확장과 같은 문법) */}
+            {/* 우: 엑셀 시트 뷰 (통화 화면의 규정 확장과 같은 문법 — 크롬은 엑셀 초록) */}
             <div style={css("flex:1;min-width:0;background:var(--onair-surface);border-radius:8px;box-shadow:var(--sh-near);overflow:hidden;display:flex;flex-direction:column")}>
-              <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-1000);color:#fff;flex:none")}>
+              <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--excel-green);color:#fff;flex:none")}>
                 <span className="mi" style={css("font-size:17px")}>grid_on</span>
                 <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif")}>{SHEETS.manual.file}</span>
                 <span style={css("font:400 11px 'Geist Mono',monospace;opacity:.8")}>· {SHEETS.manual.sheet} 시트</span>
@@ -433,7 +443,13 @@ export default function Standby() {
                       <span key={i} style={css("width:" + c.w + "px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}</span>
                     ))}
                   </div>
-                  {SHEETS.manual.rows.map((row, ri) => (
+                  {SHEETS.manual.rows
+                    .map((row, ri) => [row, ri] as const)
+                    .filter(([row]) =>
+                      !manualSearch.trim() ||
+                      row.some((cell) => cell.toLowerCase().includes(manualSearch.trim().toLowerCase()))
+                    )
+                    .map(([row, ri]) => (
                     <div key={ri} style={css("display:flex")}>
                       <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono',monospace;color:var(--gray-600)")}>{ri + 1}</span>
                       {row.map((cell, ci) => (
