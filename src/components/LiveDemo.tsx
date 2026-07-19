@@ -145,9 +145,10 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
           {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율 */}
           <div style={css("display:flex;gap:40px;align-items:center;justify-content:center")}>
             <Phone vm={vm} />
-            <div style={css("flex:none;width:1100px;height:688px;display:flex;align-items:center;justify-content:center")}>
+            <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
               {vm.showWaiting && <Waiting vm={vm} />}
               {vm.showPrep && <PrepCard vm={vm} />}
+              {/* 종료 후에도 통화 화면이 배경에 남고, 후처리 시트가 그 위로 올라온다 */}
               {vm.showActive && <ActiveCall vm={vm} />}
               {vm.showWrap && <WrapSheet vm={vm} />}
             </div>

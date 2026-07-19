@@ -292,6 +292,8 @@
   /* Motion — most interactions feel instant; use motion only to clarify change */
   /* 하우스 커브 — y2>1 오버슈트(바운스)는 금융 콘솔 성격과 불일치라 교정 */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); /* @kind other */
+  /* 드로어(바텀 시트) 전용 — iOS 드로어 커브 (에밀 코왈스키/Ionic). 후처리 시트 승강에 사용 */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --duration-state: 150ms; /* @kind other */
   --duration-popover: 200ms; /* @kind other */
   --duration-overlay: 300ms; /* @kind other */

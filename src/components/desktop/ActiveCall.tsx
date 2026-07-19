@@ -73,6 +73,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         return;
       }
       if (typing) return;
+      if (vm.showWrap) return; // 종료 후 배경 화면에선 통화 단축키 비활성
       const k = e.key.toLowerCase();
       if (k === "m") setMuted((v) => !v);
       else if (k === "h") setHeld((v) => !v);
@@ -91,9 +92,17 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transition:width .3s cubic-bezier(0.2,0.8,0.2,1);width:" + (transferOpen && !vm.transferReserved ? "1240px" : "1004px"))}>
-          <span style={css("display:flex;align-items:center;gap:7px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")} title="온에어 — 통화·녹취 중">
-            <span className="onairdot" /> 녹취 중
-          </span>
+          {vm.showWrap ? (
+            /* 통화 종료 — 온에어 소등, 배경으로 남은 화면임을 알약이 말해준다 */
+            <span style={css("display:flex;align-items:center;gap:7px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")} title="통화 종료 — 온에어 소등">
+              <span className="onairdot off" />
+              <span className="mi" style={css("font-size:14px;color:var(--green-700)")}>check_circle</span> 녹취 완료
+            </span>
+          ) : (
+            <span style={css("display:flex;align-items:center;gap:7px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")} title="온에어 — 통화·녹취 중">
+              <span className="onairdot" /> 녹취 중
+            </span>
+          )}
           {vm.isUrgent && (
             <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:#fff;background:var(--red-800);border-radius:9999px;padding:3px 9px")}>긴급</span>
           )}
@@ -174,6 +183,13 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <span className="mi" style={css("font-size:13px")}>pause</span> 보류 중 · 고객에게 대기 안내
             </span>
           )}
+          {vm.showWrap ? (
+            /* 종료 후 — 통화 컨트롤 대신 후처리 보조 도구 */
+            <span style={css("display:flex;gap:5px")}>
+              <span className="cbtn" title="녹취 다시 듣기"><span className="mi" style={css("font-size:19px")}>play_arrow</span></span>
+              <span className="cbtn" title="통화 요약 복사"><span className="mi" style={css("font-size:19px")}>content_copy</span></span>
+            </span>
+          ) : (
           <span style={css("display:flex;gap:5px")}>
             <span
               className="cbtn"
@@ -207,6 +223,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
             </span>
           </span>
+          )}
+          {!vm.showWrap && (
           <span style={css("position:relative")}>
             <span
               title="통화 종료"
@@ -226,10 +244,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             )}
           </span>
+          )}
         </div>
       </div>
 
-      <div style={css("flex:1;display:flex;gap:16px;padding:16px;min-height:0")}>
+      <div style={css("flex:1;display:flex;gap:16px;padding:16px;min-height:0" + (vm.showWrap ? "" : ";padding-bottom:42px"))}>
         {/* ── 좌 컬럼 ── */}
         <div ref={leftColRef} style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden")}>
           <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px" + (vm.verified ? ";opacity:.93" : ""))}>
@@ -514,7 +533,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         </div>
 
         {/* ── 우 컬럼 : 규정 ── */}
-        <div style={css("width:" + vm.regW + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0")}>
+        {/* 오토레이아웃 모션 — 규정 패널 확장(372↔640)이 스냅 대신 부드럽게 밀린다 */}
+        <div style={css("width:" + vm.regW + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1)")}>
           <div className="card" style={css("flex:" + (vm.regCollapsed ? "none" : "1") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "reg" ? ";box-shadow:var(--sh-focus)" : ";opacity:" + (vm.verified ? ".95" : ".9")))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
@@ -653,6 +673,13 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         </div>
       </div>
 
+      {/* 접힌 후처리 시트의 가장자리 — 통화 중에도 "종료하면 여기서 이어진다"를 예고 */}
+      {!vm.showWrap && (
+        <div style={css("position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:1240px;height:34px;background:var(--onair-surface);border-radius:12px 12px 0 0;box-shadow:var(--sh-modal);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px")}>
+          <span style={css("width:40px;height:4px;border-radius:9999px;background:var(--color-border)")} />
+          <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>통화를 종료하면 여기서 후처리가 이어집니다</span>
+        </div>
+      )}
     </DesktopShell>
   );
 }

@@ -361,7 +361,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     if (phaseRef.current === "active") {
       clearAll();
       setPhase("summarizing");
-      setWrapSheetOpen(false);
+      // 종료와 동시에 후처리 시트가 자동으로 올라온다 — 통화→후처리는 한 흐름
+      setWrapSheetOpen(true);
       after(3600, () => setPhase("wrap"));
     } else {
       reset();
@@ -720,9 +721,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? "전화가 오면 자연어 접수가 시작됩니다"
         : "완료되면 상담 준비 카드가 표시됩니다",
     waitingSpin: p !== "idle",
-    // desktop screens
+    // desktop screens — 통화 종료 후에도 통화 화면이 배경에 남고(흐름 연속),
+    // 후처리는 그 위로 올라오는 바텀 시트다. "통화→후처리 = 한 흐름"
     showPrep: p === "prep",
-    showActive: p === "active",
+    showActive: p === "active" || ended,
     showWrap: ended,
     wrapLoading: p === "summarizing",
     wrapReady: p === "wrap",
