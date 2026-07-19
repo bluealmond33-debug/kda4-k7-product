@@ -255,7 +255,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         </div>
       </div>
 
-      <div style={css("flex:1;display:flex;gap:16px;padding:16px;min-height:0" + (vm.showWrap ? "" : ";padding-bottom:42px"))}>
+      <div style={css("flex:1;display:flex;gap:16px;min-height:0;padding:16px 16px " + (vm.showWrap ? "16px" : "42px") + " 16px")}>
         {/* ── 좌 컬럼 ── */}
         <div ref={leftColRef} style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden")}>
           <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px" + (vm.verified ? ";opacity:.93" : ""))}>

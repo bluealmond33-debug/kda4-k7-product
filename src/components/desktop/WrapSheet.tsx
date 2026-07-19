@@ -15,6 +15,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
   const PEEK = 56;
   // 마운트 직후 한 프레임은 내려간 상태 → 다음 프레임에 올라온다 (등장이 항상 아래에서 위로)
   const [entered, setEntered] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false); // 출처(재료) 접이식 — 기본 접힘
   useEffect(() => {
     const raf = requestAnimationFrame(() => setEntered(true));
     return () => cancelAnimationFrame(raf);
@@ -80,10 +81,10 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
         ) : (
           <>
             <div style={css("flex:1;display:flex;gap:18px;padding:14px 24px;min-height:0")}>
-              {/* 좌 — 예전엔 상담사가 손으로 쓰던 기입 항목들. 기본값이 채워져 있고 클릭해 수정 */}
-              <div style={css("width:300px;flex:none;display:flex;flex-direction:column;gap:12px;overflow:visible")}>
-                <div className="lbl">기입 항목 · 자동 채움 — ✎를 눌러 수정</div>
-                <div style={css("display:flex;flex-direction:column;gap:8px")}>
+              {/* 좌 = 문서 속성 사이드바 — 고객·상담사·일시·유형·결과 */}
+              <div style={css("width:270px;flex:none;display:flex;flex-direction:column;gap:11px;overflow:visible")}>
+                <div className="lbl">상담 정보 · 자동 채움 — ✎로 수정</div>
+                <div style={css("display:flex;flex-direction:column;gap:7px")}>
                   <EditRow label="고객" value={`${vm.customerName} · ${vm.customerPhone}`} />
                   <EditRow label="상담사" value={`${AGENT.name} · ${AGENT.id}`} />
                   <EditRow label="일시" value="2026.07.15 14:32" small />
@@ -92,66 +93,63 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 <SelectField label="상담 결과" value={vm.wrapResult} open={vm.resultMenu} onToggle={vm.toggleResultMenu} opts={vm.resultOpts} />
                 <div style={css("flex:1")} />
                 <div style={css("font:400 11px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-                  MVP 상담 결과 — 저장 시 상담 이력에 기록됩니다
+                  저장 시 상담 이력에 기록됩니다
                 </div>
               </div>
 
-              {/* 우 — 재료 1·2가 위에 나란히, 그 아래 초안이 합쳐져 내려온다 */}
+              {/* 우 = 초안이 주인공. 재료는 위 접이식 '출처' 바에 숨어 있다 */}
               <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:10px")}>
-                <div style={css("display:flex;gap:10px;flex:none")}>
-                  <div style={css("flex:1.3;background:var(--gray-100);border-radius:8px;padding:11px 14px")}>
-                    <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:6px")}>
-                      <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>graphic_eq</span>
-                      <span style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>재료 1 · 음성 데이터</span>
-                      <span style={css("font:400 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600);margin-left:auto")}>통화 {vm.clockStr} · 녹취</span>
-                    </div>
-                    <div style={css("font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);max-height:56px;overflow:auto")}>
-                      {vm.wrapSummaryDefault}
-                    </div>
+                {/* 출처 바 — 기본 접힘. 펼치면 음성·메모(편집 가능)가 드러난다 */}
+                <div style={css("flex:none;background:var(--gray-100);border-radius:8px")}>
+                  <div
+                    onClick={() => setSourcesOpen((v) => !v)}
+                    style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;user-select:none")}
+                  >
+                    <span className="mi" style={css("font-size:15px;color:var(--gray-600)")}>graphic_eq</span>
+                    <span className="mi" style={css("font-size:15px;color:var(--gray-600)")}>edit_note</span>
+                    <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+                      출처 — 음성 녹취 + 메모 {vm.memoItems.length}건으로 작성됨
+                    </span>
+                    <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500);margin-left:auto")}>
+                      {sourcesOpen ? "접기" : "펼쳐 보기"}
+                    </span>
+                    <span className="mi" style={css("font-size:18px;color:var(--gray-500);transition:transform .25s var(--ease-drawer);transform:rotate(" + (sourcesOpen ? 180 : 0) + "deg)")}>expand_more</span>
                   </div>
-                  {/* 재료 2 — 메모는 여기서도 실제로 추가된다 (통화 중 못 적었어도 늦지 않게) */}
-                  <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:11px 14px;display:flex;flex-direction:column")}>
-                    <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:6px")}>
-                      <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>edit_note</span>
-                      <span style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>재료 2 · 상담원 메모</span>
-                      <span style={css("font:400 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600);margin-left:auto")}>{vm.memoItems.length}건</span>
-                    </div>
-                    <div style={css("flex:1;max-height:34px;overflow:auto;display:flex;flex-direction:column;gap:3px")}>
-                      {vm.memoItems.map((m, i) => (
-                        <div key={i} style={css("display:flex;gap:6px;align-items:baseline")}>
-                          <span style={css("color:var(--blue-700);font-weight:700;flex:none;font-size:11px")}>•</span>
-                          <span style={css("font:400 12px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{m}</span>
+                  {/* max-height 애니메이션 — grid-fr은 중첩 flex에서 콘텐츠가 눌린다(알약과 같은 교훈) */}
+                  <div style={css("overflow:hidden;transition:max-height .3s var(--ease-drawer),opacity .25s;max-height:" + (sourcesOpen ? "140px" : "0px") + ";opacity:" + (sourcesOpen ? "1" : "0"))}>
+                    <div>
+                      <div style={css("display:flex;gap:10px;padding:0 14px 12px")}>
+                        <div style={css("flex:1.3;background:var(--onair-surface);border-radius:8px;padding:10px 12px")}>
+                          <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:5px")}>🎙 음성 녹취 · 통화 {vm.clockStr}</div>
+                          <div style={css("font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);max-height:52px;overflow:auto")}>{vm.wrapSummaryDefault}</div>
                         </div>
-                      ))}
-                      {vm.memoEmpty && (
-                        <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>통화 중 작성한 메모가 없습니다 — 아래에서 추가할 수 있어요</span>
-                      )}
-                    </div>
-                    <div style={css("flex:none;display:flex;align-items:center;gap:6px;margin-top:6px;background:var(--onair-surface);border-radius:9999px;padding:6px 11px")}>
-                      <span style={css("color:var(--blue-700);font-weight:700;font-size:12px")}>•</span>
-                      <input
-                        value={vm.memoDraft}
-                        onChange={vm.onMemoDraft}
-                        onKeyDown={vm.onMemoKey}
-                        placeholder="메모 추가 후 Enter"
-                        style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}
-                      />
+                        <div style={css("flex:1;background:var(--onair-surface);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column")}>
+                          <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:5px")}>✎ 상담원 메모 · {vm.memoItems.length}건</div>
+                          <div style={css("flex:1;max-height:34px;overflow:auto;display:flex;flex-direction:column;gap:2px")}>
+                            {vm.memoItems.map((m, i) => (
+                              <div key={i} style={css("display:flex;gap:5px;align-items:baseline")}>
+                                <span style={css("color:var(--blue-700);font-weight:700;flex:none;font-size:11px")}>•</span>
+                                <span style={css("font:400 12px/1.4 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{m}</span>
+                              </div>
+                            ))}
+                            {vm.memoEmpty && <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>작성한 메모가 없습니다</span>}
+                          </div>
+                          <div style={css("flex:none;display:flex;align-items:center;gap:6px;margin-top:5px;background:var(--gray-100);border-radius:9999px;padding:5px 10px")}>
+                            <span style={css("color:var(--blue-700);font-weight:700;font-size:12px")}>•</span>
+                            <input value={vm.memoDraft} onChange={vm.onMemoDraft} onKeyDown={vm.onMemoKey} placeholder="메모 추가 후 Enter" style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")} />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div style={css("flex:none;display:flex;align-items:center;justify-content:center;gap:7px;color:var(--gray-600);font:600 11px 'Geist Sans','Pretendard',sans-serif")}>
-                  <span className="mi" style={css("font-size:14px")}>call_merge</span>
-                  두 재료가 아래 초안으로 합쳐졌습니다
-                  <span className="mi" style={css("font-size:14px")}>arrow_downward</span>
-                </div>
-
-                {/* 최종 초안 — 재료를 보면서 바로 수정 */}
+                {/* 최종 초안 = 히어로. 시트 높이 대부분을 차지한다 */}
                 <div style={css("flex:1;display:flex;flex-direction:column;min-height:0")}>
                   <div style={css("display:flex;justify-content:space-between;align-items:center;margin-bottom:6px")}>
-                    <span style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
-                      <span className="mi" style={css("font-size:14px;color:var(--blue-700);vertical-align:-2px;margin-right:4px")}>auto_awesome</span>
-                      후처리 초안 <span style={css("font-weight:400;color:var(--blue-700)")}>· 클릭해 편집</span>
+                    <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
+                      <span className="mi" style={css("font-size:15px;color:var(--blue-700);vertical-align:-2px;margin-right:4px")}>auto_awesome</span>
+                      후처리 초안 <span style={css("font-weight:400;font-size:12px;color:var(--gray-600)")}>· 클릭해 편집</span>
                     </span>
                     <span
                       onClick={vm.regenerating ? undefined : vm.regenerateSummary}
@@ -167,7 +165,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                     contentEditable
                     suppressContentEditableWarning
                     onInput={vm.onSummary}
-                    style={css("flex:1;border:1px solid var(--gray-300);border-radius:8px;padding:13px 16px;font:400 14px/1.75 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none;transition:opacity .25s;opacity:" + (vm.regenerating ? ".4" : "1"))}
+                    style={css("flex:1;border:1px solid var(--gray-300);border-radius:8px;padding:15px 18px;font:400 14px/1.8 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none;transition:opacity .25s;opacity:" + (vm.regenerating ? ".4" : "1"))}
                   >
                     {vm.wrapSummaryDefault}
                   </div>
