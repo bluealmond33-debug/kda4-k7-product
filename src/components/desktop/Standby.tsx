@@ -278,7 +278,7 @@ export default function Standby() {
                         >
                           <span style={css("width:8px;height:8px;border-radius:9999px;margin-top:5px;flex:none;transition:background .25s;background:" + (un ? "var(--blue-700)" : "var(--gray-300)"))} />
                           <div style={css("flex:1")}>
-                            <div style={css("font:700 13.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{a.title}</div>
+                            <div style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{a.title}</div>
                             <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>{a.sub}</div>
                           </div>
                           {a.action && un && (
@@ -383,7 +383,7 @@ export default function Standby() {
                       >
                         {on && <span className="mi" style={css("font-size:13px")}>check</span>}
                       </span>
-                      <span style={css("flex:1;font:500 13.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)" + (on ? ";text-decoration:line-through;opacity:.6" : ""))}>{w.label}</span>
+                      <span style={css("flex:1;font:500 13px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)" + (on ? ";text-decoration:line-through;opacity:.6" : ""))}>{w.label}</span>
                       <span style={css("font:600 12px 'Geist Mono',monospace;color:var(--gray-700)")}>{w.meta}</span>
                     </div>
                   );
@@ -474,12 +474,12 @@ export default function Standby() {
                 <span style={css("width:1.3px;height:13px;background:var(--gray-300)")} />
                 <span style={css("display:flex;align-items:center;gap:5px")}>
                   <PhoneIncoming size={14} color="var(--gray-600)" strokeWidth={2} />
-                  대기열 <span className="bignum" style={css("font-size:13.5px")}>0</span>건
+                  대기열 <span className="bignum" style={css("font-size:13px")}>0</span>건
                 </span>
                 <span style={css("width:1.3px;height:13px;background:var(--gray-300)")} />
                 <span style={css("display:flex;align-items:center;gap:5px")}>
                   <CalendarClock size={14} color="var(--gray-600)" strokeWidth={2} />
-                  다음 콜백 <span className="bignum" style={css("font-size:13.5px")}>11:00</span>
+                  다음 콜백 <span className="bignum" style={css("font-size:13px")}>11:00</span>
                 </span>
               </>
             )}
@@ -504,7 +504,7 @@ export default function Standby() {
               <div onClick={() => setView("today")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
                 <div style={css("display:flex;align-items:center;justify-content:space-between")}>
                   <History size={20} color="var(--blue-700)" strokeWidth={1.8} />
-                  <span className="bignum" style={css("font-size:13.5px;color:var(--gray-1000)")}>{TODAY.count}<span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>건</span></span>
+                  <span className="bignum" style={css("font-size:13px;color:var(--gray-1000)")}>{TODAY.count}<span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>건</span></span>
                 </div>
                 <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>처리 내역</span>
                 <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>후처리 {TODAY.wrapDone}건 완료</span>
@@ -526,7 +526,7 @@ export default function Standby() {
                 <span style={css("position:relative;display:inline-flex;width:20px")}>
                   <Bell size={20} color="var(--blue-700)" strokeWidth={1.8} />
                   {unreadCount > 0 && (
-                    <span style={css("position:absolute;top:-5px;right:-8px;min-width:15px;height:15px;padding:0 4px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 9.5px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
+                    <span style={css("position:absolute;top:-5px;right:-8px;min-width:15px;height:15px;padding:0 4px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 10px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
                   )}
                 </span>
                 <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>알림</span>

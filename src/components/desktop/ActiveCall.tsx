@@ -277,7 +277,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
           {vm.verified && showHistory && (
             <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockUp .25s ease")}>
-              <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
+              <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">과거 상담 이력</span>
                 <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>최근 6개월 · {HISTORY.length}건</span>
               </div>
@@ -304,7 +304,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
           {vm.verified && showAccounts && (
             <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockUp .25s ease")}>
-              <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
+              <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">보유 계좌 및 카드</span>
                 <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{ACCOUNTS.length}건 · 정상</span>
               </div>
@@ -436,7 +436,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         {/* ── 우 컬럼 : 규정 ── */}
         <div style={css("width:" + vm.regW + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0")}>
           <div className="card" style={css("flex:" + (vm.regCollapsed ? "none" : "1") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden;opacity:" + (vm.verified ? ".95" : ".9"))}>
-            <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
+            <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>gavel</span> 관련 규정 및 매뉴얼
               </span>

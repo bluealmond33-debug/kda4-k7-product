@@ -256,7 +256,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <span style={css("width:52px;height:52px;border-radius:9999px;background:var(--green-700);color:#fff;display:flex;align-items:center;justify-content:center")}>
               <span className="mi" style={css("font-size:28px")}>sync_alt</span>
             </span>
-            <div style={css("font:700 17px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{sentTo} 상담사에게 이관 완료</div>
+            <div style={css("font:700 16px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{sentTo} 상담사에게 이관 완료</div>
             <div style={css("font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 인계 메모가 자동 작성되어 함께 전달되었습니다</div>
           </div>
         )}

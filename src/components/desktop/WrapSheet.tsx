@@ -52,7 +52,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
           </div>
 
           <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
-            <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px dashed var(--color-border)")}>
+            <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd">오늘 완료한 상담</span>
               <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>12건</span>
             </div>
