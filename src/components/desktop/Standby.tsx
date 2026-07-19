@@ -156,7 +156,7 @@ export default function Standby() {
   return (
     <div
       style={css(
-        "width:1100px;height:688px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near);display:flex;flex-direction:column;font-family:'Geist Sans','Pretendard',system-ui,sans-serif;overflow:hidden"
+        "width:1100px;height:688px;position:relative;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near);display:flex;flex-direction:column;font-family:'Geist Sans','Pretendard',system-ui,sans-serif;overflow:hidden"
       )}
     >
       {/* ── 상단: 프로필(좌, 작게) + 날짜·상태·운영정보(우, 작게) — 시계가 주인공이 되도록 모두 물러난다 ── */}
@@ -500,9 +500,9 @@ export default function Standby() {
 
       {!view && (
         /* ── 대기(시계) 화면 — 시계가 정중앙의 유일한 주인공. 나머지는 가장자리로 ── */
-        <div style={css("flex:1;position:relative;min-height:0")}>
-          {/* 시계 — 이 영역의 정중앙 */}
-          <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center")}>
+        <div style={css("flex:1;min-height:0")}>
+          {/* 시계 — 헤더 아래 영역이 아니라 화면(루트) 전체 기준 정중앙 (루트가 position:relative) */}
+          <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none")}>
             <div style={css("display:flex;align-items:center;transition:opacity .3s" + (onBreak ? ";opacity:.55" : ""))}>
               <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{hh}</span>
               <span style={css("display:flex;flex-direction:column;gap:30px;margin:0 26px")}>
@@ -523,7 +523,7 @@ export default function Standby() {
                 <span
                   onClick={() => setOnBreak(false)}
                   style={css(
-                    "margin-top:22px;display:inline-flex;align-items:center;gap:7px;padding:12px 26px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 14px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus)"
+                    "margin-top:22px;display:inline-flex;align-items:center;gap:7px;padding:12px 26px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 14px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus);pointer-events:auto"
                   )}
                 >
                   <span className="mi" style={css("font-size:19px")}>play_arrow</span>복귀하기
