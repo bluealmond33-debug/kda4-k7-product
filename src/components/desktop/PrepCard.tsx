@@ -30,10 +30,10 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       </div>
 
       {/* dim — 광원이 모달에 있으므로 뒤는 웜 블랙으로 가라앉는다 */}
-      <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5)")} />
+      <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5);animation:fadeIn .18s ease-out")} />
 
       {/* 모달 */}
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
+      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
         <div style={css("padding:22px 28px 20px;border-bottom:1px solid var(--gray-200)")}>
           <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:14px")}>
             {vm.isUrgent ? (
@@ -212,7 +212,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <span className="mi" style={css("font-size:17px")}>phone_forwarded</span> 다른 상담사에게 이관
             </span>
             {pickerOpen && (
-              <div style={css("position:absolute;bottom:52px;right:0;width:290px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:12px;z-index:20;animation:dockUp .18s ease")}>
+              <div style={css("position:absolute;bottom:52px;right:0;width:290px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:12px;z-index:20;animation:dockUp .18s cubic-bezier(0.2,0.8,0.2,1)")}>
                 <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:3px")}>부서 내 시니어 상담사에게 이관</div>
                 <div style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>AI 인계 메모가 자동 작성되어 함께 전달됩니다</div>
                 <div style={css("display:flex;flex-direction:column;gap:6px")}>

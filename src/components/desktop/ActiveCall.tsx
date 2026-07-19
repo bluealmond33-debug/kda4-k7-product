@@ -162,7 +162,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </span>
             {/* 오클릭 방지 — 종료는 한 번 더 묻는다 */}
             {endConfirm && (
-              <div style={css("position:absolute;top:48px;right:0;width:220px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:13px 14px;z-index:40;animation:dockUp .15s ease")}>
+              <div style={css("position:absolute;top:48px;right:0;width:220px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:13px 14px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
                 <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:9px")}>통화를 종료할까요?</div>
                 <div style={css("display:flex;gap:6px")}>
                   <span onClick={vm.endCall} style={css("flex:1;text-align:center;padding:7px 0;border-radius:9999px;background:var(--red-800);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>종료</span>
@@ -287,7 +287,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </div>
 
           {vm.verified && showHistory && (
-            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockUp .25s ease")}>
+            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockUp .25s cubic-bezier(0.2,0.8,0.2,1)")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">과거 상담 이력</span>
                 <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>최근 6개월 · {HISTORY.length}건</span>
@@ -314,7 +314,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           )}
 
           {vm.verified && showAccounts && (
-            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockUp .25s ease")}>
+            <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockUp .25s cubic-bezier(0.2,0.8,0.2,1)")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">보유 계좌 및 카드</span>
                 <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{ACCOUNTS.length}건 · 정상</span>

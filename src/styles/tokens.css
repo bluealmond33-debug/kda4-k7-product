@@ -290,7 +290,8 @@
   --shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
 
   /* Motion — most interactions feel instant; use motion only to clarify change */
-  --ease-out: cubic-bezier(0.175, 0.885, 0.32, 1.1); /* @kind other */
+  /* 하우스 커브 — y2>1 오버슈트(바운스)는 금융 콘솔 성격과 불일치라 교정 */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); /* @kind other */
   --duration-state: 150ms; /* @kind other */
   --duration-popover: 200ms; /* @kind other */
   --duration-overlay: 300ms; /* @kind other */

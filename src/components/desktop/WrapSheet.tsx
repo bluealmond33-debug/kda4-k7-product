@@ -146,7 +146,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 
           {/* 바텀업 시트 — 열리면 재료 패널 위로 올라온다 */}
           {vm.wrapReady && vm.wrapSheetOpen && (
-            <div style={css("position:absolute;left:0;right:0;bottom:0;top:44px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);display:flex;flex-direction:column;overflow:visible;z-index:25;animation:dockUp .3s ease")}>
+            <div style={css("position:absolute;left:0;right:0;bottom:0;top:44px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);display:flex;flex-direction:column;overflow:visible;z-index:25;animation:dockUp .25s cubic-bezier(0.2,0.8,0.2,1)")}>
               <div onClick={vm.toggleWrapSheet} style={css("display:flex;align-items:center;justify-content:center;padding:8px 0 4px;cursor:pointer")} title="시트 접기">
                 <span style={css("width:48px;height:5px;border-radius:9999px;background:var(--color-border)")} />
               </div>

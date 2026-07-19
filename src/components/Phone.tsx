@@ -193,11 +193,12 @@ function InCallScreen({ vm }: { vm: CallFlowVM }) {
 
         {vm.showWave && (
           <div style={css("margin-top:18px;display:flex;align-items:center;justify-content:center;gap:5px;height:24px")}>
-            <span style={css("width:4px;height:8px;border-radius:9999px;background:#8a8a8e;animation:wave 1s infinite")} />
-            <span style={css("width:4px;height:18px;border-radius:9999px;background:#3a3a3c;animation:wave .9s infinite .1s")} />
+            {/* 바 높이는 22px 고정, 신축은 scaleY(GPU) — 위상차는 delay가 만든다 */}
+            <span style={css("width:4px;height:22px;border-radius:9999px;background:#8a8a8e;animation:wave 1s infinite")} />
+            <span style={css("width:4px;height:22px;border-radius:9999px;background:#3a3a3c;animation:wave .9s infinite .1s")} />
             <span style={css("width:4px;height:22px;border-radius:9999px;background:#8a8a8e;animation:wave 1.1s infinite .2s")} />
-            <span style={css("width:4px;height:12px;border-radius:9999px;background:#3a3a3c;animation:wave .8s infinite .15s")} />
-            <span style={css("width:4px;height:16px;border-radius:9999px;background:#8a8a8e;animation:wave 1s infinite .25s")} />
+            <span style={css("width:4px;height:22px;border-radius:9999px;background:#3a3a3c;animation:wave .8s infinite .15s")} />
+            <span style={css("width:4px;height:22px;border-radius:9999px;background:#8a8a8e;animation:wave 1s infinite .25s")} />
           </div>
         )}
 

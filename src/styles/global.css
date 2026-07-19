@@ -70,7 +70,9 @@ a:hover {
   border: none;
   border-radius: 12px;
   box-shadow: var(--sh-near, 0 2px 8px rgba(0, 0, 0, 0.06));
-  transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s;
+  /* 그림자·잉크가 같은 커브로 움직여야 조명이 "한 번에" 이동한 것으로 읽힌다 */
+  transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .sechd {
   /* 타입 래더 v2 Section — 실효 크기(×0.764) 기준으로 13px은 지각 하한 아래.
@@ -166,13 +168,18 @@ a:hover {
   transition: box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
     transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.ptile:hover {
-  box-shadow: var(--sh-focus);
-  transform: translateY(-2px);
+/* 터치 기기의 hover 오발동 방지 */
+@media (hover: hover) and (pointer: fine) {
+  .ptile:hover {
+    box-shadow: var(--sh-focus);
+    transform: translateY(-2px);
+  }
 }
 .ptile:active {
   transform: translateY(0);
   box-shadow: var(--sh-near);
+  /* 프레스는 스냅, 릴리즈만 0.25s — 비대칭 타이밍 */
+  transition-duration: 0.1s;
 }
 
 /* 메모 행 수정·삭제 — 올렸을 때만 드러난다. 상시 노출이면 기록이 산만해진다 */
@@ -209,15 +216,6 @@ a:hover {
   color: var(--gray-600);
 }
 
-@keyframes pulseDot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-}
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -232,13 +230,15 @@ a:hover {
     opacity: 0.15;
   }
 }
+/* wave — height 애니메이션은 매 프레임 레이아웃을 유발. scaleY로 GPU 이동
+   (바는 전부 height 22px 고정, 컨테이너 중앙 정렬이라 신축 모양은 동일) */
 @keyframes wave {
   0%,
   100% {
-    height: 6px;
+    transform: scaleY(0.27);
   }
   50% {
-    height: 22px;
+    transform: scaleY(1);
   }
 }
 @keyframes dockUp {
@@ -249,5 +249,70 @@ a:hover {
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+/* 팝오버는 트리거 기점에서 출발 — 트리거 아래에 뜨는 팝오버는 위(-8px)에서 내려온다 */
+@keyframes dockDown {
+  from {
+    transform: translateY(-8px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+/* PrepCard 모달 — 유일하게 하드컷이던 대면적 등장. 모달은 center 기점 예외 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* 모션 접근성 — 이동만 제거, 페이드는 유지 ("적게·부드럽게"이지 0은 아님) */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes dockUp {
+    from {
+      transform: none;
+      opacity: 0.4;
+    }
+  }
+  @keyframes dockDown {
+    from {
+      transform: none;
+      opacity: 0.4;
+    }
+  }
+  @keyframes modalIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+  @keyframes wave {
+    0%,
+    100% {
+      transform: scaleY(0.6);
+    }
+    50% {
+      transform: scaleY(0.6);
+    }
+  }
+  .ptile:hover {
+    transform: none;
   }
 }
