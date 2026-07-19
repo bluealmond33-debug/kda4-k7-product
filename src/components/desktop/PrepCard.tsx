@@ -6,12 +6,16 @@ import DesktopShell from "./DesktopShell";
 
 /** 1c — 상담 준비 카드 (dim 배경 + 모달). 유의사항 확인 시 통화 연결 활성화.
  *  인입 유형별 변주: urgent = 긴급 배지·빨간 램프·우선 배정 / transfer = 이관 배지 + AI 인수인계 블록. */
+const AUTO_TARGET = "__AUTO__"; // 기본 이관 — 부서 대기열 자동 배정
+
 export default function PrepCard({ vm }: { vm: CallFlowVM }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickDeep, setPickDeep] = useState(false); // 상담사 직접 지정 목록(한 단계 더)
   const [sentTo, setSentTo] = useState("");
   const resetT = useRef<number | null>(null);
   const sendTo = (name: string) => {
     setPickerOpen(false);
+    setPickDeep(false);
     setSentTo(name);
     if (resetT.current) window.clearTimeout(resetT.current);
     resetT.current = window.setTimeout(() => vm.reset(), 2000);
@@ -226,22 +230,42 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <div style={css("position:absolute;bottom:52px;right:0;width:290px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:12px;z-index:20;animation:dockUp .18s cubic-bezier(0.2,0.8,0.2,1)")}>
                 <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:3px")}>부서 내 시니어 상담사에게 이관</div>
                 <div style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>AI 인계 메모가 자동 작성되어 함께 전달됩니다</div>
-                <div style={css("display:flex;flex-direction:column;gap:6px")}>
-                  {vm.transferTargets.map((t) => (
-                    <span
-                      key={t.name}
-                      onClick={() => sendTo(t.name)}
-                      style={css("display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;background:var(--gray-100);cursor:pointer")}
-                    >
-                      <span className="av" style={css("width:30px;height:30px;font-size:15px;background:var(--onair-surface)")}><span className="mi">headset_mic</span></span>
-                      <span style={css("flex:1")}>
-                        <span style={css("display:block;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{t.name} <span style={css("font:600 10.5px;color:var(--green-900)")}>{t.level} {t.tenure}</span></span>
-                        <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{t.state}</span>
+                {/* 기본이 먼저 — 자동 배정 한 번 클릭. 지정은 한 단계 더 */}
+                <span
+                  onClick={() => sendTo(AUTO_TARGET)}
+                  style={css("display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:8px;background:var(--blue-700);color:#fff;cursor:pointer;margin-bottom:6px")}
+                >
+                  <span className="mi" style={css("font-size:18px")}>sync_alt</span>
+                  <span style={css("flex:1")}>
+                    <span style={css("display:block;font:700 12.5px 'Geist Sans','Pretendard',sans-serif")}>기본 이관 — 부서 대기열 자동 배정</span>
+                    <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;opacity:.85")}>수신 가능한 시니어에게 즉시 배정됩니다</span>
+                  </span>
+                </span>
+                <span
+                  onClick={() => setPickDeep((v) => !v)}
+                  style={css("display:flex;align-items:center;gap:6px;padding:8px 11px;border-radius:8px;cursor:pointer;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:" + (pickDeep ? "var(--gray-100)" : "transparent"))}
+                >
+                  상담사 직접 지정
+                  <span className="mi" style={css("font-size:16px;color:var(--gray-600);transition:transform .2s;transform:rotate(" + (pickDeep ? "180deg" : "0deg") + ")")}>expand_more</span>
+                </span>
+                {pickDeep && (
+                  <div style={css("display:flex;flex-direction:column;gap:6px;margin-top:5px")}>
+                    {vm.transferTargets.map((t) => (
+                      <span
+                        key={t.name}
+                        onClick={() => sendTo(t.name)}
+                        style={css("display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;background:var(--gray-100);cursor:pointer")}
+                      >
+                        <span className="av" style={css("width:30px;height:30px;font-size:15px;background:var(--onair-surface)")}><span className="mi">headset_mic</span></span>
+                        <span style={css("flex:1")}>
+                          <span style={css("display:block;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{t.name} <span style={css("font:600 10.5px;color:var(--green-900)")}>{t.level} {t.tenure}</span></span>
+                          <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{t.state}</span>
+                        </span>
+                        <span className="mi" style={css("font-size:16px;color:var(--gray-500)")}>chevron_right</span>
                       </span>
-                      <span className="mi" style={css("font-size:16px;color:var(--gray-500)")}>chevron_right</span>
-                    </span>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </span>
@@ -267,7 +291,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <span style={css("width:52px;height:52px;border-radius:9999px;background:var(--green-700);color:#fff;display:flex;align-items:center;justify-content:center")}>
               <span className="mi" style={css("font-size:28px")}>sync_alt</span>
             </span>
-            <div style={css("font:700 16px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{sentTo} 상담사에게 이관 완료</div>
+            <div style={css("font:700 16px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{sentTo === AUTO_TARGET ? "이관 완료 — 부서 대기열에 자동 배정" : `${sentTo} 상담사에게 이관 완료`}</div>
             <div style={css("font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 인계 메모가 자동 작성되어 함께 전달되었습니다</div>
           </div>
         )}

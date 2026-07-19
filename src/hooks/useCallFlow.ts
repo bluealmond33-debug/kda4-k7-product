@@ -119,6 +119,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [incoming, setIncoming] = useState<IncomingKind>("normal");
   // 통화 중 "이관 예약" — 통화를 끊지 않고 걸어두면 종료 시 인계된다
   const [transferReserved, setTransferReserved] = useState(false);
+  // 이관 예약 대상 — null = 기본(부서 대기열 자동 배정), 이름 = 지정 상담사
+  const [transferTarget, setTransferTarget] = useState<string | null>(null);
   // 감정온도는 고정값이 아니라 실시간 신호 — 데모에선 통화 20초 후 안정으로 하강(상담 효과 연출)
   const [emoDrift, setEmoDrift] = useState<{ score: number; level: "stable" | "caution" | "elevated"; reason: string } | null>(null);
   const [clock, setClock] = useState(0);
@@ -345,6 +347,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setWrapSheetOpen(false);
     setFollowups(DEFAULT_FOLLOWUPS);
     setTransferReserved(false);
+    setTransferTarget(null);
     setEmoDrift(null);
     setIncoming("normal");
   }, [clearAll]);
@@ -580,12 +583,24 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     pickNormal: () => pickIncoming("normal"),
     pickUrgent: () => pickIncoming("urgent"),
     pickTransfer: () => pickIncoming("transfer"),
+    // 콜 유형은 접수 시점에 픽스처가 고정되므로 대기 중에만 바꿀 수 있다 — UI가 이 사실을 보여줘야 함
+    canPickIncoming: p === "idle",
     isUrgent: incoming === "urgent",
     isTransfer: incoming === "transfer",
     handover: TRANSFER_HANDOVER,
     transferTargets: TRANSFER_TARGETS,
     transferReserved,
-    toggleTransferReserve: () => setTransferReserved((v) => !v),
+    transferTarget,
+    // 기본이 먼저: 인자 없이 부르면 자동 배정 예약. 지정은 이름을 넘길 때만
+    reserveTransfer: (target?: string) => {
+      setTransferReserved(true);
+      setTransferTarget(target ?? null);
+    },
+    toggleTransferReserve: () =>
+      setTransferReserved((v) => {
+        if (v) setTransferTarget(null);
+        return !v;
+      }),
     micErr,
     audioBusy,
     simBg: sim ? "var(--blue-700)" : "#fff",

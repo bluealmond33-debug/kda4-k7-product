@@ -66,9 +66,13 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             <span style={css("display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
               {vm.phaseLabel}
             </span>
-            {/* 다음 인입 콜 유형 (대기 중에만 선택 가능) */}
+            {/* 다음 인입 콜 유형 — 콜 유형은 접수 시점에 고정되므로 대기 중에만 바꿀 수 있다.
+                진행 중에는 흐려지고 잠금 아이콘이 이유를 말한다 */}
             <span style={css("font-size:12px;color:var(--color-fg-muted)")}>다음 콜</span>
-            <div style={css("display:flex;border:1px solid var(--color-border);border-radius:9999px;overflow:hidden")}>
+            <div
+              title={vm.canPickIncoming ? "다음 콜의 인입 유형을 고릅니다" : "콜 유형은 접수 시점에 정해져요 — 이번 콜을 마치면 바꿀 수 있습니다"}
+              style={css("display:flex;align-items:center;border:1px solid var(--color-border);border-radius:9999px;overflow:hidden;transition:opacity .2s" + (vm.canPickIncoming ? "" : ";opacity:.45"))}
+            >
               {([
                 ["normal", "일반", vm.pickNormal],
                 ["urgent", "긴급", vm.pickUrgent],
@@ -81,16 +85,20 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
                     key={key}
                     onClick={pick}
                     style={css(
-                      "padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;background:" +
+                      "padding:6px 12px;font-size:12.5px;font-weight:600;background:" +
                         (on ? accent : "#fff") +
                         ";color:" +
-                        (on ? "#fff" : "var(--color-fg-secondary)")
+                        (on ? "#fff" : "var(--color-fg-secondary)") +
+                        ";cursor:" + (vm.canPickIncoming ? "pointer" : "not-allowed")
                     )}
                   >
                     {label}
                   </span>
                 );
               })}
+              {!vm.canPickIncoming && (
+                <span className="mi" style={css("font-size:13px;color:var(--color-fg-muted);padding:0 8px 0 2px")}>lock</span>
+              )}
             </div>
             <input
               ref={audioInputRef}

@@ -25,6 +25,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [muted, setMuted] = useState(false);
   const [held, setHeld] = useState(false);
   const [endConfirm, setEndConfirm] = useState(false);
+  // 이관 패널 — 버튼을 눌렀을 때만 알약이 옆으로 늘어나며 선택지가 드러난다
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferPick, setTransferPick] = useState(false);
   // 메모 인라인 수정 — editIdx 행이 input으로 바뀐다
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
@@ -63,6 +66,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       if (e.key === "Escape") {
         setEndConfirm(false);
         setEditIdx(null);
+        setTransferOpen(false);
+        setTransferPick(false);
         if (typing) el.blur();
         return;
       }
@@ -84,7 +89,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     <DesktopShell flex>
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
-        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1004px")}>
+        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transition:width .3s cubic-bezier(0.2,0.8,0.2,1);width:" + (transferOpen && !vm.transferReserved ? "1240px" : "1004px"))}>
           <span style={css("display:flex;align-items:center;gap:7px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")} title="온에어 — 통화·녹취 중">
             <span className="onairdot" /> 녹취 중
           </span>
@@ -118,7 +123,49 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           {vm.transferReserved && (
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
-              <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · 종료 시 인계
+              <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · {vm.transferTarget ? `${vm.transferTarget} 상담사에게 인계` : "종료 시 인계"}
+            </span>
+          )}
+          {/* 이관 패널 — 기본(자동 배정)이 먼저, 지정은 한 단계 더 */}
+          {transferOpen && !vm.transferReserved && (
+            <span style={css("position:relative;display:flex;align-items:center;gap:6px;white-space:nowrap")}>
+              <span
+                onClick={() => {
+                  vm.reserveTransfer();
+                  setTransferOpen(false);
+                  setTransferPick(false);
+                }}
+                style={css("display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:9999px;background:var(--blue-700);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}
+              >
+                <span className="mi" style={css("font-size:14px")}>sync_alt</span>종료 시 인계 · 자동 배정
+              </span>
+              <span
+                onClick={() => setTransferPick((v) => !v)}
+                style={css("display:flex;align-items:center;gap:3px;padding:7px 12px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-800);font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:" + (transferPick ? "var(--gray-100)" : "var(--onair-surface)"))}
+              >
+                상담사 지정<span className="mi" style={css("font-size:15px")}>expand_more</span>
+              </span>
+              {transferPick && (
+                <div style={css("position:absolute;top:44px;right:0;width:280px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:11px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
+                  <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:8px")}>부서 내 시니어에게 종료 시 인계</div>
+                  <div style={css("display:flex;flex-direction:column;gap:5px")}>
+                    {vm.transferTargets.map((t) => (
+                      <span
+                        key={t.name}
+                        onClick={() => {
+                          vm.reserveTransfer(t.name);
+                          setTransferOpen(false);
+                          setTransferPick(false);
+                        }}
+                        style={css("display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--gray-100);cursor:pointer")}
+                      >
+                        <span style={css("flex:1;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{t.name} <span style={css("font:600 10.5px;color:var(--green-900)")}>{t.level} {t.tenure}</span></span>
+                        <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{t.state}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </span>
           )}
           {held && (
@@ -145,9 +192,16 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </span>
             <span
               className="cbtn"
-              title={(vm.transferReserved ? "이관 예약 취소" : "이관 예약 — 통화를 끊지 않고 종료 시 인계") + " · 단축키 T"}
-              onClick={vm.toggleTransferReserve}
-              style={vm.transferReserved ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : undefined}
+              title={(vm.transferReserved ? "이관 예약 취소" : "이관 — 통화를 끊지 않고 종료 시 인계") + " · 단축키 T"}
+              onClick={() => {
+                if (vm.transferReserved) {
+                  vm.toggleTransferReserve();
+                } else {
+                  setTransferOpen((v) => !v);
+                  setTransferPick(false);
+                }
+              }}
+              style={vm.transferReserved || transferOpen ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : undefined}
             >
               <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
             </span>
