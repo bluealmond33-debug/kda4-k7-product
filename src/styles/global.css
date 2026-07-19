@@ -73,7 +73,9 @@ a:hover {
   transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s;
 }
 .sechd {
-  font: 700 13px "Geist Sans", "Pretendard", sans-serif;
+  /* 타입 래더 v2 Section — 실효 크기(×0.764) 기준으로 13px은 지각 하한 아래.
+     700→600: 실효 10px대 한글에서 700은 뭉친다 */
+  font: 600 14px "Geist Sans", "Pretendard", sans-serif;
   color: var(--gray-1000);
 }
 .cbtn {

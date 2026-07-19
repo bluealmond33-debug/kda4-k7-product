@@ -116,7 +116,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 {vm.summaryPoints.map((p, i) => (
                   <div key={i} style={css("display:flex;gap:9px;align-items:baseline")}>
                     <span style={css("font:700 11px 'Geist Mono',monospace;color:var(--blue-900);flex:none")}>{i + 1}</span>
-                    <span style={css("font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{p}</span>
+                    <span style={css("font:400 14px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{p}</span>
                   </div>
                 ))}
               </div>
@@ -177,7 +177,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                   >
                     <span style={css("width:22px;height:22px;flex:none;border-radius:9999px;border:1.5px solid var(--gray-500);background:var(--onair-surface);box-sizing:border-box")} />
                     <div style={css("flex:1")}>
-                      <div style={css("font-weight:700;font-size:14.5px;color:var(--gray-1000)")}>{cur.title}</div>
+                      <div style={css("font-weight:700;font-size:14px;color:var(--gray-1000)")}>{cur.title}</div>
                       <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{cur.sub}</div>
                     </div>
                     <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);flex:none")}>

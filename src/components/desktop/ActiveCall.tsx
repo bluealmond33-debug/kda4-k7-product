@@ -29,6 +29,16 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const memoInputRef = useRef<HTMLInputElement | null>(null);
+  const [memoFocused, setMemoFocused] = useState(false);
+
+  // 광원 상태머신 v1 — verified 이분법 너머, 상담사의 실제 초점을 따라간다.
+  // 기본 = 인증 여부(고객↔스크립트), 오버라이드 = 입력 포커스(메모) > 규정집 확장.
+  // 마우스 추적 없음 — 전환은 .card의 0.45s 이산 트랜지션.
+  const focus: "customer" | "script" | "memo" | "reg" =
+    memoFocused || editIdx !== null ? "memo"
+    : vm.regExpanded ? "reg"
+    : vm.verified ? "script"
+    : "customer";
 
   // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
   const leftColRef = useRef<HTMLDivElement | null>(null);
@@ -84,24 +94,25 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:6px")}>
             <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
-            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
-            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
+            {/* 라벨-값 분리: 라벨은 500, 값은 600 14px — 흘끗 보기에 값만 뜨도록 */}
+            <span style={css("font:500 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
+            <span style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:7px")} title="고객 감정온도">
-            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
+            <span style={css("font:500 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
             <span className="lampdots">
               <i className={"g" + (vm.prepEmotionBars === 1 ? " lit" : "")} />
               <i className={"a" + (vm.prepEmotionBars === 2 ? " lit" : "")} />
               <i className={"r" + (vm.prepEmotionBars >= 3 ? " lit" : "")} />
             </span>
-            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
+            <span style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("display:flex;align-items:center;gap:5px")}>
             <span className="mi" style={css("font-size:15px;color:" + vm.prepRiskFg)}>gpp_maybe</span>
-            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
-            <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</span>
+            <span style={css("font:500 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
+            <span style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</span>
           </span>
           <span style={css("margin-left:auto;font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
@@ -184,7 +195,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
           {/* 고객 카드 + 본인인증 (1d) — 본인확인 전에는 광원이 여기에 있다 */}
           {/* 인증 전에는 인증 폼 높이(≈418px) 고정으로 흔들림 방지, 인증 후에는 내용만큼 */}
-          <div className="card" style={css("padding:16px" + (vm.verified ? "" : ";min-height:418px;box-shadow:var(--sh-focus)"))}>
+          <div className="card" style={css("padding:16px" + (vm.verified ? "" : ";min-height:418px") + (focus === "customer" ? ";box-shadow:var(--sh-focus)" : ""))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;margin-bottom:12px")}>
               <span className="sechd">고객</span>
               <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>고객 동의 시 열람</span>
@@ -334,21 +345,22 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <div className="card" style={css("flex:none;padding:15px 17px")}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
               <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>
-              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>AI 사전 요약</span>
-              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>대기 중 고객 진술 기반</span>
+              <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 사전 요약</span>
+              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>대기 중 고객 진술 기반</span>
             </div>
-            <div style={css("font:600 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:10px")}>{vm.prepHeadline}</div>
+            {/* 카드의 주인 문장 — Title 18px: 통화 시작 순간 첫 시선이 꽂히는 곳 */}
+            <div style={css("font:600 18px/1.4 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:10px")}>{vm.prepHeadline}</div>
             <div style={css("display:flex;flex-direction:column;gap:8px")}>
               {vm.prepSummaryBullets.map((t, i) => (
                 <div key={i} style={css("display:flex;gap:11px")}>
                   <span style={css("width:3px;border-radius:2px;background:var(--blue-500);flex:none")} />
-                  <span style={css("font:400 13px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
+                  <span style={css("font:400 14px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden" + (vm.verified ? ";box-shadow:var(--sh-focus)" : ""))}>
+          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "script" ? ";box-shadow:var(--sh-focus)" : ""))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>menu_book</span> 단계별 상담 스크립트
@@ -358,14 +370,15 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div style={css("flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px")}>
               {vm.steps.map((st, i) => (
                 <div key={i} style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
-                  <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{st.title}</div>
-                  <div style={css("font:400 13px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{st.text}</div>
+                  {/* 크기 역전 해소 — 제목이 본문보다 작았던 것을 바로잡음 (둘 다 14, weight·잉크로 분리) */}
+                  <div style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{st.title}</div>
+                  <div style={css("font:400 14px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{st.text}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="card" style={css("flex:none;height:196px;display:flex;flex-direction:column" + (vm.verified ? "" : ";opacity:.93"))}>
+          <div className="card" style={css("flex:none;height:196px;display:flex;flex-direction:column" + (focus === "memo" ? ";box-shadow:var(--sh-focus)" : vm.verified ? "" : ";opacity:.93"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:5px")}>
                 <span className="mi" style={css("font-size:17px")}>edit_note</span> 상담원 메모
@@ -388,11 +401,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                         }
                       }}
                       onBlur={() => setEditIdx(null)}
-                      style={css("flex:1;min-width:0;border:none;outline:none;border-bottom:1px solid var(--blue-400);font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:transparent;padding:0")}
+                      style={css("flex:1;min-width:0;border:none;outline:none;border-bottom:1px solid var(--blue-400);font:400 14px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:transparent;padding:0")}
                     />
                   ) : (
                     <>
-                      <span style={css("flex:1;min-width:0;font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{m}</span>
+                      <span style={css("flex:1;min-width:0;font:400 14px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{m}</span>
                       {/* 수정·삭제 — 행에 올렸을 때만 드러난다 (memorow:hover) */}
                       <span className="memoact" style={css("display:flex;gap:2px;flex:none;align-self:center")}>
                         <span
@@ -426,8 +439,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 value={vm.memoDraft}
                 onChange={vm.onMemoDraft}
                 onKeyDown={vm.onMemoKey}
+                onFocus={() => setMemoFocused(true)}
+                onBlur={() => setMemoFocused(false)}
                 placeholder="메모 입력 후 Enter · 단축키 N"
-                style={css("flex:1;border:none;outline:none;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:transparent")}
+                style={css("flex:1;border:none;outline:none;font:400 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:transparent")}
               />
             </div>
           </div>
@@ -435,7 +450,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
         {/* ── 우 컬럼 : 규정 ── */}
         <div style={css("width:" + vm.regW + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0")}>
-          <div className="card" style={css("flex:" + (vm.regCollapsed ? "none" : "1") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden;opacity:" + (vm.verified ? ".95" : ".9"))}>
+          <div className="card" style={css("flex:" + (vm.regCollapsed ? "none" : "1") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "reg" ? ";box-shadow:var(--sh-focus)" : ";opacity:" + (vm.verified ? ".95" : ".9")))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>gavel</span> 관련 규정 및 매뉴얼

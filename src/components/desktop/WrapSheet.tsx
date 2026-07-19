@@ -134,7 +134,8 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                   <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>자동 작성됨 · 열어서 확인·수정</span>
                 </div>
                 <div style={css("flex:1;min-height:0;overflow:hidden;position:relative")}>
-                  <div style={css("font:400 13px/1.7 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+                  {/* 후처리 초안 = 저장 전 검증 대상 텍스트 — "작음+옅음" 이중 감쇠 해제 */}
+                  <div style={css("font:400 14px/1.7 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
                     {vm.wrapSummaryDefault}
                   </div>
                   <div style={css("position:absolute;left:0;right:0;bottom:0;height:46px;background:linear-gradient(transparent,var(--onair-surface))")} />
