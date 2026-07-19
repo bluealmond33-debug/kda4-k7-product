@@ -159,39 +159,56 @@ export default function Standby() {
         "width:1100px;height:688px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near);display:flex;flex-direction:column;font-family:'Geist Sans','Pretendard',system-ui,sans-serif;overflow:hidden"
       )}
     >
-      {/* ── 상단: 프로필 + 날짜/상태 (상태 표시는 여기 한 곳만) ── */}
-      <div style={css("flex:none;display:flex;align-items:center;justify-content:space-between;padding:22px 26px")}>
-        <div style={css("display:flex;align-items:center;gap:13px")}>
-          <span className="av" style={css("width:44px;height:44px;font-size:20px")}>
+      {/* ── 상단: 프로필(좌, 작게) + 날짜·상태·운영정보(우, 작게) — 시계가 주인공이 되도록 모두 물러난다 ── */}
+      <div style={css("flex:none;display:flex;align-items:flex-start;justify-content:space-between;padding:18px 24px")}>
+        <div style={css("display:flex;align-items:center;gap:10px")}>
+          <span className="av" style={css("width:32px;height:32px;font-size:16px")}>
             <span className="mi">account_circle</span>
           </span>
           <div>
-            <div style={css("display:flex;align-items:center;gap:8px")}>
-              <span style={css("font:700 16px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
+            <div style={css("display:flex;align-items:center;gap:7px")}>
+              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
                 {AGENT.name} {AGENT.role}
               </span>
               {/* 숙련도 — 틴트 없이 잉크만 */}
               <span
                 title="부서 내 숙련도 — 이관 방향(주니어→시니어)의 기준"
                 style={css(
-                  "display:inline-flex;align-items:center;gap:3px;font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:" +
+                  "display:inline-flex;align-items:center;gap:2px;font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:" +
                     (AGENT.level === "시니어" ? "var(--green-900)" : "var(--amber-900)")
                 )}
               >
-                <span className="mi" style={css("font-size:13px")}>
+                <span className="mi" style={css("font-size:12px")}>
                   {AGENT.level === "시니어" ? "workspace_premium" : "school"}
                 </span>
                 {AGENT.level}
               </span>
             </div>
-            <div style={css("font:500 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:3px")}>
+            <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:2px")}>
               {AGENT.dept} · {AGENT.tenure} · {AGENT.id}
             </div>
           </div>
         </div>
-        <div style={css("display:flex;flex-direction:column;align-items:flex-end;gap:7px")}>
-          <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>{dateStr}</span>
-          {onBreak ? <Lamp tone="a" label="휴식 중" /> : <Lamp tone="g" label="대기 중 · 수신 가능" />}
+        <div style={css("display:flex;flex-direction:column;align-items:flex-end;gap:5px")}>
+          <div style={css("display:flex;align-items:center;gap:10px")}>
+            <span style={css("font:500 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{dateStr}</span>
+            {onBreak ? <Lamp tone="a" label="휴식 중" /> : <Lamp tone="g" label="대기 중 · 수신 가능" />}
+          </div>
+          {!onBreak && !view && (
+            <>
+              {/* 운영 정보 — 램프가 상태를 말하니 여기는 숫자만 작게 */}
+              <div style={css("display:flex;align-items:center;gap:6px;font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                <PhoneIncoming size={12} color="var(--gray-500)" strokeWidth={2} />
+                대기열 <span className="bignum" style={css("font-size:11.5px;color:var(--gray-800)")}>0</span>건
+                <span style={css("width:1px;height:10px;background:var(--gray-300)")} />
+                <CalendarClock size={12} color="var(--gray-500)" strokeWidth={2} />
+                다음 콜백 <span className="bignum" style={css("font-size:11.5px;color:var(--gray-800)")}>11:00</span>
+              </div>
+              <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>
+                전화가 오면 준비 카드가 이 자리에 도착합니다
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -466,105 +483,67 @@ export default function Standby() {
       )}
 
       {!view && (
-        /* ── 대기(시계) 화면 ── */
-        <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0")}>
-          {/* 시계 모듈 — 화면의 주인. 가로폭이 아래 타일 줄보다 넓다 */}
-          <div style={css("display:flex;align-items:center" + (onBreak ? ";opacity:.55" : ""))}>
-            <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{hh}</span>
-            <span style={css("display:flex;flex-direction:column;gap:30px;margin:0 26px")}>
-              <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
-              <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
-            </span>
-            <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{mm}</span>
-            <span style={css("margin-left:22px;background:var(--gray-100);border-radius:8px;padding:9px 13px")}>
-              <span className="clocknum" style={css("font-size:27px;color:var(--gray-800)")}>{ss}</span>
-            </span>
-          </div>
-          {/* 상태 줄 — 운영 신호(대기열·콜백)를 한 줄에 흡수. 팀 현황은 관리자 정보라 뺐다 */}
-          <div style={css("margin-top:20px;display:flex;align-items:center;gap:9px;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
-            <span style={css("width:8px;height:8px;border-radius:9999px;background:" + (onBreak ? "var(--amber-700)" : "var(--green-700)"))} />
-            {onBreak ? (
-              "휴식 중 — 복귀하면 수신 대기로 전환됩니다"
-            ) : (
+        /* ── 대기(시계) 화면 — 시계가 정중앙의 유일한 주인공. 나머지는 가장자리로 ── */
+        <div style={css("flex:1;position:relative;min-height:0")}>
+          {/* 시계 — 이 영역의 정중앙 */}
+          <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center")}>
+            <div style={css("display:flex;align-items:center;transition:opacity .3s" + (onBreak ? ";opacity:.55" : ""))}>
+              <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{hh}</span>
+              <span style={css("display:flex;flex-direction:column;gap:30px;margin:0 26px")}>
+                <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
+                <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
+              </span>
+              <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{mm}</span>
+              <span style={css("margin-left:22px;background:var(--gray-100);border-radius:8px;padding:9px 13px")}>
+                <span className="clocknum" style={css("font-size:27px;color:var(--gray-800)")}>{ss}</span>
+              </span>
+            </div>
+            {onBreak && (
               <>
-                수신 대기 중
-                <span style={css("width:1.3px;height:13px;background:var(--gray-300)")} />
-                <span style={css("display:flex;align-items:center;gap:5px")}>
-                  <PhoneIncoming size={14} color="var(--gray-600)" strokeWidth={2} />
-                  대기열 <span className="bignum" style={css("font-size:13px")}>0</span>건
-                </span>
-                <span style={css("width:1.3px;height:13px;background:var(--gray-300)")} />
-                <span style={css("display:flex;align-items:center;gap:5px")}>
-                  <CalendarClock size={14} color="var(--gray-600)" strokeWidth={2} />
-                  다음 콜백 <span className="bignum" style={css("font-size:13px")}>11:00</span>
+                <div style={css("margin-top:18px;display:flex;align-items:center;gap:8px;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+                  <span style={css("width:8px;height:8px;border-radius:9999px;background:var(--amber-700)")} />
+                  휴식 중 — 복귀하면 수신 대기로 전환됩니다
+                </div>
+                <span
+                  onClick={() => setOnBreak(false)}
+                  style={css(
+                    "margin-top:22px;display:inline-flex;align-items:center;gap:7px;padding:12px 26px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 14px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus)"
+                  )}
+                >
+                  <span className="mi" style={css("font-size:19px")}>play_arrow</span>복귀하기
                 </span>
               </>
             )}
           </div>
+
+          {/* 하단 — 입구들은 고스트 칩으로 조용히. 카드는 어차피 자동으로 도착한다 */}
           {!onBreak && (
-            <div style={css("margin-top:7px;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>
-              전화가 오면 준비 카드가 이 자리에 도착합니다
-            </div>
-          )}
-          {onBreak ? (
-            <span
-              onClick={() => setOnBreak(false)}
-              style={css(
-                "margin-top:26px;display:inline-flex;align-items:center;gap:7px;padding:12px 26px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 14px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus)"
-              )}
-            >
-              <span className="mi" style={css("font-size:19px")}>play_arrow</span>복귀하기
-            </span>
-          ) : (
-            <div style={css("margin-top:34px;display:flex;gap:10px")}>
-              {/* 처리 내역 */}
-              <div onClick={() => setView("today")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
-                <div style={css("display:flex;align-items:center;justify-content:space-between")}>
-                  <History size={20} color="var(--blue-700)" strokeWidth={1.8} />
-                  <span className="bignum" style={css("font-size:13px;color:var(--gray-1000)")}>{TODAY.count}<span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>건</span></span>
-                </div>
-                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>처리 내역</span>
-                <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>후처리 {TODAY.wrapDone}건 완료</span>
-              </div>
-              {/* 매뉴얼 — 아이콘 유지 */}
-              <div onClick={() => setView("manual")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
-                <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>menu_book</span>
-                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>매뉴얼</span>
-                <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>규정·업무 가이드</span>
-              </div>
-              {/* 코칭·리뷰 */}
-              <div onClick={() => setView("coach")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
-                <GraduationCap size={20} color="var(--blue-700)" strokeWidth={1.8} />
-                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>코칭·리뷰</span>
-                <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>어제 피드백 · 워밍업</span>
-              </div>
-              {/* 알림 — 카운트는 종 아이콘 우상단 배지로 */}
-              <div onClick={() => setView("alerts")} className="card ptile" style={css("width:140px;padding:14px 13px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--sh-far)")}>
-                <span style={css("position:relative;display:inline-flex;width:20px")}>
-                  <Bell size={20} color="var(--blue-700)" strokeWidth={1.8} />
+            <div style={css("position:absolute;left:0;right:0;bottom:16px;display:flex;align-items:center;justify-content:center;gap:2px")}>
+              <span onClick={() => setView("today")} className="ghosttile">
+                <History size={15} strokeWidth={2} />처리 내역
+                <span className="bignum" style={css("font-size:11.5px;color:var(--gray-500)")}>{TODAY.count}</span>
+              </span>
+              <span onClick={() => setView("manual")} className="ghosttile">
+                <span className="mi" style={css("font-size:16px")}>menu_book</span>매뉴얼
+              </span>
+              <span onClick={() => setView("coach")} className="ghosttile">
+                <GraduationCap size={15} strokeWidth={2} />코칭·리뷰
+              </span>
+              <span onClick={() => setView("alerts")} className="ghosttile">
+                <span style={css("position:relative;display:inline-flex")}>
+                  <Bell size={15} strokeWidth={2} />
                   {unreadCount > 0 && (
-                    <span style={css("position:absolute;top:-5px;right:-8px;min-width:15px;height:15px;padding:0 4px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 10px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
+                    <span style={css("position:absolute;top:-5px;right:-7px;min-width:13px;height:13px;padding:0 3px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 9px 'Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
                   )}
                 </span>
-                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>알림</span>
-                <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);line-height:1.4")}>사고대응팀 회신 · 콜백 예약</span>
-              </div>
+                알림
+              </span>
+              <span style={css("width:1px;height:14px;background:var(--gray-300);margin:0 8px")} />
+              <span onClick={() => setOnBreak(true)} className="ghosttile">
+                <span className="mi" style={css("font-size:16px")}>local_cafe</span>휴식하기
+              </span>
             </div>
           )}
-        </div>
-      )}
-
-      {/* ── 하단: 휴식 토글 ── */}
-      {!view && !onBreak && (
-        <div style={css("flex:none;display:flex;justify-content:center;padding-bottom:22px")}>
-          <span
-            onClick={() => setOnBreak(true)}
-            style={css(
-              "display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:9999px;background:var(--onair-surface);box-shadow:var(--sh-near);color:var(--gray-800);font:600 13px 'Geist Sans','Pretendard',sans-serif;cursor:pointer"
-            )}
-          >
-            <span className="mi" style={css("font-size:18px")}>local_cafe</span>휴식하기
-          </span>
         </div>
       )}
     </div>

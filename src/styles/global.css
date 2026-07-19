@@ -182,6 +182,24 @@ a:hover {
   transition-duration: 0.1s;
 }
 
+/* 대기화면 고스트 타일 — 시계가 주인공이므로 입구들은 존재감을 지운다.
+   평소엔 회색 텍스트, 올렸을 때만 면이 생긴다 (그림자 부상 없음 — ptile보다 한 단계 조용) */
+.ghosttile {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  color: var(--gray-600);
+  font: 500 12.5px "Geist Sans", "Pretendard", sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.ghosttile:hover {
+  background: var(--gray-100);
+  color: var(--gray-1000);
+}
+
 /* 메모 행 수정·삭제 — 올렸을 때만 드러난다. 상시 노출이면 기록이 산만해진다 */
 .memorow .memoact {
   opacity: 0;
