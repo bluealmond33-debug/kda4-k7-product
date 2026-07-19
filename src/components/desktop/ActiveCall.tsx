@@ -91,7 +91,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     <DesktopShell flex>
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
-        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transition:width .3s cubic-bezier(0.2,0.8,0.2,1);width:" + (transferOpen && !vm.transferReserved ? "1240px" : "1004px"))}>
+        {/* 알약 폭 = 콘텐츠 폭(빈 공간 없음). 이관 패널은 grid 0fr→1fr 트릭으로 알약이 부드럽게 길어진다 */}
+        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)")}>
           {vm.showWrap ? (
             /* 통화 종료 — 온에어 소등, 배경으로 남은 화면임을 알약이 말해준다 */
             <span style={css("display:flex;align-items:center;gap:7px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")} title="통화 종료 — 온에어 소등">
@@ -129,53 +130,35 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <span style={css("font:500 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
             <span style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</span>
           </span>
-          <span style={css("margin-left:auto;font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
+          <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           {vm.transferReserved && (
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
               <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · {vm.transferTarget ? `${vm.transferTarget} 상담사에게 인계` : "종료 시 인계"}
             </span>
           )}
-          {/* 이관 패널 — 기본(자동 배정)이 먼저, 지정은 한 단계 더 */}
-          {transferOpen && !vm.transferReserved && (
-            <span style={css("position:relative;display:flex;align-items:center;gap:6px;white-space:nowrap")}>
-              <span
-                onClick={() => {
-                  vm.reserveTransfer();
-                  setTransferOpen(false);
-                  setTransferPick(false);
-                }}
-                style={css("display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:9999px;background:var(--blue-700);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}
-              >
-                <span className="mi" style={css("font-size:14px")}>sync_alt</span>종료 시 인계 · 자동 배정
+          {/* 이관 패널 — 기본(자동 배정)이 먼저, 지정은 한 단계 더.
+              max-width 0↔340px 전환으로 알약이 옆으로 부드럽게 늘어난다 */}
+          {!vm.showWrap && (
+            <span style={css("display:flex;align-items:center;overflow:hidden;transition:max-width .4s cubic-bezier(0.2,0.8,0.2,1),opacity .3s;max-width:" + (transferOpen && !vm.transferReserved ? "340px" : "0px") + ";opacity:" + (transferOpen && !vm.transferReserved ? "1" : "0"))}>
+              <span style={css("display:flex;align-items:center;gap:6px;white-space:nowrap")}>
+                <span
+                  onClick={() => {
+                    vm.reserveTransfer();
+                    setTransferOpen(false);
+                    setTransferPick(false);
+                  }}
+                  style={css("display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:9999px;background:var(--blue-700);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}
+                >
+                  <span className="mi" style={css("font-size:14px")}>sync_alt</span>종료 시 인계 · 자동 배정
+                </span>
+                <span
+                  onClick={() => setTransferPick((v) => !v)}
+                  style={css("display:flex;align-items:center;gap:3px;padding:7px 12px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-800);font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:" + (transferPick ? "var(--gray-100)" : "var(--onair-surface)"))}
+                >
+                  상담사 지정<span className="mi" style={css("font-size:15px")}>expand_more</span>
+                </span>
               </span>
-              <span
-                onClick={() => setTransferPick((v) => !v)}
-                style={css("display:flex;align-items:center;gap:3px;padding:7px 12px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-800);font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:" + (transferPick ? "var(--gray-100)" : "var(--onair-surface)"))}
-              >
-                상담사 지정<span className="mi" style={css("font-size:15px")}>expand_more</span>
-              </span>
-              {transferPick && (
-                <div style={css("position:absolute;top:44px;right:0;width:280px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:11px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
-                  <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:8px")}>부서 내 시니어에게 종료 시 인계</div>
-                  <div style={css("display:flex;flex-direction:column;gap:5px")}>
-                    {vm.transferTargets.map((t) => (
-                      <span
-                        key={t.name}
-                        onClick={() => {
-                          vm.reserveTransfer(t.name);
-                          setTransferOpen(false);
-                          setTransferPick(false);
-                        }}
-                        style={css("display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--gray-100);cursor:pointer")}
-                      >
-                        <span style={css("flex:1;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{t.name} <span style={css("font:600 10.5px;color:var(--green-900)")}>{t.level} {t.tenure}</span></span>
-                        <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{t.state}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </span>
           )}
           {held && (
@@ -207,20 +190,44 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             >
               <span className="mi" style={css("font-size:19px")}>{held ? "play_arrow" : "pause"}</span>
             </span>
-            <span
-              className="cbtn"
-              title={(vm.transferReserved ? "이관 예약 취소" : "이관 — 통화를 끊지 않고 종료 시 인계") + " · 단축키 T"}
-              onClick={() => {
-                if (vm.transferReserved) {
-                  vm.toggleTransferReserve();
-                } else {
-                  setTransferOpen((v) => !v);
-                  setTransferPick(false);
-                }
-              }}
-              style={vm.transferReserved || transferOpen ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : undefined}
-            >
-              <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
+            <span style={css("position:relative;display:flex")}>
+              <span
+                className="cbtn"
+                title={(vm.transferReserved ? "이관 예약 취소" : "이관 — 통화를 끊지 않고 종료 시 인계") + " · 단축키 T"}
+                onClick={() => {
+                  if (vm.transferReserved) {
+                    vm.toggleTransferReserve();
+                  } else {
+                    setTransferOpen((v) => !v);
+                    setTransferPick(false);
+                  }
+                }}
+                style={vm.transferReserved || transferOpen ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : undefined}
+              >
+                <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
+              </span>
+              {/* 상담사 지정 팝오버 — grid 클리핑을 피해 버튼 기준으로 띄운다 */}
+              {transferPick && (
+                <div style={css("position:absolute;top:46px;right:0;width:280px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:11px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
+                  <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:8px")}>부서 내 시니어에게 종료 시 인계</div>
+                  <div style={css("display:flex;flex-direction:column;gap:5px")}>
+                    {vm.transferTargets.map((t) => (
+                      <span
+                        key={t.name}
+                        onClick={() => {
+                          vm.reserveTransfer(t.name);
+                          setTransferOpen(false);
+                          setTransferPick(false);
+                        }}
+                        style={css("display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--gray-100);cursor:pointer;white-space:nowrap")}
+                      >
+                        <span style={css("flex:1;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{t.name} <span style={css("font:600 10.5px;color:var(--green-900)")}>{t.level} {t.tenure}</span></span>
+                        <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{t.state}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </span>
           </span>
           )}
@@ -330,9 +337,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       inputMode="numeric"
                       style={css("width:" + (vm.authMaxLen === 6 ? "110px" : "78px") + ";border:none;background:transparent;font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000);padding:0")}
                     />
-                    {vm.authHint && (
-                      <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500);white-space:nowrap;margin-left:auto")}>{vm.authHint}</span>
-                    )}
                   </label>
                   <span onClick={vm.runVerify} style={css("flex:none;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>대조</span>
                 </div>
@@ -469,7 +473,13 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </span>
               <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>불릿 자동 · 종료 시 후처리에 반영</span>
             </div>
-            <div style={css("flex:1;overflow:auto;padding:10px 16px;display:flex;flex-direction:column;gap:6px")}>
+            {/* 빈 영역을 클릭해도 바로 입력 — placeholder 영역이 입력처럼 안 보이던 문제 해소 */}
+            <div
+              onClick={(e) => {
+                if (e.target === e.currentTarget || vm.memoEmpty) memoInputRef.current?.focus();
+              }}
+              style={css("flex:1;overflow:auto;padding:10px 16px;display:flex;flex-direction:column;gap:6px;cursor:text")}
+            >
               {vm.memoItems.map((m, i) => (
                 <div key={i} className="memorow" style={css("display:flex;gap:8px;align-items:baseline")}>
                   <span style={css("color:var(--blue-700);font-weight:700;flex:none")}>•</span>
@@ -550,7 +560,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
 
             {vm.regCollapsed ? (
-              <div style={css("flex:1;min-height:0;overflow:auto")}>
+              /* 내부 폭 고정 — 패널 width가 애니메이션되는 동안 텍스트가 재줄바꿈되며 끊겨 보이는 것을 방지 */
+              <div style={css("flex:1;min-height:0;overflow:auto;width:372px;animation:fadeIn .25s ease-out")}>
                 <div style={css("padding:12px 15px;border-bottom:1px solid var(--gray-200)")}>
                   {/* 실검색 — 입력하면 시트가 필터링된다. AI 추천 검색어는 placeholder로 */}
                   <div style={css("display:flex;align-items:center;gap:8px;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;background:var(--onair-surface)")}>
@@ -593,7 +604,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             ) : (
-              <>
+              <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
                 {/* 엑셀 크롬 — 실물 메타포는 실물의 색(엑셀 초록). 검색·파일 업로드가 여기 산다 */}
                 <div style={css("display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--excel-green);color:#fff")}>
                   <span className="mi" style={css("font-size:18px")}>grid_on</span>
@@ -667,7 +678,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;background:#fff;border:1px solid var(--gray-300);border-bottom:none;border-radius:4px 4px 0 0;padding:5px 12px;color:var(--gray-1000)")}>{vm.regSheet}</span>
                   <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;padding:5px 12px;color:var(--gray-600)")}>Sheet2</span>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

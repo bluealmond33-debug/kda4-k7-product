@@ -110,16 +110,19 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
           {/* 요약 2/3 + 신호 1/3 — 왼쪽은 읽는 영역, 오른쪽은 훑는 영역 */}
           <div style={css("display:flex;gap:12px")}>
-            {/* 좌 2/3 — 요구사항 분해 + AI 배정(한 줄로 흡수) */}
+            {/* 좌 2/3 — 요약(맥락)이 먼저, 요구사항(할 일)은 그 다음. 한 줄 헤드라인만으론 파악이 어렵다 */}
             <div style={css("flex:2;background:var(--gray-100);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column")}>
-              <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:8px")}>
-                <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>checklist</span>요구사항 분해 <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· 요약에서 상담사가 할 일</span>
+              <div style={css("font:400 13.5px/1.65 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:11px")}>
+                {vm.summaryProse}
               </div>
-              <div style={css("display:flex;flex-direction:column;gap:6px")}>
+              <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:7px;padding-top:10px;border-top:1px solid var(--gray-200)")}>
+                <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>checklist</span>상담사가 할 일
+              </div>
+              <div style={css("display:flex;flex-direction:column;gap:5px")}>
                 {vm.summaryPoints.map((p, i) => (
                   <div key={i} style={css("display:flex;gap:9px;align-items:baseline")}>
                     <span style={css("font:700 11px 'Geist Mono',monospace;color:var(--blue-900);flex:none")}>{i + 1}</span>
-                    <span style={css("font:400 14px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{p}</span>
+                    <span style={css("font:400 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{p}</span>
                   </div>
                 ))}
               </div>
@@ -129,26 +132,26 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 <span style={css("font:600 10.5px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900)")}>{vm.prepConfidence}</span>
               </div>
             </div>
-            {/* 우 1/3 — 감정온도 + 사고징후 스택 */}
+            {/* 우 1/3 — 감정온도 + 사고징후. 흘끗 봐도 걸리도록 값을 크게, 좌측에 신호색 바 */}
             <div style={css("flex:1;display:flex;flex-direction:column;gap:10px")}>
-              <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
-                <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>고객 감정온도</div>
-                <div style={css("display:flex;align-items:center;gap:7px")}>
+              <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:13px 15px;box-shadow:inset 3px 0 0 " + vm.prepEmotionFg)}>
+                <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>고객 감정온도</div>
+                <div style={css("display:flex;align-items:center;gap:8px")}>
                   <span className="lampdots">
                     <i className={"g" + (vm.prepEmotionBars === 1 ? " lit" : "")} />
                     <i className={"a" + (vm.prepEmotionBars === 2 ? " lit" : "")} />
                     <i className={"r" + (vm.prepEmotionBars >= 3 ? " lit" : "")} />
                   </span>
-                  <span style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
+                  <span style={css("font:700 18px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
                 </div>
-                <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:3px")}>{vm.prepEmotionSignal}</div>
+                <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:4px")}>{vm.prepEmotionSignal}</div>
               </div>
-              <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
-                <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>
+              <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:13px 15px;box-shadow:inset 3px 0 0 " + vm.prepRiskFg)}>
+                <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
                   <span className="mi" style={css("font-size:14px;color:" + vm.prepRiskFg)}>gpp_maybe</span>사고 징후
                 </div>
-                <div style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</div>
-                <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg + ";margin-top:3px")}>{vm.prepRiskSignal}</div>
+                <div style={css("font:700 18px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</div>
+                <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg + ";margin-top:4px")}>{vm.prepRiskSignal}</div>
               </div>
             </div>
           </div>
@@ -168,25 +171,28 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               ))}
             </div>
             {vm.prepDone < vm.prepTotal ? (
-              <div style={css("display:flex;flex-direction:column;gap:6px")}>
-                {/* 확인 완료한 항목 — 위에 쌓여 언제든 다시 읽을 수 있다 */}
-                {vm.prepRows.slice(0, vm.prepDone).map((r, i) => (
-                  <div key={i} style={css("display:flex;gap:10px;align-items:center;background:var(--gray-100);border-radius:8px;padding:9px 14px")}>
-                    <span style={css("width:18px;height:18px;flex:none;border-radius:9999px;background:var(--green-700);color:#fff;display:inline-flex;align-items:center;justify-content:center")}><span className="mi" style={css("font-size:13px")}>check</span></span>
-                    <div style={css("flex:1")}>
-                      <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>{r.title}</span>
-                      <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-left:7px")}>{r.sub}</span>
-                    </div>
-                  </div>
-                ))}
-                {/* 지금 확인할 항목 */}
+              /* 현재 항목만 고정 위치에 — 확인 버튼이 늘 같은 자리라 리듬이 안 깨진다.
+                 이전 항목은 ← 뒤로 가기로 다시 본다 */
+              <div style={css("display:flex;gap:6px;align-items:stretch")}>
+                <span
+                  onClick={vm.prepDone > 0 ? vm.prepRows[vm.prepDone - 1].toggle : undefined}
+                  title={vm.prepDone > 0 ? "이전 항목 다시 확인" : ""}
+                  style={css(
+                    "width:36px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .2s,color .2s,opacity .2s;" +
+                      (vm.prepDone > 0
+                        ? "background:var(--gray-100);color:var(--gray-700);cursor:pointer"
+                        : "background:var(--gray-100);color:var(--gray-400);opacity:.45;cursor:default")
+                  )}
+                >
+                  <span className="mi" style={css("font-size:19px")}>arrow_back</span>
+                </span>
                 {(() => {
                   const cur = vm.prepRows[vm.prepDone];
                   return (
                     <div
                       onClick={cur.toggle}
                       style={css(
-                        "display:flex;gap:12px;align-items:center;background:var(--background-200);border-radius:8px;padding:13px 15px;cursor:pointer;user-select:none"
+                        "flex:1;min-height:64px;display:flex;gap:12px;align-items:center;background:var(--background-200);border-radius:8px;padding:13px 15px;cursor:pointer;user-select:none"
                       )}
                     >
                       <span style={css("width:22px;height:22px;flex:none;border-radius:9999px;border:1.5px solid var(--gray-500);background:var(--onair-surface);box-sizing:border-box")} />

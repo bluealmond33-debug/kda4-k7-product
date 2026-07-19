@@ -5,6 +5,7 @@ import {
   REG_RECOS,
   REG_QUERY,
   SUMMARY_POINTS,
+  SUMMARY_PROSE,
   CUSTOMER,
   SHEETS,
   URGENT_RESPONSE,
@@ -154,6 +155,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
   const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
+  const [summaryVersion, setSummaryVersion] = useState(0);
+  const [regenerating, setRegenerating] = useState(false);
   const [wrapType, setWrapType] = useState(WRAP_TYPE_OPTIONS[0]);
   const [wrapResult, setWrapResult] = useState(WRAP_RESULT_OPTIONS[0]);
   const [typeMenu, setTypeMenu] = useState(false);
@@ -354,6 +357,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setTransferReserved(false);
     setTransferTarget(null);
     setEmoDrift(null);
+    setSummaryVersion(0);
+    setRegenerating(false);
     setIncoming("normal");
   }, [clearAll]);
 
@@ -415,8 +420,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // ── auth ──
   const pickAuth = useCallback((m: AuthMethod) => {
     setAuthMethod(m);
-    // 방식이 바뀌면 자릿수 규칙도 바뀐다 — 넘치는 입력은 잘라낸다
-    setAuthInput((v) => v.slice(0, m === "birth" ? 6 : 4));
+    // 방식이 바뀌면 이전 입력은 무의미 — 비운다 (잘라서 남기면 오입력 오류처럼 보인다)
+    setAuthInput("");
     setAuthErr(false);
   }, []);
   const onAuthInput = useCallback(
@@ -782,12 +787,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     customerPhone: CUSTOMER.phoneMasked,
     inquiryLabel,
     wrapSummaryDefault: [
-      `고객의 ${card.summary ?? summary?.headline ?? "상담 내용"}.`,
+      // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
+      summaryVersion % 2 === 0
+        ? `고객의 ${card.summary ?? summary?.headline ?? "상담 내용"}.`
+        : `${SUMMARY_PROSE[incoming]}`,
       `업무유형: ${card.business_type}.`,
       `전달부서: ${card.department}.`,
     ]
       .filter(Boolean)
       .join(" "),
+    summaryVersion,
+    regenerating,
+    regenerateSummary: () => {
+      // 재생성 느낌 — 잠깐 생성 중 상태를 거쳐 다른 문형으로
+      setRegenerating(true);
+      after(700, () => {
+        setSummaryVersion((v) => v + 1);
+        setRegenerating(false);
+      });
+    },
+    summaryProse: SUMMARY_PROSE[incoming],
     connectBg: allChecked ? "var(--blue-700)" : "var(--gray-200)",
     connectFg: allChecked ? "#fff" : "var(--gray-600)",
     connectCursor: allChecked ? "pointer" : "not-allowed",
@@ -821,8 +840,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // phone: 010 - **** - [    ] / birth: [      ] (YYMMDD) / account: ***-**-[    ]
     authPrefix: authMethod === "birth" ? "" : authMethod === "account" ? "***-**-" : "010 - **** - ",
     authMaxLen: authMethod === "birth" ? 6 : 4,
-    authHolePlaceholder: authMethod === "birth" ? "●●●●●●" : "●●●●",
-    authHint: authMethod === "birth" ? "생년월일 6자리 (YYMMDD)" : "",
+    // 힌트를 placeholder에 통합 — 별도 힌트 텍스트가 좁은 칸에서 잘리던 문제 해소
+    authHolePlaceholder: authMethod === "birth" ? "YYMMDD" : "●●●●",
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
     steps: SCRIPTS[incoming].map((st) => ({ title: st.title, text: st.text })),
     firstLine: SCRIPTS[incoming][0].text,
@@ -906,7 +925,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       remove: () => removeFollowup(i),
     })),
     noFollowups: followups.length === 0,
-    recoFollowups: RECOMMENDED_FOLLOWUPS.map((f) => ({
+    // 이미 추가된 추천은 숨긴다 — x로 빼면 다시 나타난다
+    recoFollowups: RECOMMENDED_FOLLOWUPS.filter(
+      (f) => !followups.some((x) => x.label === f.label)
+    ).map((f) => ({
       icon: f.icon,
       label: f.label,
       add: () => addFollowup(f),

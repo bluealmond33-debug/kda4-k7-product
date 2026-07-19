@@ -104,14 +104,15 @@ a:hover {
 .pill {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   background: var(--onair-surface, #fff);
   border: none;
   border-radius: 9999px;
-  height: 54px;
+  height: 48px;
   box-sizing: border-box;
-  padding: 8px 10px 8px 20px;
-  box-shadow: var(--sh-focus, var(--shadow-popover));
+  padding: 6px 8px 6px 18px;
+  /* 알약은 상태 표시줄이지 주인공이 아니다 — 그림자를 낮춰 초점(sh-focus)은 본문 카드가 갖는다 */
+  box-shadow: var(--sh-near);
   z-index: 10;
   white-space: nowrap;
 }

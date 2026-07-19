@@ -180,10 +180,22 @@ export const SUMMARY_POINTS: Record<IncomingKind, string[]> = {
 };
 
 /** 유형별 규정 검색어 (우측 패널 검색창 데모 값) */
+/* 검색 placeholder = 시트에 실제로 존재하는 키워드 — placeholder대로 치면 진짜 찾아진다 */
 export const REG_QUERY: Record<IncomingKind, string> = {
-  normal: "주담대 만기 연장",
-  urgent: "명의도용 지급정지",
-  transfer: "중도상환수수료 면제",
+  normal: "본인확인",
+  urgent: "FDS",
+  transfer: "반환지원",
+};
+
+/* 준비카드 서술형 요약 — 헤드라인 한 줄만으로는 상황 파악이 어렵다는 피드백.
+   헤드라인(무슨 일) → 프로즈(맥락 2문장) → 요구사항(할 일) 순서로 읽힌다 */
+export const SUMMARY_PROSE: Record<IncomingKind, string> = {
+  normal:
+    "고객은 보유 중인 주택담보대출의 만기가 다가와 연장이 가능한지 확인하고 싶어 합니다. 연장에 필요한 서류와 비대면 접수 가능 여부까지 함께 묻고 있어, 재약정 절차 안내가 필요한 상담입니다.",
+  urgent:
+    "고객은 본인이 신청한 적 없는 대출 실행 문자를 받고 크게 불안해하며 즉시 확인을 요청하고 있습니다. 명의도용 가능성이 있어 지급정지 등 긴급 조치와 사고대응팀 공조가 필요한 상담입니다.",
+  transfer:
+    "전세자금대출 중도상환 관련 상담이 앞선 상담사에게서 이관되었습니다. 수수료 면제 조건 확인까지 진행된 상태로, 남은 절차 안내부터 이어가면 되는 상담입니다.",
 };
 
 export interface SheetColumn {

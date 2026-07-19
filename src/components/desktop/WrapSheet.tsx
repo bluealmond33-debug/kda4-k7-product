@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
@@ -9,9 +10,16 @@ import DesktopShell from "./DesktopShell";
  *  승강 커브 = --ease-drawer (iOS 드로어), transform만 애니메이션(GPU). */
 export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
   const open = vm.wrapSheetOpen;
-  // 시트 전체 높이 812px(1440 좌표계), 접힌 상태 = 헤더 56px만 보임
-  const SHEET_H = 812;
+  // 시트 전체 높이 700px(1440 좌표계 — 콘텐츠에 맞게, 휑하지 않게), 접힌 상태 = 헤더 56px만
+  const SHEET_H = 700;
   const PEEK = 56;
+  // 마운트 직후 한 프레임은 내려간 상태 → 다음 프레임에 올라온다 (등장이 항상 아래에서 위로)
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const shown = open && entered;
   return (
     <DesktopShell overlay>
       {/* dim — 시트가 열렸을 때만. 클릭하면 접혀서 뒤의 통화 화면을 본다 */}
@@ -19,9 +27,9 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
         onClick={open ? vm.toggleWrapSheet : undefined}
         style={css(
           "position:absolute;inset:0;background:rgba(22,20,17,.34);transition:opacity .45s var(--ease-drawer);pointer-events:" +
-            (open ? "auto" : "none") +
+            (shown ? "auto" : "none") +
             ";opacity:" +
-            (open ? "1" : "0")
+            (shown ? "1" : "0")
         )}
       />
 
@@ -31,7 +39,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
           "position:absolute;left:50%;bottom:0;width:1240px;height:" +
             SHEET_H +
             "px;background:var(--onair-surface);border-radius:12px 12px 0 0;box-shadow:var(--sh-modal);display:flex;flex-direction:column;overflow:hidden;pointer-events:auto;transition:transform .5s var(--ease-drawer);transform:translateX(-50%) translateY(" +
-            (open ? "0" : SHEET_H - PEEK + "px") +
+            (shown ? "0" : SHEET_H - PEEK + "px") +
             ")"
         )}
       >
@@ -74,7 +82,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <div style={css("flex:1;display:flex;gap:18px;padding:14px 24px;min-height:0")}>
               {/* 좌 — 예전엔 상담사가 손으로 쓰던 기입 항목들. 기본값이 채워져 있고 클릭해 수정 */}
               <div style={css("width:300px;flex:none;display:flex;flex-direction:column;gap:12px;overflow:visible")}>
-                <div className="lbl">기입 항목 · 자동 채움, 클릭해 수정</div>
+                <div className="lbl">기입 항목 · 자동 채움 — ✎를 눌러 수정</div>
                 <div style={css("display:flex;flex-direction:column;gap:8px")}>
                   <EditRow label="고객" value={`${vm.customerName} · ${vm.customerPhone}`} />
                   <EditRow label="상담사" value={`${AGENT.name} · ${AGENT.id}`} />
@@ -145,15 +153,21 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                       <span className="mi" style={css("font-size:14px;color:var(--blue-700);vertical-align:-2px;margin-right:4px")}>auto_awesome</span>
                       후처리 초안 <span style={css("font-weight:400;color:var(--blue-700)")}>· 클릭해 편집</span>
                     </span>
-                    <span style={css("display:inline-flex;align-items:center;gap:3px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);cursor:pointer")}>
-                      <span className="mi" style={css("font-size:15px")}>refresh</span> 다시 생성
+                    <span
+                      onClick={vm.regenerating ? undefined : vm.regenerateSummary}
+                      style={css("display:inline-flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);cursor:" + (vm.regenerating ? "default;opacity:.6" : "pointer"))}
+                    >
+                      <span className="mi" style={css("font-size:15px" + (vm.regenerating ? ";animation:spin .8s linear infinite" : ""))}>refresh</span>
+                      {vm.regenerating ? "생성 중…" : "다시 생성"}
                     </span>
                   </div>
+                  {/* key=summaryVersion — 다시 생성하면 초안이 새 문형으로 갈아끼워진다 */}
                   <div
+                    key={vm.summaryVersion}
                     contentEditable
                     suppressContentEditableWarning
                     onInput={vm.onSummary}
-                    style={css("flex:1;border:1px solid var(--gray-300);border-radius:8px;padding:13px 16px;font:400 14px/1.75 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none")}
+                    style={css("flex:1;border:1px solid var(--gray-300);border-radius:8px;padding:13px 16px;font:400 14px/1.75 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none;transition:opacity .25s;opacity:" + (vm.regenerating ? ".4" : "1"))}
                   >
                     {vm.wrapSummaryDefault}
                   </div>
@@ -201,11 +215,36 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 }
 
 function EditRow({ label, value, small }: { label: string; value: string; small?: boolean }) {
+  // 연필을 눌러야만 편집 — 기본 편집 가능이면 흘끗 클릭에 실수로 고쳐진다
+  const [editing, setEditing] = useState(false);
   return (
-    <div style={css("display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:9999px;padding:7px 12px")}>
+    <div style={css("display:flex;align-items:center;gap:8px;border-radius:9999px;padding:7px 12px;transition:background .2s,box-shadow .2s;background:var(--gray-100)" + (editing ? ";background:var(--onair-surface);box-shadow:inset 0 0 0 1.5px var(--blue-500)" : ""))}>
       <span className="lbl" style={css("width:44px;flex:none")}>{label}</span>
-      <span contentEditable suppressContentEditableWarning style={css("flex:1;font:600 " + (small ? "12px" : "12.5px") + " 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);outline:none")}>{value}</span>
-      <span className="mi" style={css("font-size:14px;color:var(--gray-400)")}>edit</span>
+      <span
+        contentEditable={editing}
+        suppressContentEditableWarning
+        onBlur={() => setEditing(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLElement).blur();
+        }}
+        style={css("flex:1;font:600 " + (small ? "12px" : "12.5px") + " 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);outline:none;cursor:" + (editing ? "text" : "default"))}
+      >
+        {value}
+      </span>
+      <span
+        className="mi"
+        title={editing ? "완료 (Enter)" : "수정"}
+        onClick={(e) => {
+          if (!editing) {
+            setEditing(true);
+            const txt = (e.currentTarget.parentElement?.querySelector('[contenteditable]') ?? null) as HTMLElement | null;
+            requestAnimationFrame(() => txt?.focus());
+          }
+        }}
+        style={css("font-size:14px;cursor:pointer;color:" + (editing ? "var(--blue-700)" : "var(--gray-500)"))}
+      >
+        {editing ? "check" : "edit"}
+      </span>
     </div>
   );
 }
