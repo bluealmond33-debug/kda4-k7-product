@@ -215,28 +215,44 @@ export default function Standby() {
       {view === "today" && (
         <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0")}>
           <SubHead onBack={back} title="처리 내역" sub="오늘" />
-          {/* 요약 스탯 3장 */}
-          <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px")}>
+          {/* 요약 스탯 3장 — 아이콘 + bignum 타일 */}
+          <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px")}>
             {[
-              { label: "처리", value: `${TODAY.count}건` },
-              { label: "후처리 완료", value: `${TODAY.wrapDone}건` },
-              { label: "평균 통화", value: TODAY.avgTalk },
+              { icon: <History size={17} color="var(--blue-700)" strokeWidth={2} />, label: "처리", value: `${TODAY.count}`, unit: "건" },
+              { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>task_alt</span>, label: "후처리 완료", value: `${TODAY.wrapDone}`, unit: "건" },
+              { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>timer</span>, label: "평균 통화", value: TODAY.avgTalk, unit: "" },
             ].map((s) => (
-              <div key={s.label} style={css("background:var(--background-200);border-radius:8px;padding:13px 16px")}>
-                <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{s.label}</div>
-                <div className="bignum" style={css("font-size:19px;color:var(--gray-1000);margin-top:4px")}>{s.value}</div>
+              <div key={s.label} className="card" style={css("padding:13px 16px;box-shadow:var(--sh-near)")}>
+                <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{s.icon}{s.label}</div>
+                <div style={css("margin-top:6px")}>
+                  <span className="bignum" style={css("font-size:24px;color:var(--gray-1000)")}>{s.value}</span>
+                  {s.unit && <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-left:2px")}>{s.unit}</span>}
+                </div>
               </div>
             ))}
           </div>
-          {/* 시간축 리스트 — 최근 콜이 위 */}
-          <div style={css("background:var(--background-200);border-radius:8px;overflow:auto;min-height:0")}>
-            {TODAY.rows.map((r, i) => (
-              <div key={i} style={css("display:flex;align-items:center;gap:14px;padding:12px 18px" + (i < TODAY.rows.length - 1 ? ";border-bottom:1px solid var(--gray-200)" : ""))}>
-                <span style={css("font:600 12.5px 'Geist Mono',monospace;color:var(--gray-700);width:44px;flex:none")}>{r.time}</span>
-                <span style={css("flex:1;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.type}</span>
-                <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:" + (r.status === "후처리 완료" ? "var(--green-900)" : "var(--amber-900)"))}>{r.status}</span>
-              </div>
-            ))}
+          {/* 시간축 타임라인 — 좌측 레일(점+선), 최근 콜이 위 */}
+          <div style={css("flex:1;min-height:0;overflow:auto")}>
+            {TODAY.rows.map((r, i) => {
+              const last = i === TODAY.rows.length - 1;
+              const cb = r.status === "콜백 예약";
+              return (
+                <div key={i} className="ptile" style={css("display:flex;gap:14px;padding:2px 4px;border-radius:8px")}>
+                  {/* 레일 */}
+                  <div style={css("display:flex;flex-direction:column;align-items:center;flex:none;width:10px")}>
+                    <span style={css("width:9px;height:9px;border-radius:9999px;margin-top:15px;flex:none;background:" + (cb ? "var(--amber-700)" : "var(--gray-400)"))} />
+                    {!last && <span style={css("flex:1;width:1.5px;background:var(--gray-200)")} />}
+                  </div>
+                  <div style={css("flex:1;display:flex;align-items:center;gap:14px;padding:12px 4px" + (last ? "" : ";border-bottom:1px solid var(--gray-200)"))}>
+                    <span style={css("font:600 12.5px 'Geist Mono',monospace;color:var(--gray-600);width:44px;flex:none")}>{r.time}</span>
+                    <span style={css("flex:1;font:600 13.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.type}</span>
+                    <span style={css("display:inline-flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:4px 10px;" + (cb ? "color:var(--amber-900);background:rgba(178,116,0,.10)" : "color:var(--green-900);background:rgba(29,122,72,.10)"))}>
+                      <span className="mi" style={css("font-size:13px")}>{cb ? "event" : "check"}</span>{r.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
