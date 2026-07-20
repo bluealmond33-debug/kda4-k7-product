@@ -191,12 +191,21 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 })()}
               </div>
             ) : (
-              /* 4/4 완료 — 유의사항 자리가 첫 응대 문장이 된다 */
-              <div style={css("display:flex;align-items:baseline;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
-                <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
-                <div>
-                  <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>확인 완료 — 이 문장으로 통화를 여세요</div>
-                  <div style={css("font:500 15px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
+              /* 4/4 완료 — 유의사항 자리가 첫 응대 문장이 된다. ← 로 유의사항을 다시 확인할 수 있다 */
+              <div style={css("display:flex;gap:6px;align-items:stretch")}>
+                <span
+                  onClick={vm.prepRows[vm.prepDone - 1].toggle}
+                  title="이전 항목 다시 확인"
+                  style={css("width:36px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .2s;background:var(--gray-100);color:var(--gray-700);cursor:pointer")}
+                >
+                  <span className="mi" style={css("font-size:19px")}>arrow_back</span>
+                </span>
+                <div style={css("flex:1;display:flex;align-items:baseline;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
+                  <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
+                  <div>
+                    <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>확인 완료 — 이 문장으로 통화를 여세요</div>
+                    <div style={css("font:500 15px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
+                  </div>
                 </div>
               </div>
             )}
