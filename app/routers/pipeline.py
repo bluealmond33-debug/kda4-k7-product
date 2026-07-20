@@ -52,6 +52,7 @@ _REASON_LABELS: dict[AttentionReasonCode, str] = {
     AttentionReasonCode.REPEAT_CONTACT: "반복 연락",
     AttentionReasonCode.PRIOR_RESOLUTION_FAILED: "이전 해결 실패",
     AttentionReasonCode.HIGH_EMOTIONAL_DISTRESS: "고객 감정 주의",
+    AttentionReasonCode.TEXT_HIGH_RISK_SIGNAL: "텍스트 상황 고위험 신호",
 }
 
 
