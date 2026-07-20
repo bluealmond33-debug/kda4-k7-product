@@ -24,7 +24,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
         <div
           ref={vm.stageRef}
           style={{
-            width: vm.stageWidth + "px",
+            width: "1420px",
             transformOrigin: "top left",
             transform: vm.scaleT,
             display: "flex",
@@ -145,6 +145,36 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             </span>
           </div>
 
+          {/* 데모 안내(가이드 모드) — 상단 패널. 스테이지 폭(1420)을 넘지 않아 폰·데스크톱을
+              축소시키지 않는다(스케일은 폭 기준). 상단 '안내' 토글 또는 × 로 켜고 끈다 */}
+          {vm.guideOpen && (
+            <div style={css("width:1400px;box-sizing:border-box;background:var(--onair-surface);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.26);padding:13px 22px 15px")}>
+              <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:11px")}>
+                <span className="mi" style={css("font-size:19px;color:var(--blue-700)")}>tips_and_updates</span>
+                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>데모 안내</span>
+                <span style={css("font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px")}>{vm.guide.step}</span>
+                <span style={css("width:1px;height:15px;background:var(--color-border);margin:0 3px")} />
+                <span style={css("font:700 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.guide.title}</span>
+                <div style={css("flex:1")} />
+                <span onClick={vm.closeGuide} title="안내 닫기 — 상단 '안내'로 다시 켜기" style={css("cursor:pointer;display:flex")}>
+                  <span className="mi" style={css("font-size:19px;color:var(--gray-500)")}>close</span>
+                </span>
+              </div>
+              <div style={css("display:flex;gap:22px;margin-bottom:11px")}>
+                {vm.guide.points.map((pt, i) => (
+                  <div key={i} style={css("flex:1;display:flex;gap:8px;align-items:flex-start")}>
+                    <span style={css("flex:none;width:5px;height:5px;border-radius:9999px;background:var(--blue-500);margin-top:7px")} />
+                    <span style={css("font:400 12.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{pt}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={css("display:flex;gap:8px;align-items:center;background:var(--gray-100);border-radius:10px;padding:10px 14px")}>
+                <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>arrow_forward</span>
+                <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.guide.next}</span>
+              </div>
+            </div>
+          )}
+
           {vm.micErr && (
             <div style={css("background:var(--onair-surface);border-radius:9999px;padding:8px 16px;font-size:12.5px;color:var(--amber-900);box-shadow:0 10px 34px rgba(0,0,0,.28);display:flex;align-items:center;gap:6px")}>
               <span className="mi" style={css("font-size:16px")}>info</span>
@@ -152,40 +182,8 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             </div>
           )}
 
-          {/* 가이드 레일 + 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율 */}
+          {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율 */}
           <div style={css("display:flex;gap:40px;align-items:center;justify-content:center")}>
-            {/* 데모 안내(가이드 모드) — 떠다니지 않고 스테이지 왼쪽 레일로 들어와 아무것도 가리지 않는다.
-                상단 '안내'로 토글하면 스테이지 폭이 늘고 줄어든다 */}
-            {vm.guideOpen && (
-              <div style={css("flex:none;width:300px;align-self:stretch;display:flex;flex-direction:column;justify-content:center")}>
-                <div style={css("background:var(--onair-surface);border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.32);display:flex;flex-direction:column;overflow:hidden")}>
-                  <div style={css("display:flex;align-items:center;gap:8px;padding:13px 12px 12px 16px;border-bottom:1px solid var(--gray-200)")}>
-                    <span className="mi" style={css("font-size:18px;color:var(--blue-700)")}>tips_and_updates</span>
-                    <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>데모 안내</span>
-                    <span style={css("font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px")}>{vm.guide.step}</span>
-                    <div style={css("flex:1")} />
-                    <span onClick={vm.closeGuide} title="안내 닫기 — 상단 '안내'로 다시 켜기" style={css("cursor:pointer;display:flex")}>
-                      <span className="mi" style={css("font-size:18px;color:var(--gray-500)")}>close</span>
-                    </span>
-                  </div>
-                  <div style={css("padding:15px 16px 4px")}>
-                    <div style={css("font:700 16px/1.35 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:11px")}>{vm.guide.title}</div>
-                    <div style={css("display:flex;flex-direction:column;gap:10px")}>
-                      {vm.guide.points.map((pt, i) => (
-                        <div key={i} style={css("display:flex;gap:9px;align-items:flex-start")}>
-                          <span style={css("flex:none;width:5px;height:5px;border-radius:9999px;background:var(--blue-500);margin-top:7px")} />
-                          <span style={css("font:400 13px/1.65 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{pt}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={css("margin:13px 14px 15px;display:flex;gap:8px;align-items:flex-start;background:var(--gray-100);border-radius:10px;padding:11px 12px")}>
-                    <span className="mi" style={css("font-size:17px;color:var(--blue-700);margin-top:1px")}>arrow_forward</span>
-                    <span style={css("font:600 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.guide.next}</span>
-                  </div>
-                </div>
-              </div>
-            )}
             <Phone vm={vm} />
             <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
               {vm.showWaiting && <Waiting vm={vm} />}
