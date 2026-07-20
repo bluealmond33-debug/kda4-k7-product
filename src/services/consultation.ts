@@ -16,7 +16,7 @@ export function getDemoConsultationCard(): ConsultationCardResponse {
     status: "completed",
     score: 55,
     level: "caution",
-    reason: "만기 임박 관련 불안 발화",
+    reason: "[SOURCE=STUB] 만기 임박 관련 불안 발화",
   };
   return card;
 }

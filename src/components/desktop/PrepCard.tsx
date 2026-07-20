@@ -105,6 +105,17 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                   <i className={"r" + (vm.prepEmotionBars >= 3 ? " lit" : "")} />
                 </span>
                 <span style={css("font:700 18px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
+                <span
+                  title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델이 판정한 값입니다" : "실제 모델 미연동 — 데모용 값입니다"}
+                  style={css(
+                    "font:600 9.5px 'Geist Mono',monospace;letter-spacing:.2px;padding:2px 6px;border-radius:5px;" +
+                      (vm.prepEmotionSourceBadge.isReal
+                        ? "background:var(--blue-50,#eef4ff);color:var(--blue-900,#1a3a6b)"
+                        : "background:var(--gray-200);color:var(--gray-600)")
+                  )}
+                >
+                  {vm.prepEmotionSourceBadge.label}
+                </span>
               </div>
               <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:4px")}>{vm.prepEmotionSignal}</div>
             </div>

@@ -27,6 +27,8 @@ import {
   summarize,
   createConsultationFromAudio,
   getDemoConsultationCard,
+  parseEmotionSource,
+  emotionSourceBadge,
   type CallSummary,
   type ConsultationCardResponse,
   type TranscriptChunk,
@@ -850,7 +852,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         : temperature.level
         ? EMOTION_LABELS[temperature.level]
         : "분석 중",
-    prepEmotionSignal: temperature.reason ?? "특이 감정 신호 없음",
+    // 백엔드가 reason 맨 앞에 실어 보낸 [SOURCE=...]를 배지로 분리하고, 신호 텍스트에선 접두사를 뺀다(P0-3)
+    prepEmotionSourceBadge: emotionSourceBadge(parseEmotionSource(temperature.reason)),
+    prepEmotionSignal:
+      (temperature.reason ?? "").replace(/^\[SOURCE=[A-Z_]+\]\s*/, "") || "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
     prepEmotionFg: temperature.level ? EMOTION_COLORS[temperature.level].fg : "var(--gray-700)",
     prepEmotionBar: temperature.level ? EMOTION_COLORS[temperature.level].bar : "var(--gray-500)",
