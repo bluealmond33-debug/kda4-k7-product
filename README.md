@@ -1,6 +1,7 @@
-# NARS (No ARS) — 금융 콜센터 AI 백엔드
+# KARI-NA (Kiwoom Academy Response Innovation · No ARS) — 금융 콜센터 AI 백엔드
 
-K7팀 프로젝트 "NARS(No ARS)" — ARS에 갇히지 않는 콜센터. 고객 상담 음성을 받아
+K7팀 프로젝트 "KARI-NA" — Kiwoom Academy Response Innovation, No ARS. ARS에 갇히지 않는
+콜센터. 고객 상담 음성을 받아
 **완전 온프레미스**로 STT → 요약/분류(텍스트) → 감정온도(음향) → 융합 판단 → RAG를
 거쳐 상담사용 브리핑 카드를 자동 생성하는 FastAPI 백엔드다.
 

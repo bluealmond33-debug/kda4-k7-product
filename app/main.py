@@ -23,7 +23,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="NARS(No ARS) — 보이스피싱 상담 브리핑 API", lifespan=lifespan)
+app = FastAPI(title="KARI-NA(Kiwoom Academy Response Innovation · No ARS) — 보이스피싱 상담 브리핑 API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
