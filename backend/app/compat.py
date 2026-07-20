@@ -13,6 +13,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from app.config import Settings
 from app.contracts import IncidentRisk
 from app.pipeline import analyze_transcript, transcribe_audio
+from app.rag import RegulationSearchUnavailable, search_regulations
 
 
 router = APIRouter(tags=["legacy-demo-compatibility"])
@@ -120,6 +121,33 @@ def _judge(risk_flags: dict, emotion: dict) -> dict:
     }
 
 
+def _regulation_references(settings: Settings, query: str) -> list[dict]:
+    """Real regulation hits when the RAG index is provisioned; else placeholders.
+
+    Keeps the legacy {doc_id, title, excerpt, score} shape (enriched with
+    page/section when available) so existing dashboards do not break.
+    """
+    query = (query or "").strip()
+    if query:
+        try:
+            hits = search_regulations(settings, query, limit=3)
+        except (RegulationSearchUnavailable, ValueError):
+            hits = []
+        if hits:
+            return [
+                {
+                    "doc_id": h["doc_id"],
+                    "title": h["title"],
+                    "excerpt": h["excerpt"],
+                    "score": h["score"],
+                    "page": h["page"],
+                    "section": h["section"],
+                }
+                for h in hits
+            ]
+    return _DUMMY_DOCS
+
+
 def build_compat_router(settings: Settings) -> APIRouter:
     @router.post("/stt", deprecated=True)
     def legacy_stt(audio: UploadFile = File(...)) -> dict:
@@ -185,8 +213,14 @@ def build_compat_router(settings: Settings) -> APIRouter:
         return _judge(body.get("gpt", {}).get("risk_flags", {}), body.get("emotion", {}))
 
     @router.post("/rag", deprecated=True)
-    def legacy_rag(_: dict) -> dict:
-        return {"documents": _DUMMY_DOCS}
+    def legacy_rag(body: dict) -> dict:
+        query = str(
+            body.get("query")
+            or body.get("text")
+            or body.get("summary")
+            or ""
+        )
+        return {"documents": _regulation_references(settings, query)}
 
     @router.post("/briefing", deprecated=True)
     def legacy_briefing(audio: UploadFile = File(...)) -> dict:
@@ -202,7 +236,7 @@ def build_compat_router(settings: Settings) -> APIRouter:
             "department": analysis.department,
             "emotion": emotion,
             "judgement": _judge(risk_flags, emotion),
-            "references": _DUMMY_DOCS,
+            "references": _regulation_references(settings, analysis.summary),
         }
 
     return router
