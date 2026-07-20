@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------- STT ----------
@@ -47,11 +47,29 @@ class GptAnalysis(BaseModel):
 
 # ---------- 감정분석 ----------
 
+class AnalysisSource(str, Enum):
+    """이 결과가 실제로 어디서 나왔는지 — 박정운님 2026-07-20 리뷰(P0-3) 반영.
+
+    발표 데모 중 모델 파일이 없으면 조용히 스텁으로 대체되는데, 겉보기엔 실제 모델 결과와
+    구분이 안 됐다. 이 필드로 "진짜 모델이 돈 건지"를 항상 노출한다.
+    """
+
+    REAL_MODEL = "REAL_MODEL"
+    RULE_FALLBACK = "RULE_FALLBACK"
+    STUB = "STUB"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
 class EmotionResult(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())  # model_version 필드명이 pydantic 예약 접두사와 겹침
+
     anger_probability: float = Field(ge=0, le=1)
     anxiety_probability: float = Field(ge=0, le=1)
     neutral_probability: float = Field(ge=0, le=1)
     uncertainty: float = Field(ge=0, le=1)
+    analysis_source: AnalysisSource = AnalysisSource.STUB
+    model_version: str | None = None
+    fallback_reason: str | None = None
 
 
 # ---------- 텍스트 감정분류 (EXAONE, 음향 모델과 별도 채널) ----------
