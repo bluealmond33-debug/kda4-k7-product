@@ -194,11 +194,14 @@ def _mvp_emotion_result_from_raw(prediction: dict[str, Any]) -> MvpEmotionResult
     score = round(min(band_max, max(band_min, intensity * 100)), 1)
 
     model_ref = f"{prediction.get('model_version', 'emotion_temperature_demo_final_v4')}"
+    # reason 맨 앞에 [SOURCE=...] 구조화 접두사를 둔다 — mvp-1.0 계약(exactKeys)에 새 키를 추가하지
+    # 않고도 프론트가 이 접두사를 파싱해 "실제 모델 vs 데모 스텁" 배지를 만들 수 있게(P0-3).
     return MvpEmotionResult(
         status=EmotionStatus.COMPLETED,
         score=score,
         level=level,
         reason=(
+            f"[SOURCE={AnalysisSource.REAL_MODEL.value}] "
             f"{model_ref}; audio_quality={prediction['audio_quality']}; "
             "박정운 emotion_temperature 모델(demo/shadow only, 실제 라우팅 자동판단 금지)"
         ),
@@ -209,5 +212,7 @@ def analyze_emotion_mvp(audio_bytes: bytes) -> MvpEmotionResult:
     """app/routers/mvp.py(mvp-1.0 계약)용 — 모델 없으면 unavailable로 고정."""
     raw, reason = predict_raw_emotion(audio_bytes)
     if raw is None:
-        return MvpEmotionResult(reason=f"감정 모델 미사용: {reason or '알 수 없는 사유'}")
+        return MvpEmotionResult(
+            reason=f"[SOURCE={AnalysisSource.STUB.value}] 감정 모델 미사용: {reason or '알 수 없는 사유'}"
+        )
     return _mvp_emotion_result_from_raw(raw)
