@@ -33,8 +33,20 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             alignItems: "center",
           }}
         >
-          {/* 상단 제어 바 — 4단계 스테퍼 + 현재 단계 상세 + 데모 조작 */}
-          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+          {/* 상단 제어 바 — 데모 안내 동그란 토글 + 4단계 스테퍼 알약(시연용 리모컨) */}
+          <div style={css("display:flex;align-items:center;gap:12px")}>
+            {/* 데모 안내 토글 — 알약 왼쪽 동그란 아이콘 버튼. 클릭=상단 안내 패널 표시, 패널 ×로 숨김 */}
+            <span
+              onClick={vm.toggleGuide}
+              title={vm.guideOpen ? "데모 안내 숨기기" : "데모 안내 보기"}
+              style={css(
+                "flex:none;width:46px;height:46px;border-radius:9999px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 34px rgba(0,0,0,.28);transition:background .2s;" +
+                  (vm.guideOpen ? "background:var(--blue-700)" : "background:var(--onair-surface)")
+              )}
+            >
+              <span className="mi" style={css("font-size:23px;color:" + (vm.guideOpen ? "#fff" : "var(--blue-700)"))}>tips_and_updates</span>
+            </span>
+            <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
             <div style={css("display:flex;align-items:center;gap:10px")}>
               {["접수", "준비", "통화", "후처리"].map((label, i) => {
                 const n = i + 1;
@@ -130,23 +142,14 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
                 <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약
               </span>
             )}
-            <span
-              onClick={vm.toggleGuide}
-              title="화면별 데모 설명을 켜고 끕니다"
-              style={css(
-                "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;" +
-                  (vm.guideOpen ? "background:var(--blue-700);color:#fff" : "background:var(--gray-100);color:var(--gray-800)")
-              )}
-            >
-              <span className="mi" style={css("font-size:17px")}>tips_and_updates</span>안내
-            </span>
             <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>
+            </div>
           </div>
 
-          {/* 데모 안내(가이드 모드) — 상단 패널. 스테이지 폭(1420)을 넘지 않아 폰·데스크톱을
-              축소시키지 않는다(스케일은 폭 기준). 상단 '안내' 토글 또는 × 로 켜고 끈다 */}
+          {/* 데모 안내(가이드 모드) — 상단 패널. 알약 왼쪽 동그란 안내 버튼으로 표시, 패널 × 로 숨김.
+              스테이지 폭(1420)을 넘지 않아 폰·데스크톱을 축소시키지 않는다(스케일은 폭 기준) */}
           {vm.guideOpen && (
             <div style={css("width:1400px;box-sizing:border-box;background:var(--onair-surface);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.26);padding:13px 22px 15px")}>
               <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:11px")}>
