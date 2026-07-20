@@ -13,6 +13,7 @@ from openai import OpenAI
 from app.config import settings
 from app.contracts import CallStatus, ConsultationCard, MvpCallResponse, TranscriptResult
 from app.database import DatabaseUnavailable, get_call, save_call
+from app.services.emotion import analyze_emotion, analyze_emotion_mvp
 from app.services.gpt_analysis import analyze_transcript
 from app.services.judge import judge as run_judge
 from app.services.local_llm import analyze_transcript_local
@@ -50,9 +51,11 @@ async def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
             client = _get_openai_client()
             transcribed = transcribe_audio(client, audio.filename or "customer-audio.wav", audio_bytes)
             gpt_result = analyze_transcript(client, transcribed.text)
-        emotion_result_for_judge = _placeholder_emotion_for_judge()
+        emotion_result_for_judge = analyze_emotion(audio_bytes)
         judgement = run_judge(gpt_result.risk_flags, emotion_result_for_judge)
-        card: ConsultationCard = to_consultation_card(gpt_result, judgement)
+        card: ConsultationCard = to_consultation_card(
+            gpt_result, judgement, emotion=analyze_emotion_mvp(audio_bytes)
+        )
 
         response = MvpCallResponse(
             call_id=uuid4(),
@@ -88,12 +91,3 @@ async def read_consultation_card(call_id: UUID) -> MvpCallResponse:
     if response is None:
         raise HTTPException(status_code=404, detail="call not found")
     return response
-
-
-def _placeholder_emotion_for_judge():
-    """judge()는 EmotionResult(anger/anxiety/neutral/uncertainty)를 요구하지만, 이 엔드포인트의
-    응답 계약(ConsultationCard.emotion)은 항상 unavailable로 고정한다 — judge용 입력만 필요해서
-    중립값을 준다. 실제 감정 모델이 오면 이 자리에 그 결과를 넣고 judge에도 반영하면 된다."""
-    from app.schemas import EmotionResult
-
-    return EmotionResult(anger_probability=0, anxiety_probability=0, neutral_probability=1, uncertainty=0)

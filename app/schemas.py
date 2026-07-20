@@ -54,9 +54,23 @@ class EmotionResult(BaseModel):
     uncertainty: float = Field(ge=0, le=1)
 
 
+# ---------- 텍스트 감정분류 (EXAONE, 음향 모델과 별도 채널) ----------
+
+class TextEmotionResult(BaseModel):
+    """전사문(글자)만으로 판단 가능한 것만 담는다 — 목소리 톤은 원리상 알 수 없으므로
+    voice_tone은 항상 고정값이다. 박정운 음향 모델(EmotionResult)과 합쳐 쓰는 걸 전제로 한다."""
+
+    content_emotion: str
+    situation_severity: str
+    urgency_score: int = Field(ge=0, le=100)
+    voice_tone: str = "unknown_text_only"
+    evidence: str
+
+
 class AnalyzeResult(BaseModel):
     gpt: GptAnalysis
     emotion: EmotionResult
+    text_emotion: Optional[TextEmotionResult] = None
 
 
 # ---------- 주의 여부 판단 ----------
@@ -194,5 +208,6 @@ class BriefingCard(BaseModel):
     summary: str
     department: str
     emotion: EmotionResult
+    text_emotion: Optional[TextEmotionResult] = None
     judgement: JudgeResult
     references: list[RagDocument]

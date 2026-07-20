@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "exaone3.5:7.8b"
 
+    # 박정운 emotion_temperature v4 모델(격양도) — 파일 없으면 emotion.py가 자동으로 스텁 폴백.
+    emotion_temperature_model_path: str = "app/services/k7modeling/models/emotion_temperature_demo_final_v4.joblib"
+    emotion_temperature_model_sha256: str = (
+        "88e2c3f3e0d85497a3e59a84ac42835ccf8620aab999de27cdb9ff92fc27d4ac"
+    )
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property
