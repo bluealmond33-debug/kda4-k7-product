@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
@@ -20,10 +21,12 @@ from app.schemas import (
     ReactEmotionRequest,
     ReactEmotionScore,
     ReactSummarizeRequest,
+    TextEmotionResult,
     TranscribeResult,
 )
 from app.schemas import GptAnalysis
 from app.services.emotion import analyze_emotion
+from app.services.fusion import fuse_judgement
 from app.services.gpt_analysis import analyze_transcript
 from app.services.judge import judge as run_judge
 from app.services.legacy_adapter import emotion_label_and_score, routing_reason, urgency_score_for
@@ -32,6 +35,9 @@ from app.services.local_stt import transcribe_audio_local
 from app.services.rag import search_procedures
 from app.services.react_adapter import build_call_summary, emotion_label, emotion_level_and_signals
 from app.services.stt import transcribe_audio
+from app.services.text_emotion import TextEmotionError, classify_text_emotion
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -74,6 +80,16 @@ def _analyze(transcript: str) -> GptAnalysis:
     return analyze_transcript(_get_openai_client(), transcript)
 
 
+def _classify_text_emotion_safe(transcript: str) -> TextEmotionResult | None:
+    """텍스트 감정분류는 음향 신호를 보완하는 부가 채널이라, 실패해도(Ollama 미기동 등)
+    전체 파이프라인을 막지 않고 그냥 이 신호 없이 진행한다."""
+    try:
+        return classify_text_emotion(settings, transcript)
+    except TextEmotionError:
+        logger.warning("text_emotion 분류 실패, 융합 없이 진행", exc_info=True)
+        return None
+
+
 @router.post("/stt", response_model=TranscribeResult)
 async def stt_endpoint(audio: UploadFile) -> TranscribeResult:
     audio_bytes = await audio.read()
@@ -86,8 +102,9 @@ async def analyze_endpoint(audio: UploadFile, transcript: str = Form(...)) -> An
 
     gpt_result = _analyze(transcript)
     emotion_result = analyze_emotion(audio_bytes)
+    text_emotion_result = _classify_text_emotion_safe(transcript)
 
-    return AnalyzeResult(gpt=gpt_result, emotion=emotion_result)
+    return AnalyzeResult(gpt=gpt_result, emotion=emotion_result, text_emotion=text_emotion_result)
 
 
 @router.post("/judge", response_model=JudgeResult)
@@ -160,7 +177,12 @@ async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
     transcribed = _transcribe(audio.filename or "audio.wav", audio_bytes)
     gpt_result = _analyze(transcribed.text)
     emotion_result = analyze_emotion(audio_bytes)
+    text_emotion_result = _classify_text_emotion_safe(transcribed.text)
+
     judgement = run_judge(gpt_result.risk_flags, emotion_result)
+    if text_emotion_result is not None:
+        judgement = fuse_judgement(judgement, text_emotion_result)
+
     references = search_procedures(settings, _rag_query(judgement.reason_codes, gpt_result.summary))
 
     return BriefingCard(
@@ -169,6 +191,7 @@ async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
         summary=gpt_result.summary,
         department=gpt_result.department,
         emotion=emotion_result,
+        text_emotion=text_emotion_result,
         judgement=judgement,
         references=references,
     )
