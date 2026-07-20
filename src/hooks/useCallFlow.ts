@@ -212,8 +212,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
-  // 데모 안내(가이드 모드) — 시연 시 화면별 설명 오버레이. 기본 켜짐, 초기화해도 유지(발표자 선호)
+  // 데모 안내(가이드 모드) — 화면별 소개 팝업. 기본 켜짐(로드 시 대기화면 안내부터).
   const [guideOpen, setGuideOpen] = useState(true);
+  // 팝업이 보여줄 단계 — 도달 시 자동으로 현재 단계, 스테퍼 번호 클릭 시 그 단계
+  const [guideStep, setGuideStep] = useState<GuideKey>("idle");
 
   const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
   const [summaryVersion, setSummaryVersion] = useState(0);
@@ -613,6 +615,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       : p === "active"
       ? "active"
       : "wrap";
+  // 새 단계에 도달하면 그 단계 안내를 자동 팝업으로 (화면별 소개 멘트). 대기(idle)는 로드 시 1회.
+  useEffect(() => {
+    setGuideStep(guideKey);
+    setGuideOpen(true);
+  }, [guideKey]);
   const sim = mode === "sim";
   const nv = !verified;
 
@@ -732,9 +739,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     phaseLabel: LABELS[p] || p,
     // 데모 안내(가이드 모드)
     guideOpen,
-    toggleGuide: () => setGuideOpen((v) => !v),
     closeGuide: () => setGuideOpen(false),
-    guide: GUIDE[guideKey],
+    guide: GUIDE[guideStep],
+    guideStep,
+    // 스테퍼 번호 클릭 → 그 단계 안내로 전환하며 팝업 (도달 전 단계도 미리보기 가능)
+    openGuideStep: (k: string) => {
+      setGuideStep(k as GuideKey);
+      setGuideOpen(true);
+    },
     // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
     stepIndex:
       p === "idle"

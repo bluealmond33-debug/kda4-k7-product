@@ -15,15 +15,16 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
   const vm = useCallFlow(config);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  // 데모 안내 패널 등장/퇴장 모션 — 알약 왼쪽 동그란 버튼에서 슉 나오고(등장) 다시 들어간다(퇴장).
-  // 첫 로드엔 살짝 늦게 나와 "이 버튼을 누르면 안내가 나온다"가 읽히게 한다.
+  // 데모 안내 팝업 등장/퇴장 모션 — 화면 중앙에서 슉 뜨고 다시 접힌다.
+  // 첫 로드엔 살짝 늦게 떠서 "여기 안내가 뜨는구나"가 읽히게. 열려 있는 동안 단계가 바뀌면
+  // 딤을 유지한 채 내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝 애니메이션.
   const guideMounted = useRef(false);
   const [guideRender, setGuideRender] = useState(vm.guideOpen);
   const [guideIn, setGuideIn] = useState(false);
   useEffect(() => {
     if (vm.guideOpen) {
       setGuideRender(true);
-      const delay = guideMounted.current ? 0 : 480; // 첫 등장만 지연 → 버튼에서 나오는 게 보이게
+      const delay = guideMounted.current ? 0 : 420; // 첫 등장만 지연
       guideMounted.current = true;
       let raf = 0;
       const t = window.setTimeout(() => {
@@ -36,7 +37,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
     }
     guideMounted.current = true;
     setGuideIn(false); // 퇴장 애니메이션
-    const t = window.setTimeout(() => setGuideRender(false), 340); // 끝나면 언마운트
+    const t = window.setTimeout(() => setGuideRender(false), 300); // 끝나면 언마운트
     return () => window.clearTimeout(t);
   }, [vm.guideOpen]);
 
@@ -58,20 +59,8 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             alignItems: "center",
           }}
         >
-          {/* 상단 제어 바 — 데모 안내 동그란 토글 + 4단계 스테퍼 알약(시연용 리모컨) */}
-          <div style={css("display:flex;align-items:center;gap:12px")}>
-            {/* 데모 안내 토글 — 알약 왼쪽 동그란 아이콘 버튼. 클릭=상단 안내 패널 표시, 패널 ×로 숨김 */}
-            <span
-              onClick={vm.toggleGuide}
-              title={vm.guideOpen ? "데모 안내 숨기기" : "데모 안내 보기"}
-              style={css(
-                "flex:none;width:46px;height:46px;border-radius:9999px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 34px rgba(0,0,0,.28);transition:background .2s;" +
-                  (vm.guideOpen ? "background:var(--blue-700)" : "background:var(--onair-surface)")
-              )}
-            >
-              <span className="mi" style={css("font-size:23px;color:" + (vm.guideOpen ? "#fff" : "var(--blue-700)"))}>tips_and_updates</span>
-            </span>
-            <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+          {/* 상단 제어 바 — 4단계 스테퍼 알약(시연용 리모컨). 번호를 누르면 그 단계 안내가 팝업으로 뜬다 */}
+          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
             <div style={css("display:flex;align-items:center;gap:10px")}>
               {["접수", "준비", "통화", "후처리"].map((label, i) => {
                 const n = i + 1;
@@ -80,7 +69,11 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
                 return (
                   <span key={label} style={css("display:inline-flex;align-items:center;gap:10px")}>
                     {i > 0 && <span style={css("width:14px;height:1.5px;background:" + (done || active ? "var(--gray-500)" : "var(--gray-300)"))} />}
-                    <span style={css("display:inline-flex;align-items:center;gap:6px")}>
+                    <span
+                      onClick={() => vm.openGuideStep(["intake", "prep", "active", "wrap"][i])}
+                      title={label + " 안내 보기"}
+                      style={css("display:inline-flex;align-items:center;gap:6px;cursor:pointer")}
+                    >
                       <span
                         style={css(
                           "width:21px;height:21px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px 'Geist Mono',monospace;" +
@@ -170,38 +163,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>
-            </div>
           </div>
-
-          {/* 데모 안내(가이드 모드) — 상단 패널. 알약 왼쪽 동그란 버튼에서 슉 펼쳐지고(등장) 다시 접힌다(퇴장).
-              transform-origin을 버튼 쪽(위·좌)으로 두어 "버튼에서 나오는" 느낌. 폭 불변이라 본 화면 안 줄어듦 */}
-          {guideRender && (
-            <div style={css("width:1400px;box-sizing:border-box;background:var(--onair-surface);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.26);padding:13px 22px 15px;transform-origin:232px -38px;transition:transform .34s var(--ease-out),opacity .26s ease-out;" + (guideIn ? "opacity:1;transform:scale(1) translateY(0)" : "opacity:0;transform:scale(.9) translateY(-12px)"))}>
-              <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:11px")}>
-                <span className="mi" style={css("font-size:19px;color:var(--blue-700)")}>tips_and_updates</span>
-                <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>데모 안내</span>
-                <span style={css("font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px")}>{vm.guide.step}</span>
-                <span style={css("width:1px;height:15px;background:var(--color-border);margin:0 3px")} />
-                <span style={css("font:700 15px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.guide.title}</span>
-                <div style={css("flex:1")} />
-                <span onClick={vm.closeGuide} title="안내 닫기 — 상단 '안내'로 다시 켜기" style={css("cursor:pointer;display:flex")}>
-                  <span className="mi" style={css("font-size:19px;color:var(--gray-500)")}>close</span>
-                </span>
-              </div>
-              <div style={css("display:flex;gap:22px;margin-bottom:11px")}>
-                {vm.guide.points.map((pt, i) => (
-                  <div key={i} style={css("flex:1;display:flex;gap:8px;align-items:flex-start")}>
-                    <span style={css("flex:none;width:5px;height:5px;border-radius:9999px;background:var(--blue-500);margin-top:7px")} />
-                    <span style={css("font:400 12.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{pt}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={css("display:flex;gap:8px;align-items:center;background:var(--gray-100);border-radius:10px;padding:10px 14px")}>
-                <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>arrow_forward</span>
-                <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.guide.next}</span>
-              </div>
-            </div>
-          )}
 
           {vm.micErr && (
             <div style={css("background:var(--onair-surface);border-radius:9999px;padding:8px 16px;font-size:12.5px;color:var(--amber-900);box-shadow:0 10px 34px rgba(0,0,0,.28);display:flex;align-items:center;gap:6px")}>
@@ -210,8 +172,8 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             </div>
           )}
 
-          {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율 */}
-          <div style={css("display:flex;gap:40px;align-items:center;justify-content:center")}>
+          {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율. 안내 팝업은 이 영역 위 중앙 딤 모달로 뜬다 */}
+          <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
             <Phone vm={vm} />
             <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
               {vm.showWaiting && <Waiting vm={vm} />}
@@ -220,6 +182,43 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               {vm.showActive && <ActiveCall vm={vm} />}
               {vm.showWrap && <WrapSheet vm={vm} />}
             </div>
+
+            {/* 데모 안내 팝업 — 화면 중앙 딤 모달. 폰·데스크톱은 그대로 두고(안 밀림) 뒤만 어두워진다.
+                단계 도달 시 자동, 스테퍼 번호 클릭 시 그 단계. × 또는 바깥(딤) 클릭으로 닫음 */}
+            {guideRender && (
+              <>
+                <div
+                  onClick={vm.closeGuide}
+                  style={css("position:absolute;inset:0;z-index:500;background:rgba(22,20,17,.42);transition:opacity .3s ease-out;cursor:pointer;opacity:" + (guideIn ? "1" : "0"))}
+                />
+                <div style={css("position:absolute;left:50%;top:50%;z-index:501;width:540px;max-width:92%;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);overflow:hidden;transform-origin:50% 40%;transition:transform .34s var(--ease-out),opacity .26s ease-out;" + (guideIn ? "opacity:1;transform:translate(-50%,-50%) scale(1)" : "opacity:0;transform:translate(-50%,-46%) scale(.92)"))}>
+                  <div style={css("display:flex;align-items:center;gap:9px;padding:16px 18px 14px;border-bottom:1px solid var(--gray-200)")}>
+                    <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>tips_and_updates</span>
+                    <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>데모 안내</span>
+                    <span style={css("font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px")}>{vm.guide.step}</span>
+                    <div style={css("flex:1")} />
+                    <span onClick={vm.closeGuide} title="닫기" style={css("cursor:pointer;display:flex;width:28px;height:28px;border-radius:9999px;align-items:center;justify-content:center;background:var(--gray-100)")}>
+                      <span className="mi" style={css("font-size:18px;color:var(--gray-600)")}>close</span>
+                    </span>
+                  </div>
+                  <div style={css("padding:17px 20px 6px")}>
+                    <div style={css("font:700 18px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:13px")}>{vm.guide.title}</div>
+                    <div style={css("display:flex;flex-direction:column;gap:11px")}>
+                      {vm.guide.points.map((pt, i) => (
+                        <div key={i} style={css("display:flex;gap:10px;align-items:flex-start")}>
+                          <span style={css("flex:none;width:6px;height:6px;border-radius:9999px;background:var(--blue-500);margin-top:7px")} />
+                          <span style={css("font:400 13.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{pt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={css("margin:15px 18px 18px;display:flex;gap:9px;align-items:flex-start;background:var(--gray-100);border-radius:10px;padding:12px 14px")}>
+                    <span className="mi" style={css("font-size:18px;color:var(--blue-700);margin-top:1px")}>arrow_forward</span>
+                    <span style={css("font:600 13px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.guide.next}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
