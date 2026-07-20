@@ -100,6 +100,13 @@ SIMPLE_BLOCKERS = [
     "본인 아님", "내가 안 한", "상담사", "직원", "민원", "제한", "정지", "잠김",
 ]
 
+# These words are part of the official voice-ARS intent itself. Other blockers
+# (for example 오류, 분쟁 or 상담사) still force human GENERAL handling.
+SIMPLE_ALLOWED_BLOCKERS = {
+    "S122": {"정지"},
+    "S123": {"신고"},
+}
+
 CLASSIFICATION_RULES = [
     {
         "classification": "EMERGENCY",
@@ -162,22 +169,23 @@ def classify_transcript(transcript: str) -> dict:
         }
 
     blockers = find_matches(text, SIMPLE_BLOCKERS)
-    if not blockers:
-        simple_candidates = []
-        for code in (task["code"] for task in SIMPLE_TASKS):
-            if code == "S001" and "대출" in text:
-                continue
-            matches = find_matches(text, TASK_KEYWORDS[code])
-            if matches:
-                simple_candidates.append((code, matches))
-        if len(simple_candidates) == 1:
-            code, matches = simple_candidates[0]
-            task = TASKS_BY_CODE[code]
-            return {**task, "matched_keywords": matches, "reason": "명확한 단일 조회·안내 의도이며 예외 징후가 없음"}
-        if len(simple_candidates) > 1:
-            task = TASKS_BY_CODE["G004"]
-            matches = [keyword for _, keywords in simple_candidates for keyword in keywords]
-            return {**task, "matched_keywords": matches, "reason": "여러 업무 의도가 함께 감지되어 일반 상담으로 분류"}
+    simple_candidates = []
+    for code in (task["code"] for task in SIMPLE_TASKS):
+        if code == "S001" and "대출" in text:
+            continue
+        matches = find_matches(text, TASK_KEYWORDS[code])
+        allowed_blockers = SIMPLE_ALLOWED_BLOCKERS.get(code, set())
+        disallowed_blockers = [word for word in blockers if word not in allowed_blockers]
+        if matches and not disallowed_blockers:
+            simple_candidates.append((code, matches))
+    if len(simple_candidates) == 1:
+        code, matches = simple_candidates[0]
+        task = TASKS_BY_CODE[code]
+        return {**task, "matched_keywords": matches, "reason": "공식 말로하는 ARS의 단일 자동처리 업무이며 예외 징후가 없음"}
+    if len(simple_candidates) > 1:
+        task = TASKS_BY_CODE["G004"]
+        matches = [keyword for _, keywords in simple_candidates for keyword in keywords]
+        return {**task, "matched_keywords": matches, "reason": "여러 업무 의도가 함께 감지되어 일반 상담으로 분류"}
 
     try:
         from app.services.routing.topic_classifier import predict_bank_topic

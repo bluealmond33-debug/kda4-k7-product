@@ -1,4 +1,29 @@
+"""SIMPLE task catalogue based on Woori Card's official voice ARS.
+
+Source: https://pc.wooricard.com/dcpc/yh1/cct/cct04/H1CCT204S05.do
+Verified: 2026-07-20
+
+The voice ARS is the primary evidence for SIMPLE classification. Tasks found
+only in the keypad ARS are retained as review candidates, not active labels.
+"""
+
 from __future__ import annotations
+
+
+ARS_CLASSIFICATION_EVIDENCE = {
+    "primary": {
+        "name": "우리카드 말로하는 ARS - AI상담사 처리 가능 업무",
+        "url": "https://pc.wooricard.com/dcpc/yh1/cct/cct04/H1CCT204S05.do",
+        "verified_at": "2026-07-20",
+        "usage": "SIMPLE 업무와 자연어 표현의 1차 근거",
+    },
+    "secondary": {
+        "name": "우리카드 누르는 ARS - 개인회원 메뉴",
+        "url": "https://pc.wooricard.com/dcpc/yh1/cct/cct04/H1CCT204S00.do",
+        "verified_at": "2026-07-20",
+        "usage": "말로하는 ARS에서 확인되지 않은 업무 후보의 보조 근거",
+    },
+}
 
 
 def simple_task(code: str, name: str) -> dict:
@@ -12,42 +37,62 @@ def simple_task(code: str, name: str) -> dict:
 
 
 ARS_SIMPLE_TASKS = [
-    simple_task("S101", "결제대금 확인"),
-    simple_task("S102", "카드 사용내역 조회·발송"),
-    simple_task("S103", "명세서 발송·재발송"),
+    simple_task("S101", "결제대금·연체대금 확인"),
+    simple_task("S102", "카드 사용내역 조회"),
+    simple_task("S103", "명세서 조회·재발송"),
     simple_task("S104", "카드 이용한도 조회"),
     simple_task("S105", "카드 이용한도 상향"),
-    simple_task("S106", "결제대금 즉시결제"),
-    simple_task("S107", "입금 가상계좌 확인"),
+    simple_task("S106", "카드대금 납부·선결제"),
     simple_task("S108", "입금내역 확인"),
-    simple_task("S109", "카드대출 ARS 신청"),
-    simple_task("S110", "결제알림 서비스 관리"),
-    simple_task("S111", "회원정보 모바일 변경"),
-    simple_task("S112", "카드 비밀번호 변경"),
-    simple_task("S113", "포인트·마일리지 조회·전환"),
-    simple_task("S114", "증명서 신청"),
-    simple_task("S115", "카드 재발급·갱신·해지 관리"),
-    simple_task("S116", "챗봇 연결 문자 전송"),
-    simple_task("S117", "카드 이용주기 안내"),
+    simple_task("S111", "회원정보·결제일·결제계좌 변경"),
+    simple_task("S112", "카드 비밀번호 변경·사용등록"),
+    simple_task("S113", "포인트 조회"),
+    simple_task("S115", "카드 재발급·갱신"),
+    simple_task("S118", "결제예상금액 조회"),
+    simple_task("S119", "교통카드·하이패스 이용내역"),
+    simple_task("S120", "특별한도 조회·신청"),
+    simple_task("S121", "분할납부·할부개월 변경"),
+    simple_task("S122", "카드 일시정지·해제"),
+    simple_task("S123", "카드 분실신고·해제"),
+    simple_task("S124", "소득공제 신청"),
+    simple_task("S125", "전월실적 충족 조회"),
+    simple_task("S126", "자동납부 신청·조회"),
+    simple_task("S127", "리볼빙 신청"),
+]
+
+
+# Retained for label review only. These are not active SIMPLE tasks because
+# they were not confirmed in the official voice-ARS AI handling list.
+KEYPAD_ONLY_TASK_CANDIDATES = [
+    {"legacy_code": "S107", "name": "입금 가상계좌 확인"},
+    {"legacy_code": "S109", "name": "카드대출 ARS 신청"},
+    {"legacy_code": "S110", "name": "결제알림 서비스 관리"},
+    {"legacy_code": "S114", "name": "증명서 신청"},
+    {"legacy_code": "S116", "name": "챗봇 연결 문자 전송"},
+    {"legacy_code": "S117", "name": "카드 이용주기 안내"},
 ]
 
 
 ARS_TASK_KEYWORDS = {
-    "S101": ["결제대금 확인", "카드 결제대금 조회", "이번 달 카드값", "카드값 얼마"],
-    "S102": ["카드 사용내역 조회", "카드사용내역 조회", "카드 사용내역 발송", "사용내역 보내"],
-    "S103": ["명세서 발송 방법", "명세서 주소 확인", "명세서 재발송", "카드 명세서 보내"],
+    "S101": ["결제대금 확인", "연체대금 확인", "카드 결제대금", "이번 달 카드값", "카드값 얼마"],
+    "S102": ["카드 사용내역 조회", "카드사용내역 조회", "매출전표 조회", "카드 이용내역"],
+    "S103": ["명세서 조회", "명세서 발송", "명세서 재발송", "카드 명세서 보내"],
     "S104": ["신용카드 한도 조회", "체크카드 한도 조회", "카드 한도 확인"],
     "S105": ["신용카드 한도 상향", "체크카드 한도 상향", "카드 한도 올려"],
-    "S106": ["결제대금 즉시결제", "카드값 즉시결제", "카드대금 바로 결제", "카드 선결제"],
-    "S107": ["가상계좌 확인", "입금 가상계좌"],
+    "S106": ["결제대금 즉시결제", "카드값 즉시결제", "카드대금 미리 납부", "카드 선결제"],
     "S108": ["입금내역 확인", "입금 내역 조회"],
-    "S109": ["카드론 ars 신청", "장기카드대출 ars 신청", "현금서비스 ars 신청", "단기카드대출 ars 신청"],
-    "S110": ["결제알림 신청", "결제알림 정보변경", "결제알림 해지", "결제 알림 서비스"],
-    "S111": ["개인정보 변경 모바일서비스", "결제계좌 변경 모바일서비스", "결제일 변경 모바일서비스"],
-    "S112": ["카드 비밀번호 변경"],
-    "S113": ["포인트 조회", "포인트를 조회", "포인트가 얼마", "마일리지 조회", "마일리지를 조회", "포인트 전환", "포인트를 전환", "포인트 이용방법"],
-    "S114": ["증명서 신청", "카드 증명서 발급"],
-    "S115": ["카드 재발급", "카드 갱신", "카드 해지", "휴면카드 계속사용", "거래정지 사유 확인"],
-    "S116": ["챗봇 연결 문자", "챗봇연결 문자", "챗봇 문자 전송"],
-    "S117": ["카드 이용주기 안내", "카드 이용 주기"],
+    "S111": ["회원정보 변경", "결제일 변경", "결제계좌 변경", "혜택정보 수신 동의"],
+    "S112": ["카드 비밀번호 변경", "카드 비밀번호 등록", "카드 사용등록", "현금카드 겸용 등록"],
+    "S113": ["포인트 조회", "포인트를 조회", "통합 포인트 조회"],
+    "S115": ["카드 재발급", "카드 갱신"],
+    "S118": ["결제 예상금액", "결제예상금액 조회"],
+    "S119": ["교통카드 이용내역", "하이패스 이용내역", "교통카드 내역", "하이패스 내역"],
+    "S120": ["특별한도 조회", "특별한도 신청"],
+    "S121": ["분할납부", "할부개월수 변경", "할부 개월 변경"],
+    "S122": ["카드 일시정지", "일시정지", "카드 일시정지 해제", "카드 정지 해제"],
+    "S123": ["카드 분실신고", "분실 신고", "카드 분실 해제", "분실신고 확인"],
+    "S124": ["소득공제 신청", "카드 소득공제"],
+    "S125": ["전월실적 충족", "전월실적을 충족", "전월 실적 조회", "전월실적 조회"],
+    "S126": ["자동납부 신청", "자동납부 조회", "아파트관리비 자동납부", "도시가스 자동납부"],
+    "S127": ["리볼빙 신청", "일부결제금액이월약정 신청"],
 }
