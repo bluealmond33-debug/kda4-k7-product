@@ -89,12 +89,19 @@ def predict_raw_emotion(audio_bytes: bytes) -> dict[str, Any] | None:
 
     tmp_path: Path | None = None
     try:
+        import warnings
+
+        from app.services.k7modeling._opensmile_ascii_fix import ensure_ascii_opensmile_config
         from app.services.k7modeling.sliding_window_v4 import predict_demo_audio_v4
 
+        ensure_ascii_opensmile_config()  # venv가 한글 경로일 때 opensmile 우회
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             tmp.write(audio_bytes)
             tmp_path = Path(tmp.name)
-        return predict_demo_audio_v4(Path(settings.emotion_temperature_model_path), tmp_path)
+        with warnings.catch_warnings():
+            # 벤더 코드가 LGBMClassifier에 numpy 배열(피처명 없음)을 넘겨서 나는 무해한 경고.
+            warnings.filterwarnings("ignore", message="X does not have valid feature names")
+            return predict_demo_audio_v4(Path(settings.emotion_temperature_model_path), tmp_path)
     except Exception:
         logger.exception("emotion_temperature 추론 실패, 폴백")
         return None
