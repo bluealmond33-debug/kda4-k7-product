@@ -212,8 +212,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
-  // 데모 안내(가이드 모드) — 화면별 소개 팝업. 기본 켜짐(로드 시 대기화면 안내부터).
-  const [guideOpen, setGuideOpen] = useState(true);
+  // 데모 안내(가이드 모드) — 화면별 소개 팝업. 로드/단계도달 후 '잠시 뒤' 자동으로 뜬다(아래 효과).
+  const [guideOpen, setGuideOpen] = useState(false);
   // 팝업이 보여줄 단계 — 도달 시 자동으로 현재 단계, 스테퍼 번호 클릭 시 그 단계
   const [guideStep, setGuideStep] = useState<GuideKey>("idle");
 
@@ -615,10 +615,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       : p === "active"
       ? "active"
       : "wrap";
-  // 새 단계에 도달하면 그 단계 안내를 자동 팝업으로 (화면별 소개 멘트). 대기(idle)는 로드 시 1회.
+  // 새 단계에 도달하면 그 단계 안내를 자동 팝업으로 (화면별 소개 멘트).
+  // 화면을 잠깐 본 뒤(700ms) 뜬다 — "화면 먼저, 설명은 이어서". 대기(idle)는 로드 후 1회.
+  // (스테퍼 번호 클릭 = openGuideStep = 지연 없이 즉시)
   useEffect(() => {
     setGuideStep(guideKey);
-    setGuideOpen(true);
+    const t = window.setTimeout(() => setGuideOpen(true), 700);
+    return () => window.clearTimeout(t);
   }, [guideKey]);
   const sim = mode === "sim";
   const nv = !verified;

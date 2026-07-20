@@ -34,15 +34,18 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [editText, setEditText] = useState("");
   const memoInputRef = useRef<HTMLInputElement | null>(null);
   const [memoFocused, setMemoFocused] = useState(false);
+  const [authFocused, setAuthFocused] = useState(false);
 
-  // 광원 상태머신 v1 — verified 이분법 너머, 상담사의 실제 초점을 따라간다.
-  // 기본 = 인증 여부(고객↔스크립트), 오버라이드 = 입력 포커스(메모) > 규정집 확장.
+  // 광원 상태머신 v2 — 통화 중 '상담사가 계속 보는 작업면' = 단계별 스크립트가 기본 초점.
+  // 오버라이드(잠깐 손대는 순간에만) = 메모 입력 > 규정집 확장 > 본인확인 입력 포커스.
+  // (구 v1: 미인증이면 고객카드가 떠서 통화 내내 그림자가 본인확인에 가 있던 문제 교정 —
+  //  본인확인은 계속 보는 면이 아니라 초반에 잠깐 처리하는 작업이므로 입력에 들어갔을 때만 뜬다.)
   // 마우스 추적 없음 — 전환은 .card의 0.45s 이산 트랜지션.
   const focus: "customer" | "script" | "memo" | "reg" =
     memoFocused || editIdx !== null ? "memo"
     : vm.regExpanded ? "reg"
-    : vm.verified ? "script"
-    : "customer";
+    : authFocused ? "customer"
+    : "script";
 
   // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
   const leftColRef = useRef<HTMLDivElement | null>(null);
@@ -331,6 +334,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       className="authin"
                       value={vm.authInput}
                       onChange={vm.onAuthInput}
+                      onFocus={() => setAuthFocused(true)}
+                      onBlur={() => setAuthFocused(false)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") vm.runVerify();
                       }}

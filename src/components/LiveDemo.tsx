@@ -15,27 +15,22 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
   const vm = useCallFlow(config);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  // 데모 안내 팝업 등장/퇴장 모션 — 화면 중앙에서 슉 뜨고 다시 접힌다.
-  // 첫 로드엔 살짝 늦게 떠서 "여기 안내가 뜨는구나"가 읽히게. 열려 있는 동안 단계가 바뀌면
-  // 딤을 유지한 채 내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝 애니메이션.
-  const guideMounted = useRef(false);
+  // 데모 안내 팝업 등장/퇴장 모션 — 중앙에서 슉 뜨고 다시 접힌다. 등장 지연은 useCallFlow(700ms)가 담당.
+  // 열려 있는 동안 단계가 바뀌면 딤 유지·내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝.
   const [guideRender, setGuideRender] = useState(vm.guideOpen);
   const [guideIn, setGuideIn] = useState(false);
   useEffect(() => {
     if (vm.guideOpen) {
       setGuideRender(true);
-      const delay = guideMounted.current ? 0 : 420; // 첫 등장만 지연
-      guideMounted.current = true;
       let raf = 0;
       const t = window.setTimeout(() => {
         raf = requestAnimationFrame(() => setGuideIn(true));
-      }, delay);
+      }, 0);
       return () => {
         window.clearTimeout(t);
         if (raf) cancelAnimationFrame(raf);
       };
     }
-    guideMounted.current = true;
     setGuideIn(false); // 퇴장 애니메이션
     const t = window.setTimeout(() => setGuideRender(false), 300); // 끝나면 언마운트
     return () => window.clearTimeout(t);
