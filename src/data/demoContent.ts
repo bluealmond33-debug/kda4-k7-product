@@ -99,6 +99,7 @@ export const TRANSFER_HANDOVER = {
   from: "박민지",
   fromLevel: "주니어" as const,
   fromTenure: "1년차",
+  fromDept: "수신·예금팀",
   talkTime: "07:24",
   verified: true,
   aiMemo: [
@@ -114,6 +115,21 @@ export const TRANSFER_TARGETS = [
   { name: "이수진", level: "시니어", tenure: "6년차", state: "대기 중" },
   { name: "정해원", level: "시니어", tenure: "9년차", state: "통화 중 · 예약 가능" },
 ] as const;
+
+/* 이관은 특정 개인이 아니라 부서로 — 특정 사람에게 넘기면 책임 소재가 흐려진다는 실무 지적 반영.
+   부서 대기열이 책임 주체가 되고, 그 안에서 수신 가능한 상담사에게 배정된다. */
+export const TRANSFER_DEPTS = [
+  { name: "사고대응팀", desc: "명의도용·보이스피싱·이상거래", state: "대기 2건" },
+  { name: "여신심사팀", desc: "대출 심사·재약정·한도 변경", state: "대기 1건" },
+  { name: "전자금융팀", desc: "OTP·공동인증서·이체 오류", state: "대기 0건" },
+] as const;
+
+/* AI가 콜 유형으로 추천하는 이관 부서 — 기본 이관의 목적지 */
+export const SUGGESTED_DEPT: Record<IncomingKind, string> = {
+  normal: "여신심사팀",
+  urgent: "사고대응팀",
+  transfer: "여신심사팀",
+};
 
 export interface ScriptStep {
   title: string;
@@ -315,19 +331,23 @@ export function renderSheet(d: SheetData): RenderedSheet {
   };
 }
 
+// 상담 유형·결과 드롭다운 선택지 — 콜 유형별 기본값(WRAP_DEFAULTS)도 이 목록 안에 들어 있어야
+// 선택 표시가 메뉴 항목과 일치한다.
 export const WRAP_TYPE_OPTIONS = [
+  "대출 › 만기연장·재약정",
+  "대출 › 전세자금 조건변경",
+  "전자금융 › 명의도용 의심",
   "전자금융 › 착오송금",
-  "전자금융 › OTP/보안",
   "카드 › 분실·정지",
   "수신 › 이체한도",
-  "대출 › 상환일정",
 ];
 
 export const WRAP_RESULT_OPTIONS = [
-  "타 부서 이관 · 사고대응팀",
   "상담 완료 · 안내",
+  "상담 완료 · 재약정 접수",
   "재상담 예약",
   "추가 확인 필요",
+  "타 부서 이관 · 사고대응팀",
 ];
 
 export interface Followup {
@@ -335,12 +355,53 @@ export interface Followup {
   label: string;
 }
 
-export const DEFAULT_FOLLOWUPS: Followup[] = [
-  { icon: "event", label: "콜백 예약 · 오늘 16:00" },
-  { icon: "confirmation_number", label: "사고대응팀 이관 티켓 생성" },
-];
+/** 콜 유형별 후처리 프리셋 — 상담 유형·결과·후속조치가 실제 통화 내용과 어긋나지 않게 한다.
+ *  (구: 정적 기본값이 모든 콜에 착오송금/사고대응팀을 물려, 주담대 상담이 사고팀 이관으로
+ *   끝나는 자기모순을 만들었다) */
+export interface WrapPreset {
+  type: string;
+  result: string;
+  /** 종료 시 이미 걸려 있는 후속조치 칩 */
+  followups: Followup[];
+  /** '+' 로 추가할 수 있는 추천 후속조치 */
+  recommended: Followup[];
+}
 
-export const RECOMMENDED_FOLLOWUPS: Followup[] = [
-  { icon: "sms", label: "고객 SMS 안내 발송" },
-  { icon: "flag", label: "FDS 모니터링 등록" },
-];
+export const WRAP_DEFAULTS: Record<IncomingKind, WrapPreset> = {
+  normal: {
+    type: "대출 › 만기연장·재약정",
+    result: "상담 완료 · 재약정 접수",
+    followups: [
+      { icon: "sms", label: "필요 서류 목록 SMS 발송" },
+      { icon: "event", label: "심사 담당자 콜백 · 오늘 16:00" },
+    ],
+    recommended: [
+      { icon: "description", label: "재약정 심사 접수 등록" },
+      { icon: "flag", label: "만기 도래 관리 대상 등록" },
+    ],
+  },
+  urgent: {
+    type: "전자금융 › 명의도용 의심",
+    result: "타 부서 이관 · 사고대응팀",
+    followups: [
+      { icon: "confirmation_number", label: "사고대응팀 이관 티켓 생성" },
+      { icon: "block", label: "지급정지 요청 접수" },
+    ],
+    recommended: [
+      { icon: "sms", label: "사고 접수번호 SMS 발송" },
+      { icon: "flag", label: "FDS 모니터링 등록" },
+    ],
+  },
+  transfer: {
+    type: "대출 › 전세자금 조건변경",
+    result: "상담 완료 · 재약정 접수",
+    followups: [
+      { icon: "sms", label: "재약정 절차·수수료 기준 SMS 발송" },
+      { icon: "event", label: "재약정 심사 결과 콜백 예약" },
+    ],
+    recommended: [
+      { icon: "description", label: "중도상환수수료 면제 검토 등록" },
+      { icon: "flag", label: "재약정 접수 등록" },
+    ],
+  },
+};

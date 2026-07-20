@@ -134,7 +134,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           {vm.transferReserved && (
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
-              <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · {vm.transferTarget ? `${vm.transferTarget} 상담사에게 인계` : "종료 시 인계"}
+              <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · 종료 시 {vm.transferTarget ?? vm.suggestedDept}로
             </span>
           )}
           {/* 이관 패널 — 기본(자동 배정)이 먼저, 지정은 한 단계 더.
@@ -144,19 +144,19 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <span style={css("display:flex;align-items:center;gap:6px;white-space:nowrap")}>
                 <span
                   onClick={() => {
-                    vm.reserveTransfer();
+                    vm.reserveTransfer(vm.suggestedDept);
                     setTransferOpen(false);
                     setTransferPick(false);
                   }}
                   style={css("display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:9999px;background:var(--blue-700);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}
                 >
-                  <span className="mi" style={css("font-size:14px")}>sync_alt</span>종료 시 인계 · 자동 배정
+                  <span className="mi" style={css("font-size:14px")}>auto_awesome</span>종료 시 {vm.suggestedDept}로
                 </span>
                 <span
                   onClick={() => setTransferPick((v) => !v)}
                   style={css("display:flex;align-items:center;gap:3px;padding:7px 12px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-800);font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:" + (transferPick ? "var(--gray-100)" : "var(--onair-surface)"))}
                 >
-                  상담사 지정<span className="mi" style={css("font-size:15px")}>expand_more</span>
+                  다른 부서<span className="mi" style={css("font-size:15px")}>expand_more</span>
                 </span>
               </span>
             </span>
@@ -206,23 +206,25 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               >
                 <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
               </span>
-              {/* 상담사 지정 팝오버 — grid 클리핑을 피해 버튼 기준으로 띄운다 */}
+              {/* 다른 부서 팝오버 — grid 클리핑을 피해 버튼 기준으로 띄운다 */}
               {transferPick && (
-                <div style={css("position:absolute;top:46px;right:0;width:280px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:11px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
-                  <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:8px")}>부서 내 시니어에게 종료 시 인계</div>
+                <div style={css("position:absolute;top:46px;right:0;width:290px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:11px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
+                  <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:8px")}>종료 시 인계할 부서</div>
                   <div style={css("display:flex;flex-direction:column;gap:5px")}>
-                    {vm.transferTargets.map((t) => (
+                    {vm.transferDepts.map((d) => (
                       <span
-                        key={t.name}
+                        key={d.name}
                         onClick={() => {
-                          vm.reserveTransfer(t.name);
+                          vm.reserveTransfer(d.name);
                           setTransferOpen(false);
                           setTransferPick(false);
                         }}
                         style={css("display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--gray-100);cursor:pointer;white-space:nowrap")}
                       >
-                        <span style={css("flex:1;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{t.name} <span style={css("font:600 10.5px;color:var(--green-900)")}>{t.level} {t.tenure}</span></span>
-                        <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{t.state}</span>
+                        <span style={css("flex:1")}>
+                          <span style={css("display:block;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name} <span style={css("font:600 10.5px;color:var(--gray-600)")}>{d.state}</span></span>
+                          <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
+                        </span>
                       </span>
                     ))}
                   </div>

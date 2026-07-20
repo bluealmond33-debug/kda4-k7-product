@@ -12,13 +12,14 @@ import {
   TRANSFER_RESPONSE,
   TRANSFER_HANDOVER,
   TRANSFER_TARGETS,
+  TRANSFER_DEPTS,
+  SUGGESTED_DEPT,
   type IncomingKind,
   type SheetData,
   renderSheet,
   WRAP_TYPE_OPTIONS,
   WRAP_RESULT_OPTIONS,
-  DEFAULT_FOLLOWUPS,
-  RECOMMENDED_FOLLOWUPS,
+  WRAP_DEFAULTS,
   type Followup,
 } from "../data/demoContent";
 import {
@@ -672,6 +673,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     isTransfer: incoming === "transfer",
     handover: TRANSFER_HANDOVER,
     transferTargets: TRANSFER_TARGETS,
+    transferDepts: TRANSFER_DEPTS,
+    suggestedDept: SUGGESTED_DEPT[incoming],
     transferReserved,
     transferTarget,
     // 기본이 먼저: 인자 없이 부르면 자동 배정 예약. 지정은 이름을 넘길 때만
