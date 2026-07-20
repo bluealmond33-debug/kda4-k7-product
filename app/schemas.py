@@ -85,10 +85,28 @@ class TextEmotionResult(BaseModel):
     evidence: str
 
 
+# ---------- 상담 라우팅 분류 (전형진, 규칙+로컬 ML) ----------
+
+class RoutingResult(BaseModel):
+    """전형진님 classify_transcript() 결과를 우리 스키마로 감싼 것 — 어느 업무/부서로 보낼지.
+
+    department(GPT 자유형 추측)와 다른 축이라 대체가 아니라 병행 신호로 붙인다.
+    ML 모델 파일이 없어도 규칙 기반 EMERGENCY/SIMPLE 판정은 그대로 나온다."""
+
+    task_code: str            # S001~S117 / G001~G010 / E001~E002
+    task_name: str
+    classification: str       # SIMPLE / GENERAL / EMERGENCY
+    handler: str              # AI_CC / HUMAN
+    reason: str
+    matched_keywords: list[str] = Field(default_factory=list)
+    bank_topic: Optional[str] = None  # 로컬 ML 모델이 붙였을 때만
+
+
 class AnalyzeResult(BaseModel):
     gpt: GptAnalysis
     emotion: EmotionResult
     text_emotion: Optional[TextEmotionResult] = None
+    routing: Optional[RoutingResult] = None
 
 
 # ---------- 주의 여부 판단 ----------
@@ -228,5 +246,6 @@ class BriefingCard(BaseModel):
     department: str
     emotion: EmotionResult
     text_emotion: Optional[TextEmotionResult] = None
+    routing: Optional[RoutingResult] = None
     judgement: JudgeResult
     references: list[RagDocument]

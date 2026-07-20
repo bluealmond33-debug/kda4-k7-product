@@ -34,6 +34,7 @@ from app.services.local_llm import analyze_transcript_local
 from app.services.local_stt import transcribe_audio_local
 from app.services.rag import search_procedures
 from app.services.react_adapter import build_call_summary, emotion_label, emotion_level_and_signals
+from app.services.routing_classifier import classify_routing_safe
 from app.services.stt import transcribe_audio
 from app.services.text_emotion import TextEmotionError, classify_text_emotion
 
@@ -104,8 +105,14 @@ async def analyze_endpoint(audio: UploadFile, transcript: str = Form(...)) -> An
     gpt_result = _analyze(transcript)
     emotion_result = analyze_emotion(audio_bytes)
     text_emotion_result = _classify_text_emotion_safe(transcript)
+    routing_result = classify_routing_safe(transcript)
 
-    return AnalyzeResult(gpt=gpt_result, emotion=emotion_result, text_emotion=text_emotion_result)
+    return AnalyzeResult(
+        gpt=gpt_result,
+        emotion=emotion_result,
+        text_emotion=text_emotion_result,
+        routing=routing_result,
+    )
 
 
 @router.post("/judge", response_model=JudgeResult)
@@ -179,6 +186,7 @@ async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
     gpt_result = _analyze(transcribed.text)
     emotion_result = analyze_emotion(audio_bytes)
     text_emotion_result = _classify_text_emotion_safe(transcribed.text)
+    routing_result = classify_routing_safe(transcribed.text)
 
     judgement = run_judge(gpt_result.risk_flags, emotion_result)
     if text_emotion_result is not None:
@@ -193,6 +201,7 @@ async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
         department=gpt_result.department,
         emotion=emotion_result,
         text_emotion=text_emotion_result,
+        routing=routing_result,
         judgement=judgement,
         references=references,
     )
