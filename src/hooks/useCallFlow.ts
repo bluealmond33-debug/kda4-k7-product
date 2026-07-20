@@ -573,7 +573,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const fit = useCallback(() => {
     const w = rootRef.current ? rootRef.current.clientWidth : window.innerWidth;
     const avail = Math.max(320, w - 40);
-    const sc = Math.min(1, avail / STAGE_W);
+    // 스테이지 실제 폭을 측정 — 가이드 레일이 열리면 폭이 늘어난다(offsetWidth는 transform 영향 안 받음)
+    const sc = Math.min(1, avail / (stageRef.current?.offsetWidth || STAGE_W));
     setScale((prev) => (prev !== sc ? sc : prev));
     const h = stageRef.current ? stageRef.current.offsetHeight : 0;
     setNatH((prev) => (prev !== h ? h : prev));
@@ -592,7 +593,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // re-measure after any layout-affecting change
   useLayoutEffect(() => {
     fit();
-  }, [fit, phase, verified, regExpanded, memoItems, followups, wrapSheetOpen, micErr]);
+  }, [fit, phase, verified, regExpanded, memoItems, followups, wrapSheetOpen, micErr, guideOpen]);
 
   useEffect(() => () => clearAll(), [clearAll]);
 
@@ -611,6 +612,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       : p === "active"
       ? "active"
       : "wrap";
+  // 가이드 레일이 열리면 스테이지 폭이 늘어난다 (레일 300 + gap 40)
+  const stageWidth = guideOpen ? STAGE_W + 340 : STAGE_W;
   const sim = mode === "sim";
   const nv = !verified;
 
@@ -724,7 +727,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     stageRef,
     // scaling
     scaleT: "scale(" + scale + ")",
-    scaledW: STAGE_W * scale + "px",
+    stageWidth,
+    scaledW: stageWidth * scale + "px",
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,
