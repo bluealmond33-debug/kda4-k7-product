@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
 import Phone from "./Phone";
@@ -14,6 +14,31 @@ import WrapSheet from "./desktop/WrapSheet";
 export default function LiveDemo(config: CallFlowConfig = {}) {
   const vm = useCallFlow(config);
   const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // 데모 안내 패널 등장/퇴장 모션 — 알약 왼쪽 동그란 버튼에서 슉 나오고(등장) 다시 들어간다(퇴장).
+  // 첫 로드엔 살짝 늦게 나와 "이 버튼을 누르면 안내가 나온다"가 읽히게 한다.
+  const guideMounted = useRef(false);
+  const [guideRender, setGuideRender] = useState(vm.guideOpen);
+  const [guideIn, setGuideIn] = useState(false);
+  useEffect(() => {
+    if (vm.guideOpen) {
+      setGuideRender(true);
+      const delay = guideMounted.current ? 0 : 480; // 첫 등장만 지연 → 버튼에서 나오는 게 보이게
+      guideMounted.current = true;
+      let raf = 0;
+      const t = window.setTimeout(() => {
+        raf = requestAnimationFrame(() => setGuideIn(true));
+      }, delay);
+      return () => {
+        window.clearTimeout(t);
+        if (raf) cancelAnimationFrame(raf);
+      };
+    }
+    guideMounted.current = true;
+    setGuideIn(false); // 퇴장 애니메이션
+    const t = window.setTimeout(() => setGuideRender(false), 340); // 끝나면 언마운트
+    return () => window.clearTimeout(t);
+  }, [vm.guideOpen]);
 
   return (
     <div
@@ -148,10 +173,10 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             </div>
           </div>
 
-          {/* 데모 안내(가이드 모드) — 상단 패널. 알약 왼쪽 동그란 안내 버튼으로 표시, 패널 × 로 숨김.
-              스테이지 폭(1420)을 넘지 않아 폰·데스크톱을 축소시키지 않는다(스케일은 폭 기준) */}
-          {vm.guideOpen && (
-            <div style={css("width:1400px;box-sizing:border-box;background:var(--onair-surface);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.26);padding:13px 22px 15px")}>
+          {/* 데모 안내(가이드 모드) — 상단 패널. 알약 왼쪽 동그란 버튼에서 슉 펼쳐지고(등장) 다시 접힌다(퇴장).
+              transform-origin을 버튼 쪽(위·좌)으로 두어 "버튼에서 나오는" 느낌. 폭 불변이라 본 화면 안 줄어듦 */}
+          {guideRender && (
+            <div style={css("width:1400px;box-sizing:border-box;background:var(--onair-surface);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.26);padding:13px 22px 15px;transform-origin:232px -38px;transition:transform .34s var(--ease-out),opacity .26s ease-out;" + (guideIn ? "opacity:1;transform:scale(1) translateY(0)" : "opacity:0;transform:scale(.9) translateY(-12px)"))}>
               <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:11px")}>
                 <span className="mi" style={css("font-size:19px;color:var(--blue-700)")}>tips_and_updates</span>
                 <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>데모 안내</span>
