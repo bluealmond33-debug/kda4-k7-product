@@ -151,6 +151,8 @@ const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; n
     next: "'저장 후 다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
   },
 };
+// 가이드 투어 순서 — 스테퍼 인디케이터·이전/다음 내비게이션 기준
+const GUIDE_ORDER: GuideKey[] = ["idle", "intake", "prep", "active", "wrap"];
 
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
 const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
@@ -745,10 +747,23 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     closeGuide: () => setGuideOpen(false),
     guide: GUIDE[guideStep],
     guideStep,
-    // 스테퍼 번호 클릭 → 그 단계 안내로 전환하며 팝업 (도달 전 단계도 미리보기 가능)
+    guideIndex: GUIDE_ORDER.indexOf(guideStep),
+    // 스테퍼 인디케이터용 — 순서대로 {key,label}
+    guideSteps: GUIDE_ORDER.map((k) => ({ key: k, label: GUIDE[k].step })),
+    // 스테퍼 번호/인디케이터 클릭 → 그 단계 안내로 전환하며 팝업 (도달 전 단계도 미리보기 가능)
     openGuideStep: (k: string) => {
       setGuideStep(k as GuideKey);
       setGuideOpen(true);
+    },
+    // 가이드 투어 이전/다음 — 데모는 안 움직이고 안내만 앞뒤로 넘긴다. 마지막에서 '다음' = 닫기
+    guidePrev: () => {
+      const i = GUIDE_ORDER.indexOf(guideStep);
+      if (i > 0) setGuideStep(GUIDE_ORDER[i - 1]);
+    },
+    guideNext: () => {
+      const i = GUIDE_ORDER.indexOf(guideStep);
+      if (i < GUIDE_ORDER.length - 1) setGuideStep(GUIDE_ORDER[i + 1]);
+      else setGuideOpen(false);
     },
     // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
     stepIndex:
