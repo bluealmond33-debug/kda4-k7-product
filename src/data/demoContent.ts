@@ -161,6 +161,16 @@ export const ADMIN_QUEUE = [
   },
 ] as const;
 
+/** '통화 추가' 데모 — 관리자 대기열에 랜덤으로 들어올 더미 인입 풀 (긴급 없음, 일반 카드만) */
+export const ADMIN_QUEUE_POOL = [
+  { dept: "여신심사팀", masked: "정*아", summary: "신용대출 한도 증액 가능 여부 문의" },
+  { dept: "여신심사팀", masked: "이*준", summary: "전세자금대출 서류 재제출 절차 문의" },
+  { dept: "사고대응팀", masked: "한*솔", summary: "해외 결제 승인 취소 요청" },
+  { dept: "사고대응팀", masked: "오*택", summary: "스미싱 문자 클릭 후 계좌 점검 요청" },
+  { dept: "전자금융팀", masked: "유*나", summary: "OTP 재발급 및 이체한도 문의" },
+  { dept: "전자금융팀", masked: "강*민", summary: "공동인증서 갱신 오류 해결 요청" },
+] as const;
+
 export interface ScriptStep {
   title: string;
   text: string;

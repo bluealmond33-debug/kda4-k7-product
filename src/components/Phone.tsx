@@ -223,8 +223,12 @@ function InCallScreen({ vm }: { vm: CallFlowVM }) {
               {CONTROLS.map((c) => (
                 <div key={c.label} style={css("display:flex;flex-direction:column;align-items:center;gap:7px")}>
                   <span
+                    /* '통화 추가' = 데모 제어 — 관리자 대기열에 랜덤 상담카드가 새로 들어온다 */
+                    onClick={c.label === "통화 추가" ? vm.addQueueCall : undefined}
+                    title={c.label === "통화 추가" ? "데모: 대기열에 새 상담 인입 추가" : undefined}
                     style={css(
-                      "width:75px;height:75px;border-radius:9999px;background:#e4e4e6;display:flex;align-items:center;justify-content:center"
+                      "width:75px;height:75px;border-radius:9999px;background:#e4e4e6;display:flex;align-items:center;justify-content:center" +
+                        (c.label === "통화 추가" ? ";cursor:pointer" : "")
                     )}
                   >
                     <span className="mi" style={css("font-size:28px;color:#1c1c1e")}>{c.icon}</span>

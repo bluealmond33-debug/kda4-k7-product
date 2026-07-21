@@ -190,7 +190,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               {/* 종료 후에도 통화 화면이 배경에 남고, 후처리 시트가 그 위로 올라온다 */}
               {vm.showActive && <ActiveCall vm={vm} />}
               {vm.showWrap && <WrapSheet vm={vm} />}
-              {adminAvailable && <AdminQueueSheet open={adminOpen} onClose={() => setAdminOpen(false)} />}
+              {adminAvailable && <AdminQueueSheet open={adminOpen} onClose={() => setAdminOpen(false)} extras={vm.queueExtras} />}
             </div>
 
           </div>

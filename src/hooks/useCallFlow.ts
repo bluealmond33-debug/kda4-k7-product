@@ -14,6 +14,7 @@ import {
   TRANSFER_TARGETS,
   TRANSFER_DEPTS,
   SUGGESTED_DEPT,
+  ADMIN_QUEUE_POOL,
   type IncomingKind,
   type SheetData,
   renderSheet,
@@ -189,6 +190,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
+
+  // 관리자 대기열에 데모로 추가된 인입 — 폰 '통화 추가' 버튼이 랜덤으로 밀어넣는다
+  const [queueExtras, setQueueExtras] = useState<
+    { id: number; dept: string; masked: string; summary: string; at: number }[]
+  >([]);
+  const addQueueCall = useCallback(() => {
+    setQueueExtras((xs) => {
+      // 아직 안 들어온 사람 우선 — 풀이 다 소진되면 그때부터 중복 허용
+      const unused = ADMIN_QUEUE_POOL.filter((p) => !xs.some((x) => x.masked === p.masked));
+      const pool = unused.length ? unused : ADMIN_QUEUE_POOL;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      return xs.concat({ id: Date.now() + Math.random(), ...pick, at: Date.now() });
+    });
+  }, []);
 
   const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
   const [summaryVersion, setSummaryVersion] = useState(0);
@@ -734,6 +749,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       }),
     micErr,
     audioBusy,
+    // 관리자 대기열 데모 추가 인입
+    queueExtras,
+    addQueueCall,
     simBg: sim ? "var(--blue-700)" : "#fff",
     simFg: sim ? "#fff" : "var(--color-fg-secondary)",
     micBg: !sim ? "var(--blue-700)" : "#fff",
