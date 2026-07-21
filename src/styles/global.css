@@ -318,6 +318,26 @@ a:hover {
     transform: translateX(0);
   }
 }
+/* 투어링 코치마크 — 눌러야 할 버튼 곁 말풍선: 톡 등장한 뒤 살짝 까딱이며 시선을 끈다 */
+@keyframes coachIn {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes coachBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
 
 /* 모션 접근성 — 이동만 제거, 페이드는 유지 ("적게·부드럽게"이지 0은 아님) */
 @media (prefers-reduced-motion: reduce) {
@@ -370,6 +390,25 @@ a:hover {
     }
     50% {
       transform: scaleY(0.6);
+    }
+  }
+  @keyframes coachIn {
+    from {
+      opacity: 0;
+      transform: none;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes coachBob {
+    0%,
+    100% {
+      transform: none;
+    }
+    50% {
+      transform: none;
     }
   }
   .ptile:hover {

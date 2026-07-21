@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
 import Phone from "./Phone";
@@ -6,6 +6,8 @@ import Waiting from "./desktop/Waiting";
 import PrepCard from "./desktop/PrepCard";
 import ActiveCall from "./desktop/ActiveCall";
 import WrapSheet from "./desktop/WrapSheet";
+import DemoTour, { TourChooser } from "../tour/DemoTour";
+import { SCREEN_ORDER } from "../tour/steps";
 
 /**
  * K7 라이브 상담 시연 — 왼쪽 아이폰(자연어 접수) + 오른쪽 상담사 데스크톱.
@@ -15,33 +17,15 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
   const vm = useCallFlow(config);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  // 데모 안내 팝업 등장/퇴장 모션 — 중앙에서 슉 뜨고 다시 접힌다. 등장 지연은 useCallFlow(700ms)가 담당.
-  // 열려 있는 동안 단계가 바뀌면 딤 유지·내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝.
-  const [guideRender, setGuideRender] = useState(vm.guideOpen);
-  const [guideIn, setGuideIn] = useState(false);
-  useEffect(() => {
-    if (vm.guideOpen) {
-      setGuideRender(true);
-      let raf = 0;
-      const t = window.setTimeout(() => {
-        raf = requestAnimationFrame(() => setGuideIn(true));
-      }, 0);
-      return () => {
-        window.clearTimeout(t);
-        if (raf) cancelAnimationFrame(raf);
-      };
-    }
-    setGuideIn(false); // 퇴장 애니메이션
-    const t = window.setTimeout(() => setGuideRender(false), 300); // 끝나면 언마운트
-    return () => window.clearTimeout(t);
-  }, [vm.guideOpen]);
-
-  // 가이드 스텝 전환 방향(슬라이드) — 이전 인덱스 대비 앞(오른쪽서)/뒤(왼쪽서)
-  const prevIdxRef = useRef(vm.guideIndex);
-  const dir = vm.guideIndex >= prevIdxRef.current ? 1 : -1;
-  useEffect(() => {
-    prevIdxRef.current = vm.guideIndex;
-  }, [vm.guideIndex]);
+  // 데모 투어링 — 시연·발표용 안내 레이어(src/tour, 분리 모듈).
+  // pending = 시작 선택 전 · on = 투어 진행 · off = 자유 체험. 실제 제품에선 이 상태와 아래 마운트만 지우면 된다.
+  const [tourMode, setTourMode] = useState<"pending" | "on" | "off">("pending");
+  const [tourRun, setTourRun] = useState(0); // 재시작 키 — 알약 클릭 시 지금 화면 투어부터 다시
+  const startTour = () => {
+    setTourMode("on");
+    setTourRun((k) => k + 1);
+  };
+  const screenKey = SCREEN_ORDER[vm.stepIndex];
 
   return (
     <div
@@ -61,19 +45,19 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             alignItems: "center",
           }}
         >
-          {/* 상단 제어 바 — 4단계 스테퍼 알약(시연용 리모컨). 번호를 누르면 그 단계 안내가 팝업으로 뜬다 */}
-          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+          {/* 상단 제어 바 — 5단계 스테퍼 알약(시연용 리모컨): 대기·접수·준비·통화·후처리.
+              준비에는 ★ — 준비 카드가 이 데모의 핵심임을 늘 보이게. 클릭 = 지금 화면 투어 다시 보기 */}
+          <div data-tour="topbar" style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
             <div style={css("display:flex;align-items:center;gap:10px")}>
-              {["접수", "준비", "통화", "후처리"].map((label, i) => {
-                const n = i + 1;
-                const active = vm.stepIndex === n;
-                const done = vm.stepIndex > n;
+              {["대기", "접수", "준비", "통화", "후처리"].map((label, i) => {
+                const active = vm.stepIndex === i;
+                const done = vm.stepIndex > i;
                 return (
                   <span key={label} style={css("display:inline-flex;align-items:center;gap:10px")}>
                     {i > 0 && <span style={css("width:14px;height:1.5px;background:" + (done || active ? "var(--gray-500)" : "var(--gray-300)"))} />}
                     <span
-                      onClick={vm.reopenGuide}
-                      title="지금 화면 안내 다시 보기"
+                      onClick={startTour}
+                      title="지금 화면 투어 다시 보기"
                       style={css("display:inline-flex;align-items:center;gap:6px;cursor:pointer")}
                     >
                       <span
@@ -86,9 +70,12 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
                               : "background:var(--gray-100);color:var(--gray-600)")
                         )}
                       >
-                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : n}
+                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i + 1}
                       </span>
                       <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
+                      {label === "준비" && (
+                        <span className="mi" title="이 데모의 핵심 — 상담 준비 카드" style={css("font-size:13px;color:var(--amber-700);margin-left:-3px")}>star</span>
+                      )}
                     </span>
                   </span>
                 );
@@ -157,11 +144,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               <span className="mi" style={css("font-size:17px")}>audio_file</span>
               {vm.audioBusy ? "음성 처리 중" : "음성 파일 선택"}
             </span>
-            {vm.showSkip && (
-              <span onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
-                <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약
-              </span>
-            )}
+            {/* '5초 건너뛰고 요약'은 접수가 실제 벌어지는 데스크톱 대기 화면(Waiting)으로 이동 — 리모컨 아님 */}
             <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>
@@ -174,10 +157,10 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             </div>
           )}
 
-          {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율. 안내 팝업은 이 영역 위 중앙 딤 모달로 뜬다 */}
+          {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율 */}
           <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
             <Phone vm={vm} />
-            <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
+            <div data-tour="desk" style={css("flex:none;width:1100px;height:688px;position:relative")}>
               {vm.showWaiting && <Waiting vm={vm} />}
               {vm.showPrep && <PrepCard vm={vm} />}
               {/* 종료 후에도 통화 화면이 배경에 남고, 후처리 시트가 그 위로 올라온다 */}
@@ -185,66 +168,14 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               {vm.showWrap && <WrapSheet vm={vm} />}
             </div>
 
-            {/* 데모 안내 팝업 — 화면 중앙 딤 모달. 폰·데스크톱은 그대로 두고(안 밀림) 뒤만 어두워진다.
-                단계 도달 시 자동, 스테퍼 번호 클릭 시 그 단계. × 또는 바깥(딤) 클릭으로 닫음 */}
-            {guideRender && (
-              <>
-                <div
-                  onClick={vm.closeGuide}
-                  style={css("position:absolute;inset:0;z-index:500;background:rgba(22,20,17,.42);transition:opacity .3s ease-out;cursor:pointer;opacity:" + (guideIn ? "1" : "0"))}
-                />
-                <div style={css("position:absolute;left:50%;top:50%;z-index:501;width:560px;max-width:92%;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);overflow:hidden;transform-origin:50% 40%;transition:transform .34s var(--ease-out),opacity .26s ease-out;" + (guideIn ? "opacity:1;transform:translate(-50%,-50%) scale(1)" : "opacity:0;transform:translate(-50%,-46%) scale(.92)"))}>
-                  {/* 헤더 — "지금 몇 단계 / 무슨 화면인지"를 뚜렷하게. 이 팝업은 '지금 화면' 한 장만 설명한다 */}
-                  <div style={css("display:flex;align-items:center;gap:9px;padding:15px 18px 13px")}>
-                    <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>tips_and_updates</span>
-                    <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>데모 안내</span>
-                    <span style={css("display:inline-flex;align-items:center;gap:5px;font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
-                      <span style={css("font:700 11px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.guideIndex + 1}/{vm.guideTotal}</span>
-                      <span style={css("width:1px;height:11px;background:var(--gray-300)")} />
-                      {vm.guideScreenLabel} 화면
-                    </span>
-                    <div style={css("flex:1")} />
-                    <span onClick={vm.closeGuide} title="닫기" style={css("cursor:pointer;display:flex;width:28px;height:28px;border-radius:9999px;align-items:center;justify-content:center;background:var(--gray-100)")}>
-                      <span className="mi" style={css("font-size:18px;color:var(--gray-600)")}>close</span>
-                    </span>
-                  </div>
-
-                  {/* 슬라이드 콘텐츠 — 지금 화면 한 장만. 단계 전환 시 방향성 슬라이드(key=guideStep 재마운트로 애니 재생) */}
-                  <div style={css("padding:6px 20px 0;min-height:150px")}>
-                    <div key={vm.guideStep} style={{ animation: (dir >= 0 ? "guideSlideFwd" : "guideSlideBack") + " .34s cubic-bezier(0.2,0.8,0.2,1)" }}>
-                      <div style={css("font:700 18px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:12px")}>{vm.guide.title}</div>
-                      <div style={css("display:flex;flex-direction:column;gap:10px")}>
-                        {vm.guide.points.map((pt, i) => (
-                          <div key={i} style={css("display:flex;gap:10px;align-items:flex-start")}>
-                            <span style={css("flex:none;width:6px;height:6px;border-radius:9999px;background:var(--blue-500);margin-top:7px")} />
-                            <span style={css("font:400 13px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{pt}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={css("margin-top:13px;display:flex;gap:9px;align-items:flex-start;background:var(--gray-100);border-radius:10px;padding:11px 13px")}>
-                        <span className="mi" style={css("font-size:17px;color:var(--blue-700);margin-top:1px")}>arrow_forward</span>
-                        <span style={css("font:600 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.guide.next}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 푸터 — 이 화면을 확인하고 닫으면, 데모가 다음 화면에 도달할 때 그 화면 안내가 다시 뜬다 */}
-                  <div style={css("display:flex;align-items:center;gap:10px;padding:15px 18px 16px")}>
-                    <div style={css("flex:1;font:500 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>
-                      {vm.guideIndex < vm.guideTotal - 1
-                        ? "다음 화면으로 넘어가면 그 화면 안내가 다시 나타납니다"
-                        : "마지막 화면입니다 — 상단 단계를 눌러 이 화면 안내를 다시 볼 수 있어요"}
-                    </div>
-                    <span onClick={vm.closeGuide} style={css("display:inline-flex;align-items:center;gap:4px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;background:var(--gray-1000);color:#fff;border-radius:9999px;padding:8px 15px;cursor:pointer")}>
-                      확인했어요 <span className="mi" style={css("font-size:16px")}>check</span>
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>
+
+      {/* 데모 투어링 마운트 — 스테이지(transform: scale) 바깥이라 fixed 오버레이가 정확히 얹힌다.
+          실제 제품에선 이 두 줄과 src/tour 폴더만 지우면 투어가 완전히 사라진다. (src/tour/README.md) */}
+      {tourMode === "pending" && <TourChooser onPick={(t) => setTourMode(t ? "on" : "off")} />}
+      {tourMode === "on" && <DemoTour key={tourRun} vm={vm} screen={screenKey} onExit={() => setTourMode("off")} />}
     </div>
   );
 }

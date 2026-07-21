@@ -35,7 +35,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5);animation:fadeIn .18s ease-out")} />
 
       {/* 모달 */}
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
+      <div data-tour="prep-card" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
         <div style={css("padding:22px 28px 20px;border-bottom:1px solid var(--gray-200)")}>
           {/* 배지 = 콜 유형 신호. 떴다는 것 자체가 의미이므로 긴급·이관일 때만 표시(일반=배지 없음) */}
           {vm.isUrgent ? (
@@ -150,7 +150,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
           {/* 유의사항 — 순차 확인: 한 번에 하나만, 클릭할 때마다 게이지가 찬다.
               4/4가 되면 이 자리가 첫 응대 문장으로 바뀌며 통화 연결이 열린다 */}
-          <div>
+          <div data-tour="prep-checks">
             <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:8px")}>
               <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>이번 상담 유의사항</span>
               <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>클릭해 하나씩 확인 · 모두 확인하면 연결 가능</span>
@@ -280,6 +280,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             )}
           </span>
           <span
+            data-tour="prep-connect"
             onClick={vm.answerCall}
             style={css(
               "padding:10px 26px;background:" +
