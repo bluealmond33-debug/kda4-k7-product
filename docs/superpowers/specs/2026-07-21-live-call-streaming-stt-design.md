@@ -32,7 +32,7 @@
 | # | 결정 | 값 |
 |---|------|-----|
 | 1 | 통화 방식 | **웹 통화 페이지**. 고객 웹앱 마이크 → `wss` WebSocket으로 랩탑에 오디오 스트리밍. 외부 통신망 불필요 |
-| 2 | 스트리밍 STT | **VAD 문장 단위**. `webrtcvad`로 발화 세그먼트 감지 → 발화 종료 시 그 구간만 기존 whisper 코어로 전사, 한 줄씩 확정 출력 |
+| 2 | 스트리밍 STT | **문장 단위 세그먼트**. 순수 파이썬 RMS 에너지 VAD(numpy)로 발화 경계 감지 → 발화 종료 시 그 구간만 기존 whisper 코어로 전사, 한 줄씩 확정 출력. native VAD(.pyd)는 Smart App Control 차단 위험이라 회피 |
 | 3 | 개인정보 | **컨테이너 분리**. 별도 `pii-service` + 별도 DB 스키마. **ai-backend는 pii-service를 호출하지 않음** |
 | 4 | 마이크 secure-context | **mkcert로 LAN https/wss**. 팀원이 자기 기기에서 열어도 `getUserMedia` 동작 |
 | 5 | 분석 분리 | 발화당 **빠른 신호**(감정온도·라우팅·위험)는 실시간, **LLM 요약(exaone)** 은 debounce로 분리 |
@@ -76,13 +76,14 @@
   - server→customer(JSON): `{type:"status", state:"connected|active|ended"}` 최소.
 - 서버 시작: 기존 uvicorn 그대로. **TLS는 §4.5**.
 
-### 4.2 ai-backend — 스트리밍 STT (`app/services/streaming_stt.py`, 신규)
+### 4.2 ai-backend — 스트리밍 STT (`app/services/stream_segmenter.py` + `streaming_stt.py`, 신규)
 - 입력이 이미 raw PCM 16k라 **ffmpeg 디코드 불필요** → av 차단 이슈 원천 회피.
-- `webrtcvad`(aggressiveness 2, 20ms 프레임): voiced 프레임 누적으로 발화 시작 감지,
-  **trailing silence ~700ms** 로 발화 종료 판정. 발화 최대 길이 ~15s 초과 시 강제 컷.
-- 발화 종료 시: 누적 Int16 → `float32/32768.0` → **기존 싱글턴** `local_stt._get_model()` 의
-  `WhisperModel.transcribe(audio, language="ko")` 호출 → 텍스트 확정 → `{transcript,isFinal:true}` emit.
-- v1은 **final만**(깜빡임 없음). interim 부분전사는 P2.
+- **세그먼터**(`stream_segmenter.py`, numpy만): 20ms 프레임 RMS로 voiced/silence 판정. 연속 voiced로
+  발화 시작, **trailing silence ~700ms** 로 종료, voiced 길이 <300ms 발화는 버림, 최대 ~15s 강제 컷.
+  webrtcvad/silero 같은 네이티브 VAD(.pyd)는 av와 같은 Smart App Control 차단 위험이 있어 **비채택**.
+- **전사**(`streaming_stt.py`): 발화 Int16 → `float32/32768.0` → **기존 싱글턴** `local_stt._get_model()`
+  의 `WhisperModel.transcribe(audio, language="ko")` → 텍스트 확정 → `{transcript,isFinal:true}` emit.
+- v1은 **final만**(깜빡임 없음). interim 부분전사는 P2. Linux 컨테이너에선 webrtcvad로 업그레이드 여지.
 
 ### 4.3 ai-backend — 빠른 신호 vs 느린 요약 (`app/services/live_signals.py`, 신규)
 - **발화당(핫패스, 실시간)**:
@@ -159,6 +160,6 @@
 ## 9. 미해결 / 리스크
 
 - 감정 모델 발화당 최소 오디오 길이 — 너무 짧은 발화는 신뢰도 낮음(어댑터에서 최소 길이 가드).
-- 한국어 VAD 튜닝(aggressiveness·silence 임계) 실측 필요.
+- 한국어 VAD 튜닝(RMS 임계·silence 임계·min voiced 길이) 실측 필요 — 발표 환경 소음 수준에 맞춰 조정.
 - GPU 동시 부하 실측(STT turbo + exaone) — 안 되면 요약을 CPU/less-frequent로.
 - mkcert 인증서를 팀원 기기에 어떻게 신뢰시킬지(각 기기 rootCA 설치 vs 발표 기기 집중).
