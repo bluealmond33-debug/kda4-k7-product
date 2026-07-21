@@ -39,7 +39,7 @@ services:
       args:
         VITE_API_BASE_URL: http://localhost:8000
         VITE_DATA_API_PREFIX: /api/v1
-        VITE_USE_REAL_DATA_API: "1"
+        VITE_USE_REAL_DATA_API: "true"
     ports:
       - "5173:80"
     depends_on:

@@ -1,9 +1,12 @@
+import io
 import uuid
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.routers import pipeline
+from app.routers import mvp, pipeline
 from app.schemas import GptAnalysis, RiskFlags, TranscribeResult
 from app.services.stub_models import analyze_transcript_stub, transcribe_audio_stub
 
@@ -41,3 +44,28 @@ def test_analyze_text_endpoint_returns_200_in_stub_mode(monkeypatch):
     body = r.json()
     assert body["summary"]
     assert body["category"]
+
+
+def test_mvp_calls_endpoint_returns_201_in_stub_mode(monkeypatch):
+    monkeypatch.setattr(mvp.settings, "stub_models", True)
+    # /api/v1/calls persists via save_call (needs a DB). Stub persistence so the
+    # test exercises the stub analysis/card path without a database.
+    monkeypatch.setattr(mvp, "save_call", lambda *a, **k: None)
+    client = TestClient(app)
+    files = {"audio": ("demo.wav", io.BytesIO(b"RIFFdummy"), "audio/wav")}
+    r = client.post("/api/v1/calls", files=files)
+    assert r.status_code == 201
+    body = r.json()
+    assert body["transcript"]["stt_model"] == "stub"
+    assert body["consultation_card"]
+
+
+def test_analyze_does_not_mask_missing_key_when_not_stub(monkeypatch):
+    # 명시적 플래그 설계: stub_models=False인데 로컬모델도 키도 없으면
+    # 조용히 스텁으로 가리지 말고 500을 내야 한다(오설정 은폐 방지).
+    monkeypatch.setattr(pipeline.settings, "stub_models", False)
+    monkeypatch.setattr(pipeline.settings, "use_local_models", False)
+    monkeypatch.setattr(pipeline.settings, "openai_api_key", "")
+    with pytest.raises(HTTPException) as exc:
+        pipeline._analyze("고객 문의")
+    assert exc.value.status_code == 500
