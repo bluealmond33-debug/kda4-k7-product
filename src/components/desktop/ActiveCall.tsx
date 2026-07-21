@@ -39,16 +39,14 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [memoFocused, setMemoFocused] = useState(false);
   const [authFocused, setAuthFocused] = useState(false);
 
-  // 광원 상태머신 v2 — 통화 중 '상담사가 계속 보는 작업면' = 단계별 스크립트가 기본 초점.
-  // 오버라이드(잠깐 손대는 순간에만) = 메모 입력 > 규정집 확장 > 본인확인 입력 포커스.
-  // (구 v1: 미인증이면 고객카드가 떠서 통화 내내 그림자가 본인확인에 가 있던 문제 교정 —
-  //  본인확인은 계속 보는 면이 아니라 초반에 잠깐 처리하는 작업이므로 입력에 들어갔을 때만 뜬다.)
-  // 마우스 추적 없음 — 전환은 .card의 0.45s 이산 트랜지션.
-  const focus: "customer" | "script" | "memo" | "reg" =
+  // 광원 상태머신 v3 — 기본은 아무 카드도 들리지 않는다(진입 직후 스크립트에 그림자가 떠 있던 v2 교정).
+  // 초점은 '작업 중'일 때만: 메모 입력 > 규정집 확장 > 본인확인 입력 포커스.
+  // 마우스 관심은 .card:hover(--sh-hover)가 맡는다 — 호버 = 관심 후보, focus = 작업 중.
+  const focus: "customer" | "memo" | "reg" | "none" =
     memoFocused || editIdx !== null ? "memo"
     : vm.regExpanded ? "reg"
     : authFocused ? "customer"
-    : "script";
+    : "none";
 
   useEffect(() => {
     const el = memoListRef.current;
@@ -482,7 +480,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "script" ? ";box-shadow:var(--sh-focus)" : ""))}>
+          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>menu_book</span> 단계별 상담 스크립트
