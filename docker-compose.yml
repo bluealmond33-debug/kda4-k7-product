@@ -1,0 +1,22 @@
+name: karina
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-k7_mvp}
+    ports:
+      - "5432:5432"
+    volumes:
+      - k7_pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-k7_mvp}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  k7_pgdata:

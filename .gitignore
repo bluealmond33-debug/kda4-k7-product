@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .env
+.env.docker
 data/
 
 # 박정운 emotion_temperature 모델 바이너리 — 라이선스상 git에 올리지 않음(README.md 참고)
