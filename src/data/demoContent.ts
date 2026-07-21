@@ -131,6 +131,36 @@ export const SUGGESTED_DEPT: Record<IncomingKind, string> = {
   transfer: "여신심사팀",
 };
 
+/** 관리자 화면 — 부서별 실시간 대기열 픽스처. 이름은 마스킹(최소 표시 원칙),
+ *  용건은 AI 사전 접수 요약 한 줄. baseSec + 열람 중 경과로 대기 시간이 실제로 흐른다.
+ *  대기 건수는 TRANSFER_DEPTS의 state(대기 2·1·0건)와 같은 사건을 말한다. */
+export const ADMIN_QUEUE = [
+  {
+    dept: "사고대응팀",
+    desc: "명의도용·보이스피싱·이상거래",
+    available: 1,
+    busy: 2,
+    waiting: [
+      { masked: "박*영", summary: "카드 도난 의심 — 해외 승인 문자 확인 요청", baseSec: 252 },
+      { masked: "최*호", summary: "보이스피싱 의심 이체 차단 요청", baseSec: 158 },
+    ],
+  },
+  {
+    dept: "여신심사팀",
+    desc: "대출 심사·재약정·한도 변경",
+    available: 2,
+    busy: 1,
+    waiting: [{ masked: "김*진", summary: "주택담보대출 금리 재약정 상담", baseSec: 65 }],
+  },
+  {
+    dept: "전자금융팀",
+    desc: "OTP·공동인증서·이체 오류",
+    available: 3,
+    busy: 0,
+    waiting: [],
+  },
+] as const;
+
 export interface ScriptStep {
   title: string;
   text: string;

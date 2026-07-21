@@ -6,6 +6,7 @@ import Waiting from "./desktop/Waiting";
 import PrepCard from "./desktop/PrepCard";
 import ActiveCall from "./desktop/ActiveCall";
 import WrapSheet from "./desktop/WrapSheet";
+import AdminQueueSheet from "./desktop/AdminQueueSheet";
 import DemoTour, { TourChooser } from "../tour/DemoTour";
 import { SCREEN_ORDER } from "../tour/steps";
 
@@ -26,6 +27,9 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
     setTourRun((k) => k + 1);
   };
   const screenKey = SCREEN_ORDER[vm.stepIndex];
+
+  // 관리자 보기 — 상담사 화면과 딱 하나 다른 정보(지금 대기열)를 왼쪽 바텀업 시트로. 어느 단계에서든 토글
+  const [adminOpen, setAdminOpen] = useState(false);
 
   return (
     <div
@@ -150,6 +154,17 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>
+            <span
+              onClick={() => setAdminOpen((v) => !v)}
+              title="관리자 보기 — 부서별 실시간 대기열"
+              style={css(
+                "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;background:" +
+                  (adminOpen ? "var(--gray-1000)" : "var(--gray-100)") +
+                  ";color:" + (adminOpen ? "#fff" : "var(--gray-800)")
+              )}
+            >
+              <span className="mi" style={css("font-size:17px")}>monitoring</span>관리자
+            </span>
           </div>
 
           {vm.micErr && (
@@ -168,6 +183,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               {/* 종료 후에도 통화 화면이 배경에 남고, 후처리 시트가 그 위로 올라온다 */}
               {vm.showActive && <ActiveCall vm={vm} />}
               {vm.showWrap && <WrapSheet vm={vm} />}
+              <AdminQueueSheet open={adminOpen} onClose={() => setAdminOpen(false)} />
             </div>
 
           </div>
