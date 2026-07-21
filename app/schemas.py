@@ -152,6 +152,10 @@ class RagDocument(BaseModel):
     title: str
     excerpt: str
     score: float
+    # 김민기 RAG 설계 v0.1의 8대분류(taxonomy) 태그. 검색 필터·근거 표시용.
+    # 청크가 어느 대분류/중분류 규정인지. 없을 수도 있어 옵셔널.
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
 
 
 class RagResult(BaseModel):

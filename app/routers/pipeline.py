@@ -192,7 +192,18 @@ async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
     if text_emotion_result is not None:
         judgement = fuse_judgement(judgement, text_emotion_result)
 
-    references = search_procedures(settings, _rag_query(judgement.reason_codes, gpt_result.summary))
+    # 김민기 RAG 설계: 긴급(EMERGENCY=사고·신고) 통화면 SG 대분류 규정만 좁혀 추천.
+    # 그 외에는 전체 검색(기존 동작 유지). 에스컬레이션 안전 — 확실한 신호일 때만 필터.
+    rag_categories = (
+        ["SG"]
+        if routing_result is not None and routing_result.classification == "EMERGENCY"
+        else None
+    )
+    references = search_procedures(
+        settings,
+        _rag_query(judgement.reason_codes, gpt_result.summary),
+        categories=rag_categories,
+    )
 
     return BriefingCard(
         call_id=transcribed.call_id,
