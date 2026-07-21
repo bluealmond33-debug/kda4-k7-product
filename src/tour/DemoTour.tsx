@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { css } from "../lib/css";
 import type { CallFlowVM } from "../hooks/useCallFlow";
 import { TOUR, TOUR_OFFSETS, TOUR_TOTAL, SCREEN_LABELS, type ScreenKey } from "./steps";
@@ -138,6 +138,15 @@ export default function DemoTour({
     };
   }, [step.target]);
 
+  // 말풍선 높이 실측 — 플립·클램프 계산의 기준. setState가 useLayoutEffect 안이라
+  // 페인트 전에 위치가 보정되어 잘못된 자리가 화면에 번쩍이지 않는다.
+  const bubbleRef = useRef<HTMLDivElement | null>(null);
+  const [bh, setBh] = useState(0);
+  useLayoutEffect(() => {
+    const h = bubbleRef.current?.offsetHeight ?? 0;
+    if (h && Math.abs(h - bh) > 0.5) setBh(h);
+  });
+
   if (!rect) return null; // 앵커가 아직 없으면(화면 전환 중) 다음 폴링까지 대기
 
   const pad = step.pad ?? 8;
@@ -148,24 +157,62 @@ export default function DemoTour({
   const cx = sx + sw / 2;
   const cy = sy + sh / 2;
   const vw = window.innerWidth;
+  const vh = window.innerHeight;
 
-  // 말풍선 배치 — 앵커의 placement 쪽. 좌우 화면 밖으로 나가지 않게 클램프
-  const wrap: CSSProperties = { position: "fixed", zIndex: 601, width: BUBBLE_W };
-  const tail: CSSProperties = {};
-  const clampedLeft = clamp(cx - BUBBLE_W / 2, 12, vw - BUBBLE_W - 12);
-  if (step.placement === "bottom") {
-    Object.assign(wrap, { left: clampedLeft, top: sy + sh + GAP });
-    Object.assign(tail, { top: -5, left: clamp(cx - clampedLeft, 22, BUBBLE_W - 22) });
-  } else if (step.placement === "top") {
-    Object.assign(wrap, { left: clampedLeft, top: sy - GAP, transform: "translateY(-100%)" });
-    Object.assign(tail, { bottom: -5, left: clamp(cx - clampedLeft, 22, BUBBLE_W - 22) });
-  } else if (step.placement === "right") {
-    Object.assign(wrap, { left: sx + sw + GAP, top: cy, transform: "translateY(-50%)" });
-    Object.assign(tail, { left: -5, top: "50%" });
-  } else {
-    Object.assign(wrap, { left: sx - GAP - BUBBLE_W, top: cy, transform: "translateY(-50%)" });
-    Object.assign(tail, { right: -5, top: "50%" });
+  // 말풍선 배치 — 실측 높이(bh) 기반. ① 그쪽에 공간이 없으면 반대편으로 플립,
+  // ② 그래도 넘치면 뷰포트 안으로 클램프 — 말풍선은 어떤 창 크기에서도 항상 화면 안에 있다.
+  const W = BUBBLE_W;
+  const MARGIN = 10; // 뷰포트 가장자리 최소 여백
+  let placement = step.placement;
+  if (bh > 0) {
+    const fitsLeft = sx - GAP - W >= MARGIN;
+    const fitsRight = sx + sw + GAP + W <= vw - MARGIN;
+    const fitsTop = sy - GAP - bh >= MARGIN;
+    const fitsBottom = sy + sh + GAP + bh <= vh - MARGIN;
+    if (placement === "left" && !fitsLeft && fitsRight) placement = "right";
+    else if (placement === "right" && !fitsRight && fitsLeft) placement = "left";
+    else if (placement === "top" && !fitsTop && fitsBottom) placement = "bottom";
+    else if (placement === "bottom" && !fitsBottom && fitsTop) placement = "top";
   }
+  let bx: number;
+  let by: number;
+  if (placement === "left") {
+    bx = sx - GAP - W;
+    by = cy - bh / 2;
+  } else if (placement === "right") {
+    bx = sx + sw + GAP;
+    by = cy - bh / 2;
+  } else if (placement === "top") {
+    bx = cx - W / 2;
+    by = sy - GAP - bh;
+  } else {
+    bx = cx - W / 2;
+    by = sy + sh + GAP;
+  }
+  bx = clamp(bx, MARGIN, vw - W - MARGIN);
+  by = clamp(by, MARGIN, vh - bh - MARGIN);
+
+  // 꼬리 — 항상 같은 크기(14px)로 스팟라이트 중심을 가리킨다.
+  // 클램프로 말풍선이 밀려도 꼬리 위치를 타깃 중심에 맞춰 다시 계산 (모서리 반경은 피한다)
+  const T = 14;
+  const tail: CSSProperties = { width: T, height: T };
+  if (placement === "left" || placement === "right") {
+    const tailY = clamp(cy - by, 20, Math.max(20, bh - 20));
+    Object.assign(tail, { top: tailY - T / 2, [placement === "left" ? "right" : "left"]: -T / 2 });
+  } else {
+    const tailX = clamp(cx - bx, 20, W - 20);
+    Object.assign(tail, { left: tailX - T / 2, [placement === "top" ? "bottom" : "top"]: -T / 2 });
+  }
+
+  const wrap: CSSProperties = {
+    position: "fixed",
+    zIndex: 601,
+    width: W,
+    left: bx,
+    top: by,
+    // 첫 프레임은 높이 실측 전 — 측정될 때까지 숨겨 잘못된 위치가 번쩍이지 않게
+    visibility: bh > 0 ? "visible" : "hidden",
+  };
 
   const globalNo = TOUR_OFFSETS[screen] + i + 1;
 
@@ -190,9 +237,9 @@ export default function DemoTour({
 
       {/* 말풍선 — 영역을 꼬리로 가리키며 설명. '다음'은 이 안에 */}
       <div style={wrap}>
-        <div key={screen + i} style={css("position:relative;background:var(--onair-surface);border-radius:14px;box-shadow:var(--sh-modal);padding:15px 17px 13px;animation:coachIn .3s var(--ease-out);font-family:" + FONT)}>
-          {/* 꼬리 — 스팟라이트 영역을 가리키는 45° 사각형 */}
-          <span style={{ ...css("position:absolute;width:12px;height:12px;background:var(--onair-surface);transform:translate(-50%,0) rotate(45deg)"), ...tail }} />
+        <div ref={bubbleRef} key={screen + i} style={css("position:relative;background:var(--onair-surface);border-radius:14px;box-shadow:var(--sh-modal);padding:15px 17px 13px;animation:coachIn .3s var(--ease-out);font-family:" + FONT)}>
+          {/* 꼬리 — 스팟라이트 중심을 가리키는 45° 사각형. 크기 고정(14px), 위치는 위에서 계산 */}
+          <span style={{ ...css("position:absolute;background:var(--onair-surface);transform:rotate(45deg)"), ...tail }} />
 
           <div style={css("display:flex;align-items:center;gap:7px;margin-bottom:7px")}>
             <span style={css("font:700 14px " + FONT + ";color:var(--gray-1000)")}>{step.title}</span>
