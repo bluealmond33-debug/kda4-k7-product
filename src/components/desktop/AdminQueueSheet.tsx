@@ -12,18 +12,11 @@ const fmt = (s: number) => {
 };
 
 /**
- * 관리자 대기열 시트 — 통화 화면 전용, 왼쪽 바텀업(후처리 시트와 같은 승강 문법).
- * 상단 '관리자' 토글을 켜면 헤더만 살짝 고개를 내밀고(peek), 그 헤더를 클릭하면 전체가 올라온다.
+ * 관리자 대기열 드로어 — 통화 화면 전용. 상단 '관리자'를 누를 때만 왼쪽에서 페이지처럼
+ * 슬라이드로 나오고, 평소에는 아무것도 보이지 않는다. 닫기 = X 또는 관리자 토글.
  * 기본은 부서 하나씩(칩 선택) — '전체'는 한 단계 더 눌러서 본다.
  */
 export default function AdminQueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const H = 560; // 시트 전체 높이
-  const PEEK = 56; // 접힌 상태 = 헤더만
-  const [expanded, setExpanded] = useState(false);
-  useEffect(() => {
-    if (!open) setExpanded(false); // 토글을 끄면 다음에 켤 때 다시 peek부터
-  }, [open]);
-
   // 기본 = 부서 하나씩 · '전체'는 한 단계 더
   const [dept, setDept] = useState<number | "all">(0);
   const shown = dept === "all" ? [...ADMIN_QUEUE] : [ADMIN_QUEUE[dept]];
@@ -42,43 +35,32 @@ export default function AdminQueueSheet({ open, onClose }: { open: boolean; onCl
   const total = ADMIN_QUEUE.reduce((n, d) => n + d.waiting.length, 0);
 
   return (
-    /* 클리핑 래퍼 — 내려간(숨은) 부분이 데스크톱 화면 밖으로 삐져나오지 않게 잘라낸다 */
+    /* 클리핑 래퍼 — 왼쪽으로 밀려난(숨은) 드로어가 화면 밖으로 삐져나오지 않게 잘라낸다 */
     <div style={css("position:absolute;inset:0;overflow:hidden;border-radius:12px;pointer-events:none;z-index:80")}>
     <div
       style={{
         ...css(
-          "position:absolute;left:14px;bottom:0;width:412px;height:" +
-            H +
-            "px;background:var(--onair-surface);border-radius:12px 12px 0 0;box-shadow:var(--sh-modal);display:flex;flex-direction:column;overflow:hidden;transition:transform .5s var(--ease-drawer);font-family:" +
+          "position:absolute;left:0;top:0;bottom:0;width:420px;background:var(--onair-surface);border-radius:12px 0 0 12px;box-shadow:var(--sh-modal);display:flex;flex-direction:column;overflow:hidden;transition:transform .5s var(--ease-drawer);font-family:" +
             FONT
         ),
-        transform: !open ? "translateY(105%)" : expanded ? "translateY(0)" : "translateY(" + (H - PEEK) + "px)",
+        transform: open ? "translateX(0)" : "translateX(-105%)",
         pointerEvents: open ? "auto" : "none",
       }}
     >
-      {/* 헤더 = peek에서 보이는 부분. 클릭하면 전체 펼침/접힘 */}
-      <div onClick={() => setExpanded((v) => !v)} style={css("flex:none;cursor:pointer;user-select:none;border-bottom:1px solid var(--gray-200)")}>
-        <div style={css("display:flex;align-items:center;justify-content:center;padding:6px 0 0")}>
-          <span style={css("width:44px;height:5px;border-radius:9999px;background:var(--color-border)")} />
-        </div>
-        <div style={css("display:flex;align-items:center;gap:9px;padding:3px 16px 10px")}>
+      {/* 헤더 */}
+      <div style={css("flex:none;border-bottom:1px solid var(--gray-200)")}>
+        <div style={css("display:flex;align-items:center;gap:9px;padding:14px 16px 12px")}>
           <span className="mi" style={css("font-size:19px;color:var(--blue-700)")}>monitoring</span>
           <div style={css("flex:1;min-width:0")}>
-            <span style={css("font:700 13.5px " + FONT + ";color:var(--gray-1000)")}>실시간 대기열</span>
-            <span style={css("font:400 11px " + FONT + ";color:var(--gray-600);margin-left:8px")}>
-              {expanded ? "관리자 보기 · 부서별 대기 현황" : "클릭해 펼치기"}
-            </span>
+            <div style={css("font:700 14px " + FONT + ";color:var(--gray-1000)")}>실시간 대기열</div>
+            <div style={css("font:400 11px " + FONT + ";color:var(--gray-600)")}>관리자 보기 · 부서별 대기 현황</div>
           </div>
           <span style={css("display:inline-flex;align-items:baseline;gap:5px;background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>
             <span style={css("font:600 10.5px " + FONT + ";color:var(--gray-700)")}>전체 대기</span>
             <span style={css("font:700 12.5px " + MONO + ";color:var(--blue-700)")}>{total}건</span>
           </span>
-          <span className="mi" style={css("font-size:20px;color:var(--gray-500);transition:transform .3s var(--ease-drawer);transform:rotate(" + (expanded ? 0 : 180) + "deg)")}>expand_more</span>
           <span
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
+            onClick={onClose}
             title="관리자 보기 끄기"
             style={css("cursor:pointer;display:flex;width:26px;height:26px;border-radius:9999px;align-items:center;justify-content:center;background:var(--gray-100)")}
           >
