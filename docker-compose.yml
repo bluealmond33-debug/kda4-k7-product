@@ -33,5 +33,17 @@ services:
       db:
         condition: service_healthy
 
+  frontend:
+    build:
+      context: ../kda4-k7-product
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+        VITE_DATA_API_PREFIX: /api/v1
+        VITE_USE_REAL_DATA_API: "1"
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
 volumes:
   k7_pgdata:
