@@ -36,6 +36,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
 
       {/* 바텀 시트 — 항상 마운트, translateY로 승강 (열림/접힘 모두 부드럽게) */}
       <div
+        data-tour="wrap-sheet"
         style={css(
           "position:absolute;left:50%;bottom:0;width:1240px;height:" +
             SHEET_H +
@@ -201,7 +202,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
               <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-500);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-1000);cursor:pointer;background:var(--onair-surface)")}>
                 <span className="mi" style={css("font-size:18px")}>coffee</span> 저장 후 휴식
               </span>
-              <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
+              <span data-tour="wrap-save" onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
                 <span className="mi" style={css("font-size:18px")}>call</span> 저장 후 다음 콜
               </span>
             </div>

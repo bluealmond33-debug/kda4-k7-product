@@ -97,62 +97,7 @@ const PREP_ITEMS = [
   },
 ];
 
-/** 데모 안내(가이드 모드) — 화면별로 "이 화면이 무엇이고 왜 이렇게 생겼는지"를 설명한다.
- *  멘토·처음 보는 사람에게 시연할 때 켠다. phase → guideKey 로 매핑. */
-type GuideKey = "idle" | "intake" | "prep" | "active" | "wrap";
-const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; next: string }> = {
-  idle: {
-    step: "대기",
-    title: "시계가 화면의 주인공인 이유",
-    points: [
-      "직원 화면의 언어는 '설명'이 아니라 '상태'입니다. 대기 중 능동적으로 볼 정보는 시각 하나뿐이라, 시계를 주인공으로 뒀습니다.",
-      "전화는 자동으로 도착하므로 '전화 받기' 같은 입구 버튼은 존재감을 낮췄고, 하단 회색 항목(처리 내역·매뉴얼·코칭)은 짬에 하는 부차 활동이라 배경으로 물러나 있습니다.",
-      "상태(수신 가능·대기열·다음 콜백)는 우상단 한 곳에만 모읍니다 — 같은 정보를 두 번 표시하지 않습니다.",
-    ],
-    next: "왼쪽 전화기의 초록 통화 버튼을 눌러 전화를 걸어보세요.",
-  },
-  intake: {
-    step: "접수",
-    title: "AI가 용건을 먼저 정리합니다",
-    points: [
-      "고객이 대기 중 말한 용건을 AI가 실시간으로 접수·요약합니다. 상담사는 통화를 받기 전부터 '무슨 일인지'를 압니다.",
-      "이때 필요한 신호는 감정온도·접수 경과뿐 — 나머지는 요약이 끝나면 준비 카드로 옵니다.",
-    ],
-    next: "상단 '5초 건너뛰고 요약'으로 바로 넘어갈 수 있어요.",
-  },
-  prep: {
-    step: "준비",
-    title: "준비 카드 — 이 데모의 핵심",
-    points: [
-      "가장 큰 글씨(AI 사전 녹음 요약)가 '무슨 일'입니다. 아래 근거 발화·상담사가 할 일·배정 확신도가 그 요약을 뒷받침합니다.",
-      "오른쪽 감정온도·사고징후는 '어떻게 응대할지'의 신호입니다.",
-      "유의사항을 하나씩 확인하면 게이지가 차고, 4개를 모두 확인하면 그 자리가 '첫 응대 문장'으로 바뀌며 통화 연결이 열립니다 — 준비의 마지막 단계가 곧 오프닝 멘트입니다.",
-    ],
-    next: "유의사항의 '확인'을 네 번 눌러 통화를 열어보세요.",
-  },
-  active: {
-    step: "통화",
-    title: "통화 콘솔 — 3열 작업대",
-    points: [
-      "왼쪽=고객 정보와 본인확인(인증 전엔 상세 조회가 잠깁니다) · 가운데=AI 요약과 단계별 스크립트·메모 · 오른쪽=이 상담에 필요한 규정·매뉴얼.",
-      "빛·글로우·깜빡임 대신 그림자 깊이만으로 초점을 줍니다 — 8시간 응시해도 눈이 덜 피로하도록.",
-      "감정온도는 고정값이 아니라 통화 중 실시간으로 갱신됩니다(잠시 후 주의→안정).",
-    ],
-    next: "오른쪽 위 빨간 '통화 종료'를 누르면 후처리로 이어집니다.",
-  },
-  wrap: {
-    step: "후처리",
-    title: "상담사의 유일한 산출물 = 초안 검증",
-    points: [
-      "통화 종료와 동시에 시트가 자동으로 올라옵니다. 통화 화면은 배경에 남아 방금 내용을 다시 볼 수 있습니다.",
-      "왼쪽 상담 정보는 녹취·메모에서 자동으로 채워지고, 상담사는 필요한 것만 고칩니다(연필 아이콘). 오른쪽 초안도 클릭해 편집합니다.",
-      "상담 유형·결과·후속조치는 이번 콜 유형에 맞춰 미리 채워집니다.",
-    ],
-    next: "'저장 후 다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
-  },
-};
-// 가이드 투어 순서 — 스테퍼 인디케이터·이전/다음 내비게이션 기준
-const GUIDE_ORDER: GuideKey[] = ["idle", "intake", "prep", "active", "wrap"];
+// 화면별 데모 안내(투어링)는 src/tour 로 분리 — 시연 전용 레이어라 훅에 두지 않는다.
 
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
 const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
@@ -214,10 +159,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
-  // 데모 안내(가이드 모드) — 화면별 소개 팝업. 로드/단계도달 후 '잠시 뒤' 자동으로 뜬다(아래 효과).
-  const [guideOpen, setGuideOpen] = useState(false);
-  // 팝업이 보여줄 단계 — 도달 시 자동으로 현재 단계, 스테퍼 번호 클릭 시 그 단계
-  const [guideStep, setGuideStep] = useState<GuideKey>("idle");
 
   const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
   const [summaryVersion, setSummaryVersion] = useState(0);
@@ -598,7 +539,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // re-measure after any layout-affecting change
   useLayoutEffect(() => {
     fit();
-  }, [fit, phase, verified, regExpanded, memoItems, followups, wrapSheetOpen, micErr, guideOpen]);
+  }, [fit, phase, verified, regExpanded, memoItems, followups, wrapSheetOpen, micErr]);
 
   useEffect(() => () => clearAll(), [clearAll]);
 
@@ -606,25 +547,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const p = phase;
   const inCall = ["connecting", "recording", "confirm", "prep", "active"].includes(p);
   const ended = p === "wrap" || p === "summarizing";
-  // 데모 안내: 현재 phase → 가이드 화면 키
-  const guideKey: GuideKey =
-    p === "idle"
-      ? "idle"
-      : ["connecting", "recording", "confirm"].includes(p)
-      ? "intake"
-      : p === "prep"
-      ? "prep"
-      : p === "active"
-      ? "active"
-      : "wrap";
-  // 새 단계에 도달하면 그 단계 안내를 자동 팝업으로 (화면별 소개 멘트).
-  // 화면을 잠깐 본 뒤(700ms) 뜬다 — "화면 먼저, 설명은 이어서". 대기(idle)는 로드 후 1회.
-  // (스테퍼 번호 클릭 = openGuideStep = 지연 없이 즉시)
-  useEffect(() => {
-    setGuideStep(guideKey);
-    const t = window.setTimeout(() => setGuideOpen(true), 700);
-    return () => window.clearTimeout(t);
-  }, [guideKey]);
   const sim = mode === "sim";
   const nv = !verified;
 
@@ -742,29 +664,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,
-    // 데모 안내(가이드 모드)
-    guideOpen,
-    closeGuide: () => setGuideOpen(false),
-    guide: GUIDE[guideStep],
-    guideStep,
-    guideIndex: GUIDE_ORDER.indexOf(guideStep),
-    // 스테퍼 인디케이터용 — 순서대로 {key,label}
-    guideSteps: GUIDE_ORDER.map((k) => ({ key: k, label: GUIDE[k].step })),
-    // 스테퍼 번호/인디케이터 클릭 → 그 단계 안내로 전환하며 팝업 (도달 전 단계도 미리보기 가능)
-    openGuideStep: (k: string) => {
-      setGuideStep(k as GuideKey);
-      setGuideOpen(true);
-    },
-    // 가이드 투어 이전/다음 — 데모는 안 움직이고 안내만 앞뒤로 넘긴다. 마지막에서 '다음' = 닫기
-    guidePrev: () => {
-      const i = GUIDE_ORDER.indexOf(guideStep);
-      if (i > 0) setGuideStep(GUIDE_ORDER[i - 1]);
-    },
-    guideNext: () => {
-      const i = GUIDE_ORDER.indexOf(guideStep);
-      if (i < GUIDE_ORDER.length - 1) setGuideStep(GUIDE_ORDER[i + 1]);
-      else setGuideOpen(false);
-    },
     // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
     stepIndex:
       p === "idle"

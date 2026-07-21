@@ -35,7 +35,7 @@ const CONTROLS = [
 
 export default function Phone({ vm }: { vm: CallFlowVM }) {
   return (
-    <div style={css("flex:none;width:260px;height:532px")}>
+    <div data-tour="phone" style={css("flex:none;width:260px;height:532px;position:relative")}>
       <div
         className="sf"
         style={css(
@@ -95,17 +95,21 @@ function CallButtonRow({
   icon,
   onClick,
   sideRight,
+  dataTour,
 }: {
   color: string;
   icon: string;
   onClick?: () => void;
   sideRight?: React.ReactNode;
+  /** 투어 스팟라이트 앵커 이름 — 시연용, 렌더링엔 영향 없음 */
+  dataTour?: string;
 }) {
   return (
     <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;align-items:center;margin-top:14px")}>
       <span />
       <div
         onClick={onClick}
+        data-tour={dataTour}
         style={css(
           "width:75px;height:75px;border-radius:9999px;background:" + color + ";display:flex;align-items:center;justify-content:center;cursor:pointer"
         )}
@@ -146,6 +150,7 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
           color="#34c759"
           icon="call"
           onClick={vm.startCall}
+          dataTour="phone-call"
           sideRight={<span className="mi" style={css("font-size:28px;color:#1c1c1e;opacity:.55")}>backspace</span>}
         />
       </div>
