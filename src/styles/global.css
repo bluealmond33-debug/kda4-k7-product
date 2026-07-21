@@ -74,6 +74,11 @@ a:hover {
   transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+/* 호버 = 옅은 부상(관심 후보) — 마우스가 올라간 영역이 즉각 반응한다.
+   작업 상태의 초점(sh-focus, 인라인)이 항상 이 위에 있다: 호버는 보조 신호, 작업이 주 신호 */
+.card:hover {
+  box-shadow: var(--sh-hover, 0 2px 4px rgba(15, 18, 24, 0.12), 0 9px 20px -8px rgba(15, 18, 24, 0.22));
+}
 .sechd {
   /* 타입 래더 v2 Section — 실효 크기(×0.764) 기준으로 13px은 지각 하한 아래.
      700→600: 실효 10px대 한글에서 700은 뭉친다 */
