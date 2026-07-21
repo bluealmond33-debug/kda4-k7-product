@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS transcripts (
 
 CREATE TABLE IF NOT EXISTS consultation_cards (
     call_id uuid PRIMARY KEY REFERENCES calls (call_id) ON DELETE CASCADE,
-    schema_version text NOT NULL DEFAULT 'mvp-1.0',
+    schema_version text NOT NULL DEFAULT 'mvp-1.1',
     summary text NOT NULL CHECK (btrim(summary) <> ''),
     business_type text NOT NULL CHECK (btrim(business_type) <> ''),
     department text NOT NULL CHECK (btrim(department) <> ''),
@@ -40,9 +40,10 @@ CREATE TABLE IF NOT EXISTS consultation_cards (
     emotion_reason text,
     raw_model_result jsonb NOT NULL DEFAULT '{}'::jsonb,
     raw_emotion_result jsonb NOT NULL DEFAULT '{}'::jsonb,
+    briefing_payload jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT consultation_cards_schema_version_chk CHECK (schema_version = 'mvp-1.0'),
+    CONSTRAINT consultation_cards_schema_version_chk CHECK (schema_version = 'mvp-1.1'),
     CONSTRAINT consultation_cards_high_risk_reason_chk CHECK (
         incident_risk <> 'high' OR btrim(COALESCE(risk_reason, '')) <> ''
     ),
@@ -68,7 +69,19 @@ CREATE TABLE IF NOT EXISTS consultation_cards (
     )
 );
 
--- Idempotent constraint upgrades for a database created by an earlier mvp-1.0
+-- Idempotent contract upgrade for databases created with mvp-1.0.
+ALTER TABLE consultation_cards
+    DROP CONSTRAINT IF EXISTS consultation_cards_schema_version_chk;
+ALTER TABLE consultation_cards
+    ALTER COLUMN schema_version SET DEFAULT 'mvp-1.1';
+UPDATE consultation_cards
+SET schema_version = 'mvp-1.1'
+WHERE schema_version <> 'mvp-1.1';
+ALTER TABLE consultation_cards
+    ADD CONSTRAINT consultation_cards_schema_version_chk
+    CHECK (schema_version = 'mvp-1.1');
+
+-- Idempotent constraint upgrades for databases created by earlier revisions.
 -- revision. CREATE TABLE IF NOT EXISTS alone cannot add new constraints.
 DO $migration$
 BEGIN
@@ -81,6 +94,17 @@ BEGIN
     ) THEN
         ALTER TABLE consultation_cards
             ADD COLUMN raw_emotion_result jsonb NOT NULL DEFAULT '{}'::jsonb;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'consultation_cards'
+          AND column_name = 'briefing_payload'
+    ) THEN
+        ALTER TABLE consultation_cards
+            ADD COLUMN briefing_payload jsonb NOT NULL DEFAULT '{}'::jsonb;
     END IF;
 
     IF NOT EXISTS (
@@ -109,15 +133,6 @@ BEGIN
     ) THEN
         ALTER TABLE transcripts ADD CONSTRAINT transcripts_stt_model_not_blank_chk
             CHECK (btrim(stt_model) <> '');
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'consultation_cards_schema_version_chk'
-          AND conrelid = 'consultation_cards'::regclass
-    ) THEN
-        ALTER TABLE consultation_cards ADD CONSTRAINT consultation_cards_schema_version_chk
-            CHECK (schema_version = 'mvp-1.0');
     END IF;
 
     IF NOT EXISTS (

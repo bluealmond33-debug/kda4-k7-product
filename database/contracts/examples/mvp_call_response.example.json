@@ -1,5 +1,5 @@
 {
-  "schema_version": "mvp-1.0",
+  "schema_version": "mvp-1.1",
   "call_id": "94650acb-f213-49ee-a94e-87dfd645cc40",
   "status": "ready",
   "source_channel": "voice",
@@ -17,12 +17,46 @@
     "incident_risk": "low",
     "risk_reason": null,
     "routing_confidence": 0.94,
+    "customer_requests": [
+      "주택담보대출 만기 연장 가능 여부 확인",
+      "연장 신청에 필요한 서류 안내"
+    ],
+    "missing_information": [
+      "정확한 대출 상품명과 만기일",
+      "현재 연체 여부"
+    ],
+    "required_actions": [
+      {
+        "title": "본인확인 우선 진행",
+        "detail": "대출 상세 조회 전에 승인된 수단으로 본인확인을 완료합니다.",
+        "source": "policy"
+      },
+      {
+        "title": "대출 만기정보 확인",
+        "detail": "상품명·만기일·연체 여부를 확인한 뒤 연장 심사 절차를 안내합니다.",
+        "source": "rag"
+      }
+    ],
+    "knowledge_references": [
+      {
+        "doc_id": "K7-DEMO-LOAN-001",
+        "title": "대출 만기 및 조건변경 상담 가이드",
+        "section": "만기 연장 사전 확인",
+        "excerpt": "대출 만기 연장 문의에서는 상품명, 만기일, 연체 여부 등을 확인합니다.",
+        "source": "K7 데모 업무가이드 v1 · 대출 1절",
+        "score": 1.0
+      }
+    ],
     "emotion": {
       "status": "unavailable",
       "score": null,
       "level": null,
       "reason": "감정 모델은 아직 MVP 통합 전입니다."
-    }
+    },
+    "attention_level": "none",
+    "reason_codes": [],
+    "routing": null,
+    "text_emotion": null
   },
   "created_at": "2026-07-16T06:00:00Z"
 }

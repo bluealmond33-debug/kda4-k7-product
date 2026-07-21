@@ -39,16 +39,20 @@ def test_post_route_passes_existing_pipeline_results_to_integration_service(
         assert audio_bytes == b"RIFF-test-audio"
         return transcript
 
-    def fake_analysis(_settings, text):
+    def fake_analysis(_settings, text, references):
         calls["analysis"] += 1
         assert text == transcript.text
+        assert references
+        assert references[0].doc_id == "K7-DEMO-LOAN-001"
         return raw
 
     def fake_persist(_settings, **kwargs):
         calls["persist"] += 1
         assert kwargs["audio_filename"] == "customer.wav"
         assert kwargs["transcript"] is transcript
-        assert kwargs["raw_model_result"] == raw
+        assert kwargs["raw_model_result"]["summary"] == raw["summary"]
+        assert kwargs["raw_model_result"]["required_actions"] == []
+        assert kwargs["knowledge_references"]
         assert str(kwargs["call_id"])
         return expected
 

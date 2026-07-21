@@ -1,6 +1,6 @@
 {
   "status": "active",
-  "contract_version": "mvp-1.0",
+  "contract_version": "mvp-1.1",
   "source_channel": "voice",
   "masking_enabled": false,
   "audio_processing": {
@@ -12,13 +12,24 @@
     "audio_object_storage": "not_in_mvp",
     "stt_input": "audio",
     "summary_input": "stt_text",
-    "summary_processor": "openai",
+    "stt_processor": "provider_configured",
+    "summary_processor": "provider_configured",
+    "providers": {
+      "cloud": {
+        "stt": "openai",
+        "analysis": "openai"
+      },
+      "local": {
+        "stt": "faster_whisper",
+        "analysis": "ollama"
+      }
+    },
     "emotion_input": "same_audio_file_only",
     "branching": "after_audio_capture",
     "correlation_key": "call_id",
     "call_id_created": "before_analysis",
     "branches": {
-      "text_analysis": ["stt", "openai_summary_classification_routing"],
+      "text_analysis": ["stt_provider", "analysis_provider"],
       "audio_emotion": ["audio_emotion_model"]
     },
     "parallel_execution_allowed": true,
