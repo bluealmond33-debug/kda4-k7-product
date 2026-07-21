@@ -24,6 +24,12 @@ from app.pipeline import (
     transcribe_audio,
 )
 from app.services.routing import apply_general_topic_routing, classify_general_topic
+from app.rag import (
+    RegulationSearchUnavailable,
+    initialize_rag,
+    search_regulations,
+)
+from app.rag.taxonomy import is_valid_category
 
 
 settings = get_settings()
@@ -33,6 +39,11 @@ settings = get_settings()
 async def lifespan(_: FastAPI):
     if settings.database_url:
         initialize_database(settings)
+        # regulation RAG is optional (needs pgvector); never block startup.
+        try:
+            initialize_rag(settings)
+        except RegulationSearchUnavailable:
+            pass
     yield
 
 
@@ -103,6 +114,31 @@ def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"call pipeline failed: {exc}") from exc
+
+
+@app.get("/api/v1/regulations/search")
+def search_regulations_endpoint(
+    q: str,
+    category: str | None = None,
+    k: int = 5,
+) -> dict:
+    """Hybrid regulation search for the "관련 규정 및 매뉴얼" panel.
+
+    Returns {available, documents}. `available` is False (not an error) when the
+    RAG index or embedding model is not provisioned, so the panel can fall back
+    to its manual file list instead of showing a failure.
+    """
+    if not q.strip():
+        raise HTTPException(status_code=400, detail="q is required")
+    if not is_valid_category(category):
+        raise HTTPException(status_code=400, detail=f"unknown category: {category}")
+    try:
+        documents = search_regulations(
+            settings, q, category=category, limit=max(1, min(k, 20))
+        )
+    except RegulationSearchUnavailable:
+        return {"query": q, "category": category, "available": False, "documents": []}
+    return {"query": q, "category": category, "available": True, "documents": documents}
 
 
 @app.get(

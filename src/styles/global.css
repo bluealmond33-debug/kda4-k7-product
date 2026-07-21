@@ -297,6 +297,27 @@ a:hover {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+/* 가이드 투어 스테퍼 — 단계 콘텐츠가 방향성 슬라이드로 전환 (앞=오른쪽서, 뒤=왼쪽서) */
+@keyframes guideSlideFwd {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes guideSlideBack {
+  from {
+    opacity: 0;
+    transform: translateX(-22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 
 /* 모션 접근성 — 이동만 제거, 페이드는 유지 ("적게·부드럽게"이지 0은 아님) */
 @media (prefers-reduced-motion: reduce) {
@@ -320,6 +341,26 @@ a:hover {
     to {
       opacity: 1;
       transform: translate(-50%, -50%);
+    }
+  }
+  @keyframes guideSlideFwd {
+    from {
+      opacity: 0;
+      transform: none;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes guideSlideBack {
+    from {
+      opacity: 0;
+      transform: none;
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
   @keyframes wave {

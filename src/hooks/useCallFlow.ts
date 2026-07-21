@@ -12,13 +12,14 @@ import {
   TRANSFER_RESPONSE,
   TRANSFER_HANDOVER,
   TRANSFER_TARGETS,
+  TRANSFER_DEPTS,
+  SUGGESTED_DEPT,
   type IncomingKind,
   type SheetData,
   renderSheet,
   WRAP_TYPE_OPTIONS,
   WRAP_RESULT_OPTIONS,
-  DEFAULT_FOLLOWUPS,
-  RECOMMENDED_FOLLOWUPS,
+  WRAP_DEFAULTS,
   type Followup,
 } from "../data/demoContent";
 import {
@@ -26,6 +27,8 @@ import {
   summarize,
   createConsultationFromAudio,
   getDemoConsultationCard,
+  parseEmotionSource,
+  emotionSourceBadge,
   type CallSummary,
   type ConsultationCardResponse,
   type TranscriptChunk,
@@ -94,6 +97,63 @@ const PREP_ITEMS = [
   },
 ];
 
+/** 데모 안내(가이드 모드) — 화면별로 "이 화면이 무엇이고 왜 이렇게 생겼는지"를 설명한다.
+ *  멘토·처음 보는 사람에게 시연할 때 켠다. phase → guideKey 로 매핑. */
+type GuideKey = "idle" | "intake" | "prep" | "active" | "wrap";
+const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; next: string }> = {
+  idle: {
+    step: "대기",
+    title: "시계가 화면의 주인공인 이유",
+    points: [
+      "직원 화면의 언어는 '설명'이 아니라 '상태'입니다. 대기 중 능동적으로 볼 정보는 시각 하나뿐이라, 시계를 주인공으로 뒀습니다.",
+      "전화는 자동으로 도착하므로 '전화 받기' 같은 입구 버튼은 존재감을 낮췄고, 하단 회색 항목(처리 내역·매뉴얼·코칭)은 짬에 하는 부차 활동이라 배경으로 물러나 있습니다.",
+      "상태(수신 가능·대기열·다음 콜백)는 우상단 한 곳에만 모읍니다 — 같은 정보를 두 번 표시하지 않습니다.",
+    ],
+    next: "왼쪽 전화기의 초록 통화 버튼을 눌러 전화를 걸어보세요.",
+  },
+  intake: {
+    step: "접수",
+    title: "AI가 용건을 먼저 정리합니다",
+    points: [
+      "고객이 대기 중 말한 용건을 AI가 실시간으로 접수·요약합니다. 상담사는 통화를 받기 전부터 '무슨 일인지'를 압니다.",
+      "이때 필요한 신호는 감정온도·접수 경과뿐 — 나머지는 요약이 끝나면 준비 카드로 옵니다.",
+    ],
+    next: "상단 '5초 건너뛰고 요약'으로 바로 넘어갈 수 있어요.",
+  },
+  prep: {
+    step: "준비",
+    title: "준비 카드 — 이 데모의 핵심",
+    points: [
+      "가장 큰 글씨(AI 사전 녹음 요약)가 '무슨 일'입니다. 아래 근거 발화·상담사가 할 일·배정 확신도가 그 요약을 뒷받침합니다.",
+      "오른쪽 감정온도·사고징후는 '어떻게 응대할지'의 신호입니다.",
+      "유의사항을 하나씩 확인하면 게이지가 차고, 4개를 모두 확인하면 그 자리가 '첫 응대 문장'으로 바뀌며 통화 연결이 열립니다 — 준비의 마지막 단계가 곧 오프닝 멘트입니다.",
+    ],
+    next: "유의사항의 '확인'을 네 번 눌러 통화를 열어보세요.",
+  },
+  active: {
+    step: "통화",
+    title: "통화 콘솔 — 3열 작업대",
+    points: [
+      "왼쪽=고객 정보와 본인확인(인증 전엔 상세 조회가 잠깁니다) · 가운데=AI 요약과 단계별 스크립트·메모 · 오른쪽=이 상담에 필요한 규정·매뉴얼.",
+      "빛·글로우·깜빡임 대신 그림자 깊이만으로 초점을 줍니다 — 8시간 응시해도 눈이 덜 피로하도록.",
+      "감정온도는 고정값이 아니라 통화 중 실시간으로 갱신됩니다(잠시 후 주의→안정).",
+    ],
+    next: "오른쪽 위 빨간 '통화 종료'를 누르면 후처리로 이어집니다.",
+  },
+  wrap: {
+    step: "후처리",
+    title: "상담사의 유일한 산출물 = 초안 검증",
+    points: [
+      "통화 종료와 동시에 시트가 자동으로 올라옵니다. 통화 화면은 배경에 남아 방금 내용을 다시 볼 수 있습니다.",
+      "왼쪽 상담 정보는 녹취·메모에서 자동으로 채워지고, 상담사는 필요한 것만 고칩니다(연필 아이콘). 오른쪽 초안도 클릭해 편집합니다.",
+      "상담 유형·결과·후속조치는 이번 콜 유형에 맞춰 미리 채워집니다.",
+    ],
+    next: "'저장 후 다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
+  },
+};
+// 가이드 투어 순서 — 스테퍼 인디케이터·이전/다음 내비게이션 기준
+const GUIDE_ORDER: GuideKey[] = ["idle", "intake", "prep", "active", "wrap"];
+
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
 const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
 // 색은 값에 바인딩 — 낮음이 빨갛게, 주의가 늘 앰버로 보이는 거짓말을 막는다
@@ -154,14 +214,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
+  // 데모 안내(가이드 모드) — 화면별 소개 팝업. 로드/단계도달 후 '잠시 뒤' 자동으로 뜬다(아래 효과).
+  const [guideOpen, setGuideOpen] = useState(false);
+  // 팝업이 보여줄 단계 — 도달 시 자동으로 현재 단계, 스테퍼 번호 클릭 시 그 단계
+  const [guideStep, setGuideStep] = useState<GuideKey>("idle");
+
   const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
   const [summaryVersion, setSummaryVersion] = useState(0);
   const [regenerating, setRegenerating] = useState(false);
-  const [wrapType, setWrapType] = useState(WRAP_TYPE_OPTIONS[0]);
-  const [wrapResult, setWrapResult] = useState(WRAP_RESULT_OPTIONS[0]);
+  const [wrapType, setWrapType] = useState(WRAP_DEFAULTS.normal.type);
+  const [wrapResult, setWrapResult] = useState(WRAP_DEFAULTS.normal.result);
   const [typeMenu, setTypeMenu] = useState(false);
   const [resultMenu, setResultMenu] = useState(false);
-  const [followups, setFollowups] = useState<Followup[]>(DEFAULT_FOLLOWUPS);
+  const [followups, setFollowups] = useState<Followup[]>(WRAP_DEFAULTS.normal.followups);
 
   const [summary, setSummary] = useState<CallSummary | null>(null);
   const [consultationResponse, setConsultationResponse] =
@@ -224,7 +289,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       summarize({ chunks: transcript.current, text }),
     ]);
     if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
-    // The standard mvp-1.1 fixture remains visible for the scripted demo.
+    // The standard mvp-1.0 fixture remains visible for the scripted demo.
   }, []);
 
   const toPrep = useCallback(() => {
@@ -266,8 +331,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }, [s2, toPrep]);
 
   const runScript = useCallback(() => {
-    // Scripted calls keep emotion unavailable; only a real audio model may set it.
-    after(lineGap * 5, () => armFirst());
+    // Deterministic emotion escalation for the demo.
+    const emos = [1, 1, 2, 3];
+    emos.forEach((e, i) => after(lineGap * (i + 1), () => setEmo(e)));
+    after(lineGap * (emos.length + 1), () => armFirst());
     // Feed the (mock) transcript so the summariser has real input.
     transcript.current = [];
     stt.current = startSttSession(
@@ -300,6 +367,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? (structuredClone(TRANSFER_RESPONSE) as unknown as ConsultationCardResponse)
         : getDemoConsultationCard()
     );
+    // 후처리 프리셋도 콜 유형에 맞춰 채운다 — 상담 유형·결과·후속조치가 통화 내용과 어긋나지 않게
+    const wrap = WRAP_DEFAULTS[kind];
+    setWrapType(wrap.type);
+    setWrapResult(wrap.result);
+    setFollowups(wrap.followups);
     setTransferReserved(false);
     setEmoDrift(null);
     setPhase("connecting");
@@ -351,7 +423,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setDockType(null);
     setRegExpanded(false);
     setWrapSheetOpen(false);
-    setFollowups(DEFAULT_FOLLOWUPS);
+    setWrapType(WRAP_DEFAULTS.normal.type);
+    setWrapResult(WRAP_DEFAULTS.normal.result);
+    setFollowups(WRAP_DEFAULTS.normal.followups);
     setTransferReserved(false);
     setTransferTarget(null);
     setEmoDrift(null);
@@ -529,7 +603,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // re-measure after any layout-affecting change
   useLayoutEffect(() => {
     fit();
-  }, [fit, phase, verified, regExpanded, memoItems, followups, wrapSheetOpen, micErr]);
+  }, [fit, phase, verified, regExpanded, memoItems, followups, wrapSheetOpen, micErr, guideOpen]);
 
   useEffect(() => () => clearAll(), [clearAll]);
 
@@ -537,6 +611,25 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const p = phase;
   const inCall = ["connecting", "recording", "confirm", "prep", "active"].includes(p);
   const ended = p === "wrap" || p === "summarizing";
+  // 데모 안내: 현재 phase → 가이드 화면 키
+  const guideKey: GuideKey =
+    p === "idle"
+      ? "idle"
+      : ["connecting", "recording", "confirm"].includes(p)
+      ? "intake"
+      : p === "prep"
+      ? "prep"
+      : p === "active"
+      ? "active"
+      : "wrap";
+  // 새 단계에 도달하면 그 단계 안내를 자동 팝업으로 (화면별 소개 멘트).
+  // 화면을 잠깐 본 뒤(700ms) 뜬다 — "화면 먼저, 설명은 이어서". 대기(idle)는 로드 후 1회.
+  // (스테퍼 번호 클릭 = openGuideStep = 지연 없이 즉시)
+  useEffect(() => {
+    setGuideStep(guideKey);
+    const t = window.setTimeout(() => setGuideOpen(true), 700);
+    return () => window.clearTimeout(t);
+  }, [guideKey]);
   const sim = mode === "sim";
   const nv = !verified;
 
@@ -620,11 +713,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const allChecked = prepChecks.every(Boolean);
   const card = consultationResponse.consultation_card;
   // 통화 중 드리프트가 있으면 실시간 값이 카드 초기값을 덮는다
+  // 통화 중 드리프트한 감정온도는 종료 후(후처리)에도 유지 — 마지막 실측이 초기 카드값으로 되돌아가지 않게
   const temperature =
-    p === "active" && emoDrift
+    (p === "active" || ended) && emoDrift
       ? { status: "completed" as const, score: emoDrift.score, level: emoDrift.level, reason: emoDrift.reason }
       : card.emotion;
   const inquiryLabel = card.business_type || summary?.type || "상담 유형 분석 중";
+  // 요약 문장은 헤드라인 한 곳에만 — 불릿에는 근거만 남겨 중복을 없앤다.
   const contractBullets = [
     ...card.customer_requests,
     ...card.missing_information.map((item) => `추가 확인 필요: ${item}`),
@@ -706,6 +801,29 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,
+    // 데모 안내(가이드 모드)
+    guideOpen,
+    closeGuide: () => setGuideOpen(false),
+    guide: GUIDE[guideStep],
+    guideStep,
+    guideIndex: GUIDE_ORDER.indexOf(guideStep),
+    // 스테퍼 인디케이터용 — 순서대로 {key,label}
+    guideSteps: GUIDE_ORDER.map((k) => ({ key: k, label: GUIDE[k].step })),
+    // 스테퍼 번호/인디케이터 클릭 → 그 단계 안내로 전환하며 팝업 (도달 전 단계도 미리보기 가능)
+    openGuideStep: (k: string) => {
+      setGuideStep(k as GuideKey);
+      setGuideOpen(true);
+    },
+    // 가이드 투어 이전/다음 — 데모는 안 움직이고 안내만 앞뒤로 넘긴다. 마지막에서 '다음' = 닫기
+    guidePrev: () => {
+      const i = GUIDE_ORDER.indexOf(guideStep);
+      if (i > 0) setGuideStep(GUIDE_ORDER[i - 1]);
+    },
+    guideNext: () => {
+      const i = GUIDE_ORDER.indexOf(guideStep);
+      if (i < GUIDE_ORDER.length - 1) setGuideStep(GUIDE_ORDER[i + 1]);
+      else setGuideOpen(false);
+    },
     // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
     stepIndex:
       p === "idle"
@@ -728,6 +846,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     isTransfer: incoming === "transfer",
     handover: TRANSFER_HANDOVER,
     transferTargets: TRANSFER_TARGETS,
+    transferDepts: TRANSFER_DEPTS,
+    suggestedDept: SUGGESTED_DEPT[incoming],
     transferReserved,
     transferTarget,
     // 기본이 먼저: 인자 없이 부르면 자동 배정 예약. 지정은 이름을 넘길 때만
@@ -821,7 +941,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         : temperature.level
         ? EMOTION_LABELS[temperature.level]
         : "분석 중",
-    prepEmotionSignal: temperature.reason ?? "특이 감정 신호 없음",
+    // 백엔드가 reason 맨 앞에 실어 보낸 [SOURCE=...]를 배지로 분리하고, 신호 텍스트에선 접두사를 뺀다(P0-3)
+    prepEmotionSourceBadge: emotionSourceBadge(parseEmotionSource(temperature.reason)),
+    prepEmotionSignal:
+      (temperature.reason ?? "").replace(/^\[SOURCE=[A-Z_]+\]\s*/, "") || "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
     prepEmotionFg: temperature.level ? EMOTION_COLORS[temperature.level].fg : "var(--gray-700)",
     prepEmotionBar: temperature.level ? EMOTION_COLORS[temperature.level].bar : "var(--gray-500)",
@@ -846,8 +969,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     inquiryLabel,
     wrapSummaryDefault: [
       // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
+      // v0 = 카드 요약 원문. 이미 "고객이…"로 시작하므로 접두사를 붙이면 "고객의 고객이" 중복이 된다
       summaryVersion % 2 === 0
-        ? `고객의 ${card.summary ?? summary?.headline ?? "상담 내용"}.`
+        ? `${card.summary ?? summary?.headline ?? "상담 내용을 요약했습니다."}`
         : `${SUMMARY_PROSE[incoming]}`,
       `업무유형: ${card.business_type}.`,
       `전달부서: ${card.department}.`,
@@ -898,19 +1022,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     authErrMsg,
     authTime,
     authMethodLabel,
-    authPlaceholder:
-      authMethod === "birth"
-        ? "생년월일 6자리 (YYMMDD)"
-        : authMethod === "account"
-        ? "계좌 뒷 4자리"
-        : "연락처 뒷 4자리",
     // 마스킹 '구멍' 입력 — 실제 데이터 모양 속에 입력 칸만 뚫려 있다
     // phone: 010 - **** - [    ] / birth: [      ] (YYMMDD) / account: ***-**-[    ]
     authPrefix: authMethod === "birth" ? "" : authMethod === "account" ? "***-**-" : "010 - **** - ",
     authMaxLen: authMethod === "birth" ? 6 : 4,
     // 힌트를 placeholder에 통합 — 별도 힌트 텍스트가 좁은 칸에서 잘리던 문제 해소
     authHolePlaceholder: authMethod === "birth" ? "YYMMDD" : "●●●●",
-    // script + memo — 실제 API 체크리스트가 있으면 같은 상담 절차로 사용한다
+    // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
     steps: actualCallSteps,
     firstLine: actualCallSteps[0]?.text ?? "고객 문의 내용을 확인합니다.",
     regRecos: REG_RECOS[incoming],
@@ -994,7 +1112,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     })),
     noFollowups: followups.length === 0,
     // 이미 추가된 추천은 숨긴다 — x로 빼면 다시 나타난다
-    recoFollowups: RECOMMENDED_FOLLOWUPS.filter(
+    recoFollowups: WRAP_DEFAULTS[incoming].recommended.filter(
       (f) => !followups.some((x) => x.label === f.label)
     ).map((f) => ({
       icon: f.icon,
