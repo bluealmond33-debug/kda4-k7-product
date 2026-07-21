@@ -50,9 +50,9 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </span>
           ) : null}
           {/* AI 사전 녹음 요약 = 이 카드의 히어로. 라벨을 붙여 '제목'이 아니라 '요약'으로 읽히게 한다 */}
-          <div style={css("display:flex;gap:13px")}>
-            <span style={css("width:4px;border-radius:2px;background:var(--blue-500);flex:none")} />
-            <div>
+          <div style={css("display:flex;gap:13px;align-items:flex-start")}>
+            <span style={css("width:4px;border-radius:2px;background:var(--blue-500);flex:none;align-self:stretch")} />
+            <div style={css("flex:1;min-width:0")}>
               <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
                 <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>graphic_eq</span>AI 사전 녹음 요약
               </div>
@@ -62,6 +62,14 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <div style={css("font:400 12.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:7px")}>
                 근거 발화 · <span style={css("font-style:italic;color:var(--gray-800)")}>“{vm.transcriptQuote}”</span>
               </div>
+            </div>
+            {/* 라우팅 배지 — AI가 배정한 담당 부서(우측 상단) */}
+            <div style={css("flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:4px")}>
+              <span style={css("display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9999px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.28);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);white-space:nowrap")}>
+                <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>alt_route</span>
+                {vm.prepRoutingTitle} 라우팅
+              </span>
+              <span style={css("font:600 10px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900);opacity:.7")}>{vm.prepConfidence}</span>
             </div>
           </div>
         </div>
