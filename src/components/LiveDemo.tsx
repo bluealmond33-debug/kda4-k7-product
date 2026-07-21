@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
 import Phone from "./Phone";
@@ -28,8 +28,13 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
   };
   const screenKey = SCREEN_ORDER[vm.stepIndex];
 
-  // 관리자 보기 — 상담사 화면과 딱 하나 다른 정보(지금 대기열)를 왼쪽 바텀업 시트로. 어느 단계에서든 토글
+  // 관리자 보기 — 통화 화면 전용. 토글을 켜면 왼쪽 아래에 시트 헤더만 고개를 내밀고(peek),
+  // 그 헤더를 클릭해야 전체가 올라온다. 평소(통화 밖·토글 꺼짐)에는 아예 안 보인다.
   const [adminOpen, setAdminOpen] = useState(false);
+  const adminAvailable = vm.showActive && !vm.showWrap; // 통화 중 화면에서만
+  useEffect(() => {
+    if (!adminAvailable) setAdminOpen(false);
+  }, [adminAvailable]);
 
   return (
     <div
@@ -154,6 +159,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>
+            {adminAvailable && (
             <span
               onClick={() => setAdminOpen((v) => !v)}
               title="관리자 보기 — 부서별 실시간 대기열"
@@ -165,6 +171,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             >
               <span className="mi" style={css("font-size:17px")}>monitoring</span>관리자
             </span>
+            )}
           </div>
 
           {vm.micErr && (
@@ -183,7 +190,7 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               {/* 종료 후에도 통화 화면이 배경에 남고, 후처리 시트가 그 위로 올라온다 */}
               {vm.showActive && <ActiveCall vm={vm} />}
               {vm.showWrap && <WrapSheet vm={vm} />}
-              <AdminQueueSheet open={adminOpen} onClose={() => setAdminOpen(false)} />
+              {adminAvailable && <AdminQueueSheet open={adminOpen} onClose={() => setAdminOpen(false)} />}
             </div>
 
           </div>
