@@ -20,6 +20,7 @@ from app.services.local_llm import analyze_transcript_local
 from app.services.local_stt import transcribe_audio_local
 from app.services.mvp_adapter import to_consultation_card
 from app.services.stt import transcribe_audio
+from app.services.stub_models import analyze_transcript_stub, transcribe_audio_stub
 
 router = APIRouter(tags=["mvp-v1"])
 
@@ -44,7 +45,10 @@ async def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
         raise HTTPException(status_code=400, detail="audio file is empty")
 
     try:
-        if settings.use_local_models:
+        if settings.stub_models:
+            transcribed = transcribe_audio_stub(audio.filename or "customer-audio.wav", audio_bytes)
+            gpt_result = analyze_transcript_stub(transcribed.text)
+        elif settings.use_local_models:
             transcribed = transcribe_audio_local(settings, audio.filename or "customer-audio.wav", audio_bytes)
             gpt_result = analyze_transcript_local(settings, transcribed.text)
         else:
@@ -63,7 +67,13 @@ async def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
             audio_filename=audio.filename or "customer-audio.wav",
             transcript=TranscriptResult(
                 text=transcribed.text,
-                stt_model=f"faster-whisper:{settings.local_whisper_model}" if settings.use_local_models else "whisper-1",
+                stt_model=(
+                    "stub"
+                    if settings.stub_models
+                    else f"faster-whisper:{settings.local_whisper_model}"
+                    if settings.use_local_models
+                    else "whisper-1"
+                ),
                 duration_sec=transcribed.duration_sec,
             ),
             consultation_card=card,

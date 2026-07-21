@@ -25,6 +25,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-k7_mvp}
       USE_LOCAL_MODELS: ${USE_LOCAL_MODELS:-false}
+      STUB_MODELS: ${STUB_MODELS:-true}
       FRONTEND_ORIGIN: http://localhost:5173
     ports:
       - "8000:8000"

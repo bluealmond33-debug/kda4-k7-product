@@ -36,6 +36,7 @@ from app.services.rag import search_procedures
 from app.services.react_adapter import build_call_summary, emotion_label, emotion_level_and_signals
 from app.services.routing_classifier import classify_routing_safe
 from app.services.stt import transcribe_audio
+from app.services.stub_models import analyze_transcript_stub, transcribe_audio_stub
 from app.services.text_emotion import TextEmotionError, classify_text_emotion
 
 logger = logging.getLogger(__name__)
@@ -69,14 +70,18 @@ def _rag_query(reason_codes: list[AttentionReasonCode], summary: str) -> str:
 
 
 def _transcribe(filename: str, audio_bytes: bytes) -> TranscribeResult:
-    """온프레미스 스위치(settings.use_local_models) — true면 faster-whisper, 아니면 OpenAI Whisper."""
+    """온프레미스 스위치. stub_models면 canned, 아니면 로컬(faster-whisper)/OpenAI Whisper."""
+    if settings.stub_models:
+        return transcribe_audio_stub(filename, audio_bytes)
     if settings.use_local_models:
         return transcribe_audio_local(settings, filename, audio_bytes)
     return transcribe_audio(_get_openai_client(), filename, audio_bytes)
 
 
 def _analyze(transcript: str) -> GptAnalysis:
-    """온프레미스 스위치(settings.use_local_models) — true면 Ollama 로컬 LLM, 아니면 OpenAI GPT."""
+    """온프레미스 스위치. stub_models면 canned, 아니면 Ollama 로컬 LLM/OpenAI GPT."""
+    if settings.stub_models:
+        return analyze_transcript_stub(transcript)
     if settings.use_local_models:
         return analyze_transcript_local(settings, transcript)
     return analyze_transcript(_get_openai_client(), transcript)

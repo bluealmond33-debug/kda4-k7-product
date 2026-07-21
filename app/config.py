@@ -11,6 +11,10 @@ class Settings(BaseSettings):
 
     # 온프레미스 데모용 — true면 OpenAI 대신 로컬 STT(faster-whisper)/로컬 LLM(Ollama)을 쓴다.
     use_local_models: bool = False
+
+    # 데모 스텁 스위치 — true면 로컬모델/OpenAI 대신 canned 응답(UI 흐름 데모용).
+    # cpu 프로파일(docker-compose.yml)에서 켠다. 실배포에선 false 유지(키 누락을 가리지 않도록).
+    stub_models: bool = False
     local_whisper_model: str = "large-v3-turbo"
     local_whisper_device: str = "cuda"
     local_whisper_compute_type: str = "float16"
