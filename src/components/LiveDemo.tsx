@@ -70,7 +70,8 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
                               : "background:var(--gray-100);color:var(--gray-600)")
                         )}
                       >
-                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i + 1}
+                        {/* 대기 = 0 — 아직 콜이 시작되지 않은 상태라 단계 번호는 접수(1)부터 센다 */}
+                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i}
                       </span>
                       <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
                       {label === "준비" && (
