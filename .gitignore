@@ -15,3 +15,7 @@ npm-debug.log*
 yarn-error.log*
 *.tsbuildinfo
 .vercel
+.env.local-demo
+models/
+artifacts/
+backend/app/services/routing/models/*.joblib
