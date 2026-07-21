@@ -72,8 +72,8 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
                   <span key={label} style={css("display:inline-flex;align-items:center;gap:10px")}>
                     {i > 0 && <span style={css("width:14px;height:1.5px;background:" + (done || active ? "var(--gray-500)" : "var(--gray-300)"))} />}
                     <span
-                      onClick={() => vm.openGuideStep(["intake", "prep", "active", "wrap"][i])}
-                      title={label + " 안내 보기"}
+                      onClick={vm.reopenGuide}
+                      title="지금 화면 안내 다시 보기"
                       style={css("display:inline-flex;align-items:center;gap:6px;cursor:pointer")}
                     >
                       <span
@@ -194,44 +194,23 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
                   style={css("position:absolute;inset:0;z-index:500;background:rgba(22,20,17,.42);transition:opacity .3s ease-out;cursor:pointer;opacity:" + (guideIn ? "1" : "0"))}
                 />
                 <div style={css("position:absolute;left:50%;top:50%;z-index:501;width:560px;max-width:92%;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);overflow:hidden;transform-origin:50% 40%;transition:transform .34s var(--ease-out),opacity .26s ease-out;" + (guideIn ? "opacity:1;transform:translate(-50%,-50%) scale(1)" : "opacity:0;transform:translate(-50%,-46%) scale(.92)"))}>
-                  {/* 헤더 */}
+                  {/* 헤더 — "지금 몇 단계 / 무슨 화면인지"를 뚜렷하게. 이 팝업은 '지금 화면' 한 장만 설명한다 */}
                   <div style={css("display:flex;align-items:center;gap:9px;padding:15px 18px 13px")}>
                     <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>tips_and_updates</span>
                     <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>데모 안내</span>
-                    <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 화면별 소개</span>
+                    <span style={css("display:inline-flex;align-items:center;gap:5px;font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
+                      <span style={css("font:700 11px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.guideIndex + 1}/{vm.guideTotal}</span>
+                      <span style={css("width:1px;height:11px;background:var(--gray-300)")} />
+                      {vm.guideScreenLabel} 화면
+                    </span>
                     <div style={css("flex:1")} />
                     <span onClick={vm.closeGuide} title="닫기" style={css("cursor:pointer;display:flex;width:28px;height:28px;border-radius:9999px;align-items:center;justify-content:center;background:var(--gray-100)")}>
                       <span className="mi" style={css("font-size:18px;color:var(--gray-600)")}>close</span>
                     </span>
                   </div>
 
-                  {/* 단계 인디케이터 — 대기·접수·준비·통화·후처리. 클릭하면 그 단계 안내로 */}
-                  <div style={css("display:flex;align-items:flex-start;padding:2px 18px 15px")}>
-                    {vm.guideSteps.map((s, i) => {
-                      const cur = i === vm.guideIndex;
-                      const done = i < vm.guideIndex;
-                      return (
-                        <span key={s.key} style={css("display:flex;align-items:flex-start;" + (i > 0 ? "flex:1" : "flex:none"))}>
-                          {i > 0 && (
-                            <span style={css("flex:1;height:2px;margin:10px 6px 0;border-radius:2px;transition:background .3s;background:" + (i <= vm.guideIndex ? "var(--gray-500)" : "var(--gray-200)"))} />
-                          )}
-                          <span
-                            onClick={() => vm.openGuideStep(s.key)}
-                            title={s.label + " 안내 보기"}
-                            style={css("display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;cursor:pointer")}
-                          >
-                            <span style={css("width:22px;height:22px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 10.5px 'Geist Mono',monospace;transition:background .25s,color .25s;" + (cur ? "background:var(--blue-700);color:#fff" : done ? "background:var(--gray-1000);color:#fff" : "background:var(--gray-100);color:var(--gray-500)"))}>
-                              {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i + 1}
-                            </span>
-                            <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;white-space:nowrap;color:" + (cur ? "var(--gray-1000)" : "var(--gray-500)"))}>{s.label}</span>
-                          </span>
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  {/* 슬라이드 콘텐츠 — 단계 전환 시 방향성 슬라이드(key=guideStep 재마운트로 애니 재생) */}
-                  <div style={css("padding:0 20px;min-height:174px")}>
+                  {/* 슬라이드 콘텐츠 — 지금 화면 한 장만. 단계 전환 시 방향성 슬라이드(key=guideStep 재마운트로 애니 재생) */}
+                  <div style={css("padding:6px 20px 0;min-height:150px")}>
                     <div key={vm.guideStep} style={{ animation: (dir >= 0 ? "guideSlideFwd" : "guideSlideBack") + " .34s cubic-bezier(0.2,0.8,0.2,1)" }}>
                       <div style={css("font:700 18px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:12px")}>{vm.guide.title}</div>
                       <div style={css("display:flex;flex-direction:column;gap:10px")}>
@@ -249,24 +228,16 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
                     </div>
                   </div>
 
-                  {/* 푸터 — 이전 / N·M / 다음(마지막은 완료). 데모는 안 움직이고 안내만 넘긴다 */}
+                  {/* 푸터 — 이 화면을 확인하고 닫으면, 데모가 다음 화면에 도달할 때 그 화면 안내가 다시 뜬다 */}
                   <div style={css("display:flex;align-items:center;gap:10px;padding:15px 18px 16px")}>
-                    <span
-                      onClick={vm.guidePrev}
-                      style={css("display:inline-flex;align-items:center;gap:3px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:8px 14px 8px 11px;background:var(--gray-100);transition:opacity .2s;" + (vm.guideIndex > 0 ? "color:var(--gray-800);cursor:pointer" : "color:var(--gray-400);opacity:.5;cursor:default"))}
-                    >
-                      <span className="mi" style={css("font-size:17px")}>arrow_back</span>이전
+                    <div style={css("flex:1;font:500 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>
+                      {vm.guideIndex < vm.guideTotal - 1
+                        ? "다음 화면으로 넘어가면 그 화면 안내가 다시 나타납니다"
+                        : "마지막 화면입니다 — 상단 단계를 눌러 이 화면 안내를 다시 볼 수 있어요"}
+                    </div>
+                    <span onClick={vm.closeGuide} style={css("display:inline-flex;align-items:center;gap:4px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;background:var(--gray-1000);color:#fff;border-radius:9999px;padding:8px 15px;cursor:pointer")}>
+                      확인했어요 <span className="mi" style={css("font-size:16px")}>check</span>
                     </span>
-                    <div style={css("flex:1;text-align:center;font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-500)")}>{vm.guideIndex + 1} / {vm.guideSteps.length}</div>
-                    {vm.guideIndex < vm.guideSteps.length - 1 ? (
-                      <span onClick={vm.guideNext} style={css("display:inline-flex;align-items:center;gap:3px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;background:var(--blue-700);color:#fff;border-radius:9999px;padding:8px 12px 8px 15px;cursor:pointer")}>
-                        다음 <span className="mi" style={css("font-size:17px")}>arrow_forward</span>
-                      </span>
-                    ) : (
-                      <span onClick={vm.guideNext} style={css("display:inline-flex;align-items:center;gap:4px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;background:var(--gray-1000);color:#fff;border-radius:9999px;padding:8px 15px;cursor:pointer")}>
-                        완료 <span className="mi" style={css("font-size:16px")}>check</span>
-                      </span>
-                    )}
                   </div>
                 </div>
               </>

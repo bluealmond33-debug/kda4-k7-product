@@ -619,7 +619,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       : "wrap";
   // 새 단계에 도달하면 그 단계 안내를 자동 팝업으로 (화면별 소개 멘트).
   // 화면을 잠깐 본 뒤(700ms) 뜬다 — "화면 먼저, 설명은 이어서". 대기(idle)는 로드 후 1회.
-  // (스테퍼 번호 클릭 = openGuideStep = 지연 없이 즉시)
+  // (닫은 뒤 다시 보고 싶으면 상단 단계 알약 클릭 = reopenGuide = 지금 화면 안내 재등장)
   useEffect(() => {
     setGuideStep(guideKey);
     const t = window.setTimeout(() => setGuideOpen(true), 700);
@@ -742,28 +742,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,
-    // 데모 안내(가이드 모드)
+    // 데모 안내 — '투어'가 아니라 '지금 화면' 한 장. 데모가 그 화면에 도달할 때 그 화면 설명만 뜬다.
     guideOpen,
     closeGuide: () => setGuideOpen(false),
     guide: GUIDE[guideStep],
     guideStep,
     guideIndex: GUIDE_ORDER.indexOf(guideStep),
-    // 스테퍼 인디케이터용 — 순서대로 {key,label}
-    guideSteps: GUIDE_ORDER.map((k) => ({ key: k, label: GUIDE[k].step })),
-    // 스테퍼 번호/인디케이터 클릭 → 그 단계 안내로 전환하며 팝업 (도달 전 단계도 미리보기 가능)
-    openGuideStep: (k: string) => {
-      setGuideStep(k as GuideKey);
+    guideTotal: GUIDE_ORDER.length,
+    // 지금 화면 이름(대기·접수·준비·통화·후처리) — "무슨 화면인지"를 헤더에 보여준다
+    guideScreenLabel: GUIDE[guideStep].step,
+    // 안내를 닫았다가 다시 보고 싶을 때 — 항상 '지금 화면' 안내로 다시 연다(미래 화면 미리보기 없음)
+    reopenGuide: () => {
+      setGuideStep(guideKey);
       setGuideOpen(true);
-    },
-    // 가이드 투어 이전/다음 — 데모는 안 움직이고 안내만 앞뒤로 넘긴다. 마지막에서 '다음' = 닫기
-    guidePrev: () => {
-      const i = GUIDE_ORDER.indexOf(guideStep);
-      if (i > 0) setGuideStep(GUIDE_ORDER[i - 1]);
-    },
-    guideNext: () => {
-      const i = GUIDE_ORDER.indexOf(guideStep);
-      if (i < GUIDE_ORDER.length - 1) setGuideStep(GUIDE_ORDER[i + 1]);
-      else setGuideOpen(false);
     },
     // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
     stepIndex:
