@@ -147,7 +147,47 @@ export default function DemoTour({
     if (h && Math.abs(h - bh) > 0.5) setBh(h);
   });
 
+  // 행동 스텝에서 사용자가 스팟라이트 안(실제 버튼)을 누르는 순간 투어는 잠시 물러난다 —
+  // 종료 확인 팝오버 같은 후속 UI가 말풍선·딤에 가려지지 않게. 다음 스텝/화면에서 다시 나타난다.
+  const [engaged, setEngaged] = useState(false);
+  useEffect(() => setEngaged(false), [screen, i]);
+  const rectRef = useRef(rect);
+  rectRef.current = rect;
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const st = stepRef.current;
+      if (!st?.act) return;
+      // ① 클릭 대상이 앵커(또는 그 자식)면 즉시 — 좌표 없는 프로그램틱 클릭도 잡는다
+      const t = e.target as Element | null;
+      if (t?.closest?.('[data-tour="' + st.target + '"]')) {
+        setEngaged(true);
+        return;
+      }
+      // ② 좌표 기반 — 스팟라이트 영역 안 클릭(앵커 밖 여백 포함)
+      const r = rectRef.current;
+      if (!r || (e.clientX === 0 && e.clientY === 0)) return;
+      const p = st.pad ?? 8;
+      if (
+        e.clientX >= r.x - p &&
+        e.clientX <= r.x + r.w + p &&
+        e.clientY >= r.y - p &&
+        e.clientY <= r.y + r.h + p
+      )
+        setEngaged(true);
+    };
+    // mousedown(실사용: 누르는 즉시) + click 캡처(프로그램틱 클릭 포함) 둘 다 — 중복 호출은 무해
+    window.addEventListener("mousedown", onDown, true);
+    window.addEventListener("click", onDown, true);
+    return () => {
+      window.removeEventListener("mousedown", onDown, true);
+      window.removeEventListener("click", onDown, true);
+    };
+  }, []);
+
   if (!rect) return null; // 앵커가 아직 없으면(화면 전환 중) 다음 폴링까지 대기
+  if (engaged) return null; // 행동 중 — 투어는 물러나서 화면을 가리지 않는다
 
   const pad = step.pad ?? 8;
   const sx = rect.x - pad;
@@ -192,16 +232,29 @@ export default function DemoTour({
   bx = clamp(bx, MARGIN, vw - W - MARGIN);
   by = clamp(by, MARGIN, vh - bh - MARGIN);
 
-  // 꼬리 — 항상 같은 크기(14px)로 스팟라이트 중심을 가리킨다.
-  // 클램프로 말풍선이 밀려도 꼬리 위치를 타깃 중심에 맞춰 다시 계산 (모서리 반경은 피한다)
-  const T = 14;
-  const tail: CSSProperties = { width: T, height: T };
+  // 꼬리 — 항상 같은 크기(밑변 16 × 깊이 8)의 진짜 삼각형(clip-path).
+  // 클램프로 말풍선이 밀려도 스팟라이트 중심을 가리키도록 위치를 재계산 (모서리 반경은 피한다)
+  const TB = 16; // 밑변
+  const TD = 8; // 깊이(뾰족한 정도)
+  const tail: CSSProperties = { position: "absolute", background: "var(--onair-surface)" };
   if (placement === "left" || placement === "right") {
-    const tailY = clamp(cy - by, 20, Math.max(20, bh - 20));
-    Object.assign(tail, { top: tailY - T / 2, [placement === "left" ? "right" : "left"]: -T / 2 });
+    const tailY = clamp(cy - by, 22, Math.max(22, bh - 22));
+    Object.assign(
+      tail,
+      { width: TD, height: TB, top: tailY - TB / 2 },
+      placement === "left"
+        ? { right: -TD, clipPath: "polygon(0 0, 0 100%, 100% 50%)" } // 오른쪽(타깃)으로 뾰족
+        : { left: -TD, clipPath: "polygon(100% 0, 100% 100%, 0 50%)" } // 왼쪽(타깃)으로 뾰족
+    );
   } else {
-    const tailX = clamp(cx - bx, 20, W - 20);
-    Object.assign(tail, { left: tailX - T / 2, [placement === "top" ? "bottom" : "top"]: -T / 2 });
+    const tailX = clamp(cx - bx, 22, W - 22);
+    Object.assign(
+      tail,
+      { width: TB, height: TD, left: tailX - TB / 2 },
+      placement === "top"
+        ? { bottom: -TD, clipPath: "polygon(0 0, 100% 0, 50% 100%)" } // 아래(타깃)로 뾰족
+        : { top: -TD, clipPath: "polygon(0 100%, 100% 100%, 50% 0)" } // 위(타깃)로 뾰족
+    );
   }
 
   const wrap: CSSProperties = {
@@ -238,8 +291,8 @@ export default function DemoTour({
       {/* 말풍선 — 영역을 꼬리로 가리키며 설명. '다음'은 이 안에 */}
       <div style={wrap}>
         <div ref={bubbleRef} key={screen + i} style={css("position:relative;background:var(--onair-surface);border-radius:14px;box-shadow:var(--sh-modal);padding:15px 17px 13px;animation:coachIn .3s var(--ease-out);font-family:" + FONT)}>
-          {/* 꼬리 — 스팟라이트 중심을 가리키는 45° 사각형. 크기 고정(14px), 위치는 위에서 계산 */}
-          <span style={{ ...css("position:absolute;background:var(--onair-surface);transform:rotate(45deg)"), ...tail }} />
+          {/* 꼬리 — 스팟라이트를 가리키는 삼각형. 크기 고정, 위치는 위에서 계산 */}
+          <span style={tail} />
 
           <div style={css("display:flex;align-items:center;gap:7px;margin-bottom:7px")}>
             <span style={css("font:700 14px " + FONT + ";color:var(--gray-1000)")}>{step.title}</span>

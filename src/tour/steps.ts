@@ -99,6 +99,12 @@ export const TOUR: Record<ScreenKey, TourStep[]> = {
       body: "'확인'을 네 번 눌러보세요 — 게이지가 차고, 마지막엔 그 자리가 '첫 응대 문장'으로 바뀝니다.",
     },
     {
+      target: "prep-firstline",
+      placement: "top",
+      title: "첫 응대 문장",
+      body: "네 번째 확인이 끝나면 유의사항 자리가 '첫 응대 문장'으로 바뀝니다 — 통화를 여는 오프닝 멘트를 여기서 잠깐 확인해보세요.",
+    },
+    {
       target: "prep-connect",
       placement: "top",
       act: true,

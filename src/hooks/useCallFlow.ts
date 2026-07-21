@@ -84,18 +84,48 @@ const GLASS: Partial<Record<Phase, string>> = {
   confirm: "더 말씀하실 내용이 있으신가요?",
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
-const PREP_ITEMS = [
-  {
-    title: "본인확인 우선 진행",
-    sub: "연결 직후 연락처·생년월일 등으로 본인확인 — 완료 전에는 고객 상세 조회가 잠깁니다",
-  },
-  { title: "확정적 반환 표현 금지", sub: "“무조건 돌려받는다” 대신 반환지원 제도 절차로 안내" },
-  { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
-  {
-    title: "녹취 고지 자동 재생 — 연결 시 자동",
-    sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
-  },
-];
+/* 유의사항은 콜 유형별 — 카드·스크립트·규정과 같은 사건을 말해야 한다.
+   (구: 모든 콜에 동일한 고정 4개 → 주담대 콜에 '착오송금 반환 표현 금지'가 뜨는 자기모순)
+   실서비스에선 상담카드+관련 규정에서 AI가 콜마다 생성하는 자리다. */
+const PREP_LEN = 4;
+const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
+  normal: [
+    {
+      title: "본인확인 우선 진행",
+      sub: "연결 직후 연락처·생년월일 등으로 본인확인 — 완료 전에는 고객 상세 조회가 잠깁니다",
+    },
+    { title: "확정 표현 금지", sub: "“연장 확정” 단정 대신 재약정 심사 결과에 따라 달라질 수 있음을 안내" },
+    { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
+    {
+      title: "녹취 고지 자동 재생 — 연결 시 자동",
+      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
+    },
+  ],
+  urgent: [
+    {
+      title: "본인확인 우선 진행",
+      sub: "명의도용 의심 콜 — 본인확인 없이는 어떤 조치도 진행하지 않습니다",
+    },
+    { title: "사실관계 먼저 확인", sub: "지급정지 전 '본인이 신청한 대출인지'를 반드시 확인 — 오인 접수 방지" },
+    { title: "추가 피해 방지 안내", sub: "통화 중 다른 금융기관 앱·문자 링크를 열지 않도록 안내" },
+    {
+      title: "녹취 고지 자동 재생 — 연결 시 자동",
+      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
+    },
+  ],
+  transfer: [
+    {
+      title: "본인확인 상태 확인",
+      sub: "전임 상담사가 본인확인을 마쳤는지 인수인계에서 확인 — 완료면 재인증 생략",
+    },
+    { title: "인수인계 메모 확인", sub: "앞서 진행된 내용(금리 인하 요구권 안내)을 중복 안내하지 않기" },
+    { title: "확정 표현 금지", sub: "수수료 면제는 약정서 특약 확인 전에 단정하지 않기" },
+    {
+      title: "녹취 고지 자동 재생 — 연결 시 자동",
+      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
+    },
+  ],
+};
 
 // 화면별 데모 안내(투어링)는 src/tour 로 분리 — 시연 전용 레이어라 훅에 두지 않는다.
 
@@ -136,7 +166,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [micErr, setMicErr] = useState("");
   const [audioBusy, setAudioBusy] = useState(false);
 
-  const [prepChecks, setPrepChecks] = useState<boolean[]>(PREP_ITEMS.map(() => false));
+  const [prepChecks, setPrepChecks] = useState<boolean[]>(Array(PREP_LEN).fill(false));
   const [verified, setVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
@@ -243,7 +273,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       stt.current = null;
     }
     setPhase("prep");
-    setPrepChecks(PREP_ITEMS.map(() => false));
+    setPrepChecks(Array(PREP_LEN).fill(false));
     void runSummary();
   }, [runSummary]);
 
@@ -417,7 +447,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           { text: response.transcript.text, at: 0, isFinal: true },
         ];
         setSummary(null);
-        setPrepChecks([false, false, false]);
+        setPrepChecks(Array(PREP_LEN).fill(false));
         setPhase("prep");
       } catch (error) {
         const message = error instanceof Error ? error.message : "음성 처리에 실패했습니다.";
@@ -644,7 +674,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     ? contractBullets
     : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
   ).slice(0, 4);
-  const prepDefinitions = PREP_ITEMS;
+  const prepDefinitions = PREP_ITEMS[incoming];
   const emotionBars = temperature.score == null
     ? 0
     : temperature.score > 66
@@ -832,7 +862,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     connectCursor: allChecked ? "pointer" : "not-allowed",
     prepHint: allChecked
       ? "유의사항 확인 완료 · 통화를 연결하세요"
-      : `유의사항 ${PREP_ITEMS.length}개를 모두 확인하면 통화 연결이 활성화됩니다`,
+      : `유의사항 ${PREP_LEN}개를 모두 확인하면 통화 연결이 활성화됩니다`,
     // auth (1d)
     verified,
     notVerified: nv,
@@ -860,8 +890,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // phone: 010 - **** - [    ] / birth: [      ] (YYMMDD) / account: ***-**-[    ]
     authPrefix: authMethod === "birth" ? "" : authMethod === "account" ? "***-**-" : "010 - **** - ",
     authMaxLen: authMethod === "birth" ? 6 : 4,
-    // 힌트를 placeholder에 통합 — 별도 힌트 텍스트가 좁은 칸에서 잘리던 문제 해소
-    authHolePlaceholder: authMethod === "birth" ? "YYMMDD" : "●●●●",
+    // 입력 칸 placeholder — '●●●●'는 마스킹(****)과 똑같아 보여 빈칸임을 알 수 없었다.
+    // '무엇을 칠지'를 글자로 말한다 (생년월일은 형식이 정보라 YYMMDD 유지)
+    authHolePlaceholder: authMethod === "birth" ? "YYMMDD" : "뒤 4자리",
+    // 지금 물어야 할 값 — 안내 문구가 대조 방식을 따라간다
+    authAskLabel:
+      authMethod === "birth" ? "생년월일 6자리" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
     steps: SCRIPTS[incoming].map((st) => ({ title: st.title, text: st.text })),
     firstLine: SCRIPTS[incoming][0].text,

@@ -5,11 +5,12 @@ import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
+/* 데모 기준일 2026.07.21 — ago(상대 시점)를 함께 표기해 최근 항목이 '오늘 상담'으로 오해되지 않게 한다 */
 const HISTORY = [
-  { date: "2026.07.02", label: "카드 › 분실신고" },
-  { date: "2026.05.18", label: "수신 › 이체한도 상향" },
-  { date: "2026.03.09", label: "전자금융 › OTP 재발급" },
-  { date: "2026.02.14", label: "대출 › 상환일정 문의" },
+  { date: "2026.07.02", ago: "3주 전", label: "카드 › 분실신고" },
+  { date: "2026.05.18", ago: "2개월 전", label: "수신 › 이체한도 상향" },
+  { date: "2026.03.09", ago: "4개월 전", label: "전자금융 › OTP 재발급" },
+  { date: "2026.02.14", ago: "5개월 전", label: "대출 › 상환일정 문의" },
 ];
 
 const ACCOUNTS = [
@@ -33,6 +34,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const memoInputRef = useRef<HTMLInputElement | null>(null);
+  // 메모 목록 — 새 메모가 입력창 바로 위(맨 아래)에 붙도록 추가 시 바닥으로 자동 스크롤
+  const memoListRef = useRef<HTMLDivElement | null>(null);
   const [memoFocused, setMemoFocused] = useState(false);
   const [authFocused, setAuthFocused] = useState(false);
 
@@ -46,6 +49,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     : vm.regExpanded ? "reg"
     : authFocused ? "customer"
     : "script";
+
+  useEffect(() => {
+    const el = memoListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [vm.memoItems.length]);
 
   // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
   const leftColRef = useRef<HTMLDivElement | null>(null);
@@ -317,7 +325,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             ) : (
               <div style={css("margin-top:13px;background:var(--gray-100);border-radius:8px;padding:12px")}>
                 <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px")}>본인확인 · 미완료</div>
-                <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>고객이 말한 값을 입력하면 자동 대조됩니다</div>
+                <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>
+                  고객이 말한 <span style={css("font-weight:700;color:var(--blue-900)")}>{vm.authAskLabel}</span>를 빈칸에 입력하면 자동 대조됩니다
+                </div>
                 <div className="lbl" style={css("margin-bottom:6px")}>대조 방식</div>
                 <div style={css("display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px")}>
                   <span onClick={vm.setAuthPhone} style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:5px 11px;cursor:pointer;background:" + vm.mPhoneBg + ";color:" + vm.mPhoneFg + ";border:1px solid " + vm.mPhoneBd)}>연락처 뒷 4자리</span>
@@ -325,11 +335,18 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <span onClick={vm.setAuthAcct} style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:5px 11px;cursor:pointer;background:" + vm.mAcctBg + ";color:" + vm.mAcctFg + ";border:1px solid " + vm.mAcctBd)}>계좌 뒷 4자리</span>
                 </div>
                 <div style={css("display:flex;gap:7px;align-items:center")}>
-                  {/* 마스킹 '구멍' 입력 — 마스킹된 실제 데이터 모양 안에 입력 칸만 뚫려 있다 */}
-                  <label style={css("flex:1;min-width:0;display:flex;align-items:center;border:1px solid var(--gray-400);border-radius:9999px;padding:8px 14px;background:var(--onair-surface);cursor:text")}>
-                    {vm.authPrefix && (
-                      <span style={css("font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;color:var(--gray-500);white-space:nowrap;flex:none")}>{vm.authPrefix}</span>
+                  {/* 마스킹(회색 ****)은 조회된 원문의 모양, 빈칸은 점선 파란 박스 — '여기에 친다'가 한눈에 갈리게 */}
+                  {vm.authPrefix && (
+                    <span style={css("font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;color:var(--gray-500);white-space:nowrap;flex:none")}>{vm.authPrefix}</span>
+                  )}
+                  <label
+                    style={css(
+                      "flex:1;min-width:0;display:flex;align-items:center;gap:6px;border:1.5px " +
+                        (authFocused ? "solid var(--blue-700)" : "dashed var(--blue-500)") +
+                        ";border-radius:8px;padding:7px 11px;background:var(--onair-surface);cursor:text"
                     )}
+                  >
+                    <span className="mi" style={css("font-size:14px;color:var(--blue-700);flex:none")}>edit</span>
                     <input
                       className="authin"
                       value={vm.authInput}
@@ -342,7 +359,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       placeholder={vm.authHolePlaceholder}
                       maxLength={vm.authMaxLen}
                       inputMode="numeric"
-                      style={css("width:" + (vm.authMaxLen === 6 ? "110px" : "78px") + ";border:none;background:transparent;font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000);padding:0")}
+                      style={css("width:100%;min-width:0;border:none;background:transparent;font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000);padding:0")}
                     />
                   </label>
                   <span onClick={vm.runVerify} style={css("flex:none;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>대조</span>
@@ -393,11 +410,15 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <div key={i} style={css("display:flex;gap:11px")}>
                     <div style={css("display:flex;flex-direction:column;align-items:center;width:9px;flex:none")}>
                       <span style={css("width:9px;height:9px;border-radius:9999px;flex:none;margin-top:13px;box-sizing:border-box;" + (i === 0 ? "background:var(--blue-700)" : "border:1.5px solid var(--gray-500);background:var(--onair-surface)"))} />
-                      {i < HISTORY.length - 1 && <span style={css("width:1.5px;flex:1;background:var(--gray-300)")} />}
+                      {i < HISTORY.length - 1 && <span style={css("width:1.5px;flex:1;background:var(--gray-300);margin-bottom:-13px")} />}
                     </div>
                     <div style={css("flex:1;padding:8px 0 14px")}>
-                      <div style={css("display:flex;align-items:center;gap:8px")}>
+                      <div style={css("display:flex;align-items:center;gap:6px")}>
                         <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{h.date}</span>
+                        <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· {h.ago}</span>
+                        {i === 0 && (
+                          <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>가장 최근</span>
+                        )}
                         <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:var(--gray-100);border-radius:9999px;padding:2px 8px")}>완결</span>
                       </div>
                       <div style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:3px")}>{h.label}</div>
@@ -482,11 +503,14 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
             {/* 빈 영역을 클릭해도 바로 입력 — placeholder 영역이 입력처럼 안 보이던 문제 해소 */}
             <div
+              ref={memoListRef}
               onClick={(e) => {
                 if (e.target === e.currentTarget || vm.memoEmpty) memoInputRef.current?.focus();
               }}
               style={css("flex:1;overflow:auto;padding:10px 16px;display:flex;flex-direction:column;gap:6px;cursor:text")}
             >
+              {/* 스페이서 — 메모가 적을 땐 목록을 입력창 쪽(아래)으로 민다. 새 메모 = 항상 입력창 바로 위 */}
+              <div style={css("flex:1")} />
               {vm.memoItems.map((m, i) => (
                 <div key={i} className="memorow" style={css("display:flex;gap:8px;align-items:baseline")}>
                   <span style={css("color:var(--blue-700);font-weight:700;flex:none")}>•</span>
