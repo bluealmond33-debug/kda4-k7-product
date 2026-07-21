@@ -83,12 +83,8 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               })}
             </div>
             <span style={css("width:1px;height:20px;background:var(--color-border)")} />
-            <span style={css("display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
-              {vm.phaseLabel}
-            </span>
             {/* 다음 인입 콜 유형 — 콜 유형은 접수 시점에 고정되므로 대기 중에만 바꿀 수 있다.
                 진행 중에는 흐려지고 잠금 아이콘이 이유를 말한다 */}
-            <span style={css("font-size:12px;color:var(--color-fg-muted)")}>다음 콜</span>
             <div
               title={vm.canPickIncoming ? "다음 콜의 인입 유형을 고릅니다" : "콜 유형은 접수 시점에 정해져요 — 이번 콜을 마치면 바꿀 수 있습니다"}
               style={css("display:flex;align-items:center;border:1px solid var(--color-border);border-radius:9999px;overflow:hidden;transition:opacity .2s" + (vm.canPickIncoming ? "" : ";opacity:.45"))}
@@ -145,7 +141,12 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
               <span className="mi" style={css("font-size:17px")}>audio_file</span>
               {vm.audioBusy ? "음성 처리 중" : "음성 파일 선택"}
             </span>
-            {/* '5초 건너뛰고 요약'은 접수가 실제 벌어지는 데스크톱 대기 화면(Waiting)으로 이동 — 리모컨 아님 */}
+            {/* '5초 건너뛰고 요약' — 실제 직원 화면에는 없는 데모 제어라 리모컨(여기)에 둔다 */}
+            {vm.showSkip && (
+              <span data-tour="skip" onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
+                <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약
+              </span>
+            )}
             <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>

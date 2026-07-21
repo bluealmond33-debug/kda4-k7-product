@@ -52,17 +52,6 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
         </div>
       )}
 
-      {/* '5초 건너뛰고 요약' — 접수가 벌어지는 바로 이 화면에서, 기다림을 건너뛰는 데모 제어.
-          (상단 리모컨 바에서 이곳으로 이동 — 버튼이 하는 일과 버튼이 있는 곳을 일치시킨다) */}
-      {vm.showSkip && (
-        <span
-          data-tour="skip"
-          onClick={vm.skipWait}
-          style={css("display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:10px 20px;background:var(--blue-700);color:#fff;border-radius:9999px;font:600 13px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-far)")}
-        >
-          <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약
-        </span>
-      )}
     </div>
   );
 }
