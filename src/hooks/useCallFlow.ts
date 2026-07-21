@@ -918,6 +918,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // regulations panel
     openManual: () => setRegExpanded(true),
     openManualAt: (row: number) => {
+      setRegSearch(""); // 검색 필터가 대상 행을 가리지 않게 — 열기는 항상 원본 시트에서 그 행을 보여준다
       setRegTargetRow(row);
       setRegExpanded(true);
     },
