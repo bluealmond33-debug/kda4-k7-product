@@ -49,7 +49,7 @@ $missingLegacyOperations = @(
 $hasPostCalls = [bool]$openapi.paths."/api/v1/calls".post
 $hasGetCard = [bool]$openapi.paths."/api/v1/calls/{call_id}/consultation-card".get
 $databaseConnected = $health.database -eq "connected"
-$contractReady = $health.contract_version -eq "mvp-1.0"
+$contractReady = $health.contract_version -eq "mvp-1.1"
 
 $ready = (
     $missingMvpPaths.Count -eq 0 -and
