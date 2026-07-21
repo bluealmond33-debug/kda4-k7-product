@@ -55,6 +55,23 @@
   src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.2.6/files/geist-mono-latin-500-normal.woff2") format("woff2");
 }
 
+/* Space Grotesk — 대형 시계 숫자 전용 디스플레이 폰트 (각진 1·열린 6/9, 숫자에 캐릭터).
+   본문·소형 숫자는 계속 Geist — 시계에만 쓴다. */
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.2.5/files/space-grotesk-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.2.5/files/space-grotesk-latin-600-normal.woff2") format("woff2");
+}
+
 /* Pretendard — Korean fallback only (weight 45–920 variable) */
 @font-face {
   font-family: "Pretendard";
@@ -70,7 +87,7 @@
    Each accent scale runs 100–1000 where the step encodes INTENT, not just lightness:
    100 bg · 200 hover-bg · 300 active-bg · 400 border · 500 hover-border · 600 active-border
    700 solid fill · 800 solid-fill hover · 900 secondary text/icon · 1000 primary text/icon.
-   Light is the default; [data-theme="dark"] redefines the SAME names.
+   Light-only: 회사 내부용 프로그램으로 다크 모드는 지원하지 않는다.
    Components must reference semantic aliases (--color-*) or scales, never raw hex. */
 
 :root {
@@ -179,85 +196,6 @@
   --color-warning-solid: var(--amber-700);
 }
 
-[data-theme="dark"] {
-  --background-100: #000000;
-  --background-200: #000000;
-
-  --gray-100: #1a1a1a;
-  --gray-200: #1f1f1f;
-  --gray-300: #292929;
-  --gray-400: #2e2e2e;
-  --gray-500: #454545;
-  --gray-600: #878787;
-  --gray-700: #8f8f8f;
-  --gray-800: #7d7d7d;
-  --gray-900: #a0a0a0;
-  --gray-1000: #ededed;
-
-  --gray-alpha-100: #ffffff12;
-  --gray-alpha-200: #ffffff17;
-  --gray-alpha-300: #ffffff21;
-  --gray-alpha-400: #ffffff24;
-  --gray-alpha-500: #ffffff3d;
-  --gray-alpha-600: #ffffff82;
-  --gray-alpha-700: #ffffff8a;
-  --gray-alpha-800: #ffffff78;
-  --gray-alpha-900: #ffffff9c;
-  --gray-alpha-1000: #ffffffeb;
-
-  --blue-100: #06193a;
-  --blue-200: #022248;
-  --blue-300: #002f62;
-  --blue-400: #003674;
-  --blue-500: #00418b;
-  --blue-600: #0090ff;
-  --blue-700: #006efe;
-  --blue-800: #005be7;
-  --blue-900: #47a8ff;
-  --blue-1000: #eaf6ff;
-
-  --red-100: #330a11;
-  --red-200: #440d13;
-  --red-300: #5d0e17;
-  --red-400: #6f101b;
-  --red-500: #88151f;
-  --red-600: #f32e40;
-  --red-700: #f13242;
-  --red-800: #e2162a;
-  --red-900: #ff565f;
-  --red-1000: #ffe9ed;
-
-  --amber-100: #2a1700;
-  --amber-200: #361900;
-  --amber-300: #502800;
-  --amber-400: #5b3000;
-  --amber-500: #703e00;
-  --amber-600: #ed9a00;
-  --amber-700: #ffae00;
-  --amber-800: #ff9300;
-  --amber-900: #ff9300;
-  --amber-1000: #fff3d5;
-
-  --green-100: #002608;
-  --green-200: #00320b;
-  --green-300: #003a0e;
-  --green-400: #004615;
-  --green-500: #006717;
-  --green-600: #00952d;
-  --green-700: #00ac3a;
-  --green-800: #009432;
-  --green-900: #00ca50;
-  --green-1000: #d8ffe4;
-
-  --teal-100: #00231b;  --teal-400: #004035;  --teal-700: #00aa95;  --teal-900: #00cfb7;
-  --purple-100: #290c33; --purple-400: #541a76; --purple-700: #9440d5; --purple-900: #c472fb;
-  --pink-100: #310d1e;  --pink-400: #5d0c34;  --pink-700: #f12b82;  --pink-900: #ff4d8d;
-
-  --color-focus: var(--blue-900);
-  --focus-ring: 0 0 0 2px var(--background-100), 0 0 0 4px var(--blue-900);
-}
-
-
 /* ===== typography.css ===== */
 /* Dotorian typography — Geist, per vercel.com/design.md.
    Geist Sans sets UI + prose; Geist Mono sets code, data, and tabular figures.
@@ -352,14 +290,93 @@
   --shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
 
   /* Motion — most interactions feel instant; use motion only to clarify change */
-  --ease-out: cubic-bezier(0.175, 0.885, 0.32, 1.1); /* @kind other */
+  /* 하우스 커브 — y2>1 오버슈트(바운스)는 금융 콘솔 성격과 불일치라 교정 */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); /* @kind other */
+  /* 드로어(바텀 시트) 전용 — iOS 드로어 커브 (에밀 코왈스키/Ionic). 후처리 시트 승강에 사용 */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --duration-state: 150ms; /* @kind other */
   --duration-popover: 200ms; /* @kind other */
   --duration-overlay: 300ms; /* @kind other */
 }
 
-[data-theme="dark"] {
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.16);
+/* ===== onair.css ===== */
+/* ONAIR (온에어) design language v2.1 — K7 직원용 화면.
+   원칙: 빛은 그리지 않는다, 그림자가 그린다. 면은 쿨 뉴트럴 한 색(전문·관제 톤),
+   위계·경계·맞물림은 그림자 4벌(focus/near/far/joint)이 만든다.
+   색은 점(신호등 램프)·글자·가는 요소에만. 반지름은 두 벌 — 패널 20px, 컨트롤 9999px.
+   아래 블록은 Dotorian 스케일의 "같은 이름"을 온에어 값으로 재정의한다. */
+
+:root {
+  /* Surfaces — 패널은 전부 석고 화이트 한 색, 바닥은 석고벽 그레이 */
+  --background-100: #f8f9f9;
+  --background-200: #e9eaeb;
+
+  /* Gray → 쿨 뉴트럴 재매핑 (전문적·중성 회색, 웜 캐스트 없음) */
+  --gray-100: #eef0f1;
+  --gray-200: #e4e6e8;
+  --gray-300: #dcdee1;
+  --gray-400: #d7d9dc;
+  --gray-500: #b9bcc0;
+  --gray-600: #83878c;
+  --gray-700: #6b6f74;
+  --gray-800: #5c6065;
+  --gray-900: #4d5156;
+  --gray-1000: #1b1d20;
+
+  /* Accents — 채도 절제. 블루=행동(전경), 앰버=켜진 램프, 빨강·초록=신호등 점 */
+  --blue-400: #b9cdf1;
+  --blue-500: #8fb0e8;
+  --blue-700: #2f5fc4;
+  --blue-800: #284fa3;
+  --blue-900: #234a9e;
+  --amber-400: #e9d2a2;
+  --amber-500: #e2ab52;
+  --amber-700: #dfa348;
+  --amber-900: #77571a;
+  --red-400: #e5b3a9;
+  --red-700: #bc3f2b;
+  --red-800: #b03a27;
+  --red-900: #a33422;
+  --green-400: #b5d2bb;
+  --green-600: #6fa37c;
+  --green-700: #3e7a4e;
+  --green-900: #2f6b3f;
+
+  --color-border: rgba(20, 23, 28, 0.12);
+  --color-border-hover: rgba(20, 23, 28, 0.22);
+
+  /* 온에어 그림자 v2.9 — 승강 모델: 그림자는 높이만 인코딩(2단).
+     초점 패널만 위로 들려 큰 균등 드롭, 나머지는 전부 똑같은 낮은 드롭.
+     거리(대기 원근)는 잉크 opacity가 맡는다 — 역할 분리: 그림자=높이, 잉크=거리. */
+  --onair-surface: #f8f9f9;
+  --onair-bg: #e9eaeb;
+  /* 엑셀 시트 크롬 전용 — 실물(엑셀) 메타포는 실물의 색을 쓴다 (사용자 지정, 2026-07-19) */
+  --excel-green: #107c41;
+  --sh-focus: 0 2px 4px rgba(15, 18, 24, 0.16), 0 14px 30px -10px rgba(15, 18, 24, 0.32);
+  --sh-near: 0 3px 8px -3px rgba(15, 18, 24, 0.25), 0 1px 2px rgba(15, 18, 24, 0.10);
+  --sh-far: var(--sh-near); /* v2.9: 거리별 그림자 폐기 — 균등 낮은 드롭으로 수렴 */
+  --sh-joint: 0 -8px 14px -10px rgba(15, 18, 24, 0.30);
+  --sh-modal: 0 2px 4px rgba(15, 18, 24, 0.14), 0 18px 40px -10px rgba(15, 18, 24, 0.35);
+
+  /* ── 온에어 타입 래더 v2 (2026-07-19 전문가 리뷰 반영) ──────────
+     주의: 직원 화면은 scale(0.76389)로 축소 렌더 — 명목 13px = 실효 9.9px.
+     6단, 인접 단 격차 최소 2px(실효 1.5px). 0.5px 즉흥 값 금지:
+       Display 23  (600/1.3)  모달 헤드라인 — 화면당 0~1개
+       Title   18  (600/1.4, -0.2px)  카드의 주인 문장 (AI 요약 헤드라인)
+       Section 14  (600/1.2)  카드 섹션 헤더 (.sechd)
+       Body    14  (400/1.5~1.6)  읽는 텍스트 전부 — Section과는 weight·잉크로 구분
+       Label   12  (500~600)  라벨·필드명 — 값(600 14)과 쌍이 되면 라벨은 500
+       Caption 11  (400~500)  메타·타임스탬프 — 잉크 하한 gray-700 (gray-600은 AA 미달)
+     원칙: 같은 크기에선 weight로, 다른 역할에선 크기로 — 축은 하나씩만.
+     사다리 밖 별도 체계: 규정집 그리드(12), .bignum 스탯, .clocknum 시계.
+     카드 섹션 헤더 패딩 = 12px 16px, 내부 타일 = 13px 16px, 알약 칩 = 4~5px 10~12px. */
+
+  /* 온에어 반지름 두 벌 + 기존 이름 재매핑 */
+  --radius-card: 12px;
+  --radius-md: 12px;
+  --radius-lg: 12px;
+  --radius-inner: 8px;
+  --shadow-card: var(--sh-near);
+  --shadow-popover: var(--sh-near);
+  --shadow-modal: var(--sh-modal);
 }
-
-

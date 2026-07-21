@@ -1,8 +1,19 @@
 import type * as React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  CALL_SCRIPT,
+  SCRIPTS,
+  REG_RECOS,
+  REG_QUERY,
+  SUMMARY_POINTS,
+  SUMMARY_PROSE,
+  CUSTOMER,
   SHEETS,
+  URGENT_RESPONSE,
+  TRANSFER_RESPONSE,
+  TRANSFER_HANDOVER,
+  TRANSFER_TARGETS,
+  type IncomingKind,
+  type SheetData,
   renderSheet,
   WRAP_TYPE_OPTIONS,
   WRAP_RESULT_OPTIONS,
@@ -71,6 +82,10 @@ const GLASS: Partial<Record<Phase, string>> = {
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
 const PREP_ITEMS = [
+  {
+    title: "본인확인 우선 진행",
+    sub: "연결 직후 연락처·생년월일 등으로 본인확인 — 완료 전에는 고객 상세 조회가 잠깁니다",
+  },
   { title: "확정적 반환 표현 금지", sub: "“무조건 돌려받는다” 대신 반환지원 제도 절차로 안내" },
   { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
   {
@@ -80,6 +95,14 @@ const PREP_ITEMS = [
 ];
 
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
+const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
+// 색은 값에 바인딩 — 낮음이 빨갛게, 주의가 늘 앰버로 보이는 거짓말을 막는다
+const EMOTION_COLORS = {
+  stable: { fg: "var(--green-900)", bar: "var(--green-700)" },
+  caution: { fg: "var(--amber-900)", bar: "var(--amber-700)" },
+  elevated: { fg: "var(--red-900)", bar: "var(--red-700)" },
+} as const;
+const RISK_COLORS = { low: "var(--green-900)", high: "var(--red-900)" } as const;
 
 const fmt = (s: number) => {
   const m = Math.floor(s / 60);
@@ -94,17 +117,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [mode, setMode] = useState<Mode>("sim");
+  // 다음 인입 콜 유형 (데모) — normal | urgent(장면 A) | transfer(이관 수신)
+  const [incoming, setIncoming] = useState<IncomingKind>("normal");
+  // 통화 중 "이관 예약" — 통화를 끊지 않고 걸어두면 종료 시 인계된다
+  const [transferReserved, setTransferReserved] = useState(false);
+  // 이관 예약 대상 — null = 기본(부서 대기열 자동 배정), 이름 = 지정 상담사
+  const [transferTarget, setTransferTarget] = useState<string | null>(null);
+  // 감정온도는 고정값이 아니라 실시간 신호 — 데모에선 통화 20초 후 안정으로 하강(상담 효과 연출)
+  const [emoDrift, setEmoDrift] = useState<{ score: number; level: "stable" | "caution" | "elevated"; reason: string } | null>(null);
   const [clock, setClock] = useState(0);
   const [emo, setEmo] = useState(0);
   const [silenceLeft, setSilenceLeft] = useState(0);
   const [micErr, setMicErr] = useState("");
   const [audioBusy, setAudioBusy] = useState(false);
 
-  const [prepChecks, setPrepChecks] = useState<boolean[]>([false, false, false]);
+  const [prepChecks, setPrepChecks] = useState<boolean[]>(PREP_ITEMS.map(() => false));
   const [verified, setVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
   const [authErr, setAuthErr] = useState(false);
+  const [authErrMsg, setAuthErrMsg] = useState("");
   const [authTime, setAuthTime] = useState("");
   const [authMethodLabel, setAuthMethodLabel] = useState("");
 
@@ -115,8 +147,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const [dockType, setDockType] = useState<DockType | null>(null);
   const [regExpanded, setRegExpanded] = useState(false);
+  // 규정집 실검색 — 비어 있으면 전체, 입력하면 조항·항목·내용·멘트를 훑는다
+  const [regSearch, setRegSearch] = useState("");
+  // 업로드한 실제 파일(CSV/XLSX)이 더미 시트를 대체한다 — 세션 동안 유지
+  const [manualData, setManualData] = useState<SheetData | null>(null);
+  // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
+  const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
 
-  const [wrapSheetOpen, setWrapSheetOpen] = useState(true);
+  const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
+  const [summaryVersion, setSummaryVersion] = useState(0);
+  const [regenerating, setRegenerating] = useState(false);
   const [wrapType, setWrapType] = useState(WRAP_TYPE_OPTIONS[0]);
   const [wrapResult, setWrapResult] = useState(WRAP_RESULT_OPTIONS[0]);
   const [typeMenu, setTypeMenu] = useState(false);
@@ -184,7 +224,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       summarize({ chunks: transcript.current, text }),
     ]);
     if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
-    // The standard mvp-1.0 fixture remains visible for the scripted demo.
+    // The standard mvp-1.1 fixture remains visible for the scripted demo.
   }, []);
 
   const toPrep = useCallback(() => {
@@ -197,7 +237,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       stt.current = null;
     }
     setPhase("prep");
-    setPrepChecks([false, false, false]);
+    setPrepChecks(PREP_ITEMS.map(() => false));
     void runSummary();
   }, [runSummary]);
 
@@ -226,10 +266,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }, [s2, toPrep]);
 
   const runScript = useCallback(() => {
-    // Deterministic emotion escalation for the demo.
-    const emos = [1, 1, 2, 3];
-    emos.forEach((e, i) => after(lineGap * (i + 1), () => setEmo(e)));
-    after(lineGap * (emos.length + 1), () => armFirst());
+    // Scripted calls keep emotion unavailable; only a real audio model may set it.
+    after(lineGap * 5, () => armFirst());
     // Feed the (mock) transcript so the summariser has real input.
     transcript.current = [];
     stt.current = startSttSession(
@@ -248,8 +286,22 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }, [runScript, silTick]);
 
   // ── public actions ──
+  const incomingRef = useRef<IncomingKind>("normal");
+  incomingRef.current = incoming;
+
   const startCall = useCallback(() => {
     clearAll();
+    // 인입 유형에 맞는 상담카드 픽스처 선택 (데모)
+    const kind = incomingRef.current;
+    setConsultationResponse(
+      kind === "urgent"
+        ? (structuredClone(URGENT_RESPONSE) as unknown as ConsultationCardResponse)
+        : kind === "transfer"
+        ? (structuredClone(TRANSFER_RESPONSE) as unknown as ConsultationCardResponse)
+        : getDemoConsultationCard()
+    );
+    setTransferReserved(false);
+    setEmoDrift(null);
     setPhase("connecting");
     setClock(0);
     setEmo(0);
@@ -258,6 +310,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     startClock();
     after(3000, () => beginRecording());
   }, [after, beginRecording, clearAll, startClock]);
+
+  const pickIncoming = useCallback((k: IncomingKind) => {
+    if (phaseRef.current === "idle") setIncoming(k);
+  }, []);
 
   const skipWait = useCallback(() => {
     if (phaseRef.current === "recording" || phaseRef.current === "confirm") {
@@ -269,8 +325,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }, [toPrep]);
 
   const answerCall = useCallback(() => {
-    if (prepChecks.every(Boolean)) setPhase("active");
-  }, [prepChecks]);
+    if (prepChecks.every(Boolean)) {
+      setPhase("active");
+      // 상담이 진행되며 고객이 진정되는 흐름 — 감정온도가 살아있는 신호임을 보여준다
+      after(20000, () =>
+        setEmoDrift({ score: 22, level: "stable", reason: "상담 진행 후 안정 — 응대 톤 유지" })
+      );
+    }
+  }, [after, prepChecks]);
 
   const reset = useCallback(() => {
     clearAll();
@@ -288,14 +350,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setMemoDraft("");
     setDockType(null);
     setRegExpanded(false);
-    setWrapSheetOpen(true);
+    setWrapSheetOpen(false);
     setFollowups(DEFAULT_FOLLOWUPS);
+    setTransferReserved(false);
+    setTransferTarget(null);
+    setEmoDrift(null);
+    setSummaryVersion(0);
+    setRegenerating(false);
+    setIncoming("normal");
   }, [clearAll]);
 
   const endCall = useCallback(() => {
     if (phaseRef.current === "active") {
       clearAll();
       setPhase("summarizing");
+      // 종료와 동시에 후처리 시트가 자동으로 올라온다 — 통화→후처리는 한 흐름
       setWrapSheetOpen(true);
       after(3600, () => setPhase("wrap"));
     } else {
@@ -333,7 +402,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           { text: response.transcript.text, at: 0, isFinal: true },
         ];
         setSummary(null);
-        setPrepChecks([false, false, false]);
+        setPrepChecks(
+          Array.from(
+            { length: Math.max(1, response.consultation_card.required_actions.length) },
+            () => false
+          )
+        );
         setPhase("prep");
       } catch (error) {
         const message = error instanceof Error ? error.message : "음성 처리에 실패했습니다.";
@@ -349,16 +423,34 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // ── auth ──
   const pickAuth = useCallback((m: AuthMethod) => {
     setAuthMethod(m);
+    // 방식이 바뀌면 이전 입력은 무의미 — 비운다 (잘라서 남기면 오입력 오류처럼 보인다)
+    setAuthInput("");
     setAuthErr(false);
   }, []);
-  const onAuthInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setAuthInput(e.target.value);
-    setAuthErr(false);
-  }, []);
+  const onAuthInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      // 숫자만, 방식별 자릿수까지만 — 4자리 칸에는 4자리만 들어간다
+      const max = authMethod === "birth" ? 6 : 4;
+      setAuthInput(e.target.value.replace(/\D/g, "").slice(0, max));
+      setAuthErr(false);
+    },
+    [authMethod]
+  );
   const runVerify = useCallback(() => {
     const need = authMethod === "birth" ? 6 : 4;
-    const n = (authInput || "").replace(/\D/g, "").length;
-    if (n >= need) {
+    const digits = (authInput || "").replace(/\D/g, "");
+    if (digits.length < need) {
+      setAuthErrMsg(`자릿수가 부족합니다 — ${need}자리를 입력하세요`);
+      setAuthErr(true);
+      return;
+    }
+    // 고객 진술값과 대조 — 불일치는 인증 실패 (은행 툴의 핵심 경로)
+    if (digits.slice(-need) !== CUSTOMER.authAnswers[authMethod]) {
+      setAuthErrMsg("고객 진술과 불일치 — 값을 다시 확인하거나 다른 대조 방식을 사용하세요");
+      setAuthErr(true);
+      return;
+    }
+    {
       const now = new Date();
       const t =
         ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2);
@@ -372,8 +464,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAuthTime(t);
       setAuthMethodLabel(lbl);
       setAuthErr(false);
-    } else {
-      setAuthErr(true);
     }
   }, [authInput, authMethod]);
   const resetAuth = useCallback(() => {
@@ -398,6 +488,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     },
     [addMemo]
   );
+  // 기록된 불릿의 수정·삭제 — 당연한 기능: 오타 메모를 지우거나 고칠 수 있어야 한다
+  const updateMemo = useCallback((i: number, text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    setMemoItems((items) => items.map((m, x) => (x === i ? t : m)));
+  }, []);
+  const removeMemo = useCallback((i: number) => {
+    setMemoItems((items) => items.filter((_, x) => x !== i));
+  }, []);
 
   // ── followups ──
   const removeFollowup = useCallback((i: number) => {
@@ -442,12 +541,77 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const nv = !verified;
 
   const dk = renderSheet(SHEETS[dockType ?? "history"]);
-  const rg = renderSheet(SHEETS.manual);
+  const rg = renderSheet(manualData ?? SHEETS.manual);
+  // 검색 필터 — r.n(원본 행 번호)은 유지되므로 '열기' 강조(regTargetRow)와 충돌하지 않는다
+  const regNeedle = regSearch.trim().toLowerCase();
+  const rgRows = regNeedle
+    ? rg.rows.filter((r) => r.cells.some((c) => c.text.toLowerCase().includes(regNeedle)))
+    : rg.rows;
+
+  // CSV/XLSX 버퍼 → SheetData (첫 시트, 첫 행 = 헤더). 업로드·레포 파일 공용 파서
+  const parseSheetBuffer = useCallback(async (buf: ArrayBuffer, filename: string): Promise<SheetData | null> => {
+    const XLSX = await import("xlsx");
+    const wb = XLSX.read(buf);
+    const sheetName = wb.SheetNames[0];
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {
+      header: 1,
+      defval: "",
+    }) as unknown as (string | number)[][];
+    const filled = aoa
+      .map((r) => r.map((c) => String(c ?? "").trim()))
+      .filter((r) => r.some((c) => c));
+    if (filled.length < 2) return null; // 헤더+본문이 없으면 무시
+    const [head, ...rows] = filled;
+    const widths = [64, 130, 300, 300];
+    return {
+      title: filename.replace(/\.(xlsx|xls|csv)$/i, ""),
+      file: filename,
+      sheet: sheetName,
+      cols: head.map((l, i) => ({ l, w: widths[i] ?? 200 })),
+      rows: rows.map((r) => head.map((_, i) => r[i] ?? "")),
+    };
+  }, []);
+
+  // 실제 CSV/XLSX 파일을 읽어 규정 시트를 교체 (수동 업로드)
+  const loadManualFile = useCallback(
+    async (file: File) => {
+      const data = await parseSheetBuffer(await file.arrayBuffer(), file.name);
+      if (!data) return;
+      setManualData(data);
+      setRegTargetRow(null);
+      setRegSearch("");
+    },
+    [parseSheetBuffer]
+  );
+
+  // 레포에 실파일을 커밋하면 더미를 자동 대체 — public/manual.xlsx 또는 public/manual.csv
+  // (없으면 조용히 더미 유지. content-type 방어: SPA 폴백이 index.html을 줄 때 오파싱 방지)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      for (const path of ["/manual.xlsx", "/manual.csv"]) {
+        try {
+          const res = await fetch(path);
+          if (!res.ok) continue;
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("text/html")) continue;
+          const data = await parseSheetBuffer(await res.arrayBuffer(), path.slice(1));
+          if (data && alive) setManualData(data);
+          break;
+        } catch {
+          /* 더미 유지 */
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [parseSheetBuffer]);
 
   const mColors = (active: boolean) => ({
-    bg: active ? "var(--blue-700)" : "#fff",
+    bg: active ? "var(--blue-700)" : "var(--onair-surface)",
     fg: active ? "#fff" : "var(--gray-800)",
-    bd: active ? "var(--blue-700)" : "var(--gray-400)",
+    bd: active ? "var(--blue-700)" : "var(--gray-300)",
   });
   const mP = mColors(authMethod === "phone");
   const mB = mColors(authMethod === "birth");
@@ -455,16 +619,37 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const allChecked = prepChecks.every(Boolean);
   const card = consultationResponse.consultation_card;
-  const temperature = card.emotion;
+  // 통화 중 드리프트가 있으면 실시간 값이 카드 초기값을 덮는다
+  const temperature =
+    p === "active" && emoDrift
+      ? { status: "completed" as const, score: emoDrift.score, level: emoDrift.level, reason: emoDrift.reason }
+      : card.emotion;
   const inquiryLabel = card.business_type || summary?.type || "상담 유형 분석 중";
-  const contractBullets = [card.summary, card.routing_reason, card.risk_reason].filter(
+  const contractBullets = [
+    ...card.customer_requests,
+    ...card.missing_information.map((item) => `추가 확인 필요: ${item}`),
+    card.routing_reason,
+    card.risk_reason,
+  ].filter(
     (value): value is string => !!value
   );
   const prepSummaryBullets = (contractBullets.length
     ? contractBullets
     : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
   ).slice(0, 4);
-  const prepDefinitions = PREP_ITEMS;
+  const prepDefinitions = card.required_actions.length
+    ? card.required_actions.map((item) => ({
+        title: item.title,
+        sub: `${item.detail} · 근거: ${
+          item.source === "policy" ? "안전 규칙" : item.source === "rag" ? "관련 자료" : "AI 분석"
+        }`,
+      }))
+    : [
+        {
+          title: "상담카드 결과 확인",
+          sub: "자동 체크리스트가 생성되지 않았습니다. 고객 발화와 라우팅 결과를 직접 확인합니다.",
+        },
+      ];
   const emotionBars = temperature.score == null
     ? 0
     : temperature.score > 66
@@ -473,6 +658,43 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? 2
         : 1;
   const riskSignals = [card.risk_reason].filter((value): value is string => !!value);
+  const ragSheet = card.knowledge_references.length
+    ? {
+        file: "K7_로컬_지식베이스",
+        sheet: "검색 근거",
+        cols: [
+          { l: "문서", w: 220 },
+          { l: "구간", w: 180 },
+          { l: "근거 내용", w: 430 },
+          { l: "관련도", w: 80 },
+        ],
+        rows: card.knowledge_references.map((reference, index) => ({
+          n: index + 1,
+          cells: [
+            { text: reference.title, w: 220 },
+            { text: reference.section, w: 180 },
+            { text: reference.excerpt, w: 430 },
+            { text: `${Math.round(reference.score * 100)}%`, w: 80 },
+          ],
+        })),
+      }
+    : rg;
+  const activeRegRows = card.knowledge_references.length
+    ? regNeedle
+      ? ragSheet.rows.filter((row) =>
+          row.cells.some((cell) => cell.text.toLowerCase().includes(regNeedle))
+        )
+      : ragSheet.rows
+    : rgRows;
+  const actualSummaryPoints = card.customer_requests.length
+    ? card.customer_requests
+    : SUMMARY_POINTS[incoming];
+  const actualCallSteps = card.required_actions.length
+    ? card.required_actions.map((action, index) => ({
+        title: `${index + 1}. ${action.title}`,
+        text: action.detail,
+      }))
+    : SCRIPTS[incoming].map((step) => ({ title: step.title, text: step.text }));
 
   return {
     // refs
@@ -484,6 +706,40 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,
+    // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
+    stepIndex:
+      p === "idle"
+        ? 0
+        : ["connecting", "recording", "confirm"].includes(p)
+        ? 1
+        : p === "prep"
+        ? 2
+        : p === "active"
+        ? 3
+        : 4,
+    // 인입 유형 (데모 제어) — idle에서만 변경 가능
+    incoming,
+    pickNormal: () => pickIncoming("normal"),
+    pickUrgent: () => pickIncoming("urgent"),
+    pickTransfer: () => pickIncoming("transfer"),
+    // 콜 유형은 접수 시점에 픽스처가 고정되므로 대기 중에만 바꿀 수 있다 — UI가 이 사실을 보여줘야 함
+    canPickIncoming: p === "idle",
+    isUrgent: incoming === "urgent",
+    isTransfer: incoming === "transfer",
+    handover: TRANSFER_HANDOVER,
+    transferTargets: TRANSFER_TARGETS,
+    transferReserved,
+    transferTarget,
+    // 기본이 먼저: 인자 없이 부르면 자동 배정 예약. 지정은 이름을 넘길 때만
+    reserveTransfer: (target?: string) => {
+      setTransferReserved(true);
+      setTransferTarget(target ?? null);
+    },
+    toggleTransferReserve: () =>
+      setTransferReserved((v) => {
+        if (v) setTransferTarget(null);
+        return !v;
+      }),
     micErr,
     audioBusy,
     simBg: sim ? "var(--blue-700)" : "#fff",
@@ -526,9 +782,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? "전화가 오면 자연어 접수가 시작됩니다"
         : "완료되면 상담 준비 카드가 표시됩니다",
     waitingSpin: p !== "idle",
-    // desktop screens
+    // desktop screens — 통화 종료 후에도 통화 화면이 배경에 남고(흐름 연속),
+    // 후처리는 그 위로 올라오는 바텀 시트다. "통화→후처리 = 한 흐름"
     showPrep: p === "prep",
-    showActive: p === "active",
+    showActive: p === "active" || ended,
     showWrap: ended,
     wrapLoading: p === "summarizing",
     wrapReady: p === "wrap",
@@ -544,44 +801,80 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             next[i] = !next[i];
             return next;
           }),
-        boxBg: on ? "var(--green-700)" : "#fff",
+        boxBg: on ? "var(--green-700)" : "var(--onair-surface)",
         boxBd: on ? "var(--green-700)" : "var(--gray-500)",
         icon: on ? "check" : "",
-        bg: on ? "var(--green-100)" : "var(--background-200)",
-        bd: on ? "var(--green-400)" : "var(--gray-200)",
+        bg: on ? "var(--gray-100)" : "var(--background-200)",
+        bd: "transparent",
       };
     }),
     prepDone: prepChecks.filter(Boolean).length,
     prepTotal: prepDefinitions.length,
     prepHeadline: card.summary || summary?.headline || "상담카드 생성 중",
-    prepCustomerLine: `고객 · ${inquiryLabel} · 음성 접수`,
+    // 문의유형은 배정권고 타일이 담당 — 여기 반복하지 않는다
+    prepCustomerLine: `발신 ${CUSTOMER.phoneMasked} · 음성 접수`,
     prepRoutingTitle: card.department || "담당 부서 분석 중",
     prepRoutingReason: card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
     prepEmotionLabel:
-      temperature.status === "unavailable" ? "모델 미연동" : temperature.level ?? "분석 중",
+      temperature.status === "unavailable"
+        ? "모델 미연동"
+        : temperature.level
+        ? EMOTION_LABELS[temperature.level]
+        : "분석 중",
     prepEmotionSignal: temperature.reason ?? "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
+    prepEmotionFg: temperature.level ? EMOTION_COLORS[temperature.level].fg : "var(--gray-700)",
+    prepEmotionBar: temperature.level ? EMOTION_COLORS[temperature.level].bar : "var(--gray-500)",
     prepRiskLabel: RISK_LABELS[card.incident_risk],
+    prepRiskFg: RISK_COLORS[card.incident_risk],
     prepRiskSignal: riskSignals.join(" · ") || "특이 사고 징후 없음",
+    prepConfidence:
+      card.routing_confidence != null
+        ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
+        : "확신도 산출 전 · 상담사 확인 필요",
+    transcriptQuote: consultationResponse.transcript.text,
+    // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
+    summaryPoints: actualSummaryPoints,
     prepSummaryBullets,
+    knowledgeQuery: card.business_type,
+    knowledgeReferences: card.knowledge_references,
     externalSessionKey: consultationResponse.call_id,
-    customerName: "고객",
-    customerNumber: "MVP-AUTO",
-    customerPhone: "음성 접수",
+    // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다
+    customerName: verified ? `${CUSTOMER.name} 고객` : `${CUSTOMER.masked} 고객`,
+    customerType: CUSTOMER.type,
+    customerPhone: CUSTOMER.phoneMasked,
     inquiryLabel,
     wrapSummaryDefault: [
-      `고객의 ${card.summary ?? summary?.headline ?? "상담 내용"}.`,
+      // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
+      summaryVersion % 2 === 0
+        ? `고객의 ${card.summary ?? summary?.headline ?? "상담 내용"}.`
+        : `${SUMMARY_PROSE[incoming]}`,
       `업무유형: ${card.business_type}.`,
       `전달부서: ${card.department}.`,
     ]
       .filter(Boolean)
       .join(" "),
+    summaryVersion,
+    regenerating,
+    regenerateSummary: () => {
+      // 재생성 느낌 — 잠깐 생성 중 상태를 거쳐 다른 문형으로
+      setRegenerating(true);
+      after(700, () => {
+        setSummaryVersion((v) => v + 1);
+        setRegenerating(false);
+      });
+    },
+    summaryProse: consultationResponse
+      ? [card.routing_reason, ...card.missing_information.map((item) => `추가 확인: ${item}`)]
+          .filter(Boolean)
+          .join(" · ") || "고객 음성에서 확인된 상담 내용을 검토하고 있습니다."
+      : SUMMARY_PROSE[incoming],
     connectBg: allChecked ? "var(--blue-700)" : "var(--gray-200)",
     connectFg: allChecked ? "#fff" : "var(--gray-600)",
     connectCursor: allChecked ? "pointer" : "not-allowed",
     prepHint: allChecked
       ? "유의사항 확인 완료 · 통화를 연결하세요"
-      : "유의사항 3개를 모두 확인하면 통화 연결이 활성화됩니다",
+      : `유의사항 ${prepDefinitions.length}개를 모두 확인하면 통화 연결이 활성화됩니다`,
     // auth (1d)
     verified,
     notVerified: nv,
@@ -602,6 +895,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     runVerify,
     resetAuth,
     authErr,
+    authErrMsg,
     authTime,
     authMethodLabel,
     authPlaceholder:
@@ -610,13 +904,24 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         : authMethod === "account"
         ? "계좌 뒷 4자리"
         : "연락처 뒷 4자리",
-    // script + memo
-    steps: CALL_SCRIPT.map((st) => ({ title: st.title, text: st.text })),
+    // 마스킹 '구멍' 입력 — 실제 데이터 모양 속에 입력 칸만 뚫려 있다
+    // phone: 010 - **** - [    ] / birth: [      ] (YYMMDD) / account: ***-**-[    ]
+    authPrefix: authMethod === "birth" ? "" : authMethod === "account" ? "***-**-" : "010 - **** - ",
+    authMaxLen: authMethod === "birth" ? 6 : 4,
+    // 힌트를 placeholder에 통합 — 별도 힌트 텍스트가 좁은 칸에서 잘리던 문제 해소
+    authHolePlaceholder: authMethod === "birth" ? "YYMMDD" : "●●●●",
+    // script + memo — 실제 API 체크리스트가 있으면 같은 상담 절차로 사용한다
+    steps: actualCallSteps,
+    firstLine: actualCallSteps[0]?.text ?? "고객 문의 내용을 확인합니다.",
+    regRecos: REG_RECOS[incoming],
+    regQuery: card.business_type || REG_QUERY[incoming],
     memoItems,
     memoEmpty: memoItems.length === 0,
     memoDraft,
     onMemoDraft: (e: React.ChangeEvent<HTMLInputElement>) => setMemoDraft(e.target.value),
     onMemoKey,
+    updateMemo,
+    removeMemo,
     // dock (detail lookups)
     openHistory: () => setDockType("history"),
     openAccounts: () => setDockType("accounts"),
@@ -629,14 +934,29 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     dockRows: dk.rows,
     // regulations panel
     openManual: () => setRegExpanded(true),
-    closeReg: () => setRegExpanded(false),
+    openManualAt: (row: number) => {
+      setRegTargetRow(row);
+      setRegExpanded(true);
+    },
+    closeReg: () => {
+      setRegExpanded(false);
+      setRegTargetRow(null);
+    },
+    regTargetRow,
     regExpanded,
     regCollapsed: !regExpanded,
-    regW: regExpanded ? 720 : 372,
-    regFile: rg.file,
-    regSheet: rg.sheet,
-    regCols: rg.cols,
-    regRows: rg.rows,
+    // 실검색 — 입력은 자유, AI 추천 검색어는 placeholder로 강등
+    regSearch,
+    onRegSearch: (e: React.ChangeEvent<HTMLInputElement>) => setRegSearch(e.target.value),
+    clearRegSearch: () => setRegSearch(""),
+    loadManualFile,
+    // 확장 폭 640 — 시트가 3컬럼 리플로우라 640이면 잘림 없이 들어가고, 중앙 스크립트 압착도 덜하다
+    regW: regExpanded ? 640 : 372,
+    regFile: ragSheet.file,
+    regSheet: ragSheet.sheet,
+    regCols: ragSheet.cols,
+    regRows: activeRegRows,
+    regRowsTotal: ragSheet.rows.length,
     // wrap sheet
     wrapSheetOpen,
     notWrapSheetOpen: !wrapSheetOpen,
@@ -673,7 +993,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       remove: () => removeFollowup(i),
     })),
     noFollowups: followups.length === 0,
-    recoFollowups: RECOMMENDED_FOLLOWUPS.map((f) => ({
+    // 이미 추가된 추천은 숨긴다 — x로 빼면 다시 나타난다
+    recoFollowups: RECOMMENDED_FOLLOWUPS.filter(
+      (f) => !followups.some((x) => x.label === f.label)
+    ).map((f) => ({
       icon: f.icon,
       label: f.label,
       add: () => addFollowup(f),

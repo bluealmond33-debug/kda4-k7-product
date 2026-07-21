@@ -2,29 +2,227 @@
 // and the spreadsheet-style reference tables (manual / history / accounts).
 // In production these would come from a CMS / knowledge base / core banking API.
 
+/** 로그인한 상담사 프로필 — 대기 화면·통화 화면 프로필 영역에서 공유.
+ *  level 은 부서 내 숙련도(시니어/주니어) — 이관 방향(주니어→시니어)의 기준. */
+export const AGENT = {
+  name: "김키움",
+  role: "상담사",
+  dept: "대출·금융상담팀",
+  tenure: "4년차",
+  level: "시니어" as "시니어" | "주니어",
+  id: "K7-1042",
+} as const;
+
+/** 데모 고객 — 본인인증 전에는 마스킹된 이름만, 인증 후 실명 열람.
+ *  전화번호는 항상 마스킹(최소 표시 원칙). */
+export const CUSTOMER = {
+  name: "이정민",
+  masked: "이*민",
+  phoneMasked: "010-****-4821",
+  type: "개인 고객",
+  /** 본인확인 대조 정답 — 불일치 경로를 데모하기 위한 기준값 (원문은 화면에 표시하지 않는다) */
+  authAnswers: { phone: "4821", birth: "880214", account: "4821" },
+} as const;
+
+/** 데모 인입 콜 유형 — 라우팅 기준 후보 문서(vault 07 Outputs 2026-07-18) 참조.
+ *  urgent = 장면 A(인입 시 긴급, 대기열 우선) · transfer = 부서 내 주니어→시니어 이관 수신 */
+export type IncomingKind = "normal" | "urgent" | "transfer";
+
+/** 긴급 콜 픽스처 — 명의도용 의심(사고 징후 high), 대기열 맨 앞 점프 */
+export const URGENT_RESPONSE = {
+  schema_version: "mvp-1.1",
+  call_id: "demo-urgent-0001",
+  status: "ready",
+  source_channel: "voice",
+  audio_filename: "demo-urgent.wav",
+  transcript: {
+    text: "제가 신청한 적 없는 대출이 실행됐다는 문자를 받았어요. 지금 바로 확인해주세요.",
+    stt_model: "whisper-1",
+    duration_sec: 6.8,
+  },
+  consultation_card: {
+    summary: "고객이 본인이 신청하지 않은 대출 실행 문자를 받았다며 긴급 확인을 요청함.",
+    business_type: "명의도용 의심 대출",
+    department: "대출 및 금융상담",
+    routing_reason: "본인 미신청 대출 실행 정황 — 긴급 확인 대상",
+    incident_risk: "high",
+    risk_reason: "명의도용·대출사기 의심 · 사고대응팀 공조 필요",
+    routing_confidence: 0.91,
+    // 데모 더미값 — 감정 모델 연동 시 실값으로 대체
+    emotion: {
+      status: "completed",
+      score: 84,
+      level: "elevated",
+      reason: "다급·불안 발화 반복 감지",
+    },
+    attention_level: "high",
+    reason_codes: ["FINANCIAL_INCIDENT", "TEXT_HIGH_RISK_SIGNAL"],
+    routing: {
+      task_code: "E002",
+      task_name: "이상거래 신고",
+      classification: "EMERGENCY",
+      handler: "HUMAN",
+    },
+    text_emotion: {
+      content_emotion: "불안",
+      situation_severity: "high",
+      urgency_score: 95,
+    },
+  },
+  created_at: "2026-07-18T07:00:00Z",
+} as const;
+
+/** 긴급 카드가 대기열 맨 앞으로 온 이유 — 카드가 스스로 설명한다 (라우팅 기준 후보 문서 ①금전 피해 진행 중) */
+export const URGENT_PRIORITY_REASON =
+  "금전 피해 진행 가능성(본인 미신청 대출 실행) — 긴급 기준 해당, 대기열 맨 앞으로 배정됨";
+
+/** 이관 수신 픽스처 — 주니어 상담사가 넘긴 복합 문의 */
+export const TRANSFER_RESPONSE = {
+  schema_version: "mvp-1.1",
+  call_id: "demo-transfer-0001",
+  status: "ready",
+  source_channel: "voice",
+  audio_filename: "demo-transfer.wav",
+  transcript: {
+    text: "전세자금대출 금리랑 만기를 바꾸고 싶은데 중도상환수수료가 어떻게 되는지도 알고 싶어요.",
+    stt_model: "whisper-1",
+    duration_sec: 9.6,
+  },
+  consultation_card: {
+    summary: "고객이 전세자금대출 조건변경(금리·만기)과 중도상환수수료를 복합 문의함.",
+    business_type: "전세자금대출 조건변경",
+    department: "대출 및 금융상담",
+    routing_reason: "약정 변경·심사 조건 상담에 해당",
+    incident_risk: "low",
+    risk_reason: null,
+    routing_confidence: 0.89,
+    // 데모 더미값 — 감정 모델 연동 시 실값으로 대체
+    emotion: {
+      status: "completed",
+      score: 48,
+      level: "caution",
+      reason: "긴 상담으로 답답함 표현",
+    },
+    attention_level: "medium",
+    reason_codes: ["ATTENTION_REQUIRED"],
+    routing: {
+      task_code: "G004",
+      task_name: "기타·복합 일반 상담",
+      classification: "GENERAL",
+      handler: "HUMAN",
+    },
+    text_emotion: {
+      content_emotion: "걱정",
+      situation_severity: "medium",
+      urgency_score: 48,
+    },
+  },
+  created_at: "2026-07-18T07:10:00Z",
+} as const;
+
+/** 이관 인수인계 — 사람이 쓰지 않는다. 전임 상담사의 통화를 AI가 요약해 자동 작성 */
+export const TRANSFER_HANDOVER = {
+  from: "박민지",
+  fromLevel: "주니어" as const,
+  fromTenure: "1년차",
+  talkTime: "07:24",
+  verified: true,
+  aiMemo: [
+    "금리 인하 요구권 안내까지 진행됨",
+    "중도상환수수료 면제 조건에서 막힘 — 약정서 특약 확인 필요",
+    "고객이 재약정 절차를 오늘 안에 알고 싶어 함",
+  ],
+  remaining: "수수료 면제 조건 확정 · 재약정 절차 안내",
+} as const;
+
+/** 부서 내 이관 가능한 시니어 상담사 — 이관 방향은 주니어→시니어 */
+export const TRANSFER_TARGETS = [
+  { name: "이수진", level: "시니어", tenure: "6년차", state: "대기 중" },
+  { name: "정해원", level: "시니어", tenure: "9년차", state: "통화 중 · 예약 가능" },
+] as const;
+
 export interface ScriptStep {
   title: string;
   text: string;
 }
 
-export const CALL_SCRIPT: ScriptStep[] = [
-  {
-    title: "1. 오프닝 · 공감",
-    text: "“네 고객님, 착오송금 건으로 많이 놀라셨죠. 제가 바로 도와드리겠습니다.”",
-  },
-  {
-    title: "2. 사실 확인",
-    text: "“이체하신 시각과 금액, 그리고 잘못 입력하신 계좌번호 뒷자리를 함께 확인해볼게요. 천천히 말씀해주셔도 됩니다.”",
-  },
-  {
-    title: "3. 절차 안내 · 반환지원 제도",
-    text: "“수취인 동의 없이 임의로 돌려드릴 수는 없고, 예금보험공사 착오송금 반환지원 제도로 신청하실 수 있습니다. 제가 절차를 안내해 드릴게요.”",
-  },
-  {
-    title: "4. 마무리 · 후속 안내",
-    text: "“오늘 안내드린 내용은 문자로 다시 보내드리고, 사고대응팀에서 콜백 드리도록 예약해두겠습니다. 더 궁금하신 점 있으실까요?”",
-  },
-];
+/** 콜 유형별 상담 스크립트 — 카드·스크립트·규정이 한 사건을 말하도록 유형마다 한 벌.
+ *  (구 착오송금 단일 스크립트는 카드가 주담대인데 스크립트가 착오송금인 자기모순을 만들었다) */
+export const SCRIPTS: Record<IncomingKind, ScriptStep[]> = {
+  normal: [
+    { title: "1. 오프닝 · 공감", text: "“네 고객님, 주택담보대출 만기 연장 문의 주셨죠. 제가 바로 확인해 드리겠습니다.”" },
+    { title: "2. 사실 확인", text: "“현재 대출 계좌와 만기 예정일을 확인해볼게요. 천천히 말씀해 주셔도 됩니다.”" },
+    { title: "3. 절차 안내 · 재약정", text: "“만기 연장은 재약정 심사로 진행됩니다. 소득 증빙과 등기부등본이 필요하고, 비대면으로도 접수하실 수 있어요.”" },
+    { title: "4. 마무리 · 후속 안내", text: "“필요 서류 목록을 문자로 보내드리고, 심사 담당자가 콜백 드리도록 예약해 두겠습니다. 더 궁금하신 점 있으실까요?”" },
+  ],
+  urgent: [
+    { title: "1. 오프닝 · 공감", text: "“네 고객님, 많이 놀라셨죠. 지금 바로 확인해 드리겠습니다.”" },
+    { title: "2. 사실 확인", text: "“받으신 문자의 대출 실행 시각과 금액을 확인해볼게요. 최근 본인 명의로 신청하신 대출이 있으신가요?”" },
+    { title: "3. 긴급 조치 · 지급정지", text: "“본인이 신청하지 않은 것으로 확인되면 즉시 지급정지와 명의도용 사고 접수를 진행합니다. 사고대응팀과 바로 연결해 드릴게요.”" },
+    { title: "4. 마무리 · 후속 안내", text: "“접수 번호를 문자로 보내드리고, 사고대응팀에서 30분 내 콜백 드리겠습니다. 통화 중에는 다른 금융기관 앱을 열지 말아 주세요.”" },
+  ],
+  transfer: [
+    { title: "1. 오프닝 · 이어받기", text: "“네 고객님, 앞서 상담 내용은 전달받았습니다. 중도상환수수료 조건부터 이어서 안내드릴게요.”" },
+    { title: "2. 사실 확인", text: "“약정서 특약의 면제 조건을 확인해볼게요. 대출 실행일과 약정 기간을 함께 보겠습니다.”" },
+    { title: "3. 절차 안내 · 재약정", text: "“면제 조건이 충족되면 재약정으로 금리와 만기를 변경할 수 있습니다. 오늘 접수하시면 이번 주 안에 심사 결과를 안내드려요.”" },
+    { title: "4. 마무리 · 후속 안내", text: "“재약정 절차와 수수료 기준을 문자로 정리해 보내드리겠습니다. 더 궁금하신 점 있으실까요?”" },
+  ],
+};
+
+/** 유형별 AI 추천 규정 (우측 패널) — 스크립트와 같은 사건을 가리킨다.
+ *  row = 열기 시 규정집 시트에서 강조할 행 인덱스(0-base, SHEETS.manual.rows 기준) */
+export const REG_RECOS: Record<IncomingKind, { title: string; body: string; file: string; row: number }[]> = {
+  normal: [
+    { title: "주택담보대출 재약정 절차", body: "만기 연장은 재약정 심사 대상 — 소득 증빙·담보 재평가 기준을 확인한다.", file: "여신_업무매뉴얼 · 31행", row: 0 },
+    { title: "만기 연장 필요 서류", body: "소득금액증명원·등기부등본·인감증명서. 비대면 접수 가능 조건 확인.", file: "여신_서류기준 · 8행", row: 3 },
+  ],
+  urgent: [
+    { title: "명의도용 대출 사고 접수", body: "본인 미신청 확인 시 즉시 지급정지 → 사고 접수 → 수사기관 신고 안내.", file: "금융사고_대응지침 · 12행", row: 2 },
+    { title: "전자금융 이상거래(FDS) 대응", body: "거래 시각·기기·IP 변경 이력 확인. 의심 시 사고대응팀 연계.", file: "이상거래_대응지침 · 44행", row: 4 },
+  ],
+  transfer: [
+    { title: "중도상환수수료 면제 조건", body: "약정서 특약 기준 — 경과 기간·상환 비율별 면제 조건을 확인한다.", file: "여신_수수료기준 · 17행", row: 1 },
+    { title: "전세자금대출 재약정", body: "금리·만기 변경은 재약정 심사 대상. 보증기관 동의 요건 확인.", file: "여신_업무매뉴얼 · 42행", row: 3 },
+  ],
+};
+
+/** 유형별 요구사항 분해 — AI가 발화에서 뽑은 불릿. 이관 판단이 가능한 수준의 요약 본문 */
+export const SUMMARY_POINTS: Record<IncomingKind, string[]> = {
+  normal: [
+    "주택담보대출 만기 연장 가능 여부 확인 요청",
+    "연장 시 필요한 서류 안내 요청",
+    "비대면 진행 가능 여부에 관심",
+  ],
+  urgent: [
+    "본인 미신청 대출 실행 문자 수신 — 사실 확인 요청",
+    "즉시 지급정지 등 긴급 조치 요구",
+    "명의도용 여부 확인 필요",
+  ],
+  transfer: [
+    "전세자금대출 금리·만기 조건변경 문의",
+    "중도상환수수료 면제 조건 확인 요청",
+    "재약정 절차를 오늘 안에 안내받기 원함",
+  ],
+};
+
+/** 유형별 규정 검색어 (우측 패널 검색창 데모 값) */
+/* 검색 placeholder = 시트에 실제로 존재하는 키워드 — placeholder대로 치면 진짜 찾아진다 */
+export const REG_QUERY: Record<IncomingKind, string> = {
+  normal: "본인확인",
+  urgent: "FDS",
+  transfer: "반환지원",
+};
+
+/* 준비카드 서술형 요약 — 헤드라인 한 줄만으로는 상황 파악이 어렵다는 피드백.
+   헤드라인(무슨 일) → 프로즈(맥락 2문장) → 요구사항(할 일) 순서로 읽힌다 */
+export const SUMMARY_PROSE: Record<IncomingKind, string> = {
+  normal:
+    "고객은 보유 중인 주택담보대출의 만기가 다가와 연장이 가능한지 확인하고 싶어 합니다. 연장에 필요한 서류와 비대면 접수 가능 여부까지 함께 묻고 있어, 재약정 절차 안내가 필요한 상담입니다.",
+  urgent:
+    "고객은 본인이 신청한 적 없는 대출 실행 문자를 받고 크게 불안해하며 즉시 확인을 요청하고 있습니다. 명의도용 가능성이 있어 지급정지 등 긴급 조치와 사고대응팀 공조가 필요한 상담입니다.",
+  transfer:
+    "전세자금대출 중도상환 관련 상담이 앞선 상담사에게서 이관되었습니다. 수수료 면제 조건 확인까지 진행된 상태로, 남은 절차 안내부터 이어가면 되는 상담입니다.",
+};
 
 export interface SheetColumn {
   l: string;

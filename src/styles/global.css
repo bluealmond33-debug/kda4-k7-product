@@ -63,12 +63,21 @@ a:hover {
   border-radius: 2px;
 }
 .card {
-  background: #fff;
-  border: 1px solid var(--color-border);
+  /* ONAIR v2.9: 면은 한 색, 경계는 보더가 아니라 그림자.
+     그림자는 높이만 인코딩(2단) — 초점 패널만 sh-focus로 들리고 나머지는 전부 sh-near.
+     거리는 잉크 opacity가 맡는다. 초점 이동 전환은 이산적 0.45s */
+  background: var(--onair-surface, #fff);
+  border: none;
   border-radius: 12px;
+  box-shadow: var(--sh-near, 0 2px 8px rgba(0, 0, 0, 0.06));
+  /* 그림자·잉크가 같은 커브로 움직여야 조명이 "한 번에" 이동한 것으로 읽힌다 */
+  transition: box-shadow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .sechd {
-  font: 700 13px "Geist Sans", "Pretendard", sans-serif;
+  /* 타입 래더 v2 Section — 실효 크기(×0.764) 기준으로 13px은 지각 하한 아래.
+     700→600: 실효 10px대 한글에서 700은 뭉친다 */
+  font: 600 14px "Geist Sans", "Pretendard", sans-serif;
   color: var(--gray-1000);
 }
 .cbtn {
@@ -95,12 +104,15 @@ a:hover {
 .pill {
   display: flex;
   align-items: center;
-  gap: 16px;
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  gap: 14px;
+  background: var(--onair-surface, #fff);
+  border: none;
   border-radius: 9999px;
-  padding: 8px 10px 8px 20px;
-  box-shadow: var(--shadow-popover);
+  height: 48px;
+  box-sizing: border-box;
+  padding: 6px 8px 6px 18px;
+  /* 알약은 상태 표시줄이지 주인공이 아니다 — 그림자를 낮춰 초점(sh-focus)은 본문 카드가 갖는다 */
+  box-shadow: var(--sh-near);
   z-index: 10;
   white-space: nowrap;
 }
@@ -108,25 +120,121 @@ a:hover {
   flex: none;
 }
 .qlink {
-  background: #fff;
-  border: 1px solid var(--amber-400);
-  border-radius: 6px;
-  padding: 9px 12px;
+  background: var(--onair-surface, #fff);
+  border: 1px solid var(--gray-300);
+  border-radius: 9999px;
+  padding: 9px 16px;
   font-size: 13px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-@keyframes pulseDot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
+/* 온에어 램프 — 방송 스튜디오처럼 빨간 점 하나. 켜짐 = 통화·녹취 중, 그 외엔 꺼진 잔상 */
+.onairdot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: var(--red-700);
+  flex: none;
+}
+.onairdot.off {
+  background: rgba(188, 63, 43, 0.22);
+}
+
+/* 신호등(3점)은 오직 고객 감정온도에만 — 안정(초록)·주의(앰버)·고조(빨강), 하나만 점등 */
+.lampdots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  flex: none;
+}
+.lampdots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+}
+/* 꺼진 점 — 빈 윤곽이 아니라 제 색을 흐리게 머금은 원 (진짜 신호등처럼) */
+.lampdots i.r { background: rgba(188, 63, 43, 0.4); }
+.lampdots i.a { background: rgba(223, 163, 72, 0.52); }
+.lampdots i.g { background: rgba(62, 122, 78, 0.42); }
+.lampdots i.lit.r { background: var(--red-700); }
+.lampdots i.lit.a { background: var(--amber-700); }
+.lampdots i.lit.g { background: var(--green-700); }
+
+/* ONAIR 인터랙티브 타일 — 호버는 빛이 아니라 그림자가 깊어진다 (+1px 부상).
+   클릭 가능한 카드형 타일 공통 규칙. */
+.ptile {
+  cursor: pointer;
+  transition: box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* 터치 기기의 hover 오발동 방지 */
+@media (hover: hover) and (pointer: fine) {
+  .ptile:hover {
+    box-shadow: var(--sh-focus);
+    transform: translateY(-2px);
   }
 }
+.ptile:active {
+  transform: translateY(0);
+  box-shadow: var(--sh-near);
+  /* 프레스는 스냅, 릴리즈만 0.25s — 비대칭 타이밍 */
+  transition-duration: 0.1s;
+}
+
+/* 대기화면 고스트 타일 — 시계가 주인공이므로 입구들은 존재감을 지운다.
+   평소엔 회색 텍스트, 올렸을 때만 면이 생긴다 (그림자 부상 없음 — ptile보다 한 단계 조용) */
+.ghosttile {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  color: var(--gray-600);
+  font: 500 12.5px "Geist Sans", "Pretendard", sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.ghosttile:hover {
+  background: var(--gray-100);
+  color: var(--gray-1000);
+}
+
+/* 메모 행 수정·삭제 — 올렸을 때만 드러난다. 상시 노출이면 기록이 산만해진다 */
+.memorow .memoact {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.memorow:hover .memoact {
+  opacity: 1;
+}
+
+/* ONAIR 대형 숫자(카운터·스탯) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
+.bignum {
+  font-family: "Geist Sans", "Pretendard", sans-serif;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* ONAIR 시계 숫자 — Space Grotesk: 각진 1, 열린 6·9. 시계(대형 디스플레이)에만 쓴다 */
+.clocknum {
+  font-family: "Space Grotesk", "Geist Sans", "Pretendard", sans-serif;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/* 본인확인 입력 — 입력값은 모노·자간, placeholder는 가는 산세리프로 분리 */
+.authin::placeholder {
+  font: 400 12.5px "Geist Sans", "Pretendard", sans-serif;
+  letter-spacing: 0;
+  color: var(--gray-600);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -141,13 +249,15 @@ a:hover {
     opacity: 0.15;
   }
 }
+/* wave — height 애니메이션은 매 프레임 레이아웃을 유발. scaleY로 GPU 이동
+   (바는 전부 height 22px 고정, 컨테이너 중앙 정렬이라 신축 모양은 동일) */
 @keyframes wave {
   0%,
   100% {
-    height: 6px;
+    transform: scaleY(0.27);
   }
   50% {
-    height: 22px;
+    transform: scaleY(1);
   }
 }
 @keyframes dockUp {
@@ -158,5 +268,70 @@ a:hover {
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+/* 팝오버는 트리거 기점에서 출발 — 트리거 아래에 뜨는 팝오버는 위(-8px)에서 내려온다 */
+@keyframes dockDown {
+  from {
+    transform: translateY(-8px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+/* PrepCard 모달 — 유일하게 하드컷이던 대면적 등장. 모달은 center 기점 예외 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* 모션 접근성 — 이동만 제거, 페이드는 유지 ("적게·부드럽게"이지 0은 아님) */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes dockUp {
+    from {
+      transform: none;
+      opacity: 0.4;
+    }
+  }
+  @keyframes dockDown {
+    from {
+      transform: none;
+      opacity: 0.4;
+    }
+  }
+  @keyframes modalIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+  @keyframes wave {
+    0%,
+    100% {
+      transform: scaleY(0.6);
+    }
+    50% {
+      transform: scaleY(0.6);
+    }
+  }
+  .ptile:hover {
+    transform: none;
   }
 }
