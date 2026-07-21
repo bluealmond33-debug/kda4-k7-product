@@ -334,19 +334,26 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <span onClick={vm.setAuthBirth} style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:5px 11px;cursor:pointer;background:" + vm.mBirthBg + ";color:" + vm.mBirthFg + ";border:1px solid " + vm.mBirthBd)}>생년월일</span>
                   <span onClick={vm.setAuthAcct} style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:5px 11px;cursor:pointer;background:" + vm.mAcctBg + ";color:" + vm.mAcctFg + ";border:1px solid " + vm.mAcctBd)}>계좌 뒷 4자리</span>
                 </div>
-                <div style={css("display:flex;gap:7px;align-items:center")}>
-                  {/* 마스킹(회색 ****)은 조회된 원문의 모양, 빈칸은 점선 파란 박스 — '여기에 친다'가 한눈에 갈리게 */}
-                  {vm.authPrefix && (
-                    <span style={css("font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;color:var(--gray-500);white-space:nowrap;flex:none")}>{vm.authPrefix}</span>
-                  )}
-                  <label
-                    style={css(
-                      "flex:1;min-width:0;display:flex;align-items:center;gap:6px;border:1.5px " +
-                        (authFocused ? "solid var(--blue-700)" : "dashed var(--blue-500)") +
-                        ";border-radius:8px;padding:7px 11px;background:var(--onair-surface);cursor:text"
-                    )}
-                  >
-                    <span className="mi" style={css("font-size:14px;color:var(--blue-700);flex:none")}>edit</span>
+                <div style={css("display:flex;gap:8px;align-items:center")}>
+                  {/* 자릿수만큼 개별 상자(OTP 스타일) — 전체 번호 마스킹 없이 '몇 자리를 칠지'가 모양으로 보인다.
+                      실제 입력은 상자 위 투명 input 하나가 받고, 상자는 값을 비춰 그린다 */}
+                  <label style={css("position:relative;display:flex;gap:6px;cursor:text;flex:none")}>
+                    {Array.from({ length: vm.authMaxLen }).map((_, bi) => {
+                      const ch = vm.authInput[bi] ?? "";
+                      const cur = authFocused && bi === Math.min(vm.authInput.length, vm.authMaxLen - 1);
+                      return (
+                        <span
+                          key={bi}
+                          style={css(
+                            "width:" + (vm.authMaxLen === 6 ? "29px" : "38px") +
+                              ";height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 16px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-1000);background:var(--onair-surface);box-sizing:border-box;transition:border-color .15s;border:1.5px " +
+                              (cur ? "solid var(--blue-700)" : ch ? "solid var(--gray-500)" : "dashed var(--gray-400)")
+                          )}
+                        >
+                          {ch}
+                        </span>
+                      );
+                    })}
                     <input
                       className="authin"
                       value={vm.authInput}
@@ -356,10 +363,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") vm.runVerify();
                       }}
-                      placeholder={vm.authHolePlaceholder}
                       maxLength={vm.authMaxLen}
                       inputMode="numeric"
-                      style={css("width:100%;min-width:0;border:none;background:transparent;font:600 14px 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:2px;outline:none;color:var(--gray-1000);padding:0")}
+                      style={css("position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;outline:none;padding:0;cursor:text;caret-color:transparent")}
                     />
                   </label>
                   <span onClick={vm.runVerify} style={css("flex:none;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}>대조</span>
@@ -520,7 +526,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                           vm.updateMemo(i, editText);
                           setEditIdx(null);
                         }
