@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import Threads from "./Threads";
 
@@ -33,32 +33,45 @@ export default function LiveTranscriptPanel({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // 발화 반응 파형 — 기준: "음성이 들리는 동안"(=STT 타이핑이 진행되는 동안)
-  // 랜덤 목표(1.4~2.9)를 계속 갈아끼우며 요동친다. 소리 크기와 무관한 랜덤 변조.
-  // 조각 도착 → 그 텍스트의 타이핑 예상 시간만큼 '말하는 중'으로 간주(+여유 0.5s),
-  // 끝나면 기저(0.9)로 천천히 가라앉는다 — 빠른 어택, 느린 릴리즈.
-  const [amp, setAmp] = useState(0.9);
-  const prevCount = useRef(0);
+  // Siri풍 파형 진폭 — 60fps rAF에서 '연속 사인 합성'으로 부드럽게 구동한다.
+  // (랜덤 스텝 대신 여러 저주파 사인을 겹쳐 자연스러운 출렁임을 만든다)
+  // React 재렌더 없이 ampRef만 갱신 → Threads가 매 프레임 getAmplitude로 읽는다.
+  // 기준: "음성이 들리는 동안"(=조각 타이핑 예상 시간 + 여유)만 크게 스웰.
+  const ampRef = useRef(0.9);
   const speakingUntil = useRef(0);
+  const prevCount = useRef(0);
   useEffect(() => {
     if (stream.length > prevCount.current) {
       const last = stream[stream.length - 1];
-      speakingUntil.current = Date.now() + last.text.length * 32 + 500;
-      setAmp(2.6); // 어택 — 말이 시작되는 순간 즉시 출렁
+      speakingUntil.current = performance.now() + last.text.length * 32 + 600;
     }
     prevCount.current = stream.length;
   }, [stream]);
   useEffect(() => {
-    const id = window.setInterval(() => {
-      const speaking = Date.now() < speakingUntil.current;
-      setAmp((a) => {
-        const target = speaking ? 1.4 + Math.random() * 1.5 : 0.9;
-        const k = speaking ? 0.3 : 0.04; // 말할 땐 빠르게 요동, 멈추면 천천히 릴리즈
-        return a + (target - a) * k;
-      });
-    }, 160);
-    return () => window.clearInterval(id);
+    let raf = 0;
+    let last = performance.now();
+    const loop = (t: number) => {
+      const dt = Math.min(0.05, (t - last) / 1000);
+      last = t;
+      const speaking = t < speakingUntil.current;
+      // 대기: 아주 느린 호흡. 말할 때: 주기가 다른 사인 3개를 겹쳐 유기적으로 출렁.
+      const idle = 0.12 * Math.sin(t * 0.0016);
+      const talk = speaking
+        ? 0.9 +
+          0.5 * Math.sin(t * 0.0075) +
+          0.28 * Math.sin(t * 0.0135 + 1.3) +
+          0.16 * Math.sin(t * 0.022 + 2.1)
+        : 0;
+      const target = 0.85 + idle + talk;
+      // 프레임 독립 이징(지수) — attack 빠르게, release 느리게. 계단 없이 매끄럽게 수렴.
+      const rate = target > ampRef.current ? 7 : 2.5;
+      ampRef.current += (target - ampRef.current) * (1 - Math.exp(-rate * dt));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
   }, []);
+  const getAmp = useCallback(() => ampRef.current, []);
 
   // 라이브 자막 스크롤 — 타이핑으로 글자가 한 자씩 자라도 항상 바닥(최신)을 본다.
   // 옛 텍스트는 위로 밀려 올라가 상단 페이드 아래로 사라진다 (발표용: 스크롤바 없음)
@@ -95,7 +108,7 @@ export default function LiveTranscriptPanel({
         )}
       >
         <div style={css("position:absolute;inset:0")}>
-          <Threads amplitude={amp} distance={0} color={[1, 1, 1]} />
+          <Threads getAmplitude={getAmp} amplitude={0.9} distance={0} color={[1, 1, 1]} />
         </div>
       </div>
 
