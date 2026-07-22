@@ -72,21 +72,19 @@ export default function PipelineFlowPanel({
       {/* 노드 행 — 왼쪽엔 시스템 레일: 이 파이프라인을 받치는 장비가 전부 켜져 있다는 실측 신호 */}
       <div style={css("display:flex;align-items:flex-start")}>
         <div style={css("flex:none;display:flex;flex-direction:column;gap:5px;padding:2px 0 0 2px")}>
-          <span style={css("display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}>
-            <span
-              style={{
-                width: 9,
-                height: 9,
-                borderRadius: 9999,
-                flex: "none",
-                background: allOn ? "var(--green-700)" : "var(--amber-700)",
-                ...(allOn ? { animation: "livePulse 2.2s ease-in-out infinite" } : null),
-              }}
-            />
-            <span style={css("font:700 11px 'Geist Mono',monospace;letter-spacing:.5px;color:" + (allOn ? "var(--green-900)" : "var(--amber-900)"))}>
-              {allOn ? "LIVE" : "데모 모드"}
-            </span>
-          </span>
+          {/* 심장박동 점 — 전부 정상이면 초록으로 잔잔히 숨쉰다. 텍스트 없이 점 하나가 말한다 */}
+          <span
+            title={allOn ? "전 시스템 정상 가동" : "데모 모드 — 일부 시스템 미연결"}
+            style={{
+              width: 9,
+              height: 9,
+              borderRadius: 9999,
+              flex: "none",
+              marginLeft: 1,
+              background: allOn ? "var(--green-700)" : "var(--amber-700)",
+              ...(allOn ? { animation: "livePulse 2.2s ease-in-out infinite" } : null),
+            }}
+          />
           {railLamp(lampBackend, "백엔드")}
           {railLamp(lampDb, "DB")}
           {railLamp(lampRag, "RAG")}
