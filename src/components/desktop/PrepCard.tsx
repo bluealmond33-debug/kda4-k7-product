@@ -83,9 +83,10 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
           )}
 
-          {/* 신호 밴드 — 요약 바로 다음. 감정온도·사고징후를 나란히, 값은 크게(색줄 없이 값 색으로만) */}
-          <div style={css("display:flex;gap:12px")}>
-            <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:13px 15px")}>
+          {/* 좌: 감정온도·사고징후 세로 스택 / 우: 해야 할 일(상담 중 가장 중요한 실행 항목) */}
+          <div style={css("display:flex;gap:12px;align-items:flex-start")}>
+            <div style={css("flex:none;width:238px;display:flex;flex-direction:column;gap:12px")}>
+            <div style={css("background:var(--gray-100);border-radius:8px;padding:13px 15px")}>
               <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>고객 감정온도</div>
               <div style={css("display:flex;align-items:center;gap:8px")}>
                 <span className="lampdots">
@@ -108,17 +109,17 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               </div>
               <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:4px")}>{vm.prepEmotionSignal}</div>
             </div>
-            <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:13px 15px")}>
+            <div style={css("background:var(--gray-100);border-radius:8px;padding:13px 15px")}>
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
                 <span className="mi" style={css("font-size:14px;color:" + vm.prepRiskFg)}>gpp_maybe</span>사고 징후
               </div>
               <div style={css("font:700 18px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</div>
               <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg + ";margin-top:4px")}>{vm.prepRiskSignal}</div>
             </div>
-          </div>
+            </div>
 
-          {/* 해야 할 일 — 요약을 실행 항목으로 분해(프로즈는 헤드라인과 중복이라 제거) + AI 배정 */}
-          <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
+            {/* 우: 해야 할 일 — 상담 중 가장 중요한 실행 항목 + AI 배정 */}
+            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
             <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>
               <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>checklist</span>해야 할 일
             </div>
@@ -134,6 +135,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
               <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
               <span style={css("font:600 10.5px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900)")}>{vm.prepConfidence}</span>
+            </div>
             </div>
           </div>
 
