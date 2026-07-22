@@ -14,3 +14,6 @@ app/services/routing/models/*.joblib
 # WavLM 음성분노 — 체크포인트/백본 캐시는 git 제외 (hippo handoff·HF에서 별도 수급)
 app/services/k7modeling/models/hf_cache/
 app/services/k7modeling/models/*.pt
+
+# RAG FAISS 인덱스(청크에서 재생성 가능) — git 제외
+app/services/rag_data/*.index
