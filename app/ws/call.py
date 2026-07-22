@@ -5,7 +5,9 @@
 """
 from __future__ import annotations
 
+import io
 import time
+import wave
 
 from fastapi import APIRouter, WebSocket
 from starlette.concurrency import run_in_threadpool
@@ -14,6 +16,7 @@ from app.config import settings
 from app.services.stream_segmenter import UtteranceSegmenter
 from app.services.streaming_stt import transcribe_utterance
 from app.services.pii_guard import mask_transcript
+from app.services.voice_anger import analyze_voice_anger
 
 router = APIRouter()
 
@@ -58,6 +61,17 @@ async def _broadcast(session: CallSession, message: dict) -> None:
         session.agents.discard(ws)
 
 
+def _pcm_to_wav(pcm: bytes, sample_rate: int = 16_000) -> bytes:
+    """16k mono Int16 PCM(WS 프레임)을 WavLM이 받는 WAV 컨테이너로 감싼다(헤더만 추가)."""
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(sample_rate)
+        handle.writeframes(pcm)
+    return buffer.getvalue()
+
+
 async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     text = await run_in_threadpool(transcribe_utterance, settings, utterance)
     if not text:
@@ -65,6 +79,9 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     # 개인정보 보호(주제 11·12): 상담사·AI에 나가는 전사는 마스킹본만.
     # 원본 음성(utterance)은 이 함수 안에서만 쓰이고 저장·반환하지 않는다(휘발).
     masked, hits = mask_transcript(text)
+    # 음성 분노(WavLM) — 격양도가 놓치는 '냉정한 분노'를 잡는 주의도 보조 신호.
+    # 모델/의존성 없으면 analyze_voice_anger가 None을 돌려줘 무해(하위호환).
+    anger = await run_in_threadpool(analyze_voice_anger, _pcm_to_wav(utterance))
     session.seq += 1
     await _broadcast(
         session,
@@ -74,6 +91,8 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
             "speaker": "customer",
             "text": masked,
             "pii_masked": len(hits),  # 이 발화에서 마스킹된 개인정보 건수(화면 배지용)
+            "anger_detected": bool(anger.detected) if anger else False,
+            "anger_probability": round(anger.probability, 3) if anger else None,
             "isFinal": True,
             "at": int(time.time() * 1000),
         },
