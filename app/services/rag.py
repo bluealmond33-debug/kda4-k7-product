@@ -28,6 +28,8 @@
 import json
 import logging
 import pathlib
+import shutil
+import tempfile
 
 import httpx
 import numpy as np
@@ -423,13 +425,20 @@ def _ensure_index(settings: Settings) -> faiss.IndexFlatIP:
     if cache_key in _index_cache:
         return _index_cache[cache_key]
 
-    # 디스크 영속 인덱스가 코퍼스 크기와 일치하면 로드(1,153청크 재임베딩 회피 — 재시작 빠름)
+    # 디스크 영속 인덱스가 코퍼스 크기와 일치하면 로드(1,153청크 재임베딩 회피 — 재시작 빠름).
+    # FAISS(Windows)는 비ASCII 경로 IO에 실패("Illegal byte sequence")하므로 ASCII 임시경로를 경유한다.
     persist = _INDEX_DIR / f"faiss_{cache_key}.index"
+    tmp = pathlib.Path(tempfile.gettempdir()) / f"_karina_faiss_{cache_key}.index"
     if persist.is_file():
-        index = faiss.read_index(str(persist))
-        if index.ntotal == len(_DOCS):
-            _index_cache[cache_key] = index
-            return index
+        try:
+            shutil.copy(str(persist), str(tmp))
+            index = faiss.read_index(str(tmp))
+            tmp.unlink(missing_ok=True)
+            if index.ntotal == len(_DOCS):
+                _index_cache[cache_key] = index
+                return index
+        except Exception:
+            logger.warning("FAISS 인덱스 로드 실패 — 재빌드", exc_info=True)
 
     # 배치 임베딩 — 큰 코퍼스를 Ollama에 한 번에 넣지 않는다(64개씩).
     texts = [doc["text"] for doc in _DOCS]
@@ -441,9 +450,10 @@ def _ensure_index(settings: Settings) -> faiss.IndexFlatIP:
     index.add(vectors)
     try:
         _INDEX_DIR.mkdir(parents=True, exist_ok=True)
-        faiss.write_index(index, str(persist))
+        faiss.write_index(index, str(tmp))      # ASCII 임시경로에 쓰고
+        shutil.move(str(tmp), str(persist))     # 유니코드 이동은 파이썬이 처리
     except Exception:
-        logger.warning("FAISS 인덱스 영속 실패(무해)", exc_info=True)
+        logger.warning("FAISS 인덱스 영속 실패(무해 — 다음 기동 시 재빌드)", exc_info=True)
     _index_cache[cache_key] = index
     return index
 
