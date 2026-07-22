@@ -64,14 +64,14 @@ export default function LiveTranscriptPanel({
   return (
     <div
       style={css(
-        "flex:none;width:470px;height:532px;display:flex;flex-direction:column;background:var(--onair-surface);border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.4);overflow:hidden"
+        "flex:none;width:400px;height:532px;display:flex;flex-direction:column;background:var(--onair-surface);border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.4);overflow:hidden"
       )}
     >
       {/* 파형 — 상자 안 상자: 흰 패널 속 여백을 둔 검은 라운드 무대, 그 위 흰 물결.
           늘 흐르고, 말하면 요동친다 */}
       <div
         style={css(
-          "flex:none;margin:16px 16px 0;height:112px;position:relative;background:#0a0a0e;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 10px 26px rgba(10,10,14,.22)"
+          "flex:none;margin:16px 16px 0;height:180px;position:relative;background:#0a0a0e;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 10px 26px rgba(10,10,14,.22)"
         )}
       >
         <div style={css("position:absolute;inset:0")}>
@@ -91,8 +91,9 @@ export default function LiveTranscriptPanel({
             </span>
           </div>
         ) : (
-          <div style={css("font:400 15.5px/1.85 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
-            {settled && <span style={css("color:var(--gray-800)")}>{settled + " "}</span>}
+          {/* 코딩 글자 — STT 원출력의 러프한 터미널 감각 */}
+          <div style={css("font:400 13px/1.95 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-1000);letter-spacing:-.2px;word-break:break-all")}>
+            {settled && <span style={css("color:var(--gray-700)")}>{settled + " "}</span>}
             <TextType
               key={lastLine.id}
               as="span"
