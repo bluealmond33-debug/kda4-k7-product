@@ -27,6 +27,7 @@ from app.rag import (
     RegulationSearchUnavailable,
     initialize_rag,
     search_regulations,
+    get_regulation_document,
 )
 from app.rag import embedder
 from app.rag.taxonomy import is_valid_category
@@ -129,6 +130,18 @@ def search_regulations_endpoint(
     except RegulationSearchUnavailable:
         return {"query": q, "category": category, "available": False, "documents": []}
     return {"query": q, "category": category, "available": True, "documents": documents}
+
+
+@app.get("/api/v1/regulations/documents/{doc_id}")
+def read_regulation_document(doc_id: str) -> dict:
+    """규정 문서 원문 열람 — 메타 + 페이지순 청크 전체 (프론트 원문 시트용)."""
+    try:
+        doc = get_regulation_document(settings, doc_id)
+    except RegulationSearchUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"unknown document: {doc_id}")
+    return doc
 
 
 @app.get(

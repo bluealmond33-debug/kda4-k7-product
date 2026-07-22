@@ -207,6 +207,7 @@ def search_regulations(
 
     return [
         {
+            "chunk_id": r["chunk_id"],
             "doc_id": r["doc_id"],
             "title": r["title"],
             "page": r["page"],
@@ -221,3 +222,50 @@ def search_regulations(
         }
         for r in rows
     ]
+
+
+def get_regulation_document(settings: Settings, doc_id: str) -> dict[str, Any] | None:
+    """문서 메타 + 페이지순 청크 전체 — 프론트의 '원문 열람 시트'(엑셀 룩) 데이터.
+
+    검색 히트의 '열기'가 이 문서를 열어 해당 청크 행을 강조한다.
+    """
+    try:
+        with psycopg.connect(
+            _database_url(settings), row_factory=dict_row
+        ) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT doc_id, title, doc_type, categories, version, effective_date, source_file "
+                    "FROM rag_documents WHERE doc_id = %s AND status = 'active'",
+                    (doc_id,),
+                )
+                doc = cursor.fetchone()
+                if doc is None:
+                    return None
+                cursor.execute(
+                    "SELECT chunk_id, page, kind, section, raw "
+                    "FROM rag_chunks WHERE doc_id = %s ORDER BY page, chunk_id",
+                    (doc_id,),
+                )
+                chunks = cursor.fetchall()
+    except psycopg.Error as exc:
+        raise RegulationSearchUnavailable("regulation document query failed") from exc
+    return {
+        "doc_id": doc["doc_id"],
+        "title": doc["title"],
+        "doc_type": doc["doc_type"],
+        "categories": list(doc["categories"] or []),
+        "version": doc["version"],
+        "effective_date": str(doc["effective_date"]) if doc["effective_date"] else None,
+        "source_file": doc["source_file"],
+        "chunks": [
+            {
+                "chunk_id": c["chunk_id"],
+                "page": c["page"],
+                "kind": c["kind"],
+                "section": c["section"],
+                "text": c["raw"],
+            }
+            for c in chunks
+        ],
+    }

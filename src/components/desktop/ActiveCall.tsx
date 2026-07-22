@@ -538,10 +538,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                         규정 원문 의미 검색{vm.semLoading ? " · 검색 중…" : ` · ${vm.semHits.length}건`}
                       </div>
                       <div style={css("display:flex;flex-direction:column;gap:7px")}>
-                        {vm.semHits.map((h) => (
+                        {vm.semHits.slice(0, 4).map((h) => (
                           <div
-                            key={`${h.doc_id}-${h.page}-${h.section ?? ""}`}
-                            style={css("border:1px solid var(--gray-200);border-radius:10px;padding:9px 11px;background:var(--onair-surface);animation:fadeIn .2s ease-out")}
+                            key={h.chunk_id}
+                            onClick={() => vm.openRegDocReal(h.doc_id, h.chunk_id)}
+                            title="클릭하면 원문 시트가 열립니다"
+                            style={css("border:1px solid var(--gray-200);border-radius:10px;padding:9px 11px;background:var(--onair-surface);animation:fadeIn .2s ease-out;cursor:pointer")}
                           >
                             <div style={css("display:flex;align-items:center;gap:5px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
                               <span style={css("flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>{h.title}</span>
@@ -581,6 +583,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   </div>
                 </div>
               </div>
+            ) : vm.regDoc || vm.regDocLoading ? (
+              <RegDocSheet vm={vm} />
+            ) : vm.regSearch.trim() && vm.semHits.length > 0 ? (
+              <RegCorpusSearchSheet vm={vm} />
             ) : (
               <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
                 {/* 엑셀 크롬 — 실물 메타포는 실물의 색(엑셀 초록). 검색·파일 업로드가 여기 산다 */}
@@ -670,6 +676,108 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         </div>
       )}
     </DesktopShell>
+  );
+}
+
+/** 실제 규정 원문 열람 시트 — 검색 히트를 클릭하면 그 문서의 청크 전체를 엑셀 룩으로.
+ *  강조 청크(검색에서 들어온 자리)로 자동 스크롤한다. */
+function RegDocSheet({ vm }: { vm: CallFlowVM }) {
+  const hitRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    hitRef.current?.scrollIntoView({ block: "center" });
+  }, [vm.regDoc, vm.regDocChunk]);
+  const doc = vm.regDoc;
+  return (
+    <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
+      <div style={css("display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--excel-green);color:#fff")}>
+        <span onClick={vm.closeRegDoc} title="검색 결과로 돌아가기" style={css("display:flex;align-items:center;gap:3px;cursor:pointer;background:rgba(255,255,255,.16);border-radius:9999px;padding:4px 10px;font:600 11px 'Geist Sans','Pretendard',sans-serif")}>
+          <span className="mi" style={css("font-size:14px")}>arrow_back</span>검색
+        </span>
+        <span className="mi" style={css("font-size:18px")}>grid_on</span>
+        <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>{doc ? doc.title : "원문 불러오는 중…"}</span>
+        {doc && (
+          <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;opacity:.85;flex:none")}>· {doc.version} · {doc.chunks.length}행</span>
+        )}
+        <span style={css("margin-left:auto;flex:none;font:400 10.5px 'Geist Sans','Pretendard',sans-serif;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px")}>{doc?.source_file ?? ""}</span>
+      </div>
+      <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
+        {!doc ? (
+          <div style={css("padding:40px 0;display:flex;justify-content:center")}>
+            <span style={css("width:26px;height:26px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
+          </div>
+        ) : (
+          <div style={css("display:flex;flex-direction:column")}>
+            <div style={css("display:flex;position:sticky;top:0;z-index:1")}>
+              {[["p", 40], ["구분", 48], ["섹션", 150], ["내용", 0]].map(([l, w], i) => (
+                <span key={i} style={css((w ? "width:" + w + "px;flex:none" : "flex:1;min-width:0") + ";padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{l}</span>
+              ))}
+            </div>
+            {doc.chunks.map((c) => {
+              const hit = c.chunk_id === vm.regDocChunk;
+              return (
+                <div key={c.chunk_id} ref={hit ? hitRef : undefined} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--blue-700);position:relative;z-index:1" : ""))}>
+                  <span style={css("width:40px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--blue-900)" : "var(--gray-600)") + ";background:" + (hit ? "var(--blue-100)" : "var(--gray-100)"))}>{c.page}</span>
+                  <span style={css("width:48px;flex:none;padding:8px 6px;text-align:center;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:" + (hit ? "var(--blue-100)" : "transparent"))}>{c.kind === "table" ? "표" : "본문"}</span>
+                  <span style={css("width:150px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 11.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:" + (hit ? "var(--blue-100)" : "transparent") + ";overflow:hidden;text-overflow:ellipsis")}>{c.section ?? ""}</span>
+                  <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);white-space:pre-wrap;background:" + (hit ? "var(--blue-100)" : "transparent"))}>{highlight(c.text, vm.regSearch)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div style={css("display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--gray-100);border-top:1px solid var(--gray-300);font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+        <span className="mi" style={css("font-size:13px")}>database</span>
+        실제 규정 코퍼스(pgvector) 원문 · 강조 행 = 검색이 찾은 자리
+      </div>
+    </div>
+  );
+}
+
+/** 실제 코퍼스 검색 결과 시트 — 펼친 상태에서 검색어가 있으면 32개 문서 전체를 대상으로 한
+ *  하이브리드 검색 결과를 엑셀 룩으로. 행 클릭 = 그 문서 원문 열람. */
+function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
+  return (
+    <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
+      <div style={css("display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--excel-green);color:#fff")}>
+        <span className="mi" style={css("font-size:18px")}>manage_search</span>
+        <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif")}>규정 원문 검색</span>
+        <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;opacity:.85")}>· 실제 코퍼스 · {vm.semHits.length}건</span>
+        <span style={css("margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.16);border-radius:9999px;padding:4px 10px")}>
+          <span className="mi" style={css("font-size:14px")}>search</span>
+          <input
+            value={vm.regSearch}
+            onChange={vm.onRegSearch}
+            placeholder="의미 검색"
+            style={css("width:130px;border:none;outline:none;background:transparent;color:#fff;font:400 11.5px 'Geist Sans','Pretendard',sans-serif")}
+          />
+          {vm.regSearch && (
+            <span className="mi" onClick={vm.clearRegSearch} style={css("font-size:13px;cursor:pointer;opacity:.8")}>close</span>
+          )}
+        </span>
+      </div>
+      <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
+        <div style={css("display:flex;flex-direction:column")}>
+          <div style={css("display:flex;position:sticky;top:0;z-index:1")}>
+            {[["문서", 150], ["p", 36], ["구분", 48], ["내용 (클릭 = 원문 열람)", 0]].map(([l, w], i) => (
+              <span key={i} style={css((w ? "width:" + w + "px;flex:none" : "flex:1;min-width:0") + ";padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{l}</span>
+            ))}
+          </div>
+          {vm.semHits.map((h) => (
+            <div key={h.chunk_id} onClick={() => vm.openRegDocReal(h.doc_id, h.chunk_id)} className="memorow" style={css("display:flex;cursor:pointer")}>
+              <span style={css("width:150px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:600 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis")}>{h.title}</span>
+              <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600);background:var(--gray-100)")}>{h.page}</span>
+              <span style={css("width:48px;flex:none;padding:8px 6px;text-align:center;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{h.kind === "table" ? "표" : "본문"}</span>
+              <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(h.excerpt, vm.regSearch)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={css("display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--gray-100);border-top:1px solid var(--gray-300);font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+        <span className="mi" style={css("font-size:13px")}>database</span>
+        pgvector 하이브리드(의미+키워드) 검색 · 규정 문서 32건 대상
+      </div>
+    </div>
   );
 }
 

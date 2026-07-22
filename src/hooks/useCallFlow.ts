@@ -38,6 +38,8 @@ import {
 } from "../services";
 import {
   searchRegulations,
+  fetchRegulationDocument,
+  type RegulationDoc,
   categoryForDepartment,
   semanticSearchEnabled,
   type RegulationHit,
@@ -225,6 +227,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [manualData, setManualData] = useState<SheetData | null>(null);
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
+  // 실제 규정 원문 열람 — 검색 히트를 클릭하면 그 문서의 청크 전체가 시트로 열린다
+  const [regDoc, setRegDoc] = useState<RegulationDoc | null>(null);
+  const [regDocChunk, setRegDocChunk] = useState<string | null>(null);
+  const [regDocLoading, setRegDocLoading] = useState(false);
+  const openRegDocReal = useCallback((docId: string, chunkId?: string) => {
+    setRegExpanded(true);
+    setRegTargetRow(null);
+    setRegDocChunk(chunkId ?? null);
+    setRegDocLoading(true);
+    void fetchRegulationDocument(docId)
+      .then((doc) => setRegDoc(doc))
+      .finally(() => setRegDocLoading(false));
+  }, []);
   // 의미 검색(2단 검색의 2단째) — 로컬 시트 필터는 0ms 즉시, 시맨틱은 디바운스 후
   // 백엔드 pgvector 하이브리드(/api/v1/regulations/search)가 규정 원문 청크를 더한다
   const [semHits, setSemHits] = useState<RegulationHit[]>([]);
@@ -875,7 +890,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           category: categoryForDepartment(
             consultationResponse.consultation_card.department
           ),
-          k: 4,
+          k: 10,
           signal: ctrl.signal,
         });
         setSemHits(res.available ? res.documents : []);
@@ -1264,6 +1279,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     closeReg: () => {
       setRegExpanded(false);
       setRegTargetRow(null);
+      setRegDoc(null);
+      setRegDocChunk(null);
+    },
+    // 실제 규정 원문 열람
+    regDoc,
+    regDocChunk,
+    regDocLoading,
+    openRegDocReal,
+    closeRegDoc: () => {
+      setRegDoc(null);
+      setRegDocChunk(null);
     },
     regTargetRow,
     regExpanded,

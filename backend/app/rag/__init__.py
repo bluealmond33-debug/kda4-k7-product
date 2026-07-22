@@ -12,10 +12,12 @@ from app.rag.store import (
     RegulationSearchUnavailable,
     initialize_rag,
     search_regulations,
+    get_regulation_document,
 )
 
 __all__ = [
     "RegulationSearchUnavailable",
     "initialize_rag",
     "search_regulations",
+    "get_regulation_document",
 ]

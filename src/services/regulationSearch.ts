@@ -8,6 +8,7 @@
 import { API_BASE_URL, DATA_API_PREFIX } from "./config";
 
 export interface RegulationHit {
+  chunk_id: string;
   doc_id: string;
   title: string;
   page: number;
@@ -64,4 +65,44 @@ export async function searchRegulations(
   );
   if (!res.ok) throw new Error(`regulation search failed: ${res.status}`);
   return (await res.json()) as RegulationSearchResponse;
+}
+
+
+// ── 원문 열람 — 검색 히트를 클릭하면 그 문서 전체를 '엑셀 룩' 시트로 연다 ──
+export interface RegulationDocChunk {
+  chunk_id: string;
+  page: number;
+  kind: "text" | "table";
+  section: string | null;
+  text: string;
+}
+
+export interface RegulationDoc {
+  doc_id: string;
+  title: string;
+  doc_type: string;
+  categories: string[];
+  version: string;
+  effective_date: string | null;
+  source_file: string;
+  chunks: RegulationDocChunk[];
+}
+
+/** 문서 메타 + 페이지순 청크 전체. 백엔드가 없거나 실패하면 null — 호출부는 더미 시트를 유지한다. */
+export async function fetchRegulationDocument(
+  docId: string,
+  opts: { signal?: AbortSignal } = {}
+): Promise<RegulationDoc | null> {
+  if (!semanticSearchEnabled) return null;
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}${DATA_API_PREFIX}/regulations/documents/${encodeURIComponent(docId)}`,
+      { signal: opts.signal }
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as RegulationDoc;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    return null;
+  }
 }
