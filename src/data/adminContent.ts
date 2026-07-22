@@ -49,15 +49,15 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
   {
     id: "stt",
     label: "실시간 STT",
-    tech: "Whisper · 문장 단위 전사",
+    tech: "faster-whisper · 문장 전사",
     icon: "graphic_eq",
     explain:
       "음성이 문장 단위 텍스트로 바뀝니다. 이 전사본이 분류·요약·규정검색의 공통 재료입니다.",
     spec: {
-      engine: "Whisper(whisper-1) · 온프레미스 전환: faster-whisper large-v3-turbo(GPU)",
+      engine: "faster-whisper large-v3-turbo (GPU · 온프레미스, 희창 백엔드 실가동) — 데모 백엔드는 whisper-1",
       io: "오디오 → 문장 단위 한국어 전사",
       status: "실가동",
-      statusNote: "백엔드 연결 시 실제 호출 — 관제의 테스트 콜은 같은 이벤트 경로의 시뮬레이션.",
+      statusNote: "온프레미스 STT는 팀 백엔드에서 가동 중. 이 대시보드의 데모 백엔드는 whisper-1 호출 — 통합 시 일원화.",
       lines: [
         "전사본이 분류·요약·규정검색의 공통 재료",
         "침묵 감지(무응답 2단계)로 접수를 자동 종료",
@@ -67,15 +67,15 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
   {
     id: "classify",
     label: "sLLM 분류·요약",
-    tech: "strict-JSON · 업무유형",
+    tech: "EXAONE 3.5 · strict-JSON",
     icon: "psychology",
     explain:
       "언어모델이 발화를 요약하고 업무유형을 뽑습니다. 출력은 스키마 강제(strict-JSON) — 화면과 DB가 같은 계약(mvp-1.0)을 공유합니다.",
     spec: {
-      engine: "gpt-4o-mini · strict json_schema — 온프레미스 전환: EXAONE 3.5 7.8B(Ollama)",
+      engine: "EXAONE 3.5 7.8B (Ollama · 온프레미스, 팀 표준 sLLM — 희창 백엔드 실가동) · 데모 백엔드: gpt-4o-mini",
       io: "전사 → 요약·업무유형·부서·근거 (mvp-1.0 카드)",
       status: "실가동",
-      statusNote: "card_routing_pipeline.py — 출력 스키마 강제라 화면·DB가 같은 계약을 공유.",
+      statusNote: "요약·분류의 팀 표준은 EXAONE(한국어 특화, LG). 데모 백엔드는 gpt-4o-mini로 같은 계약(mvp-1.0)을 출력 — 온프렘 통합 시 EXAONE으로 일원화.",
       lines: [
         "부서 8종 라벨셋은 RAG 8대분류와 코드 공유 (부서 확정 = 검색 필터 확정)",
         "LLM 실패 시 긴급 콜 규칙 폴백",
@@ -90,7 +90,7 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     explain:
       "보이스피싱·명의도용 같은 사고 징후와 감정온도를 판단합니다. 긴급(E) 판정의 근거가 여기서 나옵니다.",
     spec: {
-      engine: "사고징후: 규칙+LLM 동시 산출 · 감정온도: eGeMAPS+LightGBM(박정운 음향 모델)",
+      engine: "사고징후: 긴급 규칙 + sLLM(EXAONE) 동시 산출 · 감정온도: eGeMAPS+LightGBM(박정운 음향 모델)",
       io: "전사·음향 → incident_risk(low/high) · 감정온도(안정/주의/고조)",
       status: "연동 대기",
       statusNote: "감정 융합 모델은 온프레미스 백엔드(이희창)에 완성·가동 — 이 파이프라인에는 미연동이라 화면 감정값은 [SOURCE=STUB] 데모값입니다.",

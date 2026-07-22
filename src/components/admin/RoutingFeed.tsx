@@ -12,7 +12,7 @@ const fmtTime = (ts: number) => {
 /** 카드 속 미니 파이프라인 — 이 콜이 지금 8단계 중 어디를 지나는지.
  *  상단 큰 플로우가 '개념도'라면 이건 '이 콜의 실제 진행'이다 — 카드마다 제 프로세스가 돈다.
  *  done=초록 점 · 진행=파랑 점(점멸) · 대기=꺼진 점. compact는 스트립용(라벨 없음). */
-function MiniPipeline({
+export function MiniPipeline({
   stages,
   compact = false,
 }: {
@@ -70,10 +70,13 @@ export default function RoutingFeed({
   feed,
   totalCards,
   explain,
+  onOpenCard,
 }: {
   feed: AdminCallRecord[];
   totalCards: number;
   explain: boolean;
+  /** 타임라인 행 클릭 → 상담카드 상세 팝업 */
+  onOpenCard: (r: AdminCallRecord) => void;
 }) {
   // "진행 중" = 분류 파이프라인이 도는 중(라우팅 전). 라우팅되면 이 피드의 여정은 끝 —
   // 대기열 배정(G/E)이든 AI 응대(S)든 타임라인으로 내려간다. (라우팅 후 통화·후처리는
@@ -144,7 +147,7 @@ export default function RoutingFeed({
               {/* 타임라인 축 — 점들이 이 선 위에 앉는다 */}
               <div style={css("position:absolute;left:57px;top:7px;bottom:7px;width:1px;background:var(--gray-300)")} />
               {strips.map((r) => (
-                <TimelineRow key={r.callId} r={r} />
+                <TimelineRow key={r.callId} r={r} onOpen={() => onOpenCard(r)} />
               ))}
             </div>
           </div>
@@ -227,11 +230,17 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
 
 /** 완료 로그 한 줄 — 시각(거터) · 축 위의 색 점 · 업무명 · 부서.
  *  카드 더미 대신 관제실 처리 대장(ledger)으로 읽힌다. S는 AI 응대 표시가 붙는다. */
-function TimelineRow({ r }: { r: AdminCallRecord }) {
+function TimelineRow({ r, onOpen }: { r: AdminCallRecord; onOpen: () => void }) {
   const sge = r.sge;
   const meta = sge ? SGE_META[sge] : null;
   return (
-    <div style={css("display:flex;align-items:center;gap:9px;padding:4.5px 2px;min-height:24px")}>
+    <div
+      onClick={onOpen}
+      title="클릭하면 상담카드 상세"
+      style={css("display:flex;align-items:center;gap:9px;padding:4.5px 6px 4.5px 2px;min-height:24px;border-radius:7px;cursor:pointer;transition:background .15s")}
+      onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--gray-100)")}
+      onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
+    >
       <span style={css("flex:none;width:40px;text-align:right;font:500 10px 'Geist Mono',monospace;color:var(--gray-700)")}>
         {fmtTime(r.startedAt)}
       </span>

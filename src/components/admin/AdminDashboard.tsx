@@ -12,7 +12,9 @@ import KnowledgeBasePanel from "./KnowledgeBasePanel";
 import ClassificationPolicyModal from "./ClassificationPolicyModal";
 import RegulationUploadModal from "./RegulationUploadModal";
 import NodeDetailModal from "./NodeDetailModal";
+import CallCardModal from "./CallCardModal";
 import type { PipelineNodeDef } from "../../data/adminContent";
+import type { AdminCallRecord } from "../../hooks/useAdminFeed";
 
 // 직원 단독 화면(?role=employee)과 동일한 맞춤 — LiveDemo view="desktop"의 값 그대로:
 // 폭 1100 스테이지를 브라우저 가로에 맞추고(좌우 24px 패드), 큰 모니터에선 최대 3배 확대.
@@ -39,6 +41,7 @@ export default function AdminDashboard() {
   const [policyOpen, setPolicyOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [nodeDetail, setNodeDetail] = useState<PipelineNodeDef | null>(null);
+  const [cardDetail, setCardDetail] = useState<AdminCallRecord | null>(null);
 
   // 직원 화면과 같은 가로 맞춤 스케일 (LiveDemo view="desktop"의 fit 로직과 동일)
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -112,7 +115,12 @@ export default function AdminDashboard() {
                 onNodeClick={setNodeDetail}
               />
               <div style={css("flex:1;display:grid;grid-template-columns:400px 1fr;gap:12px;min-height:0")}>
-                <RoutingFeed feed={feed.feed} totalCards={feed.state.totalCards} explain={explain} />
+                <RoutingFeed
+                  feed={feed.feed}
+                  totalCards={feed.state.totalCards}
+                  explain={explain}
+                  onOpenCard={setCardDetail}
+                />
                 <DepartmentBoard feed={feed} explain={explain} />
               </div>
               {/* 하단 행 — 지식베이스 풀폭 (테스트 콜 리모컨은 상단 알약으로 이동) */}
@@ -134,6 +142,7 @@ export default function AdminDashboard() {
         <RegulationUploadModal onClose={() => setUploadOpen(false)} onLoaded={refreshStatus} />
       )}
       {nodeDetail && <NodeDetailModal node={nodeDetail} onClose={() => setNodeDetail(null)} />}
+      {cardDetail && <CallCardModal record={cardDetail} onClose={() => setCardDetail(null)} />}
     </div>
   );
 }
