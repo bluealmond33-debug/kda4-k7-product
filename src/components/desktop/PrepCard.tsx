@@ -103,18 +103,18 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                   style={css("font:600 9px 'Geist Mono',monospace;padding:2px 6px;border-radius:5px;background:var(--gray-200);color:var(--gray-600)")}
                 >{vm.prepEmotionSourceBadge.label}</span>
               </div>
-              <div style={css("display:flex;align-items:baseline;gap:7px")}>
-                <span style={css("font:800 34px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.2px;color:" + vm.prepEmotionFg)}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
-                <span style={css("font:700 16px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
+              <div style={css("display:flex;align-items:baseline;gap:8px")}>
+                <span style={css("font:800 40px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.5px;color:var(--gray-1000)")}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
+                <span style={css("font:800 17px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepEmotionLabel}</span>
               </div>
-              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionFg + ";margin-top:5px")}>{vm.prepEmotionSignal}</div>
+              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:5px")}>{vm.prepEmotionSignal}</div>
             </div>
             <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 15px")}>
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>
-                <span className="mi" style={css("font-size:14px;color:" + vm.prepRiskFg)}>gpp_maybe</span>사고 징후
+                <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>gpp_maybe</span>사고 징후
               </div>
-              <div style={css("font:800 30px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1px;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</div>
-              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepRiskFg + ";margin-top:5px")}>{vm.prepRiskSignal}</div>
+              <div style={css("font:800 34px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.2px;color:var(--gray-1000)")}>{vm.prepRiskLabel}</div>
+              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:5px")}>{vm.prepRiskSignal}</div>
             </div>
             </div>
 
