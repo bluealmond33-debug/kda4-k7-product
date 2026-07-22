@@ -113,21 +113,24 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
   return (
     <div style={{ ...css("display:flex;flex-direction:column;align-items:center;gap:22px;transition:opacity .3s"), opacity: dimmed ? 0.55 : 1 }}>
       {/* ── 위: 날씨 아이콘 행(전부 깔고 현재만 켜짐) · 기온 · 습도 — 값은 전부 같은 검정, 단위만 라벨 ── */}
-      <div style={css("display:flex;align-items:center;gap:16px")}>
-        <div style={css("display:flex;align-items:center;gap:8px")}>
+      {/* 좌(아이콘)·우(온도·습도)를 같은 폭으로 나누고 가운데 바를 정중앙에 고정 */}
+      <div style={css("display:flex;align-items:center;width:600px")}>
+        <div style={css("flex:1;display:flex;justify-content:flex-end;align-items:center;gap:8px")}>
           {WX_ICONS.map((Ic, i) => (
             <Ic key={i} size={22} strokeWidth={2.4} color={i === wxIdx ? INK : ICON_GHOST} />
           ))}
         </div>
-        <span style={css("align-self:center;width:1.5px;height:24px;margin:0 6px;background:var(--gray-200);border-radius:1px")} />
-        <div style={css("display:flex;align-items:flex-start;gap:5px")}>
-          <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={24} />
-          <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: LABEL, marginTop: 2 }}>°C</span>
-        </div>
-        <Droplets size={20} strokeWidth={2.2} color={INK} />
-        <div style={css("display:flex;align-items:flex-start;gap:5px")}>
-          <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={24} />
-          <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: LABEL, marginTop: 2 }}>%</span>
+        <span style={css("flex:none;width:1.5px;height:24px;margin:0 18px;background:var(--gray-200);border-radius:1px")} />
+        <div style={css("flex:1;display:flex;justify-content:flex-start;align-items:center;gap:16px")}>
+          <div style={css("display:flex;align-items:flex-start;gap:5px")}>
+            <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={24} />
+            <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: LABEL, marginTop: 2 }}>°C</span>
+          </div>
+          <Droplets size={20} strokeWidth={2.2} color={INK} />
+          <div style={css("display:flex;align-items:flex-start;gap:5px")}>
+            <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={24} />
+            <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: LABEL, marginTop: 2 }}>%</span>
+          </div>
         </div>
       </div>
 
