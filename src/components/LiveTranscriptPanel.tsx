@@ -2,41 +2,44 @@ import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import TextType from "./TextType";
 import Threads from "./Threads";
-import type { LiveLine } from "../hooks/useLiveCallBus";
 
 /**
  * 고객 화면(?role=customer) 오른쪽 — 음성 파형(Threads) + STT 전사 스트림.
  *
- * 라벨·상태 문구는 없다 — 그건 전부 상단 상황 알약의 몫이고, 이 패널은
+ * 검은 패널 — 흰 폰보다 눈에 덜 띄어야 한다(주인공은 폰, 이건 배경 정보).
+ * 라벨·상태 문구는 없다: 그건 상단 상황 알약의 몫이고, 이 패널은
  * "소리가 흐른다"(물결)와 "말이 글자가 된다"(전사) 두 감각만 보여준다.
  *
- * 물결은 가만히 있어도 잔잔하게 흐르고(기저 0.5), 발화가 도착하면
- * 크게 요동쳤다가(2.3) 서서히 가라앉는다 — 말의 에너지가 물결로 보인다.
- * (실마이크 연동 시 AnalyserNode 데시벨로 같은 amplitude를 구동하면 된다)
+ * 스트림에는 고객 발화(cust)와 AI 안내 멘트(ai)가 도착 순서로 섞인다 —
+ * 고객 조각들은 STT답게 한 문단으로 이어 붙고, AI 멘트는 별도 줄로 끊는다.
+ * 마지막 조각만 커서와 함께 타이핑된다(TextType).
  *
- * 전사는 STT답게 문장별로 끊지 않고 한 흐름으로 이어 붙인다 —
- * 확정된 텍스트 뒤에 새 조각이 계속 타이핑되며 자라나는 하나의 문단.
+ * 물결은 가만히 있어도 잔잔히 흐르고(기저 0.9/1.1), 발화가 도착하면
+ * 크게 요동(3.0)쳤다가 천천히 가라앉는다 — Siri 파형의 어택·릴리즈 원리.
  */
 
+export interface StreamItem {
+  id: string;
+  text: string;
+  who: "cust" | "ai";
+}
+
 export default function LiveTranscriptPanel({
-  lines,
+  stream,
   active,
 }: {
-  lines: LiveLine[];
+  stream: StreamItem[];
   active: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // 발화 반응 파형 — Siri 파형 원리(음량 비례 진폭 + 빠른 어택·느린 릴리즈)를
-  // 발화 이벤트에 적용: 새 조각마다 즉시 스파이크(3.0) 후 기저로 천천히 감쇠.
-  // 기저: 대기 0.9 · 통화 중 1.1 — 가만히 있어도 물결이 살아서 흐른다.
-  // (Threads 자체가 40겹 라인 + Perlin 노이즈라 겹침·랜덤 변조는 셰이더가 담당)
+  // 발화 반응 파형 — 새 조각마다 즉시 스파이크(어택) 후 기저로 천천히 감쇠(릴리즈)
   const [amp, setAmp] = useState(0.9);
   const prevCount = useRef(0);
   useEffect(() => {
-    if (lines.length > prevCount.current) setAmp(3.0);
-    prevCount.current = lines.length;
-  }, [lines]);
+    if (stream.length > prevCount.current) setAmp(3.0);
+    prevCount.current = stream.length;
+  }, [stream]);
   useEffect(() => {
     const id = window.setInterval(() => {
       setAmp((a) => {
@@ -52,26 +55,30 @@ export default function LiveTranscriptPanel({
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [lines]);
+  }, [stream]);
 
-  // STT 흐름 — 마지막 조각만 타이핑, 앞 조각들은 확정 텍스트로 이어 붙는다
-  const settled = lines
-    .slice(0, -1)
-    .map((l) => l.text)
-    .join(" ");
-  const lastLine = lines.length > 0 ? lines[lines.length - 1] : null;
+  // 같은 화자의 연속 조각은 한 그룹(문단)으로 — 고객은 이어지는 STT, AI는 별도 줄
+  const groups: { who: "cust" | "ai"; texts: string[]; lastId: string }[] = [];
+  stream.forEach((it) => {
+    const g = groups[groups.length - 1];
+    if (g && g.who === it.who) {
+      g.texts.push(it.text);
+      g.lastId = it.id;
+    } else {
+      groups.push({ who: it.who, texts: [it.text], lastId: it.id });
+    }
+  });
 
   return (
     <div
       style={css(
-        "flex:none;width:400px;height:532px;display:flex;flex-direction:column;background:var(--onair-surface);border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.4);overflow:hidden"
+        "flex:none;width:400px;height:532px;display:flex;flex-direction:column;background:#0a0a0e;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden"
       )}
     >
-      {/* 파형 — 상자 안 상자: 흰 패널 속 여백을 둔 검은 라운드 무대, 그 위 흰 물결.
-          늘 흐르고, 말하면 요동친다 */}
+      {/* 파형 — 상자 안 상자: 어두운 패널 속 더 깊은 무대, 그 위 흰 물결 */}
       <div
         style={css(
-          "flex:none;margin:16px 16px 0;height:180px;position:relative;background:#0a0a0e;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 10px 26px rgba(10,10,14,.22)"
+          "flex:none;margin:16px 16px 0;height:180px;position:relative;background:#000;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)"
         )}
       >
         <div style={css("position:absolute;inset:0")}>
@@ -79,10 +86,10 @@ export default function LiveTranscriptPanel({
         </div>
       </div>
 
-      {/* 전사 — 끊기지 않는 한 문단. 마지막 조각만 커서와 함께 타이핑 */}
-      <div ref={scrollRef} style={css("flex:1;min-height:0;overflow-y:auto;padding:20px 24px")}>
-        {!lastLine ? (
-          <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--gray-500)")}>
+      {/* 전사 — 검은 배경 위 코딩 글자. 고객은 이어지는 문단, AI 멘트는 별도 줄 */}
+      <div ref={scrollRef} style={css("flex:1;min-height:0;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px")}>
+        {groups.length === 0 ? (
+          <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#565b66")}>
             <span className="mi" style={css("font-size:30px")}>graphic_eq</span>
             <span style={css("font:400 12.5px 'Geist Sans','Pretendard',sans-serif;text-align:center;line-height:1.6")}>
               왼쪽 전화기의 통화 버튼을 누르면
@@ -91,20 +98,44 @@ export default function LiveTranscriptPanel({
             </span>
           </div>
         ) : (
-          /* 코딩 글자 — STT 원출력의 러프한 터미널 감각 */
-          <div style={css("font:400 13px/1.95 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-1000);letter-spacing:-.2px;word-break:break-all")}>
-            {settled && <span style={css("color:var(--gray-700)")}>{settled + " "}</span>}
-            <TextType
-              key={lastLine.id}
-              as="span"
-              text={lastLine.text}
-              typingSpeed={34}
-              loop={false}
-              showCursor
-              cursorCharacter="▍"
-              cursorBlinkDuration={0.45}
-            />
-          </div>
+          groups.map((g, gi) => {
+            const isLastGroup = gi === groups.length - 1;
+            const settled = (isLastGroup ? g.texts.slice(0, -1) : g.texts).join(" ");
+            const lastText = isLastGroup ? g.texts[g.texts.length - 1] : null;
+            const isAi = g.who === "ai";
+            return (
+              <div
+                key={g.lastId}
+                style={css(
+                  "font:400 13px/1.9 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:-.2px;word-break:break-all;animation:fadeIn .2s ease-out;color:" +
+                    (isAi ? "#8a919d" : "#a9b0bb")
+                )}
+              >
+                {isAi && (
+                  <span style={css("display:inline-block;margin-right:8px;padding:1px 6px;border:1px solid #3a3f49;border-radius:5px;font-size:10px;color:#8a919d;transform:translateY(-1px)")}>
+                    AI
+                  </span>
+                )}
+                {settled && (
+                  <span>{settled + (lastText ? " " : "")}</span>
+                )}
+                {lastText && (
+                  <span style={css("color:" + (isAi ? "#c6cbd4" : "#eef1f6"))}>
+                    <TextType
+                      key={g.lastId}
+                      as="span"
+                      text={lastText}
+                      typingSpeed={34}
+                      loop={false}
+                      showCursor
+                      cursorCharacter="▍"
+                      cursorBlinkDuration={0.45}
+                    />
+                  </span>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>

@@ -3,7 +3,7 @@ import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
 import { useLiveCallBus } from "../hooks/useLiveCallBus";
 import Phone from "./Phone";
-import LiveTranscriptPanel from "./LiveTranscriptPanel";
+import LiveTranscriptPanel, { type StreamItem } from "./LiveTranscriptPanel";
 import Waiting from "./desktop/Waiting";
 import PrepCard from "./desktop/PrepCard";
 import ActiveCall from "./desktop/ActiveCall";
@@ -36,6 +36,42 @@ export default function LiveDemo({
   const audioInputRef = useRef<HTMLInputElement>(null);
   // 고객 화면 실시간 상태 — demoBus 단일 소스 (알약 상태문구 + 패널 자막이 함께 쓴다)
   const live = useLiveCallBus();
+
+  // 고객 화면 전사 스트림 — 고객 발화(demoBus)와 AI 안내 멘트(vm.glassText)를
+  // 도착 순서대로 합친다. AI 멘트는 폰의 유리판에서 걷어내 패널로 옮긴 것.
+  const [stream, setStream] = useState<StreamItem[]>([]);
+  const custCount = useRef(0);
+  const lastGlass = useRef("");
+  useEffect(() => {
+    if (live.lines.length < custCount.current) {
+      // 새 콜/리셋 — 스트림도 함께 비운다
+      custCount.current = 0;
+      lastGlass.current = "";
+      setStream([]);
+    }
+    if (live.lines.length > custCount.current) {
+      const fresh = live.lines
+        .slice(custCount.current)
+        .map((l) => ({ ...l, who: "cust" as const }));
+      custCount.current = live.lines.length;
+      setStream((s) => [...s, ...fresh]);
+    }
+  }, [live.lines]);
+  useEffect(() => {
+    if (view !== "phone") return;
+    const g = vm.showGlass ? vm.glassText : "";
+    if (g && g !== lastGlass.current) {
+      lastGlass.current = g;
+      setStream((s) => [...s, { id: "ai-" + Date.now(), text: g, who: "ai" }]);
+    }
+  }, [view, vm.showGlass, vm.glassText]);
+  useEffect(() => {
+    if (vm.phIdle) {
+      custCount.current = 0;
+      lastGlass.current = "";
+      setStream([]);
+    }
+  }, [vm.phIdle]);
 
   // 데모 안내 팝업 등장/퇴장 모션 — 중앙에서 슉 뜨고 다시 접힌다. 등장 지연은 useCallFlow(700ms)가 담당.
   // 열려 있는 동안 단계가 바뀌면 딤 유지·내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝.
@@ -235,7 +271,7 @@ export default function LiveDemo({
           <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
             {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}
             {/* 고객 화면 — 폰은 살짝 왼쪽, 오른쪽에 실시간 현황·발화 스트림(타이핑 애니메이션) */}
-            {view === "phone" && <LiveTranscriptPanel lines={live.lines} active={live.active} />}
+            {view === "phone" && <LiveTranscriptPanel stream={stream} active={live.active} />}
             {view !== "phone" && (
               <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
                 {vm.showWaiting && <Waiting vm={vm} />}
