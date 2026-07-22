@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # 파일/의존성(torch·transformers) 없으면 voice_anger.py가 자동으로 None 폴백(부스터 무동작).
     wavlm_anger_model_path: str = "app/services/k7modeling/models/wavlm_anger_layer_fusion_v1.pt"
     wavlm_anger_cache_dir: str = "app/services/k7modeling/models/hf_cache"
+    # WavLM은 CPU로 돈다(기본). torch(cuDNN 9.1)와 faster-whisper의 CTranslate2(cuDNN 9.24)가
+    # 같은 프로세스에서 GPU cuDNN을 동시에 로드하면 'cudnnGetLibConfig' 심볼 충돌로 크래시하므로,
+    # STT는 GPU 유지하고 WavLM(짧은 발화)은 CPU로 격리한다. 충돌 해소 시 "cuda"로 바꿔도 됨.
+    wavlm_anger_device: str = "cpu"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

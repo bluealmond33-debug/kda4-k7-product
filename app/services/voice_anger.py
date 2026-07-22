@@ -56,6 +56,7 @@ def _load_runtime():
         _RUNTIME = WavLMLayerFusionRuntime(
             artifact_path=artifact_path,
             cache_dir=settings.wavlm_anger_cache_dir,
+            device=settings.wavlm_anger_device,  # CPU 격리 — whisper(cuDNN)와 충돌 회피
         )
         logger.info("WavLM 음성분노 모델 로드 완료: %s", artifact_path)
     except ImportError as exc:

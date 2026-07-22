@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import time
 import wave
 
@@ -19,6 +20,7 @@ from app.services.pii_guard import mask_transcript
 from app.services.voice_anger import analyze_voice_anger
 
 router = APIRouter()
+logger = logging.getLogger("karina.call")
 
 
 class CallSession:
@@ -82,6 +84,12 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     # 음성 분노(WavLM) — 격양도가 놓치는 '냉정한 분노'를 잡는 주의도 보조 신호.
     # 모델/의존성 없으면 analyze_voice_anger가 None을 돌려줘 무해(하위호환).
     anger = await run_in_threadpool(analyze_voice_anger, _pcm_to_wav(utterance))
+    logger.info(
+        "[통화 %s] 고객 발화: %s | PII %d건 | 분노 %s",
+        session.call_id, masked, len(hits),
+        f"감지(p={anger.probability:.2f})" if (anger and anger.detected)
+        else ("미감지" if anger else "폴백"),
+    )
     session.seq += 1
     await _broadcast(
         session,
