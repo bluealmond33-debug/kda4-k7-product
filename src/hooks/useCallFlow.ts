@@ -1289,6 +1289,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setRegTargetRow(null);
       setRegDoc(null);
       setRegDocChunk(null);
+      setRegSearch(""); // 축소 = 검색어까지 비워 완전히 접힘(다시 클릭하면 줄어들게)
     },
     // 실제 규정 원문 열람
     regDoc,
