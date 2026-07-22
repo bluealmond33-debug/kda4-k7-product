@@ -1,6 +1,8 @@
 # K7 음성 상담카드 MVP
 
-> 실시간 Galaxy 마이크·2발화자 STT 통합 작업: [팀/AI 인수인계 문서](docs/LIVE_CALL_HANDOFF.md) · [배포 페이지](https://k7-live-call-handoff.theonewhogazes.chatgpt.site)
+> 오늘 작업 요약: [Galaxy 마이크 실시간 상담 연동 보고서](docs/TODAY_WORK_SUMMARY.md)
+>
+> 상세 개발 인수인계: [기술 문서](docs/LIVE_CALL_HANDOFF.md) · [배포 페이지](https://k7-live-call-handoff.theonewhogazes.chatgpt.site)
 > 작업 브랜치: `codex/mingikim-live-call` — 원격 `main` 직접 push 금지
 
 고객의 **통화 음성**을 동일 원본 기준으로 두 갈래 처리합니다. STT 텍스트는 OpenAI가 요약·업무유형·담당 부서·라우팅을 분석하고, 원본 음성은 음성 감정 모델이 점수를 생성합니다. 두 결과를 같은 `call_id`로 결합해 PostgreSQL에 저장한 뒤 상담사 화면에 표시하는 통합 저장소입니다.
