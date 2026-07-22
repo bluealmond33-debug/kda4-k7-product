@@ -1,9 +1,11 @@
 import { css } from "../lib/css";
 import type { CallFlowVM } from "../hooks/useCallFlow";
+import AppleIcon from "./AppleIcon";
 
 /**
- * 아이폰 목업 — 프레임을 CSS로 직접 그린다. 실기기 스크린샷(IMG_7570~7572) 기준:
- * - 다이얼 화면: 검은 배경 + 어두운 원형 키패드 + 하단 탭바(통화·연락처·키패드·검색)
+ * 아이폰 목업 — 프레임을 CSS로 직접 그린다. 실기기 스크린샷(IMG_7570~7572) 기준,
+ * 아이콘은 애플 SF Symbols를 본뜬 Framework7 Icons(MIT)를 SVG로 이식(AppleIcon):
+ * - 다이얼 화면: 검은 배경 + 큼직한 어두운 원형 키패드(88px) — 하단 탭바는 시연에서 제외
  * - 통화 화면: 따뜻한 갈색-주황 그라데이션 + 상단 타이머→이름 + 하단 2×3 반투명
  *   컨트롤(가운데 아래 빨간 종료). 타이머는 통화 누르자마자 00:01부터.
  * - 통화 중 다이나믹 아일랜드 왼쪽에 주황 점(마이크 사용 표시).
@@ -90,7 +92,7 @@ function HomeIndicator() {
   );
 }
 
-/** 다이얼 화면 — IMG_7572: 검은 배경, 어두운 키패드 원, 초록 발신, 하단 탭바 */
+/** 다이얼 화면 — IMG_7572: 검은 배경, 큼직한 키패드 원, 초록 발신 (애플 글리프) */
 function IdleScreen({ vm }: { vm: CallFlowVM }) {
   return (
     <div style={css("position:absolute;inset:0;background:#000;color:#fff;display:flex;flex-direction:column")}>
@@ -102,49 +104,31 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
           <div style={css("font-size:14px;color:#409cff;margin-top:6px;font-weight:400")}>1588-0000</div>
         </div>
         <div style={css("flex:1")} />
-        {/* 키패드 — 어두운 원(#2c2c2e), 흰 숫자. 실기기 비율: 버튼 75px, 열 간격 28px */}
-        <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:14px")}>
+        {/* 키패드 — 어두운 원(#2c2c2e), 흰 숫자. 실기기 비율(IMG_7572): 큼직한 원 88px */}
+        <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:16px")}>
           {KEYS.map((k) => (
             <div
               key={k.d}
               style={css(
-                "display:flex;flex-direction:column;align-items:center;justify-content:center;width:75px;height:75px;border-radius:9999px;background:#2c2c2e"
+                "display:flex;flex-direction:column;align-items:center;justify-content:center;width:88px;height:88px;border-radius:9999px;background:#2c2c2e"
               )}
             >
-              <span style={css("font-size:36px;font-weight:400;color:#fff;line-height:1" + (k.sub ? "" : ";margin-top:6px"))}>{k.d}</span>
-              <span style={css("font-size:10px;font-weight:700;letter-spacing:2px;color:#9a9aa0;height:12px;margin-top:1px;text-indent:2px")}>{k.sub}</span>
+              <span style={css("font-size:42px;font-weight:400;color:#fff;line-height:1" + (k.sub ? "" : ";margin-top:6px"))}>{k.d}</span>
+              <span style={css("font-size:10.5px;font-weight:700;letter-spacing:2px;color:#9a9aa0;height:12px;margin-top:2px;text-indent:2px")}>{k.sub}</span>
             </div>
           ))}
         </div>
-        {/* 발신 — 키패드 아래 중앙 초록 원 */}
-        <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;align-items:center;margin-top:14px")}>
+        {/* 발신 — 키패드 아래 중앙 초록 원 (애플 핸드셋 글리프). 하단 메뉴는 시연 화면에선 뺐다 */}
+        <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center;margin-top:16px;margin-bottom:14px")}>
           <span />
           <div
             onClick={vm.startCall}
-            style={css("width:75px;height:75px;border-radius:9999px;background:#30d158;display:flex;align-items:center;justify-content:center;cursor:pointer")}
+            style={css("width:88px;height:88px;border-radius:9999px;background:#30d158;display:flex;align-items:center;justify-content:center;cursor:pointer")}
           >
-            <span className="mi" style={css("font-size:34px;color:#fff")}>call</span>
+            <AppleIcon name="call" size={42} />
           </div>
-          <span style={css("justify-self:center")}>
-            <span className="mi" style={css("font-size:28px;color:#fff;opacity:.55")}>backspace</span>
-          </span>
-        </div>
-        {/* 하단 탭바 — 통화·연락처·키패드(활성)·검색 */}
-        <div style={css("display:flex;align-items:center;justify-content:center;gap:10px;margin-top:22px;padding:0 20px")}>
-          <div style={css("flex:1;max-width:250px;display:flex;align-items:center;justify-content:space-around;background:#1c1c1ecc;border-radius:9999px;padding:9px 10px")}>
-            {[
-              ["schedule", "통화", false],
-              ["person", "연락처", false],
-              ["dialpad", "키패드", true],
-            ].map(([icon, label, on]) => (
-              <span key={label as string} style={css("display:flex;flex-direction:column;align-items:center;gap:2px" + (on ? ";background:#2c2c2e;border-radius:9999px;padding:5px 16px;margin:-5px 0" : ""))}>
-                <span className="mi" style={css("font-size:20px;color:" + (on ? "#409cff" : "#fff"))}>{icon}</span>
-                <span style={css("font-size:10px;color:" + (on ? "#409cff" : "#fff"))}>{label}</span>
-              </span>
-            ))}
-          </div>
-          <span style={css("width:46px;height:46px;border-radius:9999px;background:#1c1c1ecc;display:flex;align-items:center;justify-content:center")}>
-            <span className="mi" style={css("font-size:20px;color:#fff")}>search</span>
+          <span style={css("justify-self:center;opacity:.6")}>
+            <AppleIcon name="backspace" size={34} />
           </span>
         </div>
       </div>
@@ -154,13 +138,13 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
 }
 
 /** 통화 컨트롤 2×3 — IMG_7570/7571: 반투명 원, 가운데 아래 빨간 종료 */
-const CALL_CONTROLS: { icon: string; label: string; end?: boolean }[] = [
-  { icon: "volume_up", label: "오디오" },
-  { icon: "videocam", label: "FaceTime" },
-  { icon: "mic_off", label: "소리 끔" },
-  { icon: "more_horiz", label: "기타" },
-  { icon: "call_end", label: "종료", end: true },
-  { icon: "dialpad", label: "키패드" },
+const CALL_CONTROLS: { icon: "speaker" | "facetime" | "micSlash" | "more" | "callEnd" | "keypad"; label: string; end?: boolean }[] = [
+  { icon: "speaker", label: "오디오" },
+  { icon: "facetime", label: "FaceTime" },
+  { icon: "micSlash", label: "소리 끔" },
+  { icon: "more", label: "기타" },
+  { icon: "callEnd", label: "종료", end: true },
+  { icon: "keypad", label: "키패드" },
 ];
 
 /** 통화 화면 — IMG_7570/7571: 웜 그라데이션, 상단 타이머→이름, 하단 컨트롤 */
@@ -238,7 +222,7 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
                         : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px)")
                   )}
                 >
-                  <span className="mi" style={css("font-size:32px;color:#fff")}>{c.icon}</span>
+                  <AppleIcon name={c.icon} size={36} />
                 </span>
                 <span style={css("font-size:13px;color:rgba(255,255,255,.92)")}>{c.label}</span>
               </div>
