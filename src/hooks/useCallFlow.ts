@@ -1249,12 +1249,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     authErrMsg,
     authTime,
     authMethodLabel,
-    // 마스킹 '구멍' 입력 — 실제 데이터 모양 속에 입력 칸만 뚫려 있다
-    // phone: 010 - **** - [    ] / birth: [      ] (YYMMDD) / account: ***-**-[    ]
-    authPrefix: authMethod === "birth" ? "" : authMethod === "account" ? "***-**-" : "010 - **** - ",
+    // 자릿수 = 입력 상자 개수 — 마스킹된 전체 번호는 보여주지 않는다(최소 표시 원칙, 필요한 칸만)
     authMaxLen: authMethod === "birth" ? 6 : 4,
-    // 힌트를 placeholder에 통합 — 별도 힌트 텍스트가 좁은 칸에서 잘리던 문제 해소
-    authHolePlaceholder: authMethod === "birth" ? "YYMMDD" : "●●●●",
+    // 지금 물어야 할 값 — 안내 문구가 대조 방식을 따라간다
+    authAskLabel:
+      authMethod === "birth" ? "생년월일 6자리 (YYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
     steps: SCRIPTS[incoming].map((st) => ({ title: st.title, text: st.text })),
     firstLine: SCRIPTS[incoming][0].text,
