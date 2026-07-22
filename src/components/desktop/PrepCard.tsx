@@ -100,7 +100,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           {/* 좌: 감정온도·사고징후 세로 스택 / 우: 해야 할 일(상담 중 가장 중요한 실행 항목) */}
           <div style={css("display:flex;gap:12px;align-items:stretch")}>
             <div style={css("flex:none;width:238px;display:flex;flex-direction:column;gap:12px")}>
-            <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:14px 15px")}>
+            <div style={css("flex:1;min-height:130px;background:var(--gray-100);border-radius:8px;padding:14px 15px")}>
               <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 고객 감정온도
                 <span
@@ -116,7 +116,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             </div>
-            <div style={css("flex:1;border-radius:8px;padding:14px 15px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
+            <div style={css("flex:1;min-height:130px;border-radius:8px;padding:14px 15px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
               <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:7px;color:" + (riskHigh ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
                 사고 징후 <span style={css("font-weight:400;opacity:.7")}>(위험도)</span>
               </div>
