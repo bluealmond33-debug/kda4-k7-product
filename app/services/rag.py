@@ -458,6 +458,22 @@ def _ensure_index(settings: Settings) -> faiss.IndexFlatIP:
     return index
 
 
+# 질의 키워드 → 부서 대분류 추론(김동희 taxonomy). 관련성 향상용 소프트 필터.
+_DEPT_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "INV": ("연금", "irp", "퇴직연금", "isa", "노후", "개인형퇴직"),
+    "LON": ("대출", "여신", "상환", "이자", "신용대출", "담보", "중도상환"),
+    "FX": ("외환", "환전", "외화", "달러", "해외송금", "환율"),
+    "DEP": ("예금", "적금", "청약", "통장", "입출금", "발행어음", "만기", "수신"),
+}
+
+
+def _infer_categories(query: str) -> list[str] | None:
+    """질의에서 부서 대분류를 추론한다. 매칭 없으면 None(전체 검색)."""
+    low = query.lower()
+    hits = [code for code, kws in _DEPT_KEYWORDS.items() if any(k in low for k in kws)]
+    return hits or None
+
+
 def search_procedures(
     settings: Settings,
     query: str,
@@ -473,6 +489,9 @@ def search_procedures(
     categories 필터는 김민기 설계 4절의 핵심 — 통화 용건 대분류에 맞는 규정만 추천.
     예: 긴급(EMERGENCY) 통화면 categories=["SG"]로 사고·신고 규정만. None이면 전체 검색.
     """
+    if categories is None:
+        categories = _infer_categories(query)  # 질의에서 부서 추론(연금→INV 등) — 관련성↑
+
     from app.services import rag_store  # 지연 import — 순환참조 회피
 
     if rag_store.pgvector_ready(settings):
@@ -500,24 +519,26 @@ def _search_faiss(
     search_k = len(_DOCS)
     scores, indices = index.search(query_vector, search_k)
 
-    documents: list[RagDocument] = []
+    matched: list[RagDocument] = []
+    others: list[RagDocument] = []
     for score, idx in zip(scores[0], indices[0]):
         if idx < 0:
             continue
         doc = _DOCS[idx]
-        if allowed is not None and doc.get("category") not in allowed:
-            continue
-        documents.append(
-            RagDocument(
-                doc_id=doc["doc_id"],
-                title=doc["title"],
-                excerpt=doc["text"],
-                score=round(float(score), 3),
-                category=doc.get("category"),
-                subcategory=doc.get("subcategory"),
-            )
+        rd = RagDocument(
+            doc_id=doc["doc_id"],
+            title=doc["title"],
+            excerpt=doc["text"],
+            score=round(float(score), 3),
+            category=doc.get("category"),
+            subcategory=doc.get("subcategory"),
         )
-        if len(documents) >= top_k:
+        if allowed is None or doc.get("category") in allowed:
+            matched.append(rd)
+        else:
+            others.append(rd)
+        if len(matched) >= top_k:
             break
 
-    return documents
+    # 추론/지정 부서 매칭이 부족하면 관련성 순으로 나머지를 채운다(빈손 방지, 소프트 필터).
+    return (matched + others)[:top_k]
