@@ -106,6 +106,7 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   const hh = (h12 < 10 ? "!" : "") + h12; // 한 자리 시 — 앞칸은 고스트만
   const mm = (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
+  const ss = (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
   const colonOn = now.getSeconds() % 2 === 0;
   const dateStr = `${now.getMonth() + 1}/${now.getDate()}`;
   const tempStr = wx ? (wx.temp < 0 ? "-" : "") + Math.abs(wx.temp) : "--";
@@ -121,7 +122,7 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
           <WxIcon size={38} strokeWidth={2.2} color={wx ? INK : "var(--gray-300)"} />
           <div style={css("display:flex;align-items:flex-start;gap:6px")}>
             <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={40} />
-            <span style={{ fontFamily: SEG14, fontSize: 19, fontWeight: "bold", color: INK_DIM, marginTop: 2 }}>°C</span>
+            <span style={{ fontFamily: "'Geist Sans','Pretendard',sans-serif", fontSize: 21, fontWeight: 600, color: INK_DIM, marginTop: 3 }}>°C</span>
           </div>
         </div>
         <span style={css("width:1.5px;height:26px;background:var(--gray-200);border-radius:1px")} />
@@ -129,7 +130,7 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
           <Droplets size={30} strokeWidth={2.2} color={INK_DIM} />
           <div style={css("display:flex;align-items:flex-start;gap:6px")}>
             <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={40} color={INK_DIM} />
-            <span style={{ fontFamily: SEG14, fontSize: 19, fontWeight: "bold", color: INK_DIM, marginTop: 2 }}>%</span>
+            <span style={{ fontFamily: "'Geist Sans','Pretendard',sans-serif", fontSize: 21, fontWeight: 600, color: INK_DIM, marginTop: 3 }}>%</span>
           </div>
         </div>
       </div>
@@ -147,6 +148,9 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
           <span style={{ position: "absolute", inset: 0, color: INK, opacity: colonOn ? 1 : 0, transition: "opacity .12s" }}>:</span>
         </span>
         <Seg text={mm} ghost="88" font={SEG7} size={196} />
+        <div style={css("align-self:flex-end;padding-bottom:14px;margin-left:8px")}>
+          <Seg text={ss} ghost="88" font={SEG7} size={46} color={INK_DIM} />
+        </div>
       </div>
 
       {/* ── 아래: 요일 · 날짜 (세그먼트 한 줄) ── */}
