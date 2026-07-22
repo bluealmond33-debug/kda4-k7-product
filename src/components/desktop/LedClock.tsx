@@ -142,7 +142,7 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
         <Seg text={mm} ghost="88" font={SEG7} size={196} />
         {/* PM·초 그룹 — 시(時) 높이에 맞춰 위=AM/PM, 아래=초 (실물 시계 우측 스택) */}
         <div style={css("display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;padding:14px 0")}>
-          <span style={{ fontFamily: SEG14, fontSize: 46, fontWeight: "bold", color: INK }}>{isAm ? "AM" : "PM"}</span>
+          <Seg text={isAm ? "AM" : "PM"} ghost="~~" font={SEG14} size={46} />
           <Seg text={ss} ghost="88" font={SEG7} size={46} />
         </div>
       </div>
