@@ -10,3 +10,7 @@ data/
 app/services/k7modeling/models/*.joblib
 # 전형진 은행 주제 분류 모델 — 용량·재학습 이유로 git 제외(README.md 참고)
 app/services/routing/models/*.joblib
+
+# WavLM 음성분노 — 체크포인트/백본 캐시는 git 제외 (hippo handoff·HF에서 별도 수급)
+app/services/k7modeling/models/hf_cache/
+app/services/k7modeling/models/*.pt

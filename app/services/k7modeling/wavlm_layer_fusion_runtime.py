@@ -14,9 +14,9 @@ from scipy.signal import resample_poly
 from torch import nn
 from transformers import AutoFeatureExtractor, AutoModel
 
-# 추론 전용 이식본 — head 정의/backbone id를 학습 trainer 없이 이 모듈에서 가져온다.
+from .anger_layer_fusion import LAYERS, WeightedLayerMLP
 from .io_utils import sha256_file
-from .wavlm_layer_fusion_head import LAYERS, MODEL_ID, WeightedLayerMLP
+from .wavlm_alternative import MODEL_ID
 
 
 MODEL_VERSION = "wavlm-base-plus-layer-stats-fusion-v1"
@@ -26,7 +26,12 @@ SAMPLE_RATE = 16_000
 def _decode_pcm_wav(source: str | Path | bytes | BinaryIO) -> np.ndarray:
     """Decode uncompressed 16-bit PCM WAV and deterministically resample to 16 kHz."""
     opened: BinaryIO | str
-    opened = io.BytesIO(source) if isinstance(source, bytes) else source
+    if isinstance(source, bytes):
+        opened = io.BytesIO(source)
+    elif isinstance(source, Path):
+        opened = str(source)
+    else:
+        opened = source
     with wave.open(opened, "rb") as handle:
         channels = handle.getnchannels()
         sample_width = handle.getsampwidth()
@@ -71,12 +76,14 @@ class WavLMLayerFusionRuntime:
         artifact_path: str | Path,
         cache_dir: str | Path,
         *,
+        model_id_or_path: str | Path = MODEL_ID,
         device: str | torch.device | None = None,
         local_files_only: bool = True,
         max_duration_seconds: float = 60.0,
     ) -> None:
         self.artifact_path = Path(artifact_path)
         self.cache_dir = Path(cache_dir)
+        self.model_id_or_path = str(model_id_or_path)
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self.max_duration_seconds = float(max_duration_seconds)
         if self.max_duration_seconds <= 0:
@@ -100,11 +107,13 @@ class WavLMLayerFusionRuntime:
         self.head.to(self.device).eval()
 
         self.extractor = AutoFeatureExtractor.from_pretrained(
-            MODEL_ID, cache_dir=self.cache_dir, local_files_only=local_files_only
+            self.model_id_or_path,
+            cache_dir=self.cache_dir,
+            local_files_only=local_files_only,
         )
         backbone_dtype = torch.float16 if self.device.type == "cuda" else torch.float32
         self.backbone = AutoModel.from_pretrained(
-            MODEL_ID,
+            self.model_id_or_path,
             cache_dir=self.cache_dir,
             local_files_only=local_files_only,
             dtype=backbone_dtype,

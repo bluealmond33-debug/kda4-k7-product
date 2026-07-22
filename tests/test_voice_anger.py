@@ -51,9 +51,18 @@ def test_non_wav_input_returns_none_without_loading_model():
     assert analyze_voice_anger("이건 오디오가 아니라 텍스트입니다".encode("utf-8")) is None
 
 
-def test_missing_model_or_deps_falls_back_to_none():
-    # 기본 경로에 .pt 없음(또는 torch 미설치) → graceful fallback(None). 부스터는 무동작.
-    assert analyze_voice_anger(_wav_bytes()) is None
+def test_missing_model_or_deps_falls_back_to_none(monkeypatch):
+    # 체크포인트/의존성 없을 때 graceful fallback(None). 모델이 설치된 환경에서도
+    # 결정적으로 검증하도록, 존재하지 않는 경로를 강제하고 런타임 캐시를 리셋한다.
+    import app.services.voice_anger as va
+
+    monkeypatch.setattr(
+        va.settings, "wavlm_anger_model_path",
+        "app/services/k7modeling/models/__no_such_checkpoint__.pt",
+    )
+    monkeypatch.setattr(va, "_RUNTIME_LOAD_ATTEMPTED", False)
+    monkeypatch.setattr(va, "_RUNTIME", None)
+    assert va.analyze_voice_anger(_wav_bytes()) is None
 
 
 def test_prediction_maps_to_voice_anger_result():
