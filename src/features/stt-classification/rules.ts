@@ -1,6 +1,7 @@
-// 3층 라우팅 taxonomy의 2층 부서 8종 (닫힌 집합).
+// 3층 라우팅 taxonomy의 2층 부서 7종 (닫힌 집합) — hippo 7/22 확정 표 기준.
 // 원본(source of truth): backend/app/routing/taxonomy.py — 코드/라벨을 함께 유지한다.
-// 부서 코드는 규정검색 태그(backend/app/rag/taxonomy.py)와 공유 → 부서 확정 시 규정 필터로 직결.
+// 부서 코드는 규정검색 태그(backend/app/rag/taxonomy.py, 8종)와 공유하되,
+// ETC(제도·민원·기타)는 RAG 문서 분류 전용 — 라우팅 대기열이 아니므로 여기 없다.
 export const routingDepartments = [
   {
     name: "수신·예적금",
@@ -37,10 +38,6 @@ export const routingDepartments = [
       "착오송금 반환",
       "분실·도난",
     ],
-  },
-  {
-    name: "제도·민원·기타",
-    tasks: ["제도 안내", "민원 접수", "피해보상 요구", "기타 문의"],
   },
 ] as const;
 

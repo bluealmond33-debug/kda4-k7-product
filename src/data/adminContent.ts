@@ -77,7 +77,7 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
       status: "실가동",
       statusNote: "요약·분류의 팀 표준은 EXAONE(한국어 특화, LG). 데모 백엔드는 gpt-4o-mini로 같은 계약(mvp-1.0)을 출력 — 온프렘 통합 시 EXAONE으로 일원화.",
       lines: [
-        "부서 8종 라벨셋은 RAG 8대분류와 코드 공유 (부서 확정 = 검색 필터 확정)",
+        "부서 7종 라벨셋은 RAG 대분류와 코드 공유 — ETC는 문서 분류 전용 (부서 확정 = 검색 필터 확정)",
         "LLM 실패 시 긴급 콜 규칙 폴백",
       ],
     },
@@ -121,15 +121,15 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
   {
     id: "route",
     label: "부서 라우팅",
-    tech: "긴급 게이트 · 8부서 · E→S→G",
+    tech: "긴급 게이트 · 7부서 · E→S→G",
     icon: "alt_route",
     explain:
-      "규칙 기반 긴급 게이트가 먼저 걸러내고(E→S→G 순 판정), 8개 부서 대기열에 배정합니다. 단순(S) 업무는 상담사 대신 ARS·AI가 받습니다.",
+      "규칙 기반 긴급 게이트가 먼저 걸러내고(E→S→G 순 판정), 7개 부서 대기열에 배정합니다. 단순(S) 업무는 상담사 대신 ARS·AI가 받습니다.",
     spec: {
       engine: "카드 라우터 — 긴급 게이트(규칙, recall floor) → AI 분석 → 긴급 오버라이드",
-      io: "카드 → S/G/E(1층) + 부서 8종(2층) + 업무코드(3층)",
+      io: "카드 → S/G/E(1층) + 부서 7종(2층) + 업무코드(3층)",
       status: "실가동",
-      statusNote: "hippo 7/22 라우팅 보고서로 확정된 3층 taxonomy — 긴급(E)이면 사고·신고(SG) 강제.",
+      statusNote: "hippo 7/22 확정 3층 taxonomy(부서 7종) — 긴급(E)이면 사고·신고(SG) 강제.",
       lines: [
         "S(단순)는 대기열 없이 ARS·AI 즉시 응대 — 사람 큐에는 G·E만",
         "긴급 규칙이 LLM 판단보다 먼저 건다 (안전 요건)",
@@ -187,14 +187,14 @@ export interface QueueItem {
 
 export const DEPARTMENTS = routingDepartments;
 
-/** 구 부서 라벨 → 8부서 taxonomy 정규화.
+/** 구 부서 라벨 → 7부서 taxonomy 정규화.
  *  데모 픽스처(demoContent)의 카드가 아직 구 라벨을 쓰므로 보드 유입 시 여기서 흡수한다. */
 const DEPT_ALIAS: Record<string, string> = {
   "대출 및 금융상담": "여신·대출",
   금융사기: "사고·신고",
   외화: "외환·수출입",
   전자금융: "전자금융·디지털",
-  민원: "제도·민원·기타",
+  // 민원: 라우팅 큐 아님 — ETC는 RAG 문서 분류 전용 (7/22 확정 표)
   ARS: "카드·결제",
 };
 
@@ -204,7 +204,7 @@ export function normalizeDeptLabel(label: string): string {
 }
 
 /** 부서별 시드 대기열 — 대시보드가 비어 보이지 않게 하는 가상 현황.
- *  키는 rules.ts의 8부서 taxonomy. 라이브 이벤트(routing.assigned)가 이 위에 쌓인다.
+ *  키는 rules.ts의 7부서 taxonomy. 라이브 이벤트(routing.assigned)가 이 위에 쌓인다.
  *  S(단순)는 상담사 대기열에 들어가지 않는다 — ARS·AI가 즉시 응대(별도 카운터). 그래서 G/E만. */
 export const DEPT_SEED_QUEUES: Record<string, QueueItem[]> = {
   "수신·예적금": [{ id: "seed-dep-2", label: "이체한도 상향", sge: "G", callId: null, code: "G003" }],
@@ -220,7 +220,6 @@ export const DEPT_SEED_QUEUES: Record<string, QueueItem[]> = {
     { id: "seed-sg-1", label: "보이스피싱 의심 신고", sge: "E", callId: null, code: "G001" },
     { id: "seed-sg-2", label: "명의도용 지급정지", sge: "E", callId: null, code: "G001" },
   ],
-  "제도·민원·기타": [{ id: "seed-etc-1", label: "피해보상 요구", sge: "G", callId: null }],
 };
 
 /** 오늘 AI(ARS)가 자동 응대한 단순(S) 콜 시드 — S는 대기열이 아니라 이 카운터로 쌓인다 */
@@ -274,7 +273,7 @@ export const SEED_FEED: SeedFeedItem[] = [
 export const RAG_STATS = { docs: 32, chunks: 1153, categories: 8 } as const;
 
 /** 관리자 단독 시연용 테스트 콜 픽스처 — 상담사 탭 없이도 파이프라인 전체가 재생된다.
- *  sge = 라우팅 1층(명시), department = 2층(8부서 taxonomy). */
+ *  sge = 라우팅 1층(명시), department = 2층(7부서 taxonomy). */
 export interface TestCallFixture {
   label: string;
   kind: DemoCallKind;

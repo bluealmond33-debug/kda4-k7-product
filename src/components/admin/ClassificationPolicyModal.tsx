@@ -39,7 +39,7 @@ const STEPS: Array<{
 
 /**
  * 분류 정책 · 업무 카탈로그 — 왼쪽은 판정 파이프라인(세로 스테퍼, E→S→G 순서 그대로),
- * 오른쪽은 8부서 카탈로그. 색은 점·글자·가는 선으로만(ONAIR).
+ * 오른쪽은 7부서 카탈로그. 색은 점·글자·가는 선으로만(ONAIR).
  * 발표에서 "무슨 기준으로 나뉘는가"를 받는 질문에 이 화면 하나로 답한다.
  */
 export default function ClassificationPolicyModal({ onClose }: { onClose: () => void }) {
@@ -116,7 +116,7 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
             {/* ── 오른쪽: 부서 카탈로그 (2층 taxonomy) ── */}
             <div style={css("flex:1;min-width:0")}>
               <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.3px;color:var(--gray-700);padding:2px 0 10px")}>
-                라우팅 부서 8종 — RAG 8대분류와 코드 공유
+                라우팅 부서 7종 — 코드는 RAG 대분류와 공유 (ETC는 문서 분류 전용)
               </div>
               <div style={css("display:grid;grid-template-columns:1fr 1fr;gap:8px")}>
                 {routingDepartments.map((d) => {
@@ -141,7 +141,7 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
               <div style={css("margin-top:12px;display:flex;gap:8px;align-items:flex-start;border-top:1px solid var(--gray-200);padding-top:10px")}>
                 <span className="mi" style={css("flex:none;font-size:15px;color:var(--blue-700);margin-top:1px")}>info</span>
                 <span style={css("font:400 11px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
-                  라우팅은 3층입니다 — <b>1층 S/G/E</b>(우선순위) → <b>2층 부서 8종</b>(누가 받나) → <b>3층 업무코드</b>(무슨 일).
+                  라우팅은 3층입니다 — <b>1층 S/G/E</b>(우선순위) → <b>2층 부서 7종</b>(누가 받나) → <b>3층 업무코드</b>(무슨 일).
                   부서 코드가 규정검색(RAG) 분류와 같아서 <b>부서 확정 = 규정검색 필터 확정</b>. 긴급 게이트는 규칙 기반이라 LLM 판단보다 먼저 겁니다.
                 </span>
               </div>

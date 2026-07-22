@@ -24,30 +24,37 @@ export default function PipelineFlowPanel({
 }) {
   const stages = flowCall?.stages ?? {};
 
-  // 시스템 레일 — 관제가 흘끗 보고 안심하는 자리. 전부 초록이면 LIVE가 잔잔히 숨쉰다(실측).
-  const lampBackend = status.backend === "online" ? true : status.lastChecked === null ? null : false;
-  const lampDb = status.database === "connected" ? true : status.database === "unknown" ? null : false;
-  const lampRag = status.rag.available;
-  const lampColor = (on: boolean | null) =>
-    on === null ? "var(--gray-500)" : on ? "var(--green-700)" : "var(--red-700)";
-  // 정상(초록) 램프는 각자 숨쉰다 — delay를 어긋나게 줘 기계적 동기화 대신 살아있는 리듬으로
-  const railLamp = (on: boolean | null, label: string, delaySec: number) => (
-    <span style={css("display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}>
-      <span
-        style={{
-          width: 7,
-          height: 7,
-          borderRadius: 9999,
-          flex: "none",
-          background: lampColor(on),
-          ...(on === true
-            ? { animation: `livePulse 2.2s ease-in-out ${delaySec}s infinite` }
-            : null),
-        }}
-      />
-      <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>{label}</span>
-    </span>
-  );
+  // 노드별 live 램프 — "무엇이 어디서 실제로 살아있는지"를 해당 노드 자리에서 말한다(실측 폴링).
+  // 초록(숨쉼)=실가동 · 앰버=데모값/데모 대체 · 빨강=끊김 · 회색=미확인
+  const backendOn = status.backend === "online" ? true : status.lastChecked === null ? null : false;
+  const dbOn = status.database === "connected" ? true : status.database === "unknown" ? null : false;
+  const ragOn = status.rag.available;
+  const nodeLive = (
+    id: string
+  ): { color: string; pulse: boolean; tip: string } => {
+    const live = (on: boolean | null, tipOn: string, tipOff: string) =>
+      on === true
+        ? { color: "var(--green-700)", pulse: true, tip: tipOn }
+        : on === false
+        ? { color: "var(--red-700)", pulse: false, tip: tipOff }
+        : { color: "var(--gray-500)", pulse: false, tip: "미확인 (데모 모드)" };
+    switch (id) {
+      case "stt":
+        return live(backendOn, "STT 실가동 — 백엔드 연결됨", "백엔드 오프라인");
+      case "classify":
+        return live(backendOn, "분류 sLLM 실가동 — 백엔드 연결됨", "백엔드 오프라인");
+      case "route":
+        return live(backendOn, "카드 라우터 실가동", "백엔드 오프라인");
+      case "persist":
+        return live(dbOn, "PostgreSQL 연결됨 — 실측", "DB 끊김");
+      case "rag":
+        return live(ragOn, "pgvector 검색 실측 가동", "임베딩 미적재");
+      case "risk":
+        return { color: "var(--amber-700)", pulse: false, tip: "감정 모델 데모값 — 온프렘 백엔드에 완성, 이 파이프라인 미연동" };
+      default: // utterance · wrap — 시연 대체 구간
+        return { color: "var(--amber-700)", pulse: false, tip: "시연 대체 구간 (데모)" };
+    }
+  };
 
   return (
     <div className="card" style={css("flex:none;padding:14px 18px 12px")}>
@@ -83,23 +90,8 @@ export default function PipelineFlowPanel({
         )}
       </div>
 
-      {/* 노드 행 — 왼쪽엔 시스템 레일: 이 파이프라인을 받치는 장비가 전부 켜져 있다는 실측 신호 */}
+      {/* 노드 행 — 각 노드가 제 자리에서 live 여부를 말한다 (라벨 옆 실측 램프) */}
       <div style={css("display:flex;align-items:flex-start")}>
-        <div style={css("flex:none;display:flex;flex-direction:column;gap:5px;padding:2px 0 0 2px")}>
-          {railLamp(lampBackend, "백엔드", 0)}
-          {railLamp(lampDb, "DB", 0)}
-          {railLamp(lampRag, "RAG", 0)}
-          {/* 감정 모델 — 엔진은 온프렘 백엔드(희창)에 완성·가동, 이 파이프라인엔 미연동 → 앰버 */}
-          <span
-            title="감정 융합 모델(eGeMAPS+LightGBM)은 온프레미스 백엔드에 완성 — 이 파이프라인 미연동, 화면값은 데모값"
-            style={css("display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}
-          >
-            <span style={css("width:7px;height:7px;border-radius:9999px;flex:none;background:var(--amber-700)")} />
-            <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>감정</span>
-            <span style={css("font:700 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>데모값</span>
-          </span>
-        </div>
-        <span style={css("flex:none;width:1px;align-self:stretch;background:var(--gray-200);margin:2px 14px 2px 12px")} />
         {PIPELINE_NODES.map((node, i) => {
           const st = stages[node.id];
           const on = st === "start";
@@ -160,11 +152,33 @@ export default function PipelineFlowPanel({
                     />
                   )}
                 </span>
-                <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.1px;color:" + (on || done ? "var(--gray-1000)" : "var(--gray-700)"))}>
-                  {node.label}
+                {/* 라벨 + live 램프 — 이 단계가 실제로 살아있는지(실측). 초록은 숨쉰다 */}
+                {(() => {
+                  const lv = nodeLive(node.id);
+                  return (
+                    <span title={lv.tip} style={css("display:inline-flex;align-items:center;gap:5px")}>
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: 9999,
+                          flex: "none",
+                          background: lv.color,
+                          ...(lv.pulse ? { animation: "livePulse 2.2s ease-in-out infinite" } : null),
+                        }}
+                      />
+                      <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.1px;color:" + (on || done ? "var(--gray-1000)" : "var(--gray-700)"))}>
+                        {node.label}
+                      </span>
+                    </span>
+                  );
+                })()}
+                {/* 기술 캡션 — `·` 세그먼트 단위로 줄을 내려 어중간한 꺾임 없이 읽힌다 */}
+                <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700);line-height:1.45")}>
+                  {node.tech.split(" · ").map((seg) => (
+                    <span key={seg} style={css("display:block;white-space:nowrap")}>{seg}</span>
+                  ))}
                 </span>
-                {/* keep-all — 한글이 음절 중간에서 꺾이지 않게(공백·`·`에서만 개행) */}
-                <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700);line-height:1.45;word-break:keep-all")}>{node.tech}</span>
                 {explain && (
                   <span style={css("font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:7px 9px;text-align:left;animation:dockDown .25s var(--ease-out)")}>
                     {node.explain}
