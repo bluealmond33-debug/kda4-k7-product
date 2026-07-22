@@ -1,5 +1,5 @@
 import { css } from "../../lib/css";
-import { PIPELINE_NODES } from "../../data/adminContent";
+import { PIPELINE_NODES, type PipelineNodeDef } from "../../data/adminContent";
 import type { AdminStatus } from "../../services";
 import type { AdminCallRecord } from "../../hooks/useAdminFeed";
 
@@ -13,11 +13,14 @@ export default function PipelineFlowPanel({
   explain,
   concurrent,
   status,
+  onNodeClick,
 }: {
   flowCall: AdminCallRecord | null;
   explain: boolean;
   concurrent: number;
   status: AdminStatus;
+  /** 설명 모드에서 노드 클릭 → 실사용 모델 상세 팝업 */
+  onNodeClick: (node: PipelineNodeDef) => void;
 }) {
   const stages = flowCall?.stages ?? {};
 
@@ -84,8 +87,17 @@ export default function PipelineFlowPanel({
       <div style={css("display:flex;align-items:flex-start")}>
         <div style={css("flex:none;display:flex;flex-direction:column;gap:5px;padding:2px 0 0 2px")}>
           {railLamp(lampBackend, "백엔드", 0)}
-          {railLamp(lampDb, "DB", 0.7)}
-          {railLamp(lampRag, "RAG", 1.4)}
+          {railLamp(lampDb, "DB", 0)}
+          {railLamp(lampRag, "RAG", 0)}
+          {/* 감정 모델 — 엔진은 온프렘 백엔드(희창)에 완성·가동, 이 파이프라인엔 미연동 → 앰버 */}
+          <span
+            title="감정 융합 모델(eGeMAPS+LightGBM)은 온프레미스 백엔드에 완성 — 이 파이프라인 미연동, 화면값은 데모값"
+            style={css("display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}
+          >
+            <span style={css("width:7px;height:7px;border-radius:9999px;flex:none;background:var(--amber-700)")} />
+            <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>감정</span>
+            <span style={css("font:700 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>데모값</span>
+          </span>
         </div>
         <span style={css("flex:none;width:1px;align-self:stretch;background:var(--gray-200);margin:2px 14px 2px 12px")} />
         {PIPELINE_NODES.map((node, i) => {
@@ -105,7 +117,14 @@ export default function PipelineFlowPanel({
                   arrow_forward
                 </span>
               )}
-              <span style={css("flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px")}>
+              <span
+                onClick={explain ? () => onNodeClick(node) : undefined}
+                title={explain ? node.label + " — 클릭하면 실사용 모델 상세" : undefined}
+                style={css(
+                  "flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px" +
+                    (explain ? ";cursor:pointer" : "")
+                )}
+              >
                 {/* 아이콘 원 — idle 회색 · 처리 중 파랑 · 완료 진초록 체크 오버레이 */}
                 <span
                   style={css(
@@ -149,6 +168,9 @@ export default function PipelineFlowPanel({
                 {explain && (
                   <span style={css("font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:7px 9px;text-align:left;animation:dockDown .25s var(--ease-out)")}>
                     {node.explain}
+                    <span style={css("display:block;margin-top:4px;font:600 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>
+                      클릭 → 실사용 모델 상세
+                    </span>
                   </span>
                 )}
               </span>

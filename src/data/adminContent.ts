@@ -6,14 +6,25 @@ import { routingDepartments } from "../features/stt-classification/rules";
 import type { DemoCallKind, PipelineStageId, Sge } from "../services";
 import type { EmotionTemperatureLevel, MvpIncidentRisk } from "../services";
 
+/** 노드 상세 스펙 — 설명 모드에서 노드를 클릭하면 뜨는 팝업 내용.
+ *  실제 코드·hippo 문서 기준으로 정직하게: 무엇이 실가동이고 무엇이 데모·대기인지. */
+export interface PipelineNodeSpec {
+  engine: string;
+  io: string;
+  status: "실가동" | "연동 대기" | "데모 대체";
+  statusNote: string;
+  lines: string[];
+}
+
 /** 백엔드 프로세스 플로우의 8개 노드 — 발표에서 "이래서 이렇게 연결된다"를 말하는 자리.
- *  tech = 기술 캡션(항상 표시) · explain = 설명 모드에서 펼쳐지는 근거 문장 */
+ *  tech = 기술 캡션(항상 표시) · explain = 설명 모드에서 펼쳐지는 근거 문장 · spec = 클릭 상세 */
 export interface PipelineNodeDef {
   id: PipelineStageId;
   label: string;
   tech: string;
   icon: string;
   explain: string;
+  spec: PipelineNodeSpec;
 }
 
 export const PIPELINE_NODES: PipelineNodeDef[] = [
@@ -24,6 +35,16 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     icon: "call",
     explain:
       "ARS 버튼 트리 없이 고객이 평소처럼 말합니다. 이 발화 하나가 뒤의 모든 처리의 입력이 됩니다.",
+    spec: {
+      engine: "폐쇄망 LAN · 전화 인입 (PSTN 연동은 이번 범위 외)",
+      io: "고객 음성 → 오디오 스트림",
+      status: "데모 대체",
+      statusNote: "시연은 시나리오 발화·실마이크(고객 폰 화면) 입력으로 대체합니다.",
+      lines: [
+        "ARS 버튼 트리 없음 — 자연어 접수가 전체 파이프라인의 유일한 입력",
+        "시연 구도: 고객 폰(?role=customer)에서 블루투스 실마이크 발화 예정",
+      ],
+    },
   },
   {
     id: "stt",
@@ -32,6 +53,16 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     icon: "graphic_eq",
     explain:
       "음성이 문장 단위 텍스트로 바뀝니다. 이 전사본이 분류·요약·규정검색의 공통 재료입니다.",
+    spec: {
+      engine: "Whisper(whisper-1) · 온프레미스 전환: faster-whisper large-v3-turbo(GPU)",
+      io: "오디오 → 문장 단위 한국어 전사",
+      status: "실가동",
+      statusNote: "백엔드 연결 시 실제 호출 — 관제의 테스트 콜은 같은 이벤트 경로의 시뮬레이션.",
+      lines: [
+        "전사본이 분류·요약·규정검색의 공통 재료",
+        "침묵 감지(무응답 2단계)로 접수를 자동 종료",
+      ],
+    },
   },
   {
     id: "classify",
@@ -40,6 +71,16 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     icon: "psychology",
     explain:
       "언어모델이 발화를 요약하고 업무유형을 뽑습니다. 출력은 스키마 강제(strict-JSON) — 화면과 DB가 같은 계약(mvp-1.0)을 공유합니다.",
+    spec: {
+      engine: "gpt-4o-mini · strict json_schema — 온프레미스 전환: EXAONE 3.5 7.8B(Ollama)",
+      io: "전사 → 요약·업무유형·부서·근거 (mvp-1.0 카드)",
+      status: "실가동",
+      statusNote: "card_routing_pipeline.py — 출력 스키마 강제라 화면·DB가 같은 계약을 공유.",
+      lines: [
+        "부서 8종 라벨셋은 RAG 8대분류와 코드 공유 (부서 확정 = 검색 필터 확정)",
+        "LLM 실패 시 긴급 콜 규칙 폴백",
+      ],
+    },
   },
   {
     id: "risk",
@@ -48,6 +89,16 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     icon: "warning",
     explain:
       "보이스피싱·명의도용 같은 사고 징후와 감정온도를 판단합니다. 긴급(E) 판정의 근거가 여기서 나옵니다.",
+    spec: {
+      engine: "사고징후: 규칙+LLM 동시 산출 · 감정온도: eGeMAPS+LightGBM(박정운 음향 모델)",
+      io: "전사·음향 → incident_risk(low/high) · 감정온도(안정/주의/고조)",
+      status: "연동 대기",
+      statusNote: "감정 융합 모델은 온프레미스 백엔드(이희창)에 완성·가동 — 이 파이프라인에는 미연동이라 화면 감정값은 [SOURCE=STUB] 데모값입니다.",
+      lines: [
+        "긴급(E) 판정의 근거가 여기서 나온다 — 사고징후 high → 긴급 게이트",
+        "팀 최종안 진행 중: Urgency Score = 감정강도 + 위험신호 매칭 수 합산",
+      ],
+    },
   },
   {
     id: "persist",
@@ -56,6 +107,16 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     icon: "database",
     explain:
       "STT·분류 결과가 계약 검증을 거쳐 한 트랜잭션으로 저장됩니다 — calls · transcripts · consultation_cards 3테이블.",
+    spec: {
+      engine: "PostgreSQL · mvp-1.0 계약(exactKeys 검증)",
+      io: "카드 → calls · transcripts · consultation_cards (한 트랜잭션)",
+      status: "실가동",
+      statusNote: "관제의 '오늘 누적 상담카드'가 이 테이블의 실측 카운트입니다.",
+      lines: [
+        "계약 검증을 통과한 카드만 저장 — 프론트·백 스키마 불일치 차단",
+        "raw 모델 결과(jsonb)도 함께 보관해 사후 감사 가능",
+      ],
+    },
   },
   {
     id: "route",
@@ -64,6 +125,16 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     icon: "alt_route",
     explain:
       "규칙 기반 긴급 게이트가 먼저 걸러내고(E→S→G 순 판정), 8개 부서 대기열에 배정합니다. 단순(S) 업무는 상담사 대신 ARS·AI가 받습니다.",
+    spec: {
+      engine: "카드 라우터 — 긴급 게이트(규칙, recall floor) → AI 분석 → 긴급 오버라이드",
+      io: "카드 → S/G/E(1층) + 부서 8종(2층) + 업무코드(3층)",
+      status: "실가동",
+      statusNote: "hippo 7/22 라우팅 보고서로 확정된 3층 taxonomy — 긴급(E)이면 사고·신고(SG) 강제.",
+      lines: [
+        "S(단순)는 대기열 없이 ARS·AI 즉시 응대 — 사람 큐에는 G·E만",
+        "긴급 규칙이 LLM 판단보다 먼저 건다 (안전 요건)",
+      ],
+    },
   },
   {
     id: "rag",
@@ -72,6 +143,16 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     icon: "menu_book",
     explain:
       "상담 맥락으로 규정·매뉴얼을 하이브리드 검색해 상담사 화면에 근거 조항을 띄웁니다. 라우팅과 같은 분류 축을 씁니다.",
+    spec: {
+      engine: "bge-m3(1024차원, 로컬) + pgvector HNSW · 하이브리드 dense .65 + keyword .35",
+      io: "질의(+부서 필터) → 규정 청크(문서·페이지·조항·발췌)",
+      status: "실가동",
+      statusNote: "32문서 · 1,153청크 적재(실측) — PDF 업로드 시 청킹→임베딩→적재 즉시 반영.",
+      lines: [
+        "부서 코드 = RAG 분류 코드 — 라우팅 확정이 곧 검색 범위 확정",
+        "개정본은 supersede 처리(옛 버전 보관, 삭제 없음)",
+      ],
+    },
   },
   {
     id: "wrap",
@@ -80,6 +161,16 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
     icon: "edit_note",
     explain:
       "통화 종료와 동시에 후처리 초안이 자동 작성됩니다 — 상담사는 확인·보정만 합니다.",
+    spec: {
+      engine: "후처리 초안 생성 (현재 콜 유형별 프리셋 · LLM 생성 전환 계획)",
+      io: "통화 → 상담 유형·결과·후속조치 초안",
+      status: "데모 대체",
+      statusNote: "상담사는 초안을 확인·보정만 — 저장 시 상담카드에 병합됩니다.",
+      lines: [
+        "통화 종료와 동시에 시트가 자동 상승 (통화→후처리 한 흐름)",
+        "후속조치(콜백·SMS·이관 티켓)가 칩으로 제안된다",
+      ],
+    },
   },
 ];
 

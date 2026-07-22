@@ -75,12 +75,13 @@ export default function RoutingFeed({
   totalCards: number;
   explain: boolean;
 }) {
-  // 진행 중 콜은 전부 풀 카드(각자 미니 파이프라인이 돈다), 완료는 스트립으로 내려간다.
-  // 진행 중이 없으면 가장 최근 완료 1건을 풀 카드로 승격(첫인상용).
-  const live = feed.filter((r) => r.endedAt === null);
-  const done = feed.filter((r) => r.endedAt !== null);
-  const heroes = live.length > 0 ? live : done.slice(0, 1);
-  const strips = live.length > 0 ? done : done.slice(1);
+  // "진행 중" = 분류 파이프라인이 도는 중(라우팅 전). 라우팅되면 이 피드의 여정은 끝 —
+  // 대기열 배정(G/E)이든 AI 응대(S)든 타임라인으로 내려간다. (라우팅 후 통화·후처리는
+  // 부서 보드·상담사 화면 몫 — 그래서 대기 중인 긴급 콜이 여기서 영원히 "진행 중"으로 남지 않는다)
+  const pipelineLive = feed.filter((r) => r.endedAt === null && r.sge === null);
+  const heroes = pipelineLive.length > 0 ? pipelineLive : feed.slice(0, 1);
+  const heroIds = new Set(heroes.map((r) => r.callId));
+  const strips = feed.filter((r) => !heroIds.has(r.callId));
 
   return (
     <div className="card" style={css("display:flex;flex-direction:column;min-height:0;padding:16px 0 8px")}>
@@ -93,10 +94,10 @@ export default function RoutingFeed({
           <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
         <div style={css("flex:1")} />
-        {live.length > 0 && (
+        {pipelineLive.length > 0 && (
           <span style={css("flex:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}>
             <span className="onairdot" style={{ animation: "recBlink 1.4s infinite" }} />
-            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>진행 {live.length}건</span>
+            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>분류 중 {pipelineLive.length}건</span>
           </span>
         )}
       </div>
@@ -137,7 +138,7 @@ export default function RoutingFeed({
         {strips.length > 0 && (
           <div style={css("margin-top:12px")}>
             <div style={css("font:700 9.5px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.4px;color:var(--gray-700);padding:0 2px 7px")}>
-              완료 흐름 · {strips.length}건
+              처리 흐름 · {strips.length}건
             </div>
             <div style={css("position:relative")}>
               {/* 타임라인 축 — 점들이 이 선 위에 앉는다 */}
@@ -248,6 +249,10 @@ function TimelineRow({ r }: { r: AdminCallRecord }) {
         <span style={css("flex:none;display:inline-flex;align-items:center;gap:3px;font:600 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
           <span className="mi" style={css("font-size:12px")}>smart_toy</span>AI
         </span>
+      )}
+      {/* 라우팅됐지만 아직 안 끝난 G/E — 부서 대기열에서 대기 중 */}
+      {r.endedAt === null && (sge === "G" || sge === "E") && (
+        <span style={css("flex:none;font:600 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>대기</span>
       )}
       <span style={css("flex:none;font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px")}>
         {r.department ?? r.card?.department ?? ""}

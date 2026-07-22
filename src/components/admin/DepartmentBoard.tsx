@@ -10,6 +10,8 @@ import type { AdminFeed } from "../../hooks/useAdminFeed";
 export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; explain: boolean }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [transferFrom, setTransferFrom] = useState<{ dept: string; id: string } | null>(null);
+  // 보기 전환 — grid: 부서 카드(조작 포함) · load: 대기 부하 막대(한눈 비교)
+  const [view, setView] = useState<"grid" | "load">("grid");
 
   const totalWaiting = Object.values(feed.state.queues).reduce((n, q) => n + q.length, 0);
   // 관제의 첫 번째 질문 — "지금 긴급이 몇 건인가"
@@ -49,10 +51,74 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
           <span className="bignum" style={css("font-size:20px;color:var(--gray-1000)")}>{feed.state.handled}</span>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
+        {/* 보기 전환 — 카드 그리드 ↔ 부하 막대 */}
+        <span style={css("flex:none;display:inline-flex;gap:3px;margin-left:12px;background:var(--gray-100);border-radius:9999px;padding:3px")}>
+          {(
+            [
+              ["grid", "grid_view", "부서 카드 보기"],
+              ["load", "bar_chart", "대기 부하 보기"],
+            ] as const
+          ).map(([v, icon, tip]) => (
+            <span
+              key={v}
+              title={tip}
+              onClick={() => setView(v)}
+              style={css(
+                "display:flex;width:26px;height:26px;border-radius:9999px;align-items:center;justify-content:center;cursor:pointer;transition:background .2s;" +
+                  (view === v ? "background:var(--gray-1000)" : "")
+              )}
+            >
+              <span className="mi" style={css("font-size:15px;color:" + (view === v ? "#fff" : "var(--gray-700)"))}>{icon}</span>
+            </span>
+          ))}
+        </span>
       </div>
+
+      {/* ── 부하 막대 보기 — 부서별 대기량을 한눈에 비교 (E 빨강 · G 파랑 세그먼트) ── */}
+      {view === "load" && (
+        <div style={css("flex:1;display:flex;flex-direction:column;gap:7px;min-height:0;overflow-y:auto;padding:2px 2px 0")}>
+          {(() => {
+            const rows = DEPARTMENTS.map((d) => ({
+              name: d.name,
+              c: feed.queueCounts[d.name] ?? { s: 0, g: 0, e: 0 },
+            })).sort((a, b) => b.c.e + b.c.g - (a.c.e + a.c.g) || b.c.e - a.c.e);
+            const max = Math.max(1, ...rows.map((r) => r.c.e + r.c.g));
+            return rows.map((r) => {
+              const total = r.c.e + r.c.g;
+              return (
+                <div key={r.name} style={css("display:flex;align-items:center;gap:10px")}>
+                  <span style={css("flex:none;width:104px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + (r.name === "사고·신고" ? "var(--red-900)" : "var(--gray-1000)") + ";white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>
+                    {r.name}
+                  </span>
+                  {/* 막대 — 가는 요소(높이 9px)라 색 허용. E가 앞(우선), G가 뒤 */}
+                  <span style={css("flex:1;display:flex;align-items:center;gap:0;height:9px")}>
+                    {r.c.e > 0 && (
+                      <span style={{ width: `${(r.c.e / max) * 100}%`, height: 9, borderRadius: r.c.g > 0 ? "9999px 0 0 9999px" : 9999, background: "var(--red-700)", transition: "width .4s var(--ease-out)" }} />
+                    )}
+                    {r.c.g > 0 && (
+                      <span style={{ width: `${(r.c.g / max) * 100}%`, height: 9, borderRadius: r.c.e > 0 ? "0 9999px 9999px 0" : 9999, background: "var(--blue-700)", transition: "width .4s var(--ease-out)" }} />
+                    )}
+                    {total === 0 && <span style={css("width:100%;height:1px;background:var(--gray-300)")} />}
+                  </span>
+                  <span style={css("flex:none;width:96px;font:600 10.5px 'Geist Mono',monospace;color:var(--gray-800);text-align:right;white-space:nowrap")}>
+                    {r.c.e > 0 && <span style={css("color:var(--red-900)")}>E {r.c.e}</span>}
+                    {r.c.e > 0 && r.c.g > 0 && " · "}
+                    {r.c.g > 0 && <span style={css("color:var(--blue-900)")}>G {r.c.g}</span>}
+                    {total === 0 && <span style={css("color:var(--gray-600)")}>대기 없음</span>}
+                  </span>
+                </div>
+              );
+            });
+          })()}
+          <div style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);padding-top:2px")}>
+            대기량 많은 순 정렬 · 연결·이관 조작은 카드 보기에서
+          </div>
+        </div>
+      )}
 
       {/* 행 높이를 패널에 꽉 채워(minmax(0,1fr)) 죽은 공간을 카드 내부 호흡으로 흡수한다.
           사고·신고(긴급 직결)는 우하단 고정 — taxonomy 순서는 rules.ts가 진실원, 표시만 재배치 */}
+      {view === "grid" && (
       <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(0,1fr);gap:8px;min-height:0")}>
         {[...DEPARTMENTS.filter((d) => d.name !== "사고·신고"), ...DEPARTMENTS.filter((d) => d.name === "사고·신고")].map((dept) => {
           const items = feed.state.queues[dept.name] ?? [];
@@ -180,6 +246,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
           );
         })}
       </div>
+      )}
     </div>
   );
 }
