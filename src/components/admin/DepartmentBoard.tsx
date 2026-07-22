@@ -37,8 +37,15 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
     <div className="card" style={css("display:flex;flex-direction:column;padding:14px 16px 12px;min-height:0")}>
       <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:12px;white-space:nowrap")}>
         <span className="sechd" style={css("white-space:nowrap")}>부서 현황 보드</span>
-        {/* 설명 모드에선 이 패널의 백엔드 역할을, 평소엔 안내를. 좁아지면 말줄임(줄바꿈 금지) */}
-        <span style={css("flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + (explain ? "var(--gray-800)" : "var(--gray-600)"))}>
+        {/* 설명 모드에선 이 패널의 백엔드 역할을(회색 블록 — 다른 패널과 동일 문법), 평소엔 안내를 */}
+        <span
+          style={css(
+            "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 11px 'Geist Sans','Pretendard',sans-serif;" +
+              (explain
+                ? "color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:4px 9px;animation:dockDown .25s var(--ease-out)"
+                : "color:var(--gray-600)")
+          )}
+        >
           {explain
             ? "라우팅의 종착지 — G·E는 부서 대기열로, S는 AI가 즉시 응대. 연결·이관이 여기서"
             : "행에 올리면 연결·이관 · S(단순)는 AI가 즉시 응대"}
