@@ -171,6 +171,13 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
         </div>
         <div style={css("font-size:28px;font-weight:600;letter-spacing:-.3px;margin-top:16px")}>키움은행 고객센터</div>
 
+        {/* clean(고객 화면): 실폰과 같은 것만 — 통화 시간은 실제 아이폰처럼 이름 밑 회색으로 */}
+        {clean && vm.showTimer && (
+          <div style={css("margin-top:10px;font-size:16px;font-weight:400;color:#8a8a8e")}>
+            <span className="mono">{vm.clockStr}</span>
+          </div>
+        )}
+
         {/* 상태 표시 — 실제 고객 화면엔 없는 정보라 '시연 표기'를 명시한다.
             clean(고객 화면)에선 통째로 숨기고 상단 상황 알약이 대신 보여준다 */}
         {!clean && (

@@ -196,12 +196,11 @@ export default function LiveDemo({
               실제 휴대폰 화면은 깨끗하게, 상황은 전부 이 알약이 말한다 */}
           {view === "phone" && (
             <div style={css("display:flex;align-items:center;gap:10px;background:var(--onair-surface);border-radius:9999px;padding:8px 10px 8px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+              {/* on/off — 배경 없이 점+텍스트만. 통화 시간은 휴대폰 화면(실폰처럼)이 보여준다 */}
               <span
                 style={css(
-                  "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;border-radius:9999px;padding:5px 13px;" +
-                    (live.active
-                      ? "color:var(--green-900);background:var(--green-100,#e6f6ec)"
-                      : "color:var(--gray-700);background:var(--gray-100)")
+                  "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 4px;color:" +
+                    (live.active ? "var(--green-900)" : "var(--gray-700)")
                 )}
               >
                 <span
@@ -211,9 +210,6 @@ export default function LiveDemo({
                   )}
                 />
                 {live.active ? "통화 중" : "대기 중"}
-                {vm.showTimer && (
-                  <span className="mono" style={css("font-weight:600;color:var(--gray-1000)")}>{vm.clockStr}</span>
-                )}
               </span>
               {live.status && (
                 <>
