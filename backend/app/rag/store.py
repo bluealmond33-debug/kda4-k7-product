@@ -160,7 +160,7 @@ FROM sem
 JOIN rag_chunks c USING (chunk_id)
 JOIN rag_documents d ON d.doc_id = c.doc_id
 WHERE d.status = 'active'
-  AND (%(category)s IS NULL OR %(category)s = ANY (d.categories))
+  AND (%(category)s::text IS NULL OR %(category)s::text = ANY (d.categories))
 ORDER BY score DESC
 LIMIT %(limit)s
 """
