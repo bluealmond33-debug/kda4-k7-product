@@ -1,9 +1,9 @@
 {
   "mapping_version": "mvp-1.0",
-  "description": "금융 특화 모델의 task_category, consulting_situation, qa_topic을 K7 부서·위험도로 변환하는 검토 가능한 MVP 규칙",
+  "description": "금융 특화 모델의 task_category, consulting_situation, qa_topic을 K7 3층 taxonomy 부서(app/routing/taxonomy.py)·위험도로 변환하는 검토 가능한 MVP 규칙. 착오송금은 사고·신고(SG/misremit) 소관.",
   "department_rules": [
     {
-      "department": "금융사기",
+      "department": "사고·신고",
       "routing_confidence": 0.98,
       "keywords": [
         "금융사기",
@@ -12,11 +12,14 @@
         "해킹",
         "무단거래",
         "무단 거래",
-        "지급정지"
+        "지급정지",
+        "착오송금",
+        "분실",
+        "도난"
       ]
     },
     {
-      "department": "대출 및 금융상담",
+      "department": "여신·대출",
       "routing_confidence": 0.95,
       "keywords": [
         "대출",
@@ -24,36 +27,57 @@
         "주택담보",
         "신용대출",
         "만기 연장",
-        "만기연장"
+        "만기연장",
+        "금리인하"
       ]
     },
     {
-      "department": "외화",
+      "department": "외환·수출입",
       "routing_confidence": 0.93,
-      "keywords": ["외화", "환전", "해외송금", "해외 송금"]
+      "keywords": ["외화", "외환", "환전", "해외송금", "해외 송금"]
     },
     {
-      "department": "전자금융",
+      "department": "전자금융·디지털",
       "routing_confidence": 0.9,
       "keywords": [
         "전자금융",
         "인터넷뱅킹",
         "모바일뱅킹",
         "인증서",
-        "착오송금",
+        "OTP",
         "계좌개설",
         "계좌 개설"
       ]
     },
     {
-      "department": "민원",
-      "routing_confidence": 0.9,
-      "keywords": ["민원", "불만", "항의"]
+      "department": "수신·예적금",
+      "routing_confidence": 0.93,
+      "keywords": [
+        "예금",
+        "적금",
+        "예적금",
+        "주택청약",
+        "청약통장",
+        "발행어음",
+        "자동이체",
+        "이체한도",
+        "잔액"
+      ]
     },
     {
-      "department": "ARS",
-      "routing_confidence": 0.98,
-      "keywords": ["ARS", "자동응답", "자동 응답"]
+      "department": "카드·결제",
+      "routing_confidence": 0.92,
+      "keywords": ["카드", "결제대금", "포인트", "리볼빙", "할부"]
+    },
+    {
+      "department": "연금·신탁·투자",
+      "routing_confidence": 0.92,
+      "keywords": ["연금", "IRP", "퇴직연금", "펀드", "신탁"]
+    },
+    {
+      "department": "제도·민원·기타",
+      "routing_confidence": 0.9,
+      "keywords": ["민원", "불만", "항의", "ARS", "자동응답", "자동 응답", "제도 안내"]
     }
   ],
   "high_risk_keywords": [

@@ -17,7 +17,7 @@ from app.database import (
     ping_database,
 )
 from app.integration_service import persist_pipeline_result
-from app.pipeline import (
+from app.card_routing_pipeline import (
     PipelineConfigurationError,
     request_analysis_result,
     transcribe_audio,
