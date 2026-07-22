@@ -8,14 +8,16 @@ import {
   CloudRain,
   CloudSnow,
   CloudLightning,
+  Droplets,
   type LucideIcon,
 } from "lucide-react";
 import { css } from "../../lib/css";
 import "dseg/css/dseg.css";
 
 /**
- * 디지털 시계 (라이트 세그먼트 · 온에어 문법) — 패널 없이 배경 위에 바로.
- * 시:분이 주인공(최대 크기), 오른쪽에 DATE · DAY · 날씨(해/구름 아이콘 + 기온) 스택.
+ * 디지털 시계 (라이트 세그먼트 · 온에어 문법) — 시계가 정중앙 히어로.
+ * 위 한 줄 = 날씨(아이콘)·기온·습도 · 아래 한 줄 = 요일·날짜. 초는 없다(대기 화면 잔노이즈 제거).
+ * DATE는 상단 헤더의 '7월 N일(요일)'과 중복되지 않게 세그먼트 M/D로만.
  * 점등 = 잉크(검정, 볼드 세그먼트), 꺼진 세그먼트 = 연회색 고스트.
  * 날씨: Open-Meteo(무키·실측) 서울, 10분 갱신. 폰트: DSEG7/DSEG14 Bold(오픈소스).
  */
@@ -26,7 +28,6 @@ const INK = "var(--gray-1000)";
 const INK_DIM = "var(--gray-700)";
 const GHOST = "rgba(22,20,17,.08)";
 const LABEL = "var(--gray-500)";
-const FONT = "'Geist Sans','Pretendard',sans-serif";
 
 const DAY_EN = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
@@ -73,18 +74,22 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
     return () => window.clearInterval(t);
   }, []);
 
-  // 서울 실시간 날씨 — Open-Meteo 실측, 10분 갱신
-  const [wx, setWx] = useState<{ temp: number; code: number } | null>(null);
+  // 서울 실시간 날씨 — Open-Meteo 실측(기온·습도·상태), 10분 갱신
+  const [wx, setWx] = useState<{ temp: number; humidity: number; code: number } | null>(null);
   useEffect(() => {
     let alive = true;
     const load = () => {
       fetch(
-        "https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,weather_code&timezone=Asia%2FSeoul"
+        "https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul"
       )
         .then((r) => r.json())
         .then((d) => {
           if (alive && d?.current)
-            setWx({ temp: Math.round(d.current.temperature_2m), code: d.current.weather_code });
+            setWx({
+              temp: Math.round(d.current.temperature_2m),
+              humidity: Math.round(d.current.relative_humidity_2m),
+              code: d.current.weather_code,
+            });
         })
         .catch(() => {});
     };
@@ -101,60 +106,59 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   const hh = (h12 < 10 ? "!" : "") + h12; // 한 자리 시 — 앞칸은 고스트만
   const mm = (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
-  const ss = (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
   const colonOn = now.getSeconds() % 2 === 0;
   const dateStr = `${now.getMonth() + 1}/${now.getDate()}`;
   const tempStr = wx ? (wx.temp < 0 ? "-" : "") + Math.abs(wx.temp) : "--";
+  const humStr = wx ? String(wx.humidity) : "--";
   const weather = wx ? weatherOf(wx.code) : null;
-  const WxIcon = weather?.Icon;
+  const WxIcon = weather?.Icon ?? Cloud;
 
   return (
-    <div style={{ ...css("display:flex;align-items:center;gap:44px;transition:opacity .3s"), opacity: dimmed ? 0.55 : 1 }}>
-      {/* ── 시:분 — 화면의 주인공, 최대 크기 ── */}
+    <div style={{ ...css("display:flex;flex-direction:column;align-items:center;gap:24px;transition:opacity .3s"), opacity: dimmed ? 0.55 : 1 }}>
+      {/* ── 위: 날씨 · 기온 · 습도 (세그먼트 한 줄) ── */}
       <div style={css("display:flex;align-items:center;gap:16px")}>
-        <div style={css("display:flex;flex-direction:column;gap:10px;align-self:flex-start;padding-top:10px")}>
-          <span style={{ fontFamily: SEG14, fontSize: 24, fontWeight: "bold", color: isAm ? INK : GHOST }}>AM</span>
-          <span style={{ fontFamily: SEG14, fontSize: 24, fontWeight: "bold", color: !isAm ? INK : GHOST }}>PM</span>
+        <div style={css("display:flex;align-items:center;gap:11px")}>
+          <WxIcon size={38} strokeWidth={2.2} color={wx ? INK : "var(--gray-300)"} />
+          <div style={css("display:flex;align-items:flex-start;gap:6px")}>
+            <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={40} />
+            <span style={{ fontFamily: SEG14, fontSize: 19, fontWeight: "bold", color: INK_DIM, marginTop: 2 }}>°C</span>
+          </div>
         </div>
-        <Seg text={hh} ghost="88" font={SEG7} size={192} />
-        {/* 콜론 — 1초 점멸 */}
-        <span style={{ position: "relative", fontFamily: SEG7, fontSize: 192, lineHeight: 1, fontWeight: "bold" }}>
-          <span style={{ color: GHOST }}>:</span>
-          <span style={{ position: "absolute", inset: 0, color: INK, opacity: colonOn ? 1 : 0, transition: "opacity .12s" }}>:</span>
-        </span>
-        <Seg text={mm} ghost="88" font={SEG7} size={192} />
-        <div style={css("align-self:flex-end;padding-bottom:10px;margin-left:6px")}>
-          <Seg text={ss} ghost="88" font={SEG7} size={40} color={INK_DIM} />
+        <span style={css("width:1.5px;height:26px;background:var(--gray-200);border-radius:1px")} />
+        <div style={css("display:flex;align-items:center;gap:10px")}>
+          <Droplets size={30} strokeWidth={2.2} color={INK_DIM} />
+          <div style={css("display:flex;align-items:flex-start;gap:6px")}>
+            <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={40} color={INK_DIM} />
+            <span style={{ fontFamily: SEG14, fontSize: 19, fontWeight: "bold", color: INK_DIM, marginTop: 2 }}>%</span>
+          </div>
         </div>
       </div>
 
-      {/* ── 우측 스택: DATE · DAY · 날씨(아이콘+기온) — 패널·구분선 없이 ── */}
-      <div style={css("display:flex;flex-direction:column;gap:22px")}>
-        <div>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, letterSpacing: 2, color: LABEL, marginBottom: 8 }}>DATE</div>
-          <Seg text={dateStr} ghost={dateStr.replace(/\d/g, "8")} font={SEG14} size={42} />
+      {/* ── 시계 — 정중앙 히어로 ── */}
+      <div style={css("display:flex;align-items:center;gap:18px")}>
+        <div style={css("display:flex;flex-direction:column;gap:10px;align-self:flex-start;padding-top:8px")}>
+          <span style={{ fontFamily: SEG14, fontSize: 26, fontWeight: "bold", color: isAm ? INK : GHOST }}>AM</span>
+          <span style={{ fontFamily: SEG14, fontSize: 26, fontWeight: "bold", color: !isAm ? INK : GHOST }}>PM</span>
         </div>
-        <div>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, letterSpacing: 2, color: LABEL, marginBottom: 8 }}>DAY</div>
-          <Seg text={DAY_EN[now.getDay()]} ghost="~~~" font={SEG14} size={42} />
-        </div>
-        <div>
-          {/* 날씨 — 해/구름 아이콘이 상태를 말한다 (텍스트 코드·지명 없음) */}
-          <div style={css("display:flex;align-items:center;gap:14px")}>
-            {WxIcon ? (
-              <WxIcon size={42} strokeWidth={2.2} color="var(--gray-1000)" />
-            ) : (
-              <Cloud size={42} strokeWidth={2.2} color="var(--gray-300)" />
-            )}
-            <div style={css("display:flex;align-items:flex-start;gap:7px")}>
-              <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={42} />
-              <span style={{ fontFamily: SEG14, fontSize: 21, fontWeight: "bold", color: INK_DIM, marginTop: 2 }}>°C</span>
-            </div>
-          </div>
-          <div style={{ fontFamily: FONT, fontWeight: 500, fontSize: 12, color: LABEL, marginTop: 7 }}>
-            {weather?.ko ?? "수신 중…"}
-          </div>
-        </div>
+        <Seg text={hh} ghost="88" font={SEG7} size={196} />
+        {/* 콜론 — 1초 점멸 */}
+        <span style={{ position: "relative", fontFamily: SEG7, fontSize: 196, lineHeight: 1, fontWeight: "bold" }}>
+          <span style={{ color: GHOST }}>:</span>
+          <span style={{ position: "absolute", inset: 0, color: INK, opacity: colonOn ? 1 : 0, transition: "opacity .12s" }}>:</span>
+        </span>
+        <Seg text={mm} ghost="88" font={SEG7} size={196} />
+      </div>
+
+      {/* ── 아래: 요일 · 날짜 (세그먼트 한 줄) ── */}
+      <div style={css("display:flex;align-items:center;gap:16px")}>
+        <Seg text={DAY_EN[now.getDay()]} ghost="~~~" font={SEG14} size={44} />
+        <span style={css("width:1.5px;height:30px;background:var(--gray-200);border-radius:1px")} />
+        <Seg text={dateStr} ghost={dateStr.replace(/\d/g, "8")} font={SEG14} size={44} />
+      </div>
+
+      {/* 날씨 상태 한글 보조 라벨 — 작게 */}
+      <div style={{ fontFamily: "'Geist Sans','Pretendard',sans-serif", fontWeight: 500, fontSize: 12.5, color: LABEL, marginTop: -8 }}>
+        {weather?.ko ?? "날씨 수신 중…"}
       </div>
     </div>
   );
