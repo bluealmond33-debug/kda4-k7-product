@@ -1115,7 +1115,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     phInCall: inCall || ended,
     phEnded: ended,
     clockStr: fmt(clock),
-    showTimer: inCall && p !== "connecting",
+    showTimer: inCall,
+    // 통화 누르자마자 00:01 — 실기기처럼 연결음 단계부터 타이머가 붙는다
+    phoneClockStr: fmt(Math.max(clock, 1)),
     showRecDot: p === "recording" || p === "confirm",
     phoneStatus: STATUS[p] || "",
     showGlass: !!GLASS[p],
