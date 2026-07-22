@@ -112,9 +112,15 @@ export default function LiveTranscriptPanel({
         </div>
       </div>
 
-      {/* 전사 — 검은 배경 위 코딩 글자. 오래 말하면 위로 흘러가며 상단 페이드로 사라진다 */}
+      {/* 전사 — 검은 배경 위 코딩 글자. 오래 말하면 위로 흘러가며 상단이 점진적으로 투명해진다.
+          overlay 덮개 대신 mask 그라데이션 — 글자 자체가 위 88px에 걸쳐 서서히 사라진다 */}
       <div style={css("position:relative;flex:1;min-height:0")}>
-      <div ref={scrollRef} style={css("height:100%;overflow:hidden;padding:18px 22px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box")}>
+      <div
+        ref={scrollRef}
+        style={css(
+          "height:100%;overflow:hidden;padding:18px 22px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 88px);mask-image:linear-gradient(to bottom,transparent 0,#000 88px)"
+        )}
+      >
         {groups.length === 0 ? (
           <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#565b66")}>
             <span className="mi" style={css("font-size:30px")}>graphic_eq</span>
@@ -135,8 +141,6 @@ export default function LiveTranscriptPanel({
           ))
         )}
       </div>
-      {/* 상단 페이드 — 올라간 텍스트가 어둠 속으로 잦아든다 */}
-      <div style={css("position:absolute;top:0;left:0;right:0;height:64px;background:linear-gradient(#0a0a0e,rgba(10,10,14,0));pointer-events:none")} />
       </div>
     </div>
   );
