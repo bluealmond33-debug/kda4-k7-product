@@ -1,20 +1,22 @@
 import { css } from "../../lib/css";
-import type { AdminStatus } from "../../services";
+import { SGE_META, type AdminStatus, type Sge } from "../../services";
+import { cancelTestCalls, playTestCall } from "../../services/adminScenario";
 
-/** 상단 플로팅 알약 — 직원 화면 제어 알약과 같은 규격(높이·글자·그림자).
- *  램프들은 연출이 아니라 실측이다(/health · RAG 폴링). 미연결이면 정직하게 "데모 모드". */
+/** 상단 플로팅 알약 — 직원 화면 제어 알약과 같은 규격·같은 역할 분담:
+ *  왼쪽 = 정체성·실측 상태(램프는 /health·RAG 폴링 실측), 오른쪽 = 시연 리모컨(테스트 콜·초기화)과 모드.
+ *  동시 처리는 플로우 패널 헤더로, 감정모델 배지는 지식베이스 패널로 옮겨 알약 폭 예산을 지킨다. */
 export default function SystemStatusBar({
   status,
-  concurrent,
   explain,
   onToggleExplain,
   onOpenPolicy,
+  onResetAll,
 }: {
   status: AdminStatus;
-  concurrent: number;
   explain: boolean;
   onToggleExplain: () => void;
   onOpenPolicy: () => void;
+  onResetAll: () => void;
 }) {
   const offline = status.backend !== "online";
   const lamp = (on: boolean | null) =>
@@ -28,9 +30,30 @@ export default function SystemStatusBar({
     </span>
   );
 
+  // 시연 리모컨 — S/G/E 틴트 칩(직원 알약의 '다음 콜' 선택기와 같은 자리·같은 문법)
+  const testBtn = (sge: Sge) => {
+    const meta = SGE_META[sge];
+    return (
+      <span
+        key={sge}
+        onClick={() => playTestCall(sge)}
+        title={`${sge} · ${meta.label} 테스트 콜 재생`}
+        style={css(
+          "flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;border-radius:9999px;padding:6px 11px;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:" +
+            meta.bg +
+            ";color:" +
+            meta.fg
+        )}
+      >
+        <span style={css("width:7px;height:7px;border-radius:2px;flex:none;background:" + meta.bar)} />
+        {sge} {meta.label}
+      </span>
+    );
+  };
+
   return (
-    <div style={css("display:flex;align-items:center;gap:13px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 22px;box-shadow:0 10px 34px rgba(0,0,0,.28);white-space:nowrap")}>
-      {/* 타이틀 — 직원 알약의 좌측 라벨 위치 */}
+    <div style={css("display:flex;align-items:center;gap:11px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 22px;box-shadow:0 10px 34px rgba(0,0,0,.28);white-space:nowrap")}>
+      {/* 타이틀 */}
       <span style={css("display:inline-flex;align-items:center;gap:8px")}>
         <span style={css("width:24px;height:24px;border-radius:7px;background:var(--gray-1000);display:flex;align-items:center;justify-content:center")}>
           <span className="mi" style={css("font-size:14px;color:#fff")}>monitoring</span>
@@ -40,14 +63,10 @@ export default function SystemStatusBar({
 
       <span style={css("width:1px;height:20px;background:var(--color-border)")} />
 
-      {/* 실측 상태 램프 — 짧은 라벨로 알약 안에 들어간다 */}
+      {/* 실측 상태 램프 */}
       {item(lamp(status.backend === "online" ? true : status.lastChecked === null ? null : false), "백엔드", offline ? (status.lastChecked === null ? "미연결" : "오프라인") : "연결됨")}
       {item(lamp(status.database === "connected" ? true : status.database === "unknown" ? null : false), "DB", status.database === "connected" ? "연결됨" : status.database === "not_connected" ? "끊김" : "—")}
       {item(lamp(status.rag.available), "RAG", status.rag.available === null ? "—" : status.rag.available ? "가동" : "미적재")}
-      <span style={css("display:inline-flex;align-items:center;gap:5px")}>
-        <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정</span>
-        <span style={css("font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--amber-100);border-radius:9999px;padding:2.5px 8px")}>데모값</span>
-      </span>
       {offline && (
         <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:3px 10px")}>
           데모 모드
@@ -56,13 +75,22 @@ export default function SystemStatusBar({
 
       <span style={css("width:1px;height:20px;background:var(--color-border)")} />
 
-      {/* 동시 처리 */}
-      <span style={css("display:inline-flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
-        <span className={"onairdot" + (concurrent ? "" : " off")} />
-        <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>동시 처리</span>
-        <span className="bignum" style={css("font-size:15px;color:var(--gray-1000)")}>{concurrent}</span>
-        <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+      {/* 테스트 콜 — 나열은 심각도 우선 E→G→S (피드 범례·부서 칩과 동일 규약) */}
+      <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>테스트 콜</span>
+      {(["E", "G", "S"] as const).map(testBtn)}
+      <span
+        className="cbtn"
+        title="대시보드 초기화"
+        onClick={() => {
+          cancelTestCalls();
+          onResetAll();
+        }}
+        style={{ width: 30, height: 30 }}
+      >
+        <span className="mi" style={css("font-size:16px")}>restart_alt</span>
       </span>
+
+      <span style={css("width:1px;height:20px;background:var(--color-border)")} />
 
       {/* 분류 정책 */}
       <span

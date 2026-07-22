@@ -52,6 +52,11 @@ export default function KnowledgeBasePanel({
           dense .65 + kw .35 · bge-m3 · HNSW
         </span>
       </span>
+      {/* 감정 모델 — 실모델 미연동을 정직하게 (알약에서 이관, 모델 상태는 지식베이스 옆이 제자리) */}
+      <span style={css("display:inline-flex;align-items:center;gap:5px;flex:none")}>
+        <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정 모델</span>
+        <span style={css("font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--amber-100);border-radius:9999px;padding:2.5px 8px")}>데모값</span>
+      </span>
       <div style={css("flex:1")} />
       {/* PDF 업로드 — 청킹→추천→임베딩→적재→검색 반영까지 한 번에. CTA는 ONAIR 규약대로 파랑 */}
       <span

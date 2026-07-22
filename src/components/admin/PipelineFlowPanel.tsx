@@ -11,10 +11,12 @@ export default function PipelineFlowPanel({
   flowCall,
   ticker,
   explain,
+  concurrent,
 }: {
   flowCall: AdminCallRecord | null;
   ticker: FeedState["ticker"];
   explain: boolean;
+  concurrent: number;
 }) {
   const stages = flowCall?.stages ?? {};
 
@@ -27,6 +29,13 @@ export default function PipelineFlowPanel({
           발화부터 후처리까지 — 전 과정 온프레미스, 외부 API 0
         </span>
         <div style={css("flex:1")} />
+        {/* 동시 처리 — 이 파이프라인을 지금 몇 콜이 지나는지 (알약에서 이관) */}
+        <span style={css("display:inline-flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
+          <span className={"onairdot" + (concurrent ? "" : " off")} />
+          <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>동시 처리</span>
+          <span className="bignum" style={css("font-size:14px;color:var(--gray-1000)")}>{concurrent}</span>
+          <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+        </span>
         {flowCall ? (
           <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
             <span
@@ -40,7 +49,7 @@ export default function PipelineFlowPanel({
           </span>
         ) : (
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
-            인입 대기 — 상담사 화면에서 콜을 시작하거나 아래 테스트 콜을 눌러보세요
+            인입 대기 — 상담사 화면에서 콜을 시작하거나 상단 테스트 콜을 눌러보세요
           </span>
         )}
       </div>

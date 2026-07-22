@@ -9,7 +9,6 @@ import PipelineFlowPanel from "./PipelineFlowPanel";
 import RoutingFeed from "./RoutingFeed";
 import DepartmentBoard from "./DepartmentBoard";
 import KnowledgeBasePanel from "./KnowledgeBasePanel";
-import AdminTestControls from "./AdminTestControls";
 import ClassificationPolicyModal from "./ClassificationPolicyModal";
 import RegulationUploadModal from "./RegulationUploadModal";
 
@@ -92,30 +91,34 @@ export default function AdminDashboard() {
             alignItems: "center",
           }}
         >
-          {/* 상단 플로팅 알약 — 직원 화면 제어 알약과 같은 위치·톤 */}
+          {/* 상단 플로팅 알약 — 직원 화면 제어 알약과 같은 위치·톤. 테스트 콜 리모컨도 여기 */}
           <SystemStatusBar
             status={status}
-            concurrent={feed.concurrent}
             explain={explain}
             onToggleExplain={() => setExplain((v) => !v)}
             onOpenPolicy={() => setPolicyOpen(true)}
+            onResetAll={feed.resetAll}
           />
           {/* 직원 데스크톱과 동일한 캔버스 — 1100×688, 내부 1440×900 @0.76389 */}
           <DesktopShell flex>
             <div style={css("flex:1;display:flex;flex-direction:column;gap:12px;padding:16px;min-height:0")}>
-              <PipelineFlowPanel flowCall={feed.flowCall} ticker={feed.state.ticker} explain={explain} />
+              <PipelineFlowPanel
+                flowCall={feed.flowCall}
+                ticker={feed.state.ticker}
+                explain={explain}
+                concurrent={feed.concurrent}
+              />
               <div style={css("flex:1;display:grid;grid-template-columns:400px 1fr;gap:12px;min-height:0")}>
                 <RoutingFeed feed={feed.feed} totalCards={feed.state.totalCards} />
                 <DepartmentBoard feed={feed} />
               </div>
-              {/* 하단 행 — KB가 남는 폭을 갖고 테스트 콜은 자연 폭 고정(수축으로 인한 한글 세로 꺾임 방지) */}
-              <div style={css("display:grid;grid-template-columns:1fr auto;gap:12px;flex:none")}>
+              {/* 하단 행 — 지식베이스 풀폭 (테스트 콜 리모컨은 상단 알약으로 이동) */}
+              <div style={css("display:flex;flex:none")}>
                 <KnowledgeBasePanel
                   totalCards={feed.state.totalCards}
                   status={status}
                   onOpenUpload={() => setUploadOpen(true)}
                 />
-                <AdminTestControls onResetAll={feed.resetAll} />
               </div>
             </div>
           </DesktopShell>
