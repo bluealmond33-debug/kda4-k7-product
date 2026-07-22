@@ -1,0 +1,33 @@
+doc_id,filename,title,doc_type,routing,department,business_code,categories,version,effective_date,status
+hana-jutaek-cheongyak-bugeum,주택청약부금.pdf,주택청약부금,요약 상품설명서,G,DEP,subscription,DEP;subscription,v1,2026-03-09,active
+hana-jutaek-cheongyak-yegeum,주택청약예금.pdf,주택청약예금,요약 상품설명서,G,DEP,subscription,DEP;subscription,v1,2026-03-09,active
+hana-jutaek-cheongyak-jeochuk,주택청약저축.pdf,주택청약저축,요약 상품설명서,G,DEP,subscription,DEP;subscription,v1,2024-12-31,active
+hana-jutaek-cheongyak-jonghap-jeochuk,주택청약종합저축.pdf,주택청약종합저축,요약 상품설명서,G,DEP,subscription,DEP;subscription,v1,2026-06-23,active
+hana-cheongnyeon-jutaek-dream,청년 주택드림 청약통장.pdf,청년 주택드림 청약통장,요약 상품설명서,G,DEP,subscription,DEP;subscription,v1,2026-06-23,active
+hana-balhaeng-eoeum,발행어음.pdf,발행어음,상품설명서,G,DEP,deposit,DEP;deposit,v1,2025-08-20,active
+hana-cd-suikryul,CD수익률설명서(여신거래용).pdf,CD수익률설명서(여신거래용),설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-gagye-daechul-1q-autoloan,가계대출 상품설명서 [1Q(원큐) 오토론].pdf,가계대출 상품설명서 [1Q(원큐) 오토론],상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-gagye-daechul-daerieobyong,가계대출 상품설명서(은행대리업용).pdf,가계대출 상품설명서(은행대리업용),상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-gagye-daechul,가계대출 상품설명서.pdf,가계대출 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-gagye-daechul-haeksim,가계대출핵심상품설명서.pdf,가계대출핵심상품설명서,핵심설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-gukgun-sangsaengplus,국군복지단 상생플러스론 상품설명서.pdf,국군복지단 상생플러스론 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-gieop-daechul,기업대출상품설명서.pdf,기업대출상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-didimdol,내집마련 디딤돌 대출 상품설명서.pdf,내집마련 디딤돌 대출 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-daechul-gwonyuyong,대출 상품설명서(권유용).pdf,대출 상품설명서(권유용),상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-wolsanghwan-gojeong-jutaekdamho,대출거래 상품설명서(월상환액 고정형 주택담보대출용).pdf,대출거래 상품설명서(월상환액 고정형 주택담보대출용),상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-deonaeun-bogeumjari,더나은 보금자리론 설명서.pdf,더나은 보금자리론 설명서,설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-dongban-seongjang,동반성장론 상품설명서.pdf,동반성장론 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-bogeumjari,보금자리론 설명서.pdf,보금자리론 설명서,설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-bunyang-janggeum,분양주택잔금대출 상품설명서.pdf,분양주택잔금대출 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-jeonse-jageum,전세자금대출 상품설명서.pdf,전세자금대출 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-jutaekdamho-jeokgyeok,주택담보대출 상품설명서(적격대출용).pdf,주택담보대출 상품설명서(적격대출용),상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-jutaekdamho,주택담보대출 상품설명서.pdf,주택담보대출 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-jutaekdosigigeum-gagye,주택도시기금대출(가계용) 상품설명서.pdf,주택도시기금대출(가계용) 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-jutaekyeongeum-sajeonyeyak,주택연금 사전예약 보금자리론 설명서.pdf,주택연금 사전예약 보금자리론 설명서,설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-jungdogeum,중도금대출 상품설명서.pdf,중도금대출 상품설명서,상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-jungdogeum-gieop,중도금대출상품설명서(기업대출용).pdf,중도금대출상품설명서(기업대출용),상품설명서,G,LON,loan,LON;loan,v1,2026-01-01,active
+hana-fx-foreign-investor-deposit-terms,외국인증권투자 외화예금 약관.pdf,외국인증권투자 외화예금 약관,약관,G,FX,fx,FX;fx,v1,2026-01-01,active
+hana-fx-cd-passbook,외화양도성예금증서(통장식).pdf,외화양도성예금증서(통장식),약관,G,FX,fx,FX;fx,v1,2026-01-01,active
+hana-fx-deposit-terms,외화예금 거래기본약관.pdf,외화예금 거래기본약관,약관,G,FX,fx,FX;fx,v1,2026-01-01,active
+hana-fx-trading-terms,외환거래기본약관.pdf,외환거래기본약관,약관,G,FX,fx,FX;fx,v1,2026-01-01,active
+hana-irp-core,개인형 IRP 핵심설명서.pdf,개인형IRP 핵심설명서,핵심설명서,G,INV,pension,INV;pension,v1,2026-02-01,active
