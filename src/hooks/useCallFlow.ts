@@ -70,6 +70,10 @@ export interface CallFlowConfig {
   stageW?: number;
   /** 스케일 상한. 기본 1(축소만). 좁은 스테이지는 >1로 화면을 채워 여백을 없앤다. */
   maxScale?: number;
+  /** 스테이지 좌우 여백(px). 0이면 가로를 꽉 채운다. */
+  fitPad?: number;
+  /** false면 세로 캡 없이 가로 기준으로만 스케일(세로는 스크롤). */
+  fitHeight?: boolean;
 }
 
 const STAGE_W = 1420;
@@ -811,15 +815,18 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 좁은 스테이지를 확대해 화면을 채운다 — 세로는 뷰포트 높이로 캡(offsetHeight는 스케일 무관 원치수).
   const stageW = config.stageW ?? STAGE_W;
   const maxScale = config.maxScale ?? 1;
+  // fitPad = 좌우 여백(px), fitHeight=false 면 세로 캡 없이 가로를 100% 채운다(직원 단독 화면)
+  const fitPad = config.fitPad ?? 40;
+  const fitHeight = config.fitHeight ?? true;
   const fit = useCallback(() => {
     const w = rootRef.current ? rootRef.current.clientWidth : window.innerWidth;
-    const avail = Math.max(320, w - 40);
+    const avail = Math.max(320, w - fitPad);
     const h = stageRef.current ? stageRef.current.offsetHeight : 0;
-    const scH = h > 0 ? Math.max(0.4, (window.innerHeight - 40) / h) : maxScale;
+    const scH = fitHeight && h > 0 ? Math.max(0.4, (window.innerHeight - 40) / h) : maxScale;
     const sc = Math.min(maxScale, avail / stageW, scH);
     setScale((prev) => (prev !== sc ? sc : prev));
     setNatH((prev) => (prev !== h ? h : prev));
-  }, [stageW, maxScale]);
+  }, [stageW, maxScale, fitPad, fitHeight]);
 
   useEffect(() => {
     const onResize = () => fit();

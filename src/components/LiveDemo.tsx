@@ -29,6 +29,8 @@ export default function LiveDemo({
   const vm = useCallFlow({
     ...config,
     ...(view === "phone" ? { stageW: 800, maxScale: 1.7 } : null),
+    // 직원 단독 화면 — 데스크톱 폭(1100)을 브라우저 가로에 100% 맞춘다(양옆 여백 없음)
+    ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 0, fitHeight: false } : null),
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,7 +65,7 @@ export default function LiveDemo({
   return (
     <div
       ref={vm.rootRef}
-      style={css("min-height:100vh;padding:20px;display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box")}
+      style={css("min-height:100vh;padding:" + (view === "desktop" ? "0" : "20px") + ";display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box")}
     >
       <div style={{ width: vm.scaledW, height: vm.scaledH }}>
         <div
@@ -187,7 +189,8 @@ export default function LiveDemo({
           </div>
           )}
 
-          {/* 고객 화면 상황 알약 — 데모 제어 대신 '지금 무슨 일이 일어나는지'만 보여준다 */}
+          {/* 고객 화면 상황 알약 — 폰에서 걷어낸 시연 표기(상태·녹음점·타이머)가 여기로 온다.
+              실제 휴대폰 화면은 깨끗하게, 상황은 알약이 말한다 */}
           {view === "phone" && (
             <div style={css("display:flex;align-items:center;gap:12px;background:var(--onair-surface);border-radius:9999px;padding:8px 12px 8px 20px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
               <span style={css("display:inline-flex;align-items:center;gap:7px;font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
@@ -195,8 +198,14 @@ export default function LiveDemo({
                 키움은행 고객센터
               </span>
               <span style={css("width:1px;height:18px;background:var(--color-border)")} />
-              <span style={css("display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
-                {vm.phaseLabel}
+              <span style={css("display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 12px")}>
+                {vm.showRecDot && (
+                  <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--red-700);animation:recBlink 1.1s infinite")} />
+                )}
+                {vm.phoneStatus || vm.phaseLabel}
+                {vm.showTimer && (
+                  <span className="mono" style={css("font-weight:600;color:var(--gray-1000)")}>{vm.clockStr}</span>
+                )}
               </span>
               <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:6px 13px;background:var(--gray-100);border-radius:9999px;font-size:12.5px;font-weight:600;cursor:pointer")}>
                 <span className="mi" style={css("font-size:16px")}>restart_alt</span>초기화
@@ -214,7 +223,7 @@ export default function LiveDemo({
           {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율. 안내 팝업은 이 영역 위 중앙 딤 모달로 뜬다.
               view에 따라 한쪽만 남긴다: customer=폰, employee=데스크톱 (스테이지·스케일은 공유) */}
           <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
-            {view !== "desktop" && <Phone vm={vm} />}
+            {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}
             {/* 고객 화면 — 폰은 살짝 왼쪽, 오른쪽에 실시간 현황·발화 스트림(타이핑 애니메이션) */}
             {view === "phone" && <LiveTranscriptPanel />}
             {view !== "phone" && (
