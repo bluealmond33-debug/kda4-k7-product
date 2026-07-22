@@ -98,19 +98,20 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           <div style={css("display:flex;gap:12px;align-items:flex-start")}>
             <div style={css("flex:none;width:238px;display:flex;flex-direction:column;gap:12px")}>
             <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 15px")}>
-              <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>
+              <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 고객 감정온도
                 <span
                   title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델이 판정한 값입니다" : "실제 모델 미연동 — 데모용 값입니다"}
                   style={css("font:600 9px 'Geist Mono',monospace;padding:2px 6px;border-radius:5px;background:var(--gray-200);color:var(--gray-600)")}
                 >{vm.prepEmotionSourceBadge.label}</span>
               </div>
-              <div style={css("display:flex;align-items:center;gap:7px")}>
-                <span className="mi" style={css("font-size:30px;color:var(--gray-700)")}>device_thermostat</span>
-                <span style={css("font:800 40px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.5px;color:var(--gray-1000)")}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
-                <span style={css("font:800 17px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);align-self:flex-end;padding-bottom:6px")}>{vm.prepEmotionLabel}</span>
+              <div style={css("display:flex;align-items:center;gap:12px")}>
+                <Thermometer score={vm.prepEmotionScore} color={vm.prepEmotionBar} />
+                <div style={css("display:flex;align-items:baseline;gap:8px")}>
+                  <span style={css("font:800 42px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.5px;color:" + vm.prepEmotionBar)}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
+                  <span style={css("font:800 18px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
+                </div>
               </div>
-              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:5px")}>{vm.prepEmotionSignal}</div>
             </div>
             <div style={css("border-radius:8px;padding:14px 15px;background:" + (riskHigh ? "var(--red-800)" : "var(--green-100)"))}>
               <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:6px;color:" + (riskHigh ? "rgba(255,255,255,.9)" : "var(--green-900)"))}>
@@ -191,5 +192,23 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
       </div>
     </DesktopShell>
+  );
+}
+
+/** 세로 온도계 — 수은 높이가 감정 점수(0~100)에 비례, 색은 레벨 색. 재질 아이콘보다 길고 명확. */
+function Thermometer({ score, color }: { score: number | null; color: string }) {
+  const W = 20, H = 62;
+  const bulbCy = 52, bulbR = 8, tubeX = 7, tubeW = 6, tubeTop = 5, tubeBot = 46;
+  const pct = Math.max(0, Math.min(100, score ?? 0)) / 100;
+  const fillTop = tubeBot - (tubeBot - tubeTop) * pct;
+  return (
+    <svg width={W} height={H} viewBox={"0 0 " + W + " " + H} style={{ flex: "none", display: "block" }}>
+      {/* 배경 관 + 구 */}
+      <rect x={tubeX} y={tubeTop} width={tubeW} height={tubeBot - tubeTop + 4} rx={tubeW / 2} fill="var(--gray-300)" />
+      <circle cx={W / 2} cy={bulbCy} r={bulbR} fill="var(--gray-300)" />
+      {/* 수은 — 구는 항상 채우고 관은 점수만큼 */}
+      <circle cx={W / 2} cy={bulbCy} r={bulbR - 1.5} fill={color} />
+      <rect x={tubeX + 1.5} y={fillTop} width={tubeW - 3} height={bulbCy - fillTop} rx={(tubeW - 3) / 2} fill={color} />
+    </svg>
   );
 }

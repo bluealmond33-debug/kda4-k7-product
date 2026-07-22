@@ -124,15 +124,14 @@ export default function LiveDemo({
           {view !== "phone" && (
           <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
             <div style={css("display:flex;align-items:center;gap:10px")}>
-              {["접수", "준비", "통화", "후처리"].map((label, i) => {
-                const n = i + 1;
-                const active = vm.stepIndex === n;
-                const done = vm.stepIndex > n;
+              {["대기", "접수", "준비", "통화", "후처리"].map((label, i) => {
+                const active = vm.stepIndex === i;
+                const done = vm.stepIndex > i;
                 return (
                   <span key={label} style={css("display:inline-flex;align-items:center;gap:10px")}>
                     {i > 0 && <span style={css("width:14px;height:1.5px;background:" + (done || active ? "var(--gray-500)" : "var(--gray-300)"))} />}
                     <span
-                      onClick={() => vm.jumpToStep(i + 1)}
+                      onClick={() => vm.jumpToStep(i)}
                       title={label + " 화면으로 바로 이동"}
                       style={css("display:inline-flex;align-items:center;gap:6px;cursor:pointer")}
                     >
@@ -146,7 +145,8 @@ export default function LiveDemo({
                               : "background:var(--gray-100);color:var(--gray-600)")
                         )}
                       >
-                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : n}
+                        {/* 대기 = 0(아직 콜 시작 전). 접수부터 1 */}
+                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i}
                       </span>
                       <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
                     </span>
@@ -228,14 +228,13 @@ export default function LiveDemo({
           </div>
           )}
 
-          {/* 고객 화면 상황 알약 — on/off(대기·통화) + 지금 무슨 일이 일어나는지 한 줄.
-              실제 휴대폰 화면은 깨끗하게, 상황은 전부 이 알약이 말한다 */}
+          {/* 고객 화면 상황 알약 — 발표용 화면: on/off(● 대기·통화)만. 상태 문구·초기화 없음.
+              (리셋은 새로고침 또는 폰의 통화 버튼 — 새 콜 시작이 곧 리셋) */}
           {view === "phone" && (
-            <div style={css("display:flex;align-items:center;gap:10px;background:var(--onair-surface);border-radius:9999px;padding:8px 10px 8px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
-              {/* on/off — 배경 없이 점+텍스트만. 통화 시간은 휴대폰 화면(실폰처럼)이 보여준다 */}
+            <div style={css("display:flex;align-items:center;background:var(--onair-surface);border-radius:9999px;padding:7px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
               <span
                 style={css(
-                  "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 4px;color:" +
+                  "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:" +
                     (live.active ? "var(--green-900)" : "var(--gray-700)")
                 )}
               >
