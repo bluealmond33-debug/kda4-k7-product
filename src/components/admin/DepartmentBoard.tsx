@@ -60,9 +60,7 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
                 </span>
                 <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.1px")}>{dept.name}</span>
                 {isIncident && (
-                  <span style={css("font:700 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);background:var(--red-100);border-radius:9999px;padding:2px 7px")}>
-                    긴급 직결
-                  </span>
+                  <span style={css("font:700 10px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>긴급 직결</span>
                 )}
                 <div style={css("flex:1")} />
                 <span className="mi" style={css("font-size:16px;color:var(--gray-600);transition:transform .25s;transform:rotate(" + (open ? "180deg" : "0deg") + ")")}>expand_more</span>
@@ -74,17 +72,20 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
               {/* S/G/E 카운트 칩 — 0건은 흐리게. 카드 바닥에 고정(order+margin-top:auto)해
                   남는 세로 공간이 카드 내부의 호흡으로 흡수된다 */}
               <div style={css("order:3;margin-top:auto;padding-top:9px;display:flex;align-items:center;gap:6px")}>
+                {/* 신호등 문법 — 켜진 점은 제 색, 꺼진 점은 흐린 제 색(.lampdots와 동일 원리). 틴트 면 금지 */}
                 {(["E", "G", "S"] as const).map((k) => {
                   const n = k === "S" ? counts.s : k === "G" ? counts.g : counts.e;
                   const meta = SGE_META[k];
+                  const dim = { E: "rgba(188,63,43,.4)", G: "rgba(47,95,196,.35)", S: "rgba(62,122,78,.42)" }[k];
                   return (
                     <span
                       key={k}
                       style={css(
-                        "display:inline-flex;align-items:center;gap:4px;border-radius:7px;padding:3px 8px;font:700 11px 'Geist Mono',monospace;transition:opacity .3s;" +
-                          (n > 0 ? "background:" + meta.bg + ";color:" + meta.fg : "background:var(--gray-100);color:var(--gray-500);opacity:.65")
+                        "display:inline-flex;align-items:center;gap:4px;font:700 11px 'Geist Mono',monospace;transition:opacity .3s;" +
+                          (n > 0 ? "color:" + meta.fg : "color:var(--gray-500)")
                       )}
                     >
+                      <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + (n > 0 ? meta.bar : dim))} />
                       {k} {n}
                     </span>
                   );
@@ -104,18 +105,18 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
                     const pickerOpen = transferFrom?.id === it.id;
                     return (
                       <div key={it.id} style={css("position:relative;display:flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-200);border-radius:8px;padding:7px 9px")}>
-                        <span style={css("flex:none;width:8px;height:8px;border-radius:2.5px;background:" + meta.bar)} />
+                        <span style={css("flex:none;width:8px;height:8px;border-radius:9999px;background:" + meta.bar)} />
                         <span style={css("flex:1;min-width:0;font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
                           {it.label}
                         </span>
                         {it.callId && (
-                          <span style={css("flex:none;font:700 9px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--blue-100);border-radius:9999px;padding:2px 6px")}>LIVE</span>
+                          <span style={css("flex:none;font:700 9px 'Geist Mono',monospace;letter-spacing:.4px;color:var(--blue-900)")}>LIVE</span>
                         )}
                         {/* 연결 — 단순(S)은 ARS·AI가 응대, 일반·긴급은 상담사 배정 */}
                         <span
                           title={it.sge === "S" ? "AI 응대 완료 처리" : "수신 가능 상담사에게 연결"}
                           onClick={() => feed.connectItem(dept.name, it.id)}
-                          style={css("flex:none;display:flex;width:24px;height:24px;border-radius:9999px;align-items:center;justify-content:center;background:var(--green-100);cursor:pointer")}
+                          style={css("flex:none;display:flex;width:24px;height:24px;border-radius:9999px;align-items:center;justify-content:center;background:var(--gray-100);cursor:pointer")}
                         >
                           <span className="mi" style={css("font-size:14px;color:var(--green-900)")}>{it.sge === "S" ? "smart_toy" : "call"}</span>
                         </span>

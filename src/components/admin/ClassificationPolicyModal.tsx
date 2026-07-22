@@ -38,8 +38,9 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
             {(["E", "S", "G"] as const).map((k, i) => (
               <span key={k} style={css("display:flex;align-items:center;gap:8px;flex:1")}>
                 {i > 0 && <span className="mi" style={css("flex:none;font-size:16px;color:var(--gray-600)")}>arrow_forward</span>}
-                <span style={css("flex:1;display:flex;flex-direction:column;gap:3px;border-radius:10px;padding:9px 12px;background:" + SGE_META[k].bg)}>
-                  <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + SGE_META[k].fg)}>
+                <span style={css("flex:1;display:flex;flex-direction:column;gap:3px;border-radius:10px;padding:9px 12px;background:var(--onair-surface);box-shadow:var(--sh-near)")}>
+                  <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + SGE_META[k].fg)}>
+                    <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + SGE_META[k].bar)} />
                     {i + 1}. {k} · {SGE_META[k].label}
                   </span>
                   <span style={css("font:400 11px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{SGE_META[k].desc}</span>
@@ -50,7 +51,7 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
 
           {/* 위험 판정 정책 */}
           <div style={css("display:grid;grid-template-columns:1fr 1fr;gap:10px")}>
-            <div style={css("border-radius:12px;background:var(--red-100);padding:13px 16px")}>
+            <div style={css("border-radius:12px;background:var(--background-200);padding:13px 16px")}>
               <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:8px")}>
                 <span className="mi" style={css("font-size:15px;color:var(--red-900)")}>warning</span>
                 <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>사고징후 높음(high) → 긴급 E</span>
@@ -65,7 +66,7 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
                 단일 단어만으로 긴급 판정하지 않습니다 — “기관 사칭 + 송금 요구”처럼 정황이 결합될 때 긴급.
               </div>
             </div>
-            <div style={css("border-radius:12px;background:var(--green-100);padding:13px 16px")}>
+            <div style={css("border-radius:12px;background:var(--background-200);padding:13px 16px")}>
               <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:8px")}>
                 <span className="mi" style={css("font-size:15px;color:var(--green-900)")}>verified</span>
                 <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>사고징후 낮음(low) → 단순 S / 일반 G</span>

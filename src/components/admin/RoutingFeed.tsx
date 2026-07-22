@@ -37,7 +37,7 @@ export default function RoutingFeed({
         <div style={css("flex:1")} />
         {(["E", "G", "S"] as const).map((k) => (
           <span key={k} style={css("display:inline-flex;align-items:center;gap:5px")}>
-            <span style={css("width:8px;height:8px;border-radius:2.5px;background:" + SGE_META[k].bar)} />
+            <span style={css("width:8px;height:8px;border-radius:9999px;background:" + SGE_META[k].bar)} />
             <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
               {k} {SGE_META[k].label}
             </span>
@@ -85,8 +85,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
 
   if (!r.card || !sge || !meta) {
     return (
-      <div style={css("position:relative;border-radius:12px;background:var(--background-200);box-shadow:var(--sh-focus);padding:14px 16px 14px 18px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
-        <span style={css("position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--gray-400)")} />
+      <div style={css("position:relative;border-radius:12px;background:var(--background-200);box-shadow:var(--sh-focus);padding:14px 16px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
         <div style={css("display:flex;align-items:center;gap:9px")}>
           <span className="mi" style={css("font-size:16px;color:var(--blue-700);animation:spin 1.2s linear infinite")}>progress_activity</span>
           <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>분류 중…</span>
@@ -101,10 +100,11 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
   }
 
   return (
-    <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:var(--sh-focus);padding:13px 16px 14px 20px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
-      <span style={css("position:absolute;left:0;top:0;bottom:0;width:5px;background:" + meta.bar)} />
+    <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:var(--sh-focus);padding:13px 16px 14px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
       <div style={css("display:flex;align-items:center;gap:8px")}>
-        <span style={css("flex:none;font:700 11px 'Geist Sans','Pretendard',sans-serif;border-radius:7px;padding:3px 9px;background:" + meta.bg + ";color:" + meta.fg)}>
+        {/* S/G/E 신호 — 틴트·색 바 없이 점 + 잉크 (ONAIR: 색은 점·글자에만) */}
+        <span style={css("flex:none;display:inline-flex;align-items:center;gap:6px;font:700 12px 'Geist Sans','Pretendard',sans-serif;color:" + meta.fg)}>
+          <span style={css("width:9px;height:9px;border-radius:9999px;flex:none;background:" + meta.bar)} />
           {sge} · {meta.label}
         </span>
         <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
@@ -126,12 +126,12 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
           </span>
         )}
         {r.risk === "high" && (
-          <span style={css("display:inline-flex;align-items:center;gap:3px;font:700 10.5px 'Geist Sans','Pretendard',sans-serif;background:var(--red-100);color:var(--red-900);border-radius:9999px;padding:3px 9px")}>
+          <span style={css("display:inline-flex;align-items:center;gap:3px;font:700 10.5px 'Geist Sans','Pretendard',sans-serif;background:var(--gray-100);color:var(--red-900);border-radius:9999px;padding:3px 9px")}>
             <span className="mi" style={css("font-size:12px")}>warning</span>사고징후 높음
           </span>
         )}
         {r.transferTo && (
-          <span style={css("display:inline-flex;align-items:center;gap:3px;font:600 10.5px 'Geist Sans','Pretendard',sans-serif;background:var(--blue-100);color:var(--blue-900);border-radius:9999px;padding:3px 9px")}>
+          <span style={css("display:inline-flex;align-items:center;gap:3px;font:600 10.5px 'Geist Sans','Pretendard',sans-serif;background:var(--gray-100);color:var(--blue-900);border-radius:9999px;padding:3px 9px")}>
             <span className="mi" style={css("font-size:12px")}>sync_alt</span>이관 → {r.transferTo}
           </span>
         )}
@@ -153,15 +153,18 @@ function StripCard({ r, idx }: { r: AdminCallRecord; idx: number }) {
   return (
     <div
       style={css(
-        "position:relative;border-radius:9px;background:var(--background-200);box-shadow:var(--sh-near);padding:8px 12px 8px 15px;overflow:hidden;transition:opacity .3s;" +
+        "position:relative;border-radius:9px;background:var(--background-200);box-shadow:var(--sh-near);padding:8px 12px;overflow:hidden;transition:opacity .3s;" +
           (idx === 0 ? "" : "margin-top:-3px;") +
           (live ? "" : "opacity:.72")
       )}
     >
-      <span style={css("position:absolute;left:0;top:0;bottom:0;width:4px;background:" + (meta ? meta.bar : "var(--gray-400)"))} />
       <div style={css("display:flex;align-items:center;gap:8px")}>
+        {/* S/G/E 신호 — 점 + 잉크 (틴트·색 바 금지) */}
         {meta ? (
-          <span style={css("flex:none;font:700 9.5px 'Geist Mono',monospace;border-radius:5px;padding:2px 6px;background:" + meta.bg + ";color:" + meta.fg)}>{sge}</span>
+          <span style={css("flex:none;display:inline-flex;align-items:center;gap:5px;font:700 10.5px 'Geist Mono',monospace;color:" + meta.fg)}>
+            <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + meta.bar)} />
+            {sge}
+          </span>
         ) : (
           <span className="mi" style={css("flex:none;font-size:13px;color:var(--blue-700);animation:spin 1.2s linear infinite")}>progress_activity</span>
         )}

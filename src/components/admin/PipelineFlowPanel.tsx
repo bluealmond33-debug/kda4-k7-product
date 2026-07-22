@@ -80,8 +80,6 @@ export default function PipelineFlowPanel({
                     "position:relative;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;transition:background .3s,box-shadow .3s;" +
                       (on
                         ? "background:var(--blue-700);box-shadow:0 4px 14px -4px rgba(47,95,196,.55)"
-                        : done
-                        ? "background:var(--green-100)"
                         : "background:var(--gray-100)")
                   )}
                 >

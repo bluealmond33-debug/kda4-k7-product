@@ -18,8 +18,9 @@ export default function KnowledgeBasePanel({
   const docs = status.rag.documents ?? RAG_STATS.docs;
   const chunks = status.rag.chunks ?? RAG_STATS.chunks;
 
+  // min-width 고정 — "1,153"처럼 넓은 숫자가 있어도 컬럼 간격이 고르게 유지된다
   const stat = (value: string, label: string, accent = "var(--gray-1000)") => (
-    <span style={css("display:flex;flex-direction:column;gap:3px;align-items:flex-start")}>
+    <span style={css("display:flex;flex-direction:column;gap:3px;align-items:flex-start;min-width:82px")}>
       <span className="bignum" style={css("font-size:21px;color:" + accent)}>{value}</span>
       <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>{label}</span>
     </span>
@@ -52,10 +53,11 @@ export default function KnowledgeBasePanel({
           dense .65 + kw .35 · bge-m3 · HNSW
         </span>
       </span>
-      {/* 감정 모델 — 실모델 미연동을 정직하게 (알약에서 이관, 모델 상태는 지식베이스 옆이 제자리) */}
-      <span style={css("display:inline-flex;align-items:center;gap:5px;flex:none")}>
+      {/* 감정 모델 — 실모델 미연동을 정직하게. 틴트 없이 앰버 램프+잉크로만 (ONAIR: 색은 점·글자에) */}
+      <span style={css("display:inline-flex;align-items:center;gap:6px;flex:none")}>
+        <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:var(--amber-700)")} />
         <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정 모델</span>
-        <span style={css("font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--amber-100);border-radius:9999px;padding:2.5px 8px")}>데모값</span>
+        <span style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>데모값</span>
       </span>
       <div style={css("flex:1")} />
       {/* PDF 업로드 — 청킹→추천→임베딩→적재→검색 반영까지 한 번에. CTA는 ONAIR 규약대로 파랑 */}

@@ -115,7 +115,7 @@ export default function RegulationUploadModal({
                   "display:flex;flex-direction:column;align-items:center;gap:9px;border:1.5px dashed " +
                     (dragOver ? "var(--blue-700)" : "var(--gray-500)") +
                     ";border-radius:14px;padding:34px 20px;cursor:pointer;transition:background .2s,border-color .2s;background:" +
-                    (dragOver ? "var(--blue-100)" : "var(--background-200)")
+                    "var(--background-200)"
                 )}
               >
                 <span className="mi" style={css("font-size:34px;color:" + (dragOver ? "var(--blue-700)" : "var(--gray-600)"))}>picture_as_pdf</span>
@@ -165,7 +165,7 @@ export default function RegulationUploadModal({
 
           {phase.kind === "error" && (
             <div style={css("display:flex;flex-direction:column;gap:12px;padding:6px 2px")}>
-              <div style={css("display:flex;gap:9px;align-items:flex-start;background:var(--red-100);border-radius:10px;padding:12px 14px")}>
+              <div style={css("display:flex;gap:9px;align-items:flex-start;background:var(--background-200);border-radius:10px;padding:12px 14px")}>
                 <span className="mi" style={css("flex:none;font-size:17px;color:var(--red-900);margin-top:1px")}>error</span>
                 <span style={css("font:400 12.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>{phase.message}</span>
               </div>
@@ -195,14 +195,14 @@ function DoneView({
   return (
     <div style={css("display:flex;flex-direction:column;gap:12px;padding:2px")}>
       <div style={css("display:flex;align-items:center;gap:9px")}>
-        <span style={css("width:30px;height:30px;border-radius:9999px;background:var(--green-700);color:#fff;display:flex;align-items:center;justify-content:center")}>
-          <span className="mi" style={css("font-size:17px")}>check</span>
+        <span style={css("width:30px;height:30px;border-radius:9999px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;flex:none")}>
+          <span className="mi" style={css("font-size:18px;color:var(--green-900)")}>check</span>
         </span>
         <div>
           <div style={css("font:700 13.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
             {result.title}
             {result.is_scanned && (
-              <span style={css("margin-left:7px;font:700 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--amber-100);border-radius:9999px;padding:2px 7px")}>스캔본 · OCR</span>
+              <span style={css("margin-left:7px;font:700 10px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900)")}>스캔본 · OCR</span>
             )}
           </div>
           <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:2px")}>
@@ -233,7 +233,7 @@ function DoneView({
         )}
       </div>
 
-      <div style={css("display:flex;gap:9px;align-items:center;background:var(--green-100);border-radius:10px;padding:10px 13px")}>
+      <div style={css("display:flex;gap:9px;align-items:center;background:var(--background-200);border-radius:10px;padding:10px 13px")}>
         <span className="mi" style={css("flex:none;font-size:16px;color:var(--green-900)")}>manage_search</span>
         <span style={css("font:400 11.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
           지금부터 검색에 반영됩니다 — 상담사 규정검색과 카드 라우팅의 부서 필터가 이 문서를 바로 참조합니다.
