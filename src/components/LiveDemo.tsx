@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
 import Phone from "./Phone";
+import LiveTranscriptPanel from "./LiveTranscriptPanel";
 import Waiting from "./desktop/Waiting";
 import PrepCard from "./desktop/PrepCard";
 import ActiveCall from "./desktop/ActiveCall";
@@ -72,7 +73,9 @@ export default function LiveDemo({
             alignItems: "center",
           }}
         >
-          {/* 상단 제어 바 — 4단계 스테퍼 알약(시연용 리모컨). 번호를 누르면 그 단계 안내가 팝업으로 뜬다 */}
+          {/* 상단 제어 바 — 4단계 스테퍼 알약(시연용 리모컨). 번호를 누르면 그 단계 안내가 팝업으로 뜬다.
+              고객 화면(phone)에선 데모 제어를 걷어내고 아래의 '상황 알약'으로 대체한다 */}
+          {view !== "phone" && (
           <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
             <div style={css("display:flex;align-items:center;gap:10px")}>
               {["접수", "준비", "통화", "후처리"].map((label, i) => {
@@ -177,6 +180,24 @@ export default function LiveDemo({
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>
           </div>
+          )}
+
+          {/* 고객 화면 상황 알약 — 데모 제어 대신 '지금 무슨 일이 일어나는지'만 보여준다 */}
+          {view === "phone" && (
+            <div style={css("display:flex;align-items:center;gap:12px;background:var(--onair-surface);border-radius:9999px;padding:8px 12px 8px 20px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+              <span style={css("display:inline-flex;align-items:center;gap:7px;font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
+                <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>support_agent</span>
+                키움은행 고객센터
+              </span>
+              <span style={css("width:1px;height:18px;background:var(--color-border)")} />
+              <span style={css("display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
+                {vm.phaseLabel}
+              </span>
+              <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:6px 13px;background:var(--gray-100);border-radius:9999px;font-size:12.5px;font-weight:600;cursor:pointer")}>
+                <span className="mi" style={css("font-size:16px")}>restart_alt</span>초기화
+              </span>
+            </div>
+          )}
 
           {vm.micErr && (
             <div style={css("background:var(--onair-surface);border-radius:9999px;padding:8px 16px;font-size:12.5px;color:var(--amber-900);box-shadow:0 10px 34px rgba(0,0,0,.28);display:flex;align-items:center;gap:6px")}>
@@ -189,6 +210,8 @@ export default function LiveDemo({
               view에 따라 한쪽만 남긴다: customer=폰, employee=데스크톱 (스테이지·스케일은 공유) */}
           <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
             {view !== "desktop" && <Phone vm={vm} />}
+            {/* 고객 화면 — 폰은 살짝 왼쪽, 오른쪽에 실시간 현황·발화 스트림(타이핑 애니메이션) */}
+            {view === "phone" && <LiveTranscriptPanel />}
             {view !== "phone" && (
               <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
                 {vm.showWaiting && <Waiting vm={vm} />}
