@@ -1,4 +1,11 @@
-from app.schemas import AttentionLevel, EmotionResult, RecommendedAgentLevel
+from app.schemas import (
+    AttentionLevel,
+    EmotionResult,
+    JudgeResult,
+    RecommendedAgentLevel,
+    VoiceAngerResult,
+)
+from app.services.fusion import fuse_judgement
 from app.services.react_adapter import (
     bullets_from_summary,
     build_call_summary,
@@ -73,3 +80,36 @@ def test_build_call_summary_uses_first_bullet_as_headline():
     assert result.incidentRisk == "watch"
     assert result.recommendedAgent == "전문 상담사 우선"
     assert result.emotion.level == 3
+
+
+def test_call_summary_escalates_incident_risk_on_voice_anger_while_temperature_stays_calm():
+    """/summarize-call 배선 검증 — 오디오 요약 카드에 '병합된 judgement'가 흘러들면,
+    격양도가 낮아 감정온도는 '안정(level 0)' 그대로여도, WavLM 음성 분노 감지로
+    incidentRisk가 'watch'(주의 상향)로 올라간다. '냉정한 분노'를 카드가 반영하는 핵심 경로."""
+    base = JudgeResult(
+        needs_attention=False,
+        attention_level=AttentionLevel.NONE,
+        reason_codes=[],
+        recommended_agent_level=RecommendedAgentLevel.GENERAL,
+    )
+    calm_low_arousal = _emotion()  # 격양도 낮음 → 감정온도 '안정'
+    fused = fuse_judgement(
+        base,
+        None,
+        voice_anger=VoiceAngerResult(detected=True, probability=0.70, confidence=0.80),
+        audio_emotion=calm_low_arousal,
+    )
+
+    card = build_call_summary(
+        department="수신·자동이체",
+        summary="자동이체 오류 재문의. 처리 예정일 확답 요청.",
+        emotion=calm_low_arousal,
+        attention_level=fused.attention_level,
+        recommended_agent_level=fused.recommended_agent_level,
+    )
+
+    assert fused.attention_level == AttentionLevel.MEDIUM
+    assert card.incidentRisk == "watch"          # 주의 상향 표시
+    assert card.emotion.level == 0               # 감정온도는 '안정' 그대로 (원본 불변)
+    assert card.emotion.label == "안정"
+    assert card.recommendedAgent == "전문 상담사 우선"

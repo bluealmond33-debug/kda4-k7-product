@@ -1,5 +1,6 @@
 import logging
 import uuid
+from dataclasses import dataclass
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 from openai import OpenAI
@@ -11,6 +12,7 @@ from app.schemas import (
     AnalyzeResult,
     AttentionReasonCode,
     BriefingCard,
+    EmotionResult,
     JudgeRequest,
     JudgeResult,
     LegacyAnalyzeRequest,
@@ -23,8 +25,10 @@ from app.schemas import (
     ReactEmotionRequest,
     ReactEmotionScore,
     ReactSummarizeRequest,
+    RoutingResult,
     TextEmotionResult,
     TranscribeResult,
+    VoiceAngerResult,
 )
 from app.schemas import GptAnalysis
 from app.services.emotion import analyze_emotion
@@ -40,6 +44,7 @@ from app.services.routing_classifier import classify_routing_safe
 from app.services.stt import transcribe_audio
 from app.services.stub_models import analyze_transcript_stub, transcribe_audio_stub
 from app.services.text_emotion import TextEmotionError, classify_text_emotion
+from app.services.voice_anger import analyze_voice_anger
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +102,55 @@ def _classify_text_emotion_safe(transcript: str) -> TextEmotionResult | None:
     except TextEmotionError:
         logger.warning("text_emotion 분류 실패, 융합 없이 진행", exc_info=True)
         return None
+
+
+@dataclass
+class _CallAnalysis:
+    """오디오 한 통을 끝까지 분석한 결과 묶음 — '병합된 judgement'까지 포함한다."""
+
+    transcribed: TranscribeResult
+    gpt_result: GptAnalysis
+    emotion_result: EmotionResult
+    text_emotion_result: TextEmotionResult | None
+    routing_result: RoutingResult | None
+    voice_anger_result: VoiceAngerResult | None
+    judgement: JudgeResult
+
+
+def _analyze_call(filename: str, audio_bytes: bytes) -> _CallAnalysis:
+    """원본 오디오 → 전사·요약·격양도(eGeMAPS)·라우팅·음성분노(WavLM)를 돌리고 judge를
+    fusion으로 승격까지 끝낸 '병합된 judgement'를 만든다.
+
+    /briefing(브리핑 카드)과 /summarize-call(CS 요약 카드)이 이 하나를 공유한다 —
+    두 출력 모양이 달라도 '주의등급을 만드는 과정'은 완전히 동일해야 하기 때문이다.
+    voice_anger/text_emotion이 없으면 fusion은 무동작이라 기존 동작과 같다(하위호환).
+    """
+    transcribed = _transcribe(filename, audio_bytes)
+    gpt_result = _analyze(transcribed.text)
+    emotion_result = analyze_emotion(audio_bytes)
+    text_emotion_result = _classify_text_emotion_safe(transcribed.text)
+    routing_result = classify_routing_safe(transcribed.text)
+    # 음성 분노(WavLM) 부스터 입력 — 모델/의존성 없으면 None(부스터 무동작, 하위호환).
+    voice_anger_result = analyze_voice_anger(audio_bytes)
+
+    judgement = run_judge(gpt_result.risk_flags, emotion_result)
+    if text_emotion_result is not None or voice_anger_result is not None:
+        judgement = fuse_judgement(
+            judgement,
+            text_emotion_result,
+            voice_anger=voice_anger_result,
+            audio_emotion=emotion_result,
+        )
+
+    return _CallAnalysis(
+        transcribed=transcribed,
+        gpt_result=gpt_result,
+        emotion_result=emotion_result,
+        text_emotion_result=text_emotion_result,
+        routing_result=routing_result,
+        voice_anger_result=voice_anger_result,
+        judgement=judgement,
+    )
 
 
 @router.post("/stt", response_model=TranscribeResult)
@@ -185,42 +239,55 @@ async def react_summarize_endpoint(body: ReactSummarizeRequest) -> ReactCallSumm
     )
 
 
+@router.post("/summarize-call", response_model=ReactCallSummary)
+async def react_summarize_call_endpoint(audio: UploadFile) -> ReactCallSummary:
+    """kda4-k7-product 연동 — 원본 오디오로 AI 사전요약 카드(CallSummary)를 반환한다.
+
+    텍스트 전용 /summarize와 달리 실제 음성을 받아 격양도(eGeMAPS)·음성분노(WavLM)를 함께
+    돌리고, fusion으로 '병합된 주의등급'을 카드에 싣는다 — 격양도가 낮아 감정온도는 '안정'
+    이어도, WavLM이 분노를 잡으면 incidentRisk가 상향돼 상담사 화면에 '주의 상향'이 뜬다
+    ('냉정한 분노'). 감정온도(emotion)는 격양도 원본 그대로 두고 덮어쓰지 않는다.
+    """
+    audio_bytes = await audio.read()
+    analysis = _analyze_call(audio.filename or "audio.wav", audio_bytes)
+
+    return build_call_summary(
+        department=analysis.gpt_result.department,
+        summary=analysis.gpt_result.summary,
+        emotion=analysis.emotion_result,
+        attention_level=analysis.judgement.attention_level,
+        recommended_agent_level=analysis.judgement.recommended_agent_level,
+    )
+
+
 @router.post("/briefing", response_model=BriefingCard)
 async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
     audio_bytes = await audio.read()
-
-    transcribed = _transcribe(audio.filename or "audio.wav", audio_bytes)
-    gpt_result = _analyze(transcribed.text)
-    emotion_result = analyze_emotion(audio_bytes)
-    text_emotion_result = _classify_text_emotion_safe(transcribed.text)
-    routing_result = classify_routing_safe(transcribed.text)
-
-    judgement = run_judge(gpt_result.risk_flags, emotion_result)
-    if text_emotion_result is not None:
-        judgement = fuse_judgement(judgement, text_emotion_result)
+    analysis = _analyze_call(audio.filename or "audio.wav", audio_bytes)
 
     # 김민기 RAG 설계: 긴급(EMERGENCY=사고·신고) 통화면 SG 대분류 규정만 좁혀 추천.
     # 그 외에는 전체 검색(기존 동작 유지). 에스컬레이션 안전 — 확실한 신호일 때만 필터.
     rag_categories = (
         ["SG"]
-        if routing_result is not None and routing_result.classification == "EMERGENCY"
+        if analysis.routing_result is not None
+        and analysis.routing_result.classification == "EMERGENCY"
         else None
     )
     references = search_procedures(
         settings,
-        _rag_query(judgement.reason_codes, gpt_result.summary),
+        _rag_query(analysis.judgement.reason_codes, analysis.gpt_result.summary),
         categories=rag_categories,
     )
 
     return BriefingCard(
-        call_id=transcribed.call_id,
-        transcript=transcribed.text,
-        summary=gpt_result.summary,
-        department=gpt_result.department,
-        emotion=emotion_result,
-        text_emotion=text_emotion_result,
-        routing=routing_result,
-        judgement=judgement,
+        call_id=analysis.transcribed.call_id,
+        transcript=analysis.transcribed.text,
+        summary=analysis.gpt_result.summary,
+        department=analysis.gpt_result.department,
+        emotion=analysis.emotion_result,
+        text_emotion=analysis.text_emotion_result,
+        routing=analysis.routing_result,
+        judgement=analysis.judgement,
         references=references,
     )
 

@@ -27,6 +27,11 @@ class Settings(BaseSettings):
         "88e2c3f3e0d85497a3e59a84ac42835ccf8620aab999de27cdb9ff92fc27d4ac"
     )
 
+    # 전형진 WavLM 음성분노 모델(.pt 체크포인트) + HF backbone 캐시.
+    # 파일/의존성(torch·transformers) 없으면 voice_anger.py가 자동으로 None 폴백(부스터 무동작).
+    wavlm_anger_model_path: str = "app/services/k7modeling/models/wavlm_anger_layer_fusion_v1.pt"
+    wavlm_anger_cache_dir: str = "app/services/k7modeling/models/hf_cache"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property
