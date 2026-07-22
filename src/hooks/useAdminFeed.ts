@@ -205,7 +205,13 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
       const label = rec?.card?.businessType ?? "신규 상담";
       const queue = next.queues[dept];
       if (!queue) return next; // 보드 밖 부서(내부 팀)는 배지로만
-      const item: QueueItem = { id: p.callId, label, sge: p.sge, callId: p.callId };
+      const item: QueueItem = {
+        id: p.callId,
+        label,
+        sge: p.sge,
+        callId: p.callId,
+        code: rec?.card?.businessCode,
+      };
       // 긴급(E)은 대기열 맨 앞으로 — 참조 라우팅 정책(긴급 우선) 그대로
       const nextQueue = p.sge === "E" ? [item, ...queue] : [...queue, item];
       return { ...next, queues: { ...next.queues, [dept]: nextQueue } };

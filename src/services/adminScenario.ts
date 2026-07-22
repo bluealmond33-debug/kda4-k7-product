@@ -59,6 +59,7 @@ export function playTestCall(sge: Sge) {
       callId,
       summary: fx.card.summary,
       businessType: fx.card.businessType,
+      businessCode: fx.card.businessCode,
       department: fx.card.department,
       routingReason: fx.card.routingReason,
       incidentRisk: fx.card.incidentRisk,

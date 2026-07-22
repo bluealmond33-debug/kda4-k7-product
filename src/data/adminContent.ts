@@ -181,6 +181,8 @@ export interface QueueItem {
   sge: Sge;
   /** 라이브 콜이면 callId, 시드 더미면 null */
   callId: string | null;
+  /** 3층 업무코드(ARS 코드, taxonomy.py BUSINESS_CODES) — 미정의 부서(CRD·EFN·ETC)는 생략 */
+  code?: string;
 }
 
 export const DEPARTMENTS = routingDepartments;
@@ -205,18 +207,18 @@ export function normalizeDeptLabel(label: string): string {
  *  키는 rules.ts의 8부서 taxonomy. 라이브 이벤트(routing.assigned)가 이 위에 쌓인다.
  *  S(단순)는 상담사 대기열에 들어가지 않는다 — ARS·AI가 즉시 응대(별도 카운터). 그래서 G/E만. */
 export const DEPT_SEED_QUEUES: Record<string, QueueItem[]> = {
-  "수신·예적금": [{ id: "seed-dep-2", label: "이체한도 상향", sge: "G", callId: null }],
+  "수신·예적금": [{ id: "seed-dep-2", label: "이체한도 상향", sge: "G", callId: null, code: "G003" }],
   "여신·대출": [
-    { id: "seed-lon-1", label: "주담대 만기 연장", sge: "G", callId: null },
-    { id: "seed-lon-2", label: "전세자금대출 조건변경", sge: "G", callId: null },
+    { id: "seed-lon-1", label: "주담대 만기 연장", sge: "G", callId: null, code: "G002" },
+    { id: "seed-lon-2", label: "전세자금대출 조건변경", sge: "G", callId: null, code: "G002" },
   ],
   "카드·결제": [{ id: "seed-crd-3", label: "리볼빙 해지 문의", sge: "G", callId: null }],
-  "외환·수출입": [{ id: "seed-fx-1", label: "해외송금 취소·반환", sge: "G", callId: null }],
+  "외환·수출입": [{ id: "seed-fx-1", label: "해외송금 취소·반환", sge: "G", callId: null, code: "G010" }],
   "전자금융·디지털": [{ id: "seed-efn-2", label: "공동인증서 오류", sge: "G", callId: null }],
-  "연금·신탁·투자": [{ id: "seed-inv-1", label: "IRP 디폴트옵션 안내", sge: "G", callId: null }],
+  "연금·신탁·투자": [{ id: "seed-inv-1", label: "IRP 디폴트옵션 안내", sge: "G", callId: null, code: "G011" }],
   "사고·신고": [
-    { id: "seed-sg-1", label: "보이스피싱 의심 신고", sge: "E", callId: null },
-    { id: "seed-sg-2", label: "명의도용 지급정지", sge: "E", callId: null },
+    { id: "seed-sg-1", label: "보이스피싱 의심 신고", sge: "E", callId: null, code: "G001" },
+    { id: "seed-sg-2", label: "명의도용 지급정지", sge: "E", callId: null, code: "G001" },
   ],
   "제도·민원·기타": [{ id: "seed-etc-1", label: "피해보상 요구", sge: "G", callId: null }],
 };
@@ -281,6 +283,7 @@ export interface TestCallFixture {
   card: {
     summary: string;
     businessType: string;
+    businessCode?: string;
     department: string;
     routingReason: string;
     incidentRisk: MvpIncidentRisk;
@@ -302,6 +305,7 @@ export const TEST_CALLS: Record<Sge, TestCallFixture> = {
     card: {
       summary: "고객이 카드 결제대금과 명세서 재발송을 문의함 — 정형 조회 업무.",
       businessType: "카드 사용내역·결제대금 조회",
+      businessCode: "S001",
       department: "카드·결제",
       routingReason: "본인확인 후 정형화된 조회·재발송 절차 — ARS·AI 처리 가능",
       incidentRisk: "low",
@@ -322,6 +326,7 @@ export const TEST_CALLS: Record<Sge, TestCallFixture> = {
     card: {
       summary: "고객이 주택담보대출 만기 연장 가능 여부와 필요 서류를 문의함.",
       businessType: "주택담보대출 만기 연장",
+      businessCode: "G002",
       department: "여신·대출",
       routingReason: "약정 변경·재약정 심사 상담에 해당",
       incidentRisk: "low",
@@ -341,6 +346,7 @@ export const TEST_CALLS: Record<Sge, TestCallFixture> = {
     card: {
       summary: "고객이 금융감독원 사칭 전화로 안전계좌 송금을 요구받음 — 보이스피싱 의심.",
       businessType: "보이스피싱 의심",
+      businessCode: "G001",
       department: "사고·신고",
       routingReason: "긴급 게이트 — 기관 사칭 + 송금 요구 정황, 사고·신고(SG) 강제",
       incidentRisk: "high",

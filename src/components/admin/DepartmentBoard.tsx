@@ -70,48 +70,74 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
         </span>
       </div>
 
-      {/* ── 부하 막대 보기 — 부서별 대기량 비교 + 무엇이 기다리는지 한 줄 ── */}
+      {/* ── 부하 보기 — 세로 막대 그래프: 부서별 대기량(E 빨강이 위, G 파랑이 아래) ── */}
       {view === "load" && (
-        <div style={css("flex:1;display:flex;flex-direction:column;justify-content:space-evenly;min-height:0;padding:2px 2px 0")}>
+        <div style={css("flex:1;display:flex;flex-direction:column;min-height:0;padding:4px 6px 0")}>
           {(() => {
-            const rows = DEPARTMENTS.map((d) => ({
+            const rows = ordered.map((d) => ({
               name: d.name,
               items: feed.state.queues[d.name] ?? [],
               c: feed.queueCounts[d.name] ?? { s: 0, g: 0, e: 0 },
-            })).sort((a, b) => b.c.e + b.c.g - (a.c.e + a.c.g) || b.c.e - a.c.e);
+            }));
             const max = Math.max(1, ...rows.map((r) => r.c.e + r.c.g));
-            return rows.map((r) => {
-              const total = r.c.e + r.c.g;
-              return (
-                <div key={r.name} style={css("display:flex;flex-direction:column;gap:4px")}>
-                  <div style={css("display:flex;align-items:baseline;gap:10px")}>
-                    <span style={css("flex:none;width:110px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:" + (r.name === "사고·신고" ? "var(--red-900)" : "var(--gray-1000)") + ";white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>
+            return (
+              <>
+                {/* 차트 영역 — 바닥 정렬 컬럼 8개 */}
+                <div style={css("flex:1;min-height:0;display:flex;align-items:stretch;gap:10px")}>
+                  {rows.map((r) => {
+                    const total = r.c.e + r.c.g;
+                    const hPct = (total / max) * 100;
+                    return (
+                      <div
+                        key={r.name}
+                        title={r.items.length ? r.items.map((it) => (it.code ? `${it.code} ${it.label}` : it.label)).join("\n") : "대기 없음"}
+                        style={css("flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px")}
+                      >
+                        {/* 값 라벨 — 막대 바로 위 */}
+                        <div style={css("flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px")}>
+                          <span style={css("font:600 10.5px 'Geist Mono',monospace;white-space:nowrap;color:var(--gray-800)")}>
+                            {r.c.e > 0 && <span style={css("color:var(--red-900)")}>E{r.c.e}</span>}
+                            {r.c.e > 0 && r.c.g > 0 && "·"}
+                            {r.c.g > 0 && <span style={css("color:var(--blue-900)")}>G{r.c.g}</span>}
+                            {total === 0 && <span style={css("color:var(--gray-500)")}>0</span>}
+                          </span>
+                          {/* 스택 막대 — E(빨강)가 위, G(파랑)가 아래. 폭 26px = 가는 요소 */}
+                          {total > 0 ? (
+                            <div style={{ height: `${hPct}%`, minHeight: 10, width: 26, display: "flex", flexDirection: "column", borderRadius: 7, overflow: "hidden", transition: "height .4s var(--ease-out)" }}>
+                              {r.c.e > 0 && <span style={{ flex: r.c.e, background: "var(--red-700)" }} />}
+                              {r.c.g > 0 && <span style={{ flex: r.c.g, background: "var(--blue-700)" }} />}
+                            </div>
+                          ) : (
+                            <div style={css("width:26px;height:3px;border-radius:2px;background:var(--gray-300)")} />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* 바닥선 + 부서명 축 */}
+                <div style={css("height:1px;background:var(--gray-300);margin:6px 0 5px")} />
+                <div style={css("display:flex;gap:10px")}>
+                  {rows.map((r) => (
+                    <span
+                      key={r.name}
+                      style={css("flex:1;min-width:0;text-align:center;font:600 10px 'Geist Sans','Pretendard',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:" + (r.name === "사고·신고" ? "var(--red-900)" : "var(--gray-800)"))}
+                    >
                       {r.name}
                     </span>
-                    {/* 대기 중인 건들 — 클릭 없이 바로 보인다 */}
-                    <span style={css("flex:1;min-width:0;font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>
-                      {r.items.length > 0 ? r.items.map((it) => it.label).join(" · ") : "대기 없음"}
-                    </span>
-                    <span style={css("flex:none;font:600 10.5px 'Geist Mono',monospace;color:var(--gray-800);white-space:nowrap")}>
-                      {r.c.e > 0 && <span style={css("color:var(--red-900)")}>E {r.c.e}</span>}
-                      {r.c.e > 0 && r.c.g > 0 && " · "}
-                      {r.c.g > 0 && <span style={css("color:var(--blue-900)")}>G {r.c.g}</span>}
-                      {total === 0 && <span style={css("color:var(--gray-600)")}>0</span>}
-                    </span>
-                  </div>
-                  {/* 막대 — 가는 요소(높이 9px). E(빨강)가 앞, G(파랑)가 뒤 */}
-                  <span style={css("display:flex;align-items:center;height:9px")}>
-                    {r.c.e > 0 && (
-                      <span style={{ width: `${(r.c.e / max) * 100}%`, height: 9, borderRadius: r.c.g > 0 ? "9999px 0 0 9999px" : 9999, background: "var(--red-700)", transition: "width .4s var(--ease-out)" }} />
-                    )}
-                    {r.c.g > 0 && (
-                      <span style={{ width: `${(r.c.g / max) * 100}%`, height: 9, borderRadius: r.c.e > 0 ? "0 9999px 9999px 0" : 9999, background: "var(--blue-700)", transition: "width .4s var(--ease-out)" }} />
-                    )}
-                    {total === 0 && <span style={css("width:100%;height:1px;background:var(--gray-300)")} />}
-                  </span>
+                  ))}
                 </div>
-              );
-            });
+                <div style={css("display:flex;justify-content:flex-end;gap:12px;padding:5px 2px 0")}>
+                  {(["E", "G"] as const).map((k) => (
+                    <span key={k} style={css("display:inline-flex;align-items:center;gap:4px;font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+                      <span style={css("width:8px;height:8px;border-radius:9999px;background:" + SGE_META[k].bar)} />
+                      {k} {SGE_META[k].label}
+                    </span>
+                  ))}
+                  <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>막대에 올리면 대기 목록</span>
+                </div>
+              </>
+            );
           })()}
         </div>
       )}
@@ -157,6 +183,10 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                         style={css("position:relative;display:flex;align-items:center;gap:7px;background:var(--onair-surface);border:1px solid var(--gray-200);border-radius:8px;padding:5.5px 8px")}
                       >
                         <span style={css("flex:none;width:8px;height:8px;border-radius:9999px;background:" + meta.bar)} />
+                        {/* 3층 업무코드 — taxonomy의 ARS 코드 (미정의 부서는 생략) */}
+                        {it.code && (
+                          <span style={css("flex:none;font:600 9px 'Geist Mono',monospace;letter-spacing:.3px;color:var(--gray-700)")}>{it.code}</span>
+                        )}
                         <span style={css("flex:1;min-width:0;font:500 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
                           {it.label}
                         </span>
