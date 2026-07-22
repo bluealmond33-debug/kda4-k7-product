@@ -553,6 +553,58 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setIncoming("normal");
   }, [clearAll]);
 
+  // 시연 내비게이션 — 상단 알약의 단계(접수·준비·통화·후처리)를 누르면 그 화면으로 바로 점프.
+  // 접수는 실제 흐름(전화 연결)을 타고, 준비/통화/후처리는 콜 유형 픽스처로 상태를 정합하게 세팅한다.
+  const jumpToStep = useCallback(
+    (n: number) => {
+      if (n <= 0) {
+        reset();
+        return;
+      }
+      if (n === 1) {
+        reset();
+        startCall();
+        return;
+      }
+      clearAll();
+      const kind = incomingRef.current;
+      const resp =
+        kind === "urgent"
+          ? (structuredClone(URGENT_RESPONSE) as unknown as ConsultationCardResponse)
+          : kind === "transfer"
+          ? (structuredClone(TRANSFER_RESPONSE) as unknown as ConsultationCardResponse)
+          : getDemoConsultationCard();
+      setConsultationResponse(resp);
+      respRef.current = resp;
+      const wrap = WRAP_DEFAULTS[kind];
+      setWrapType(wrap.type);
+      setWrapResult(wrap.result);
+      setFollowups(wrap.followups);
+      setTransferReserved(false);
+      setEmoDrift(null);
+      setMicErr("");
+      setEmo(0);
+      setSilenceLeft(0);
+      setVerified(false);
+      setAuthInput("");
+      startClock();
+      if (n === 2) {
+        setPrepChecks(PREP_ITEMS.map(() => false));
+        setWrapSheetOpen(false);
+        setPhase("prep");
+      } else if (n === 3) {
+        setPrepChecks(PREP_ITEMS.map(() => true)); // 유의사항 확인을 거친 상태로 진입
+        setWrapSheetOpen(false);
+        setPhase("active");
+      } else {
+        setPrepChecks(PREP_ITEMS.map(() => true));
+        setWrapSheetOpen(true);
+        setPhase("wrap");
+      }
+    },
+    [clearAll, reset, startCall, startClock]
+  );
+
   const endCall = useCallback(() => {
     if (phaseRef.current === "active") {
       clearAll();
@@ -1018,6 +1070,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setMic,
     submitAudio,
     reset,
+    jumpToStep,
     startCall,
     answerCall,
     endCall,

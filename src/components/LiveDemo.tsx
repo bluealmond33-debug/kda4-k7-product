@@ -83,8 +83,8 @@ export default function LiveDemo({
                   <span key={label} style={css("display:inline-flex;align-items:center;gap:10px")}>
                     {i > 0 && <span style={css("width:14px;height:1.5px;background:" + (done || active ? "var(--gray-500)" : "var(--gray-300)"))} />}
                     <span
-                      onClick={() => vm.openGuideStep(["intake", "prep", "active", "wrap"][i])}
-                      title={label + " 안내 보기"}
+                      onClick={() => vm.jumpToStep(i + 1)}
+                      title={label + " 화면으로 바로 이동"}
                       style={css("display:inline-flex;align-items:center;gap:6px;cursor:pointer")}
                     >
                       <span
