@@ -8,3 +8,4 @@ export * from "./sge";
 export * from "./demoBus";
 export * from "./adminStatus";
 export * from "./regulationSearch";
+export * from "./regulationAdmin";

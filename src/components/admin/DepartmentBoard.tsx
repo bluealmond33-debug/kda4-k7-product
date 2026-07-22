@@ -14,7 +14,7 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
   const totalWaiting = Object.values(feed.state.queues).reduce((n, q) => n + q.length, 0);
 
   return (
-    <div className="card" style={css("display:flex;flex-direction:column;padding:16px 20px 14px;min-height:0")}>
+    <div className="card" style={css("display:flex;flex-direction:column;padding:14px 16px 12px;min-height:0")}>
       <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:12px")}>
         <span className="sechd">부서 현황 보드</span>
         <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
@@ -33,7 +33,7 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
         </span>
       </div>
 
-      <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-content:start;overflow-y:auto;min-height:0")}>
+      <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-content:start;overflow-y:auto;min-height:0")}>
         {DEPARTMENTS.map((dept) => {
           const items = feed.state.queues[dept.name] ?? [];
           const counts = feed.queueCounts[dept.name] ?? { s: 0, g: 0, e: 0 };
@@ -44,7 +44,7 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
             <div
               key={dept.name}
               style={css(
-                "border-radius:11px;background:var(--background-200);padding:12px 14px;cursor:pointer;transition:box-shadow .25s var(--ease-out);align-self:start;" +
+                "border-radius:11px;background:var(--background-200);padding:10px 12px;cursor:pointer;transition:box-shadow .25s var(--ease-out);align-self:start;" +
                   (open ? "box-shadow:var(--sh-focus);background:var(--onair-surface)" : "") +
                   (urgent ? ";outline:1.5px solid var(--red-400)" : "")
               )}

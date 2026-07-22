@@ -1,9 +1,9 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
 import { demoBus } from "../../services";
 import { useAdminFeed } from "../../hooks/useAdminFeed";
 import { useAdminStatus } from "../../hooks/useAdminStatus";
-import { useStageFit } from "../../hooks/useStageFit";
+import DesktopShell from "../desktop/DesktopShell";
 import SystemStatusBar from "./SystemStatusBar";
 import PipelineFlowPanel from "./PipelineFlowPanel";
 import RoutingFeed from "./RoutingFeed";
@@ -11,53 +11,85 @@ import DepartmentBoard from "./DepartmentBoard";
 import KnowledgeBasePanel from "./KnowledgeBasePanel";
 import AdminTestControls from "./AdminTestControls";
 import ClassificationPolicyModal from "./ClassificationPolicyModal";
+import RegulationUploadModal from "./RegulationUploadModal";
 
-// 고정 스테이지 — 16:9. 유동 그리드 대신 이 캔버스를 통째로 축소해 항상 같은 비율로 보인다.
-const STAGE_W = 1728;
-const STAGE_H = 972;
+// 직원 단독 화면(?role=employee)과 동일한 맞춤 — LiveDemo view="desktop"의 값 그대로:
+// 폭 1100 스테이지를 브라우저 가로에 맞추고(좌우 24px 패드), 큰 모니터에선 최대 3배 확대.
+const STAGE_W = 1100;
+const MAX_SCALE = 3;
+const FIT_PAD = 24;
 
 /**
  * KARI-NA 관리자 콘솔 (?role=admin) — 최고관리자용 백엔드 프로세스 대시보드.
  *
- * 상담사 탭(기본 화면)의 데모 진행이 demoBus(BroadcastChannel)로 흘러와
- * [B] 파이프라인 점등 → [C] 라우팅 피드 → [D] 부서 대기열로 실시간 반영된다.
- * [A] 상태 스트립의 램프는 연출이 아니라 실측(/health · RAG 폴링)이다.
- * 레이아웃은 STAGE_W×STAGE_H 고정 — useStageFit이 뷰포트에 맞춰 균등 축소한다.
+ * 프레임은 직원 콘솔과 완전히 동일한 셸을 쓴다:
+ * 검은 배경 + 상단 플로팅 알약 + DesktopShell(1100×688 카드, 내부 1440×900을 0.76389로 축소).
+ * 같은 캔버스·같은 스케일이므로 폰트 크기·밀도·비율이 직원 화면과 정의상 같다 —
+ * "같은 서비스의 다른 화면"으로 읽힌다.
+ *
+ * 상담사 탭의 데모 진행이 demoBus(BroadcastChannel)로 흘러와
+ * 파이프라인 점등 → 라우팅 피드 → 부서 대기열로 실시간 반영된다.
+ * 상태 알약의 램프는 연출이 아니라 실측(/health · RAG 폴링)이다.
  */
 export default function AdminDashboard() {
   const feed = useAdminFeed();
-  const status = useAdminStatus();
+  const { status, refresh: refreshStatus } = useAdminStatus();
   const [explain, setExplain] = useState(false);
   const [policyOpen, setPolicyOpen] = useState(false);
-  const { rootRef, scale } = useStageFit(STAGE_W, STAGE_H);
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  // 직원 화면과 같은 가로 맞춤 스케일 (LiveDemo view="desktop"의 fit 로직과 동일)
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
+  const [natH, setNatH] = useState(0);
+
+  const fit = useCallback(() => {
+    const w = rootRef.current ? rootRef.current.clientWidth : window.innerWidth;
+    const sc = Math.min(MAX_SCALE, Math.max(0.2, (w - FIT_PAD) / STAGE_W));
+    setScale((prev) => (Math.abs(prev - sc) > 0.0005 ? sc : prev));
+    const h = stageRef.current ? stageRef.current.offsetHeight : 0;
+    setNatH((prev) => (prev !== h ? h : prev));
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => fit();
+    window.addEventListener("resize", onResize);
+    const raf = requestAnimationFrame(fit);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(raf);
+    };
+  }, [fit]);
+  useLayoutEffect(() => {
+    fit();
+  }, [fit, explain]);
 
   useEffect(() => {
     demoBus.setSource("admin");
   }, []);
 
-  const stageStyle: CSSProperties = {
-    width: STAGE_W,
-    height: STAGE_H,
-    transformOrigin: "top left",
-    transform: `scale(${scale})`,
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    padding: "18px 20px",
-    boxSizing: "border-box",
-    overflow: "hidden",
-  };
-
   return (
     <div
       ref={rootRef}
       style={css(
-        "height:100vh;display:flex;justify-content:center;align-items:center;background:var(--onair-bg);overflow:hidden"
+        "min-height:100vh;padding:12px;display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box"
       )}
     >
-      {/* 축소된 스테이지가 레이아웃 흐름에서 차지하는 실제 크기(스크롤 방지) */}
-      <div style={{ width: STAGE_W * scale, height: STAGE_H * scale, flex: "none" }}>
-        <div style={stageStyle}>
+      <div style={{ width: STAGE_W * scale, height: natH ? natH * scale : "auto" }}>
+        <div
+          ref={stageRef}
+          style={{
+            width: STAGE_W,
+            transformOrigin: "top left",
+            transform: `scale(${scale})`,
+            display: "flex",
+            flexDirection: "column",
+            gap: 18,
+            alignItems: "center",
+          }}
+        >
+          {/* 상단 플로팅 알약 — 직원 화면 제어 알약과 같은 위치·톤 */}
           <SystemStatusBar
             status={status}
             concurrent={feed.concurrent}
@@ -65,19 +97,31 @@ export default function AdminDashboard() {
             onToggleExplain={() => setExplain((v) => !v)}
             onOpenPolicy={() => setPolicyOpen(true)}
           />
-          <PipelineFlowPanel flowCall={feed.flowCall} ticker={feed.state.ticker} explain={explain} />
-          <div style={css("flex:1;display:grid;grid-template-columns:452px 1fr;gap:12px;min-height:0")}>
-            <RoutingFeed feed={feed.feed} totalCards={feed.state.totalCards} />
-            <DepartmentBoard feed={feed} />
-          </div>
-          <div style={css("display:flex;gap:12px;flex:none")}>
-            <KnowledgeBasePanel totalCards={feed.state.totalCards} status={status} />
-            <AdminTestControls onResetAll={feed.resetAll} />
-          </div>
+          {/* 직원 데스크톱과 동일한 캔버스 — 1100×688, 내부 1440×900 @0.76389 */}
+          <DesktopShell flex>
+            <div style={css("flex:1;display:flex;flex-direction:column;gap:12px;padding:16px;min-height:0")}>
+              <PipelineFlowPanel flowCall={feed.flowCall} ticker={feed.state.ticker} explain={explain} />
+              <div style={css("flex:1;display:grid;grid-template-columns:400px 1fr;gap:12px;min-height:0")}>
+                <RoutingFeed feed={feed.feed} totalCards={feed.state.totalCards} />
+                <DepartmentBoard feed={feed} />
+              </div>
+              <div style={css("display:flex;gap:12px;flex:none")}>
+                <KnowledgeBasePanel
+                  totalCards={feed.state.totalCards}
+                  status={status}
+                  onOpenUpload={() => setUploadOpen(true)}
+                />
+                <AdminTestControls onResetAll={feed.resetAll} />
+              </div>
+            </div>
+          </DesktopShell>
         </div>
       </div>
       {/* 모달은 스테이지(transform) 밖 — position:fixed가 뷰포트 기준으로 정상 동작하도록 */}
       {policyOpen && <ClassificationPolicyModal onClose={() => setPolicyOpen(false)} />}
+      {uploadOpen && (
+        <RegulationUploadModal onClose={() => setUploadOpen(false)} onLoaded={refreshStatus} />
+      )}
     </div>
   );
 }
