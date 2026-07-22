@@ -42,8 +42,10 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           <div style={css("display:flex;gap:13px")}>
             <span style={css("width:4px;border-radius:2px;background:var(--blue-500);flex:none")} />
             <div>
-              <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
-                <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>graphic_eq</span>AI 사전 녹음 요약
+              <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:7px")}>
+                <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
+                <span style={css("font:800 12px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
+                <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 전화 받기 전, 카리나가 먼저 듣고 정리했어요</span>
               </div>
               <div style={css("font:600 23px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>
                 {vm.prepHeadline}
@@ -139,78 +141,30 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          {/* 유의사항 — 순차 확인: 한 번에 하나만, 클릭할 때마다 게이지가 찬다.
-              4/4가 되면 이 자리가 첫 응대 문장으로 바뀌며 통화 연결이 열린다 */}
+          {/* 이번 상담 유의사항 — 체크 없이 한눈에(멘토 피드백: 체크 피로 제거). 응대 전 참고 정보. */}
           <div>
-            <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:8px")}>
+            <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:9px")}>
               <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>이번 상담 유의사항</span>
-              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>클릭해 하나씩 확인 · 모두 확인하면 연결 가능</span>
-              <span style={css("margin-left:auto;font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{vm.prepDone}/{vm.prepTotal}</span>
+              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>응대 전 참고</span>
             </div>
-            {/* 진행 바 — 가로 전체로 길게. 왼쪽 텍스트 흐름과 같은 폭이라 눈에 바로 들어온다 */}
-            <div style={css("display:flex;gap:4px;margin-bottom:10px")}>
+            <div style={css("display:flex;flex-direction:column;gap:8px;margin-bottom:12px")}>
               {vm.prepRows.map((r, i) => (
-                <span key={i} style={css("flex:1;height:5px;border-radius:2px;transition:background .3s;background:" + (r.on ? "var(--green-700)" : "var(--gray-200)"))} />
-              ))}
-            </div>
-            {/* 높이 고정 — 확인 완료 시 첫 응대 문장으로 바뀌어도 카드 크기가 변하지 않는다 */}
-            <div style={css("min-height:78px;display:flex;flex-direction:column;justify-content:center")}>
-            {vm.prepDone < vm.prepTotal ? (
-              /* 현재 항목만 고정 위치에 — 확인 버튼이 늘 같은 자리라 리듬이 안 깨진다.
-                 이전 항목은 ← 뒤로 가기로 다시 본다 */
-              <div style={css("display:flex;gap:6px;align-items:stretch")}>
-                <span
-                  onClick={vm.prepDone > 0 ? vm.prepRows[vm.prepDone - 1].toggle : undefined}
-                  title={vm.prepDone > 0 ? "이전 항목 다시 확인" : ""}
-                  style={css(
-                    "width:36px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .2s,color .2s,opacity .2s;" +
-                      (vm.prepDone > 0
-                        ? "background:var(--gray-100);color:var(--gray-700);cursor:pointer"
-                        : "background:var(--gray-100);color:var(--gray-400);opacity:.45;cursor:default")
-                  )}
-                >
-                  <span className="mi" style={css("font-size:19px")}>arrow_back</span>
-                </span>
-                {(() => {
-                  const cur = vm.prepRows[vm.prepDone];
-                  return (
-                    <div
-                      onClick={cur.toggle}
-                      style={css(
-                        "flex:1;min-height:64px;display:flex;gap:12px;align-items:center;background:var(--background-200);border-radius:8px;padding:13px 15px;cursor:pointer;user-select:none"
-                      )}
-                    >
-                      <span style={css("width:22px;height:22px;flex:none;border-radius:9999px;border:1.5px solid var(--gray-500);background:var(--onair-surface);box-sizing:border-box")} />
-                      <div style={css("flex:1")}>
-                        <div style={css("font-weight:700;font-size:14px;color:var(--gray-1000)")}>{cur.title}</div>
-                        <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{cur.sub}</div>
-                      </div>
-                      <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);flex:none")}>
-                        확인 <span className="mi" style={css("font-size:16px")}>check</span>
-                      </span>
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : (
-              /* 4/4 완료 — 유의사항 자리가 첫 응대 문장이 된다. ← 로 유의사항을 다시 확인할 수 있다 */
-              <div style={css("display:flex;gap:6px;align-items:stretch")}>
-                <span
-                  onClick={vm.prepRows[vm.prepDone - 1].toggle}
-                  title="이전 항목 다시 확인"
-                  style={css("width:36px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .2s;background:var(--gray-100);color:var(--gray-700);cursor:pointer")}
-                >
-                  <span className="mi" style={css("font-size:19px")}>arrow_back</span>
-                </span>
-                <div style={css("flex:1;display:flex;align-items:baseline;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
-                  <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
-                  <div>
-                    <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>확인 완료 — 이 문장으로 통화를 여세요</div>
-                    <div style={css("font:500 15px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
+                <div key={i} style={css("display:flex;gap:9px;align-items:baseline")}>
+                  <span className="mi" style={css("font-size:15px;color:var(--gray-500);flex:none;transform:translateY(3px)")}>check_circle</span>
+                  <div style={css("flex:1")}>
+                    <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.title}</span>
+                    <span style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-left:6px")}>{r.sub}</span>
                   </div>
                 </div>
+              ))}
+            </div>
+            {/* 첫 응대 문장 — 준비의 결론. 잠금 없이 바로 보여준다 */}
+            <div style={css("display:flex;align-items:baseline;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
+              <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
+              <div>
+                <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>이 문장으로 통화를 여세요</div>
+                <div style={css("font:500 15px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
               </div>
-            )}
             </div>
           </div>
         </div>

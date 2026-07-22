@@ -418,16 +418,20 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
           <div className="card" style={css("flex:none;padding:15px 17px")}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
-              <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>
-              <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 사전 요약</span>
-              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>대기 중 고객 진술 기반</span>
+              <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>graphic_eq</span>
+              <span style={css("font:800 12.5px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
+              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 받기 전 미리 듣고 정리</span>
             </div>
             {/* 카드의 주인 문장 — Title 18px: 통화 시작 순간 첫 시선이 꽂히는 곳 */}
-            <div style={css("font:600 18px/1.4 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:10px")}>{vm.prepHeadline}</div>
+            <div style={css("font:600 18px/1.4 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:11px")}>{vm.prepHeadline}</div>
+            {/* 해야 할 일 — 통화 중 상담사가 실제로 처리할 실행 항목(요약이 텍스트로 날아가지 않게 구체화) */}
+            <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:8px")}>
+              <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>checklist</span>해야 할 일
+            </div>
             <div style={css("display:flex;flex-direction:column;gap:8px")}>
-              {vm.prepSummaryBullets.map((t, i) => (
-                <div key={i} style={css("display:flex;gap:11px")}>
-                  <span style={css("width:3px;border-radius:2px;background:var(--blue-500);flex:none")} />
+              {vm.summaryPoints.map((t, i) => (
+                <div key={i} style={css("display:flex;gap:10px;align-items:baseline")}>
+                  <span style={css("font:700 12px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-500);flex:none")}>{i + 1}</span>
                   <span style={css("font:400 14px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
                 </div>
               ))}

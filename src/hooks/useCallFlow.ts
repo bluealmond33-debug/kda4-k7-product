@@ -209,7 +209,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [micErr, setMicErr] = useState("");
   const [audioBusy, setAudioBusy] = useState(false);
 
-  const [prepChecks, setPrepChecks] = useState<boolean[]>(PREP_ITEMS.map(() => false));
+  const [prepChecks, setPrepChecks] = useState<boolean[]>(PREP_ITEMS.map(() => true));
   const [verified, setVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
@@ -405,7 +405,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       stt.current = null;
     }
     setPhase("prep");
-    setPrepChecks(PREP_ITEMS.map(() => false));
+    setPrepChecks(PREP_ITEMS.map(() => true));
     void runSummary();
     emitCardPipeline("demo");
   }, [emitCardPipeline, runSummary]);
@@ -612,7 +612,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAuthInput("");
       startClock();
       if (n === 2) {
-        setPrepChecks(PREP_ITEMS.map(() => false));
+        setPrepChecks(PREP_ITEMS.map(() => true));
         setWrapSheetOpen(false);
         setPhase("prep");
       } else if (n === 3) {
@@ -710,7 +710,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           atMs: 0,
         });
         setSummary(null);
-        setPrepChecks([false, false, false]);
+        setPrepChecks(PREP_ITEMS.map(() => true));
         setPhase("prep");
         emitCardPipeline("backend", 250);
       } catch (error) {
@@ -1225,9 +1225,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     connectBg: allChecked ? "var(--blue-700)" : "var(--gray-200)",
     connectFg: allChecked ? "#fff" : "var(--gray-600)",
     connectCursor: allChecked ? "pointer" : "not-allowed",
-    prepHint: allChecked
-      ? "유의사항 확인 완료 · 통화를 연결하세요"
-      : `유의사항 ${PREP_ITEMS.length}개를 모두 확인하면 통화 연결이 활성화됩니다`,
+    prepHint: "유의사항을 확인하고 통화를 연결하세요",
     // auth (1d)
     verified,
     notVerified: nv,
