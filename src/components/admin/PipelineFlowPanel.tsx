@@ -25,12 +25,23 @@ export default function PipelineFlowPanel({
   const lampBackend = status.backend === "online" ? true : status.lastChecked === null ? null : false;
   const lampDb = status.database === "connected" ? true : status.database === "unknown" ? null : false;
   const lampRag = status.rag.available;
-  const allOn = lampBackend === true && lampDb === true && lampRag === true;
   const lampColor = (on: boolean | null) =>
     on === null ? "var(--gray-500)" : on ? "var(--green-700)" : "var(--red-700)";
-  const railLamp = (on: boolean | null, label: string) => (
+  // 정상(초록) 램프는 각자 숨쉰다 — delay를 어긋나게 줘 기계적 동기화 대신 살아있는 리듬으로
+  const railLamp = (on: boolean | null, label: string, delaySec: number) => (
     <span style={css("display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}>
-      <span style={css("width:7px;height:7px;border-radius:9999px;flex:none;background:" + lampColor(on))} />
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 9999,
+          flex: "none",
+          background: lampColor(on),
+          ...(on === true
+            ? { animation: `livePulse 2.2s ease-in-out ${delaySec}s infinite` }
+            : null),
+        }}
+      />
       <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>{label}</span>
     </span>
   );
@@ -72,22 +83,9 @@ export default function PipelineFlowPanel({
       {/* 노드 행 — 왼쪽엔 시스템 레일: 이 파이프라인을 받치는 장비가 전부 켜져 있다는 실측 신호 */}
       <div style={css("display:flex;align-items:flex-start")}>
         <div style={css("flex:none;display:flex;flex-direction:column;gap:5px;padding:2px 0 0 2px")}>
-          {/* 심장박동 점 — 전부 정상이면 초록으로 잔잔히 숨쉰다. 텍스트 없이 점 하나가 말한다 */}
-          <span
-            title={allOn ? "전 시스템 정상 가동" : "데모 모드 — 일부 시스템 미연결"}
-            style={{
-              width: 9,
-              height: 9,
-              borderRadius: 9999,
-              flex: "none",
-              marginLeft: 1,
-              background: allOn ? "var(--green-700)" : "var(--amber-700)",
-              ...(allOn ? { animation: "livePulse 2.2s ease-in-out infinite" } : null),
-            }}
-          />
-          {railLamp(lampBackend, "백엔드")}
-          {railLamp(lampDb, "DB")}
-          {railLamp(lampRag, "RAG")}
+          {railLamp(lampBackend, "백엔드", 0)}
+          {railLamp(lampDb, "DB", 0.7)}
+          {railLamp(lampRag, "RAG", 1.4)}
         </div>
         <span style={css("flex:none;width:1px;align-self:stretch;background:var(--gray-200);margin:2px 14px 2px 12px")} />
         {PIPELINE_NODES.map((node, i) => {
