@@ -43,7 +43,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <span style={css("width:4px;border-radius:2px;background:var(--blue-500);flex:none")} />
             <div>
               <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
-                <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>graphic_eq</span>AI 사전 녹음 요약
+                <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>graphic_eq</span>{vm.summarySourceLabel}
               </div>
               <div style={css("font:600 23px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>
                 {vm.prepHeadline}

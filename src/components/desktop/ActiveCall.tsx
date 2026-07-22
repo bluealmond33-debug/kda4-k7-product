@@ -25,6 +25,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [showAccounts, setShowAccounts] = useState(false);
   const [muted, setMuted] = useState(false);
   const [held, setHeld] = useState(false);
+  const [summaryCopied, setSummaryCopied] = useState(false);
   const [endConfirm, setEndConfirm] = useState(false);
   // 메모 인라인 수정 — editIdx 행이 input으로 바뀐다
   const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -73,8 +74,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       if (typing) return;
       if (vm.showWrap) return; // 종료 후 배경 화면에선 통화 단축키 비활성
       const k = e.key.toLowerCase();
-      if (k === "m") setMuted((v) => !v);
-      else if (k === "h") setHeld((v) => !v);
+      // 실제 연동 모드의 음소거·보류는 아직 엣지 송신기/통화 음원 제어 계약이 없다.
+      // 화면 상태만 바뀌어 고객 음성이 제어된 것처럼 보이지 않도록 데모 모드에서만 허용한다.
+      if (k === "m" && !vm.isExplicitLiveCall) setMuted((v) => !v);
+      else if (k === "h" && !vm.isExplicitLiveCall) setHeld((v) => !v);
       else if (k === "r") (vm.regCollapsed ? vm.openManual : vm.closeReg)();
       else if (k === "n") {
         e.preventDefault();
@@ -84,8 +87,55 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [vm]);
+
+  const copyWrapSummary = async () => {
+    try {
+      await navigator.clipboard.writeText(vm.wrapSummaryDefault);
+      setSummaryCopied(true);
+      window.setTimeout(() => setSummaryCopied(false), 1600);
+    } catch {
+      setSummaryCopied(false);
+    }
+  };
   return (
     <DesktopShell flex>
+      {vm.liveTranscriptLines.length > 0 && !vm.showWrap && (
+        <div
+          style={css(
+            "position:absolute;left:120px;right:120px;bottom:42px;z-index:20;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.96);border:1px solid var(--blue-400);border-radius:9999px;padding:9px 15px;box-shadow:var(--sh-modal);pointer-events:none"
+          )}
+        >
+          <span style={css("display:flex;align-items:center;gap:6px;color:var(--blue-900);font-size:11.5px;font-weight:700;white-space:nowrap")}>
+            <span style={css("width:8px;height:8px;border-radius:50%;background:var(--green-700);animation:recBlink 1.1s infinite")} />
+            실시간 STT
+          </span>
+          <span style={css("display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:10.5px;color:var(--gray-600)")}>
+            <i style={css("width:6px;height:6px;border-radius:50%;background:" + (vm.captureBySpeaker.customer ? "var(--blue-700)" : "var(--gray-300)"))} />고객
+            <i style={css("width:6px;height:6px;border-radius:50%;background:" + (vm.captureBySpeaker.agent ? "var(--green-700)" : "var(--gray-300)"))} />상담원
+          </span>
+          <span style={css("display:flex;flex:1;min-width:0;gap:12px;overflow:hidden")}>
+            {vm.liveTranscriptLines.slice(-2).map((line, index) => {
+              const isAgent = line.speaker === "agent";
+              return (
+                <span
+                  key={`${line.generation ?? 0}-${line.seq}-${line.speaker}-${line.at}`}
+                  style={css(
+                    "display:flex;gap:6px;min-width:0;flex:1;" +
+                      (index > 0 ? "border-left:1px solid var(--gray-300);padding-left:12px" : "")
+                  )}
+                >
+                  <b style={css("flex:none;font-size:11.5px;color:" + (isAgent ? "var(--green-900)" : "var(--blue-700)"))}>
+                    {isAgent ? "상담원" : "고객"}
+                  </b>
+                  <span style={css("min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--gray-1000)")}>
+                    {line.text}
+                  </span>
+                </span>
+              );
+            })}
+          </span>
+        </div>
+      )}
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         {/* 알약 폭 = 콘텐츠 폭(빈 공간 없음). 이관 패널은 grid 0fr→1fr 트릭으로 알약이 부드럽게 길어진다 */}
@@ -153,24 +203,33 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           {vm.showWrap ? (
             /* 종료 후 — 통화 컨트롤 대신 후처리 보조 도구 */
             <span style={css("display:flex;gap:5px")}>
-              <span className="cbtn" title="녹취 다시 듣기"><span className="mi" style={css("font-size:19px")}>play_arrow</span></span>
-              <span className="cbtn" title="통화 요약 복사"><span className="mi" style={css("font-size:19px")}>content_copy</span></span>
+              <span
+                className="cbtn"
+                aria-disabled={vm.isExplicitLiveCall}
+                title={vm.isExplicitLiveCall ? "녹음 파일 저장·재생은 아직 연결되지 않았습니다" : "녹취 다시 듣기"}
+                style={vm.isExplicitLiveCall ? { cursor: "not-allowed", opacity: 0.42 } : undefined}
+              ><span className="mi" style={css("font-size:19px")}>play_arrow</span></span>
+              <span className="cbtn" title={summaryCopied ? "복사됨" : "통화 요약 복사"} onClick={copyWrapSummary}>
+                <span className="mi" style={css("font-size:19px")}>{summaryCopied ? "check" : "content_copy"}</span>
+              </span>
             </span>
           ) : (
           <span style={css("display:flex;gap:5px")}>
             <span
               className="cbtn"
-              title={(muted ? "음소거 해제" : "음소거") + " · 단축키 M"}
-              onClick={() => setMuted((v) => !v)}
-              style={muted ? { background: "var(--gray-1000)", color: "#fff", borderColor: "var(--gray-1000)" } : undefined}
+              aria-disabled={vm.isExplicitLiveCall}
+              title={vm.isExplicitLiveCall ? "음소거는 엣지 송신기 제어 연결 후 사용할 수 있습니다" : (muted ? "음소거 해제" : "음소거") + " · 단축키 M"}
+              onClick={vm.isExplicitLiveCall ? undefined : () => setMuted((v) => !v)}
+              style={vm.isExplicitLiveCall ? { cursor: "not-allowed", opacity: 0.42 } : muted ? { background: "var(--gray-1000)", color: "#fff", borderColor: "var(--gray-1000)" } : undefined}
             >
               <span className="mi" style={css("font-size:19px")}>{muted ? "mic_off" : "mic"}</span>
             </span>
             <span
               className="cbtn"
-              title={(held ? "보류 해제" : "보류 — 고객에게 대기 멘트") + " · 단축키 H"}
-              onClick={() => setHeld((v) => !v)}
-              style={held ? { background: "var(--amber-700)", color: "#fff", borderColor: "var(--amber-700)" } : undefined}
+              aria-disabled={vm.isExplicitLiveCall}
+              title={vm.isExplicitLiveCall ? "보류·대기 음원은 통화 오디오 제어 연결 후 사용할 수 있습니다" : (held ? "보류 해제" : "보류 — 고객에게 대기 멘트") + " · 단축키 H"}
+              onClick={vm.isExplicitLiveCall ? undefined : () => setHeld((v) => !v)}
+              style={vm.isExplicitLiveCall ? { cursor: "not-allowed", opacity: 0.42 } : held ? { background: "var(--amber-700)", color: "#fff", borderColor: "var(--amber-700)" } : undefined}
             >
               <span className="mi" style={css("font-size:19px")}>{held ? "play_arrow" : "pause"}</span>
             </span>
@@ -235,6 +294,29 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             </div>
+
+            {vm.arsDigits && (
+              <div style={css("margin-top:12px;display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--blue-400);background:var(--blue-50,#eef4ff);border-radius:8px")}>
+                <span className="mi" style={css("font-size:18px;color:var(--blue-700)")}>dialpad</span>
+                <div style={css("flex:1;min-width:0")}>
+                  <div style={css("display:flex;align-items:center;gap:6px") }>
+                    <span style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>고객 키패드 입력 수신</span>
+                    <span style={css("font:500 10px 'Geist Sans','Pretendard',sans-serif;color:" + (vm.dtmfPersisted ? "var(--green-700)" : "var(--red-800)"))}>
+                      {vm.dtmfPersisted ? "서버 저장됨" : "저장 확인 필요"}
+                    </span>
+                  </div>
+                  <div style={css("font:600 13px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-1000);margin-top:2px;letter-spacing:2px")}>{vm.dtmfMasked}</div>
+                </div>
+                {!vm.verified && (
+                  <span
+                    onClick={vm.canApplyDtmfToAuth ? vm.applyDtmfToAuth : undefined}
+                    style={css("flex:none;border-radius:9999px;padding:6px 9px;background:var(--onair-surface);border:1px solid var(--blue-400);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);cursor:" + (vm.canApplyDtmfToAuth ? "pointer" : "not-allowed"))}
+                  >
+                    대조값에 적용
+                  </span>
+                )}
+              </div>
+            )}
 
             {vm.verified ? (
               <div style={css("margin-top:13px;background:var(--gray-100);border-radius:8px;overflow:hidden")}>
@@ -395,7 +477,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <div className="card" style={css("flex:none;padding:15px 17px")}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
               <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>
-              <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 사전 요약</span>
+              <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{vm.summarySourceLabel}</span>
               <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>대기 중 고객 진술 기반</span>
             </div>
             {/* 카드의 주인 문장 — Title 18px: 통화 시작 순간 첫 시선이 꽂히는 곳 */}
@@ -587,15 +669,20 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       {vm.regRecos.map((r) => (
                         <RegReco key={r.title} vm={vm} title={r.title} body={r.body} file={r.file} row={r.row} />
                       ))}
+                      {vm.regRecos.length === 0 && (
+                        <div style={css("border:1px solid var(--gray-200);border-radius:10px;padding:11px 12px;background:var(--gray-100);font:400 11.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+                          실측 추천 규정 없음 · 위 검색창에서 실제 규정 DB를 조회해 주세요.
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div>
+                  {!vm.isExplicitLiveCall && <div>
                     <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>규정집 파일 바로가기</div>
                     <div style={css("display:flex;flex-direction:column;gap:7px")}>
                       <RegFile vm={vm} name="전자금융거래 업무매뉴얼_v24" />
                       <RegFile vm={vm} name="착오송금_반환지원_안내" />
                     </div>
-                  </div>
+                  </div>}
                 </div>
               </div>
             ) : vm.regDoc || vm.regDocLoading ? (

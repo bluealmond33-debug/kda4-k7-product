@@ -12,7 +12,8 @@
     "validate:contracts": "node scripts/validate-contracts.mjs",
     "validate:adapter": "node scripts/validate-adapter.mjs",
     "validate:frontend-contract": "node --experimental-strip-types scripts/validate-frontend-contract.mjs",
-    "check": "npm run validate:manifest && npm run validate:contracts && npm run validate:adapter && npm run validate:frontend-contract && npm run build",
+    "validate:live-call": "node --experimental-strip-types scripts/validate-live-call-contract.mjs",
+    "check": "npm run validate:manifest && npm run validate:contracts && npm run validate:adapter && npm run validate:frontend-contract && npm run validate:live-call && npm run build",
     "check:release": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-release-gates.ps1"
   },
   "dependencies": {

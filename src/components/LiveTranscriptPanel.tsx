@@ -9,8 +9,8 @@ import Threads from "./Threads";
  * 라벨·상태 문구는 없다: 그건 상단 상황 알약의 몫이고, 이 패널은
  * "소리가 흐른다"(물결)와 "말이 글자가 된다"(전사) 두 감각만 보여준다.
  *
- * 스트림에는 고객 발화(cust)와 AI 안내 멘트(ai)가 도착 순서로 섞인다 —
- * 고객 조각들은 STT답게 한 문단으로 이어 붙고, AI 멘트는 별도 줄로 끊는다.
+ * 스트림에는 고객·상담원 발화가 도착 순서로 섞인다. 같은 화자의 연속 조각은
+ * STT답게 한 문단으로 이어 붙이고 화자가 바뀌면 별도 줄로 끊는다.
  * 타이핑은 연속 타자기(useTypewriter): 목표 텍스트가 자라나도 재시작 없이
  * 이어서 따라간다 — 문장 단위로 끊기지 않는 진짜 STT 스트림 감각.
  *
@@ -21,7 +21,7 @@ import Threads from "./Threads";
 export interface StreamItem {
   id: string;
   text: string;
-  who: "cust" | "ai";
+  who: "customer" | "agent" | "ai";
 }
 
 export default function LiveTranscriptPanel({
@@ -57,8 +57,9 @@ export default function LiveTranscriptPanel({
     if (el) el.scrollTop = el.scrollHeight;
   }, [stream]);
 
-  // 같은 화자의 연속 조각은 한 그룹(문단)으로 — 고객은 이어지는 STT, AI는 별도 줄
-  const groups: { who: "cust" | "ai"; texts: string[]; lastId: string }[] = [];
+  // 같은 화자의 연속 조각은 한 그룹(문단)으로 묶되 고객·상담원 표시는
+  // 유지한다. 두 채널이 실제로 섞이는 통화에서 발화자를 지워서는 안 된다.
+  const groups: { who: StreamItem["who"]; texts: string[]; lastId: string }[] = [];
   stream.forEach((it) => {
     const g = groups[groups.length - 1];
     if (g && g.who === it.who) {
@@ -86,7 +87,7 @@ export default function LiveTranscriptPanel({
         </div>
       </div>
 
-      {/* 전사 — 검은 배경 위 코딩 글자. 고객은 이어지는 문단, AI 멘트는 별도 줄 */}
+      {/* 전사 — 검은 배경 위 코딩 글자. 같은 화자는 이어지고 화자가 바뀌면 새 줄 */}
       <div ref={scrollRef} style={css("flex:1;min-height:0;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px")}>
         {groups.length === 0 ? (
           <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#565b66")}>
@@ -140,7 +141,7 @@ function GroupLine({
   full,
   isLast,
 }: {
-  who: "cust" | "ai";
+  who: StreamItem["who"];
   full: string;
   isLast: boolean;
 }) {
@@ -148,6 +149,9 @@ function GroupLine({
   const text = isLast ? typed : full;
   const typing = isLast && typed.length < full.length;
   const isAi = who === "ai";
+  const isAgent = who === "agent";
+  const label = isAi ? "AI" : isAgent ? "상담원" : "고객";
+  const labelColor = isAi ? "#8a919d" : isAgent ? "#8fceb3" : "#8db6ff";
   return (
     <div
       style={css(
@@ -155,11 +159,9 @@ function GroupLine({
           (isAi ? "#8a919d" : "#dfe3ea")
       )}
     >
-      {isAi && (
-        <span style={css("display:inline-block;margin-right:8px;padding:1px 6px;border:1px solid #3a3f49;border-radius:5px;font-size:10px;color:#8a919d;transform:translateY(-1px)")}>
-          AI
-        </span>
-      )}
+      <span style={css("display:inline-block;margin-right:8px;padding:1px 6px;border:1px solid #3a3f49;border-radius:5px;font-size:10px;color:" + labelColor + ";transform:translateY(-1px)")}>
+        {label}
+      </span>
       {text}
       {isLast && (
         <span style={css("display:inline-block;margin-left:2px;color:#eef1f6;animation:recBlink 1s infinite" + (typing ? "" : ";opacity:.5"))}>▍</span>

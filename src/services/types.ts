@@ -9,6 +9,12 @@ export interface TranscriptChunk {
   at: number;
   /** true once the recogniser considers the fragment final. */
   isFinal: boolean;
+  /** Known endpoint role. Missing means legacy/customer input. */
+  speaker?: "customer" | "agent";
+  /** Server-wide transcript ordering key when available. */
+  seq?: number;
+  generation?: number;
+  audioSeq?: number;
 }
 
 export type EmotionTemperatureLevel = "stable" | "caution" | "elevated";

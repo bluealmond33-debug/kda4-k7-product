@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { css } from "../lib/css";
 import type { CallFlowVM } from "../hooks/useCallFlow";
 
@@ -37,11 +38,20 @@ const CONTROLS = [
  *  전부 숨긴다. 그 정보는 상단 상황 알약과 실시간 통화 패널이 대신 보여준다. */
 export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
   return (
-    <div style={css("flex:none;width:260px;height:532px")}>
+    <div
+      style={css(
+        "flex:none;width:" +
+          (clean ? "432px" : "260px") +
+          ";height:" +
+          (clean ? "886px" : "532px")
+      )}
+    >
       <div
         className="sf"
         style={css(
-          "width:432px;height:886px;transform:scale(.6);transform-origin:top left;position:relative;filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))"
+          "width:432px;height:886px;transform:scale(" +
+            (clean ? "1" : ".6") +
+            ");transform-origin:top left;position:relative;filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))"
         )}
       >
         {/* 사이드 버튼 — 프레임 뒤에서 살짝 돌출 */}
@@ -128,6 +138,12 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
         <div style={css("text-align:center;margin-top:64px")}>
           <div style={css("font-size:26px;font-weight:500;letter-spacing:.2px")}>키움은행 고객센터</div>
           <div style={css("font-size:14px;color:#3478f6;margin-top:6px;font-weight:400")}>1588-0000</div>
+          {vm.isCustomerSurface && (
+            <div style={css("display:inline-flex;align-items:center;gap:7px;margin-top:14px;padding:6px 11px;border-radius:9999px;background:" + (vm.mobileServerConnected ? "#e8fff6;color:#087a55" : "#fff1f0;color:#b42318") + ";font-size:12px;font-weight:700")}>
+              <span style={css("width:8px;height:8px;border-radius:50%;background:" + (vm.mobileServerConnected ? "#20bd77" : "#ff3b30"))} />
+              {vm.mobileServerConnected ? "통화 서버 연결됨" : "통화 서버 연결 중"}
+            </div>
+          )}
         </div>
         <div style={css("flex:1")} />
         {/* 키패드 — 실기기 비율: 버튼 75px, 열 간격 28px */}
@@ -157,6 +173,15 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
 }
 
 function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
+  const [keypadOpen, setKeypadOpen] = useState(false);
+  useEffect(() => {
+    if (vm.phEnded) setKeypadOpen(false);
+  }, [vm.phEnded]);
+
+  if (clean && keypadOpen && !vm.phEnded) {
+    return <CustomerKeypadScreen vm={vm} close={() => setKeypadOpen(false)} />;
+  }
+
   return (
     <div style={css("position:absolute;inset:0;color:#1c1c1e;display:flex;flex-direction:column")}>
       <StatusBar />
@@ -228,7 +253,22 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
             {/* 2×3 컨트롤 그리드 — 실기 비율: 세로 간격은 라벨 포함 여유 있게 */}
             <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:20px")}>
               {CONTROLS.map((c) => (
-                <div key={c.label} style={css("display:flex;flex-direction:column;align-items:center;gap:7px")}>
+                <div
+                  key={c.label}
+                  onClick={
+                    clean && c.label === "키패드" && vm.customerKeypadEnabled
+                      ? () => setKeypadOpen(true)
+                      : undefined
+                  }
+                  style={css(
+                    "display:flex;flex-direction:column;align-items:center;gap:7px;" +
+                      (clean && c.label === "키패드"
+                        ? vm.customerKeypadEnabled
+                          ? "cursor:pointer"
+                          : "opacity:.42;cursor:not-allowed"
+                        : "")
+                  )}
+                >
                   <span
                     style={css(
                       "width:75px;height:75px;border-radius:9999px;background:#e4e4e6;display:flex;align-items:center;justify-content:center"
@@ -244,6 +284,69 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
             <CallButtonRow color="#ff3b30" icon="call_end" onClick={vm.endCall} />
           </div>
         )}
+        {vm.phEnded && vm.isCustomerSurface && (
+          <div style={css("display:flex;flex-direction:column;align-items:center;gap:7px")}>
+            <span style={css("font-size:13px;color:#8a8a8e")}>새 상담을 시작할 수 있습니다</span>
+            <CallButtonRow color="#34c759" icon="call" onClick={vm.startCall} />
+          </div>
+        )}
+      </div>
+      <HomeIndicator />
+    </div>
+  );
+}
+
+function CustomerKeypadScreen({
+  vm,
+  close,
+}: {
+  vm: CallFlowVM;
+  close: () => void;
+}) {
+  const press = (digit: string) => {
+    if (!vm.customerKeypadEnabled) return;
+    if (vm.customerPressDigit(digit)) navigator.vibrate?.(22);
+  };
+  const prompt = vm.mobileAgentConnected
+    ? "상담원 통화 중 · 번호를 입력하세요"
+    : vm.mobileIntakePending
+    ? "마지막 발화를 처리하고 있습니다"
+    : vm.mobileIntakeComplete
+    ? "상담사가 통화를 준비하고 있습니다"
+    : "용건을 모두 말씀하셨으면 #을 눌러 주세요";
+
+  return (
+    <div style={css("position:absolute;inset:0;color:#1c1c1e;display:flex;flex-direction:column")}>
+      <StatusBar />
+      <div style={css("display:flex;align-items:center;justify-content:center;position:relative;margin-top:47px")}>
+        <span
+          onClick={close}
+          style={css("position:absolute;left:31px;width:42px;height:42px;border-radius:9999px;background:#e4e4e6;display:flex;align-items:center;justify-content:center;cursor:pointer")}
+        >
+          <span className="mi" style={css("font-size:22px")}>close</span>
+        </span>
+        <div style={css("text-align:center")}>
+          <div style={css("font-size:21px;font-weight:600")}>키움은행 고객센터</div>
+          <div style={css("font-size:13px;color:#8a8a8e;margin-top:5px")}>{prompt}</div>
+        </div>
+      </div>
+      <div style={css("height:48px;display:flex;align-items:center;justify-content:center;font:500 24px 'Geist Mono',monospace;letter-spacing:7px;color:#3478f6")}>
+        {vm.arsDigits || " "}
+      </div>
+      <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:14px;opacity:" + (vm.customerKeypadEnabled ? "1" : ".42"))}>
+        {KEYS.map((key) => (
+          <div
+            key={key.d}
+            onClick={() => press(key.d)}
+            style={css("display:flex;flex-direction:column;align-items:center;justify-content:center;width:75px;height:75px;border-radius:9999px;background:#e4e4e6;cursor:" + (vm.customerKeypadEnabled ? "pointer" : "not-allowed"))}
+          >
+            <span style={css("font-size:36px;font-weight:400;color:#1c1c1e;line-height:1" + (key.sub ? "" : ";margin-top:6px"))}>{key.d}</span>
+            <span style={css("font-size:10px;font-weight:700;letter-spacing:2px;color:#6d6d72;height:12px;margin-top:1px;text-indent:2px")}>{key.sub}</span>
+          </div>
+        ))}
+      </div>
+      <div style={css("margin-top:auto;padding-bottom:34px")}>
+        <CallButtonRow color="#ff3b30" icon="call_end" onClick={vm.endCall} />
       </div>
       <HomeIndicator />
     </div>

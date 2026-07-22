@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
-import { useLiveCallBus } from "../hooks/useLiveCallBus";
 import Phone from "./Phone";
 import LiveTranscriptPanel, { type StreamItem } from "./LiveTranscriptPanel";
 import Waiting from "./desktop/Waiting";
@@ -17,7 +16,8 @@ import WrapSheet from "./desktop/WrapSheet";
  *   "full"    시연화면(기본): 폰 + 데스크톱 합본. 라이브 시연은 이 화면에서.
  *   "phone"   고객 핸드폰 단독 (?role=customer)
  *   "desktop" 직원 데스크톱 단독 (?role=employee)
- * phone/desktop은 탭별 독립 인스턴스다(탭 간 통화 상태 동기화는 후속 — demoBus 확장).
+ * phone/desktop은 등록된 call_id를 공유하면 ARS·STT와 DemoEnvelope WS 릴레이로 동기화된다.
+ * call_id가 없는 full 화면은 기존 단일 브라우저 스크립트 데모를 유지한다.
  */
 export type LiveDemoView = "full" | "phone" | "desktop";
 
@@ -29,49 +29,30 @@ export default function LiveDemo({
   // 확대를 허용해 큰 모니터에서 양옆 여백 없이 화면을 채운다
   const vm = useCallFlow({
     ...config,
-    ...(view === "phone" ? { stageW: 740, maxScale: 1.7 } : null),
+    // phone owns the mobile ARS socket, desktop/full own the counselor socket.
+    // The combined full view keeps its green handset button as the scripted
+    // demo. With an explicit registered call_id, an external customer page can
+    // drive the combined view's counselor side through the same server state.
+    surface: view,
+    // The customer route is opened on a real Galaxy, not on a presentation
+    // canvas.  Keep the native 432px phone artboard, stack the transcript
+    // below it, and fit by width only so controls stay finger-sized instead of
+    // shrinking the whole two-column demo into a tiny thumbnail.
+    ...(view === "phone"
+      ? { stageW: 432, maxScale: 1, fitPad: 16, fitHeight: false }
+      : null),
     // 직원 단독 화면 — 데스크톱 폭(1100)을 브라우저 가로에 100% 맞춘다(양옆 여백 없음)
     ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 24, fitHeight: false } : null),
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
-  // 고객 화면 실시간 상태 — demoBus 단일 소스 (알약 상태문구 + 패널 자막이 함께 쓴다)
-  const live = useLiveCallBus();
-
-  // 고객 화면 전사 스트림 — 고객 발화(demoBus)와 AI 안내 멘트(vm.glassText)를
-  // 도착 순서대로 합친다. AI 멘트는 폰의 유리판에서 걷어내 패널로 옮긴 것.
-  const [stream, setStream] = useState<StreamItem[]>([]);
-  const custCount = useRef(0);
-  const lastGlass = useRef("");
-  useEffect(() => {
-    if (live.lines.length < custCount.current) {
-      // 새 콜/리셋 — 스트림도 함께 비운다
-      custCount.current = 0;
-      lastGlass.current = "";
-      setStream([]);
-    }
-    if (live.lines.length > custCount.current) {
-      const fresh = live.lines
-        .slice(custCount.current)
-        .map((l) => ({ ...l, who: "cust" as const }));
-      custCount.current = live.lines.length;
-      setStream((s) => [...s, ...fresh]);
-    }
-  }, [live.lines]);
-  useEffect(() => {
-    if (view !== "phone") return;
-    const g = vm.showGlass ? vm.glassText : "";
-    if (g && g !== lastGlass.current) {
-      lastGlass.current = g;
-      setStream((s) => [...s, { id: "ai-" + Date.now(), text: g, who: "ai" }]);
-    }
-  }, [view, vm.showGlass, vm.glassText]);
-  useEffect(() => {
-    if (vm.phIdle) {
-      custCount.current = 0;
-      lastGlass.current = "";
-      setStream([]);
-    }
-  }, [vm.phIdle]);
+  // Galaxy는 자신의 /ws/call 스트림을 직접 그린다. 상담사 화면이 늦게
+  // 열리거나 잠시 끊겨도 고객 자막이 중앙 demo relay에 의존하지 않는다.
+  const phoneActive = vm.phInCall && !vm.phEnded;
+  const phoneLines: StreamItem[] = vm.liveTranscriptLines.map((line) => ({
+    id: `${line.generation ?? 0}-${line.audioSeq ?? line.seq}-${line.speaker}-${line.at}`,
+    text: line.text,
+    who: line.speaker,
+  }));
 
   // 데모 안내 팝업 등장/퇴장 모션 — 중앙에서 슉 뜨고 다시 접힌다. 등장 지연은 useCallFlow(700ms)가 담당.
   // 열려 있는 동안 단계가 바뀌면 딤 유지·내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝.
@@ -104,7 +85,13 @@ export default function LiveDemo({
   return (
     <div
       ref={vm.rootRef}
-      style={css("min-height:100vh;padding:" + (view === "desktop" ? "12px" : "20px") + ";display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box")}
+      style={css(
+        "min-height:100vh;padding:" +
+          (view === "phone" ? "8px" : view === "desktop" ? "12px" : "20px") +
+          ";display:flex;justify-content:center;align-items:" +
+          (view === "phone" ? "flex-start" : "center") +
+          ";background:#060607;box-sizing:border-box"
+      )}
     >
       <div style={{ width: vm.scaledW, height: vm.scaledH }}>
         <div
@@ -115,7 +102,7 @@ export default function LiveDemo({
             transform: vm.scaleT,
             display: "flex",
             flexDirection: "column",
-            gap: "18px",
+            gap: view === "phone" ? "10px" : "18px",
             alignItems: "center",
           }}
         >
@@ -236,21 +223,21 @@ export default function LiveDemo({
               <span
                 style={css(
                   "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 4px;color:" +
-                    (live.active ? "var(--green-900)" : "var(--gray-700)")
+                    (phoneActive ? "var(--green-900)" : "var(--gray-700)")
                 )}
               >
                 <span
                   style={css(
                     "width:7px;height:7px;border-radius:9999px;background:" +
-                      (live.active ? "var(--green-700);animation:recBlink 1.1s infinite" : "var(--gray-400)")
+                      (phoneActive ? "var(--green-700);animation:recBlink 1.1s infinite" : "var(--gray-400)")
                   )}
                 />
-                {live.active ? "통화 중" : "대기 중"}
+                {phoneActive ? "통화 중" : "대기 중"}
               </span>
-              {live.status && (
+              {vm.phoneStatus && (
                 <>
                   <span style={css("width:1px;height:18px;background:var(--color-border)")} />
-                  <span style={css("font-size:12.5px;font-weight:600;color:var(--blue-900)")}>{live.status}</span>
+                  <span style={css("font-size:12.5px;font-weight:600;color:var(--blue-900)")}>{vm.phoneStatus}</span>
                 </>
               )}
               <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:6px 13px;background:var(--gray-100);border-radius:9999px;font-size:12.5px;font-weight:600;cursor:pointer")}>
@@ -268,10 +255,17 @@ export default function LiveDemo({
 
           {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율. 안내 팝업은 이 영역 위 중앙 딤 모달로 뜬다.
               view에 따라 한쪽만 남긴다: customer=폰, employee=데스크톱 (스테이지·스케일은 공유) */}
-          <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
+          <div
+            style={css(
+              "position:relative;display:flex;gap:" +
+                (view === "phone" ? "16px" : "40px") +
+                ";align-items:center;justify-content:center;flex-direction:" +
+                (view === "phone" ? "column" : "row")
+            )}
+          >
             {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}
             {/* 고객 화면 — 폰은 살짝 왼쪽, 오른쪽에 실시간 현황·발화 스트림(타이핑 애니메이션) */}
-            {view === "phone" && <LiveTranscriptPanel stream={stream} active={live.active} />}
+            {view === "phone" && <LiveTranscriptPanel stream={phoneLines} active={phoneActive} />}
             {view !== "phone" && (
               <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
                 {vm.showWaiting && <Waiting vm={vm} />}
