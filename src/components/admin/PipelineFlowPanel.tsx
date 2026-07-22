@@ -19,9 +19,9 @@ export default function PipelineFlowPanel({
   const stages = flowCall?.stages ?? {};
 
   return (
-    <div className="card" style={css("padding:16px 22px 14px")}>
+    <div className="card" style={css("flex:none;padding:14px 18px 12px")}>
       {/* 헤더 */}
-      <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:14px")}>
+      <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:12px")}>
         <span className="sechd">백엔드 프로세스 플로우</span>
         <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
           발화부터 후처리까지 — 전 과정 온프레미스, 외부 API 0

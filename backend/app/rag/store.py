@@ -269,3 +269,26 @@ def get_regulation_document(settings: Settings, doc_id: str) -> dict[str, Any] |
             for c in chunks
         ],
     }
+
+
+def get_regulation_stats(settings: Settings) -> dict[str, int]:
+    """활성 문서·청크 수 — 관리자 콘솔 'DB·지식베이스' 패널의 실측 통계."""
+    try:
+        with psycopg.connect(_database_url(settings)) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT count(*) FROM rag_documents WHERE status = 'active'"
+                )
+                documents = cursor.fetchone()[0]
+                cursor.execute(
+                    """
+                    SELECT count(*)
+                    FROM rag_chunks c
+                    JOIN rag_documents d ON d.doc_id = c.doc_id
+                    WHERE d.status = 'active'
+                    """
+                )
+                chunks = cursor.fetchone()[0]
+    except psycopg.Error as exc:
+        raise RegulationSearchUnavailable("regulation stats query failed") from exc
+    return {"documents": documents, "chunks": chunks}

@@ -13,3 +13,4 @@ export * from "./liveCall";
 export * from "./arsControl";
 export * from "./arsLifecycle";
 export * from "./arsMobile";
+export * from "./regulationAdmin";

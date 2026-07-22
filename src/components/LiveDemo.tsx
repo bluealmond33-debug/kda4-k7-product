@@ -234,15 +234,6 @@ export default function LiveDemo({
                 />
                 {phoneActive ? "통화 중" : "대기 중"}
               </span>
-              {vm.phoneStatus && (
-                <>
-                  <span style={css("width:1px;height:18px;background:var(--color-border)")} />
-                  <span style={css("font-size:12.5px;font-weight:600;color:var(--blue-900)")}>{vm.phoneStatus}</span>
-                </>
-              )}
-              <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:6px 13px;background:var(--gray-100);border-radius:9999px;font-size:12.5px;font-weight:600;cursor:pointer")}>
-                <span className="mi" style={css("font-size:16px")}>restart_alt</span>초기화
-              </span>
             </div>
           )}
 

@@ -1,5 +1,8 @@
+import shutil
+import tempfile
 import threading
 from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
@@ -26,6 +29,7 @@ from app.card_routing_pipeline import (
 )
 from app.rag import (
     RegulationSearchUnavailable,
+    get_regulation_stats,
     initialize_rag,
     search_regulations,
     get_regulation_document,
@@ -138,6 +142,75 @@ def search_regulations_endpoint(
     except RegulationSearchUnavailable:
         return {"query": q, "category": category, "available": False, "documents": []}
     return {"query": q, "category": category, "available": True, "documents": documents}
+
+
+@app.get("/api/v1/regulations/stats")
+def regulation_stats() -> dict:
+    """지식베이스 실측 통계(활성 문서·청크 수) — 관리자 콘솔 'DB·지식베이스' 패널용."""
+    try:
+        counts = get_regulation_stats(settings)
+    except RegulationSearchUnavailable:
+        return {"available": False, "documents": None, "chunks": None}
+    return {"available": True, **counts}
+
+
+# 개정본 감지용 문서 대장 — 같은 파일명이 대장에 있으면 새 업로드를 개정본으로 처리한다
+REGISTRY_CSV = Path(__file__).resolve().parents[2] / "database" / "rag" / "registry.csv"
+
+
+@app.post("/api/v1/regulations/upload", status_code=status.HTTP_201_CREATED)
+def upload_regulation(pdf: UploadFile = File(...)) -> dict:
+    """관리자 콘솔 규정 PDF 자동 적재 — 업로드 한 번으로 청킹→카테고리 추천→임베딩→적재.
+
+    hippo RAG 설계 8장의 (A) '백엔드 업로드 화면' 경로. auto_ingest의 preview+commit을
+    한 번에 실행한다 — 데모에선 추천 카테고리를 자동 채택하고, 근거(키워드·확신도)를
+    응답에 담아 화면에서 사후 확인한다. 같은 파일명 재업로드는 동일 doc_id로 멱등 갱신,
+    registry 대장에 있는 파일명이면 개정본 처리(옛 버전은 superseded로 보관).
+    스캔본 PDF는 OCR 의존성이 있으면 자동 처리, 없으면 안내 메시지로 실패한다.
+    """
+    filename = Path(pdf.filename or "").name
+    if not filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=415, detail="PDF 파일만 업로드할 수 있습니다")
+    if not settings.database_url:
+        raise HTTPException(status_code=503, detail="DATABASE_URL is not configured")
+    from app.rag import auto_ingest  # pdfplumber 등 무거운 의존성 — 요청 시에만 로드
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / filename
+        with path.open("wb") as out:
+            shutil.copyfileobj(pdf.file, out)
+        try:
+            preview = auto_ingest.preview(
+                path, registry_path=REGISTRY_CSV if REGISTRY_CSV.exists() else None
+            )
+            loaded = auto_ingest.commit(
+                preview, settings, supersede_doc_id=preview.revision_of
+            )
+        except HTTPException:
+            raise
+        except RegulationSearchUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except RuntimeError as exc:  # OCR 선택 의존성 미설치 등 — 안내 문구 그대로 전달
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"PDF 처리 실패: {exc}") from exc
+
+    return {
+        "filename": preview.filename,
+        "title": Path(preview.filename).stem,
+        "doc_id": preview.chunks[0]["doc_id"] if preview.chunks else None,
+        "is_scanned": preview.is_scanned,
+        "chunks_loaded": loaded,
+        "n_text": preview.n_text,
+        "n_table": preview.n_table,
+        "revision_of": preview.revision_of,
+        "suggestion": {
+            "department": preview.suggestion.department,
+            "business_code": preview.suggestion.business_code,
+            "confidence": preview.suggestion.confidence,
+            "why": preview.suggestion.why,
+        },
+    }
 
 
 @app.get("/api/v1/regulations/documents/{doc_id}")

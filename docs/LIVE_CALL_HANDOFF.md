@@ -4,7 +4,7 @@
 
 > 기준 브랜치: `codex/mingikim-live-call`
 >
-> UI 기준선: `origin/mingikim` (`77b00254fa7a7a79d0e13f152c01551797ba60e2`)
+> UI 기준선: `origin/mingikim` (`a3e326155784ed1f2339bef08fdd88def6a5fce7`)
 >
 > 원격 `main`은 수정·푸시하지 않는다.
 
