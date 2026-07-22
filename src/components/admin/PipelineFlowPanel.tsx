@@ -173,12 +173,14 @@ export default function PipelineFlowPanel({
                     </span>
                   );
                 })()}
-                {/* 기술 캡션 — `·` 세그먼트 단위로 줄을 내려 어중간한 꺾임 없이 읽힌다 */}
-                <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700);line-height:1.45")}>
-                  {node.tech.split(" · ").map((seg) => (
-                    <span key={seg} style={css("display:block;white-space:nowrap")}>{seg}</span>
-                  ))}
-                </span>
+                {/* 기술 캡션(어떤 AI·기술인지) — 설명 모드에서만. 평소 관제 화면은 조용하게 */}
+                {explain && (
+                  <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700);line-height:1.45;animation:dockDown .25s var(--ease-out)")}>
+                    {node.tech.split(" · ").map((seg) => (
+                      <span key={seg} style={css("display:block;white-space:nowrap")}>{seg}</span>
+                    ))}
+                  </span>
+                )}
                 {explain && (
                   <span style={css("font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:7px 9px;text-align:left;animation:dockDown .25s var(--ease-out)")}>
                     {node.explain}
