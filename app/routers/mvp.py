@@ -21,6 +21,7 @@ from app.services.local_stt import transcribe_audio_local
 from app.services.mvp_adapter import to_consultation_card
 from app.services.stt import transcribe_audio
 from app.services.stub_models import analyze_transcript_stub, transcribe_audio_stub
+from app.services.pii_guard import mask_transcript
 
 router = APIRouter(tags=["mvp-v1"])
 
@@ -47,14 +48,21 @@ async def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
     try:
         if settings.stub_models:
             transcribed = transcribe_audio_stub(audio.filename or "customer-audio.wav", audio_bytes)
-            gpt_result = analyze_transcript_stub(transcribed.text)
         elif settings.use_local_models:
             transcribed = transcribe_audio_local(settings, audio.filename or "customer-audio.wav", audio_bytes)
-            gpt_result = analyze_transcript_local(settings, transcribed.text)
         else:
             client = _get_openai_client()
             transcribed = transcribe_audio(client, audio.filename or "customer-audio.wav", audio_bytes)
-            gpt_result = analyze_transcript(client, transcribed.text)
+        # 개인정보 보호(주제 11·12): 전사 직후 마스킹 → 이후 분석(LLM)·저장은 마스킹본만.
+        # 원본 오디오(audio_bytes)는 이 요청 처리 중 메모리에서만 쓰고 저장하지 않는다(휘발).
+        masked_text, _pii = mask_transcript(transcribed.text)
+        transcribed.text = masked_text
+        if settings.stub_models:
+            gpt_result = analyze_transcript_stub(masked_text)
+        elif settings.use_local_models:
+            gpt_result = analyze_transcript_local(settings, masked_text)
+        else:
+            gpt_result = analyze_transcript(client, masked_text)
         emotion_result_for_judge = analyze_emotion(audio_bytes)
         judgement = run_judge(gpt_result.risk_flags, emotion_result_for_judge)
         card: ConsultationCard = to_consultation_card(

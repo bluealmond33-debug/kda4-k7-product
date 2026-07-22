@@ -3,8 +3,10 @@ import uuid
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 from openai import OpenAI
+from pydantic import BaseModel
 
 from app.config import settings
+from app.services.pii_guard import PII_SCOPE, mask_transcript
 from app.schemas import (
     AnalyzeResult,
     AttentionReasonCode,
@@ -221,3 +223,27 @@ async def briefing_endpoint(audio: UploadFile) -> BriefingCard:
         judgement=judgement,
         references=references,
     )
+
+
+# ── 개인정보 보호 데모 도구 (발표 C. 개인정보·보안) ──────────────────
+class PiiScanRequest(BaseModel):
+    text: str
+
+
+@router.post("/pii/scan")
+async def pii_scan_endpoint(body: PiiScanRequest) -> dict:
+    """정규식 기반 개인정보 탐지·마스킹 시연(주제 12).
+
+    임의 문장을 넣으면 무엇을 개인정보로 보고(주제 10) 어떻게 마스킹했는지 돌려준다.
+    발표에서 "정규식/NER 탐지, 애매하면 마스킹" 원칙을 라이브로 보여주는 용도.
+    """
+    masked, hits = mask_transcript(body.text)
+    return {
+        "scope": list(PII_SCOPE.values()),  # 주제 10: 무엇을 개인정보로 보는가
+        "masked": masked,                     # 주제 12: 마스킹 결과 (저장·AI 입력은 이것만)
+        "count": len(hits),
+        "hits": [
+            {"type": h.type, "label": h.label, "original": h.original, "masked": h.masked}
+            for h in hits
+        ],
+    }

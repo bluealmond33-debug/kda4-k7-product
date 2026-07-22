@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 from app.config import settings
 from app.services.stream_segmenter import UtteranceSegmenter
 from app.services.streaming_stt import transcribe_utterance
+from app.services.pii_guard import mask_transcript
 
 router = APIRouter()
 
@@ -61,6 +62,9 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     text = await run_in_threadpool(transcribe_utterance, settings, utterance)
     if not text:
         return
+    # 개인정보 보호(주제 11·12): 상담사·AI에 나가는 전사는 마스킹본만.
+    # 원본 음성(utterance)은 이 함수 안에서만 쓰이고 저장·반환하지 않는다(휘발).
+    masked, hits = mask_transcript(text)
     session.seq += 1
     await _broadcast(
         session,
@@ -68,7 +72,8 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
             "type": "transcript",
             "seq": session.seq,
             "speaker": "customer",
-            "text": text,
+            "text": masked,
+            "pii_masked": len(hits),  # 이 발화에서 마스킹된 개인정보 건수(화면 배지용)
             "isFinal": True,
             "at": int(time.time() * 1000),
         },
