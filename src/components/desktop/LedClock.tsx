@@ -15,22 +15,21 @@ import { css } from "../../lib/css";
 import "dseg/css/dseg.css";
 
 /**
- * 디지털 시계 (라이트 세그먼트 · 온에어 문법) — 시계가 정중앙 히어로.
- * 위 한 줄 = 날씨(아이콘)·기온·습도 · 아래 한 줄 = 요일·날짜. 초는 없다(대기 화면 잔노이즈 제거).
- * DATE는 상단 헤더의 '7월 N일(요일)'과 중복되지 않게 세그먼트 M/D로만.
- * 점등 = 잉크(검정, 볼드 세그먼트), 꺼진 세그먼트 = 연회색 고스트.
+ * 디지털 시계 (라이트 세그먼트 · 온에어 문법) — "실물 세그먼트 시계" 컨셉.
+ * 잉크 2단계만: 켜진 세그먼트=검정, 꺼진 세그먼트=옅은 고스트 (중간 회색 없음).
+ * 위계는 오직 크기로 — 시간이 주인공(최대), 날씨·PM·초는 같은 검정으로 작게.
+ * 위=날씨(아이콘·기온·습도) · 시간 오른쪽=PM·초 그룹. 날짜·요일은 상단 헤더에 있어 뺐다.
+ * °C·%·구름조금은 켜진 값이 아니라 '인쇄 라벨' — 옅은 회색 산세리프.
  * 날씨: Open-Meteo(무키·실측) 서울, 10분 갱신. 폰트: DSEG7/DSEG14 Bold(오픈소스).
  */
 
 const SEG7 = "'DSEG7-Classic',monospace";
 const SEG14 = "'DSEG14-Classic',monospace";
 const INK = "var(--gray-1000)";
-const INK_DIM = "var(--gray-700)";
 const GHOST = "rgba(22,20,17,.08)";
 const LABEL = "var(--gray-500)";
 const SANS = "'Geist Sans','Pretendard',sans-serif";
 
-const DAY_EN = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 /** Open-Meteo weather_code → 해/구름 아이콘 + 한글 라벨 */
 function weatherOf(code: number): { Icon: LucideIcon; ko: string } {
@@ -109,38 +108,34 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
   const mm = (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
   const ss = (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
   const colonOn = now.getSeconds() % 2 === 0;
-  const dateStr = `${now.getMonth() + 1}/${now.getDate()}`;
   const tempStr = wx ? (wx.temp < 0 ? "-" : "") + Math.abs(wx.temp) : "--";
   const humStr = wx ? String(wx.humidity) : "--";
   const weather = wx ? weatherOf(wx.code) : null;
   const WxIcon = weather?.Icon ?? Cloud;
 
   return (
-    <div style={{ ...css("display:flex;flex-direction:column;align-items:center;gap:24px;transition:opacity .3s"), opacity: dimmed ? 0.55 : 1 }}>
-      {/* ── 위: 날씨(아이콘+구름조금 라벨) · 기온 · 습도 — 시간보다 작게, 값 색은 통일 ── */}
+    <div style={{ ...css("display:flex;flex-direction:column;align-items:center;gap:22px;transition:opacity .3s"), opacity: dimmed ? 0.55 : 1 }}>
+      {/* ── 위: 날씨 · 기온 · 습도 — 켜진 값은 전부 같은 잉크(검정), 단위·라벨만 인쇄체 옅은 회색 ── */}
       <div style={css("display:flex;align-items:center;gap:15px")}>
         <div style={css("display:flex;flex-direction:column;align-items:center;gap:3px")}>
-          <WxIcon size={30} strokeWidth={2.2} color={wx ? INK : "var(--gray-300)"} />
+          <WxIcon size={30} strokeWidth={2.2} color={wx ? INK : GHOST} />
           <span style={{ fontFamily: SANS, fontWeight: 500, fontSize: 11, color: LABEL, whiteSpace: "nowrap" }}>{weather?.ko ?? "수신 중"}</span>
         </div>
         <div style={css("display:flex;align-items:flex-start;gap:5px")}>
           <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={34} />
-          <span style={{ fontFamily: SANS, fontSize: 16, fontWeight: 600, color: INK_DIM, marginTop: 3 }}>°C</span>
+          <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: LABEL, marginTop: 3 }}>°C</span>
         </div>
         <span style={css("width:1.5px;height:22px;background:var(--gray-200);border-radius:1px")} />
         <Droplets size={24} strokeWidth={2.2} color={INK} />
         <div style={css("display:flex;align-items:flex-start;gap:5px")}>
           <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={34} />
-          <span style={{ fontFamily: SANS, fontSize: 16, fontWeight: 600, color: INK_DIM, marginTop: 3 }}>%</span>
+          <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: LABEL, marginTop: 3 }}>%</span>
         </div>
       </div>
 
-      {/* ── 시계 — 정중앙 히어로. AM/PM(좌상)·초(우하)는 같은 크기 대칭 코너 액센트 ── */}
-      <div style={css("display:flex;align-items:center;gap:16px")}>
-        <div style={css("display:flex;flex-direction:column;gap:8px;align-self:flex-start;padding-top:10px")}>
-          <span style={{ fontFamily: SEG14, fontSize: 28, fontWeight: "bold", color: isAm ? INK_DIM : GHOST }}>AM</span>
-          <span style={{ fontFamily: SEG14, fontSize: 28, fontWeight: "bold", color: !isAm ? INK_DIM : GHOST }}>PM</span>
-        </div>
+      {/* ── 시계 — 시간이 주인공(최대). 오른쪽에 PM·초를 한 덩어리로 묶는다(같은 잉크, 위계는 크기로).
+              날짜·요일은 상단 헤더에 이미 있어 여기서 뺐다(중복 제거) ── */}
+      <div style={css("display:flex;align-items:center;gap:20px")}>
         <Seg text={hh} ghost="88" font={SEG7} size={196} />
         {/* 콜론 — 1초 점멸 */}
         <span style={{ position: "relative", fontFamily: SEG7, fontSize: 196, lineHeight: 1, fontWeight: "bold" }}>
@@ -148,16 +143,11 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
           <span style={{ position: "absolute", inset: 0, color: INK, opacity: colonOn ? 1 : 0, transition: "opacity .12s" }}>:</span>
         </span>
         <Seg text={mm} ghost="88" font={SEG7} size={196} />
-        <div style={css("align-self:flex-end;padding-bottom:10px;margin-left:6px")}>
-          <Seg text={ss} ghost="88" font={SEG7} size={28} color={INK_DIM} />
+        {/* PM·초 그룹 — 시(時) 높이에 맞춰 위=AM/PM, 아래=초 (실물 시계 우측 스택) */}
+        <div style={css("display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;padding:14px 0")}>
+          <span style={{ fontFamily: SEG14, fontSize: 40, fontWeight: "bold", color: INK }}>{isAm ? "AM" : "PM"}</span>
+          <Seg text={ss} ghost="88" font={SEG7} size={52} />
         </div>
-      </div>
-
-      {/* ── 아래: 요일 · 날짜 — 시간보다 작게 ── */}
-      <div style={css("display:flex;align-items:center;gap:15px")}>
-        <Seg text={DAY_EN[now.getDay()]} ghost="~~~" font={SEG14} size={34} />
-        <span style={css("width:1.5px;height:24px;background:var(--gray-200);border-radius:1px")} />
-        <Seg text={dateStr} ghost={dateStr.replace(/\d/g, "8")} font={SEG14} size={34} />
       </div>
     </div>
   );
