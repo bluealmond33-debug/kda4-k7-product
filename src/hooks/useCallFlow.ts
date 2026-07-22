@@ -64,6 +64,10 @@ export interface CallFlowConfig {
   silenceSec2?: number;
   /** Gap between scripted transcript lines (ms). */
   lineGapMs?: number;
+  /** 스테이지 기준 폭(px). 기본 1420(합본). 고객 화면처럼 콘텐츠가 좁은 뷰는 줄인다. */
+  stageW?: number;
+  /** 스케일 상한. 기본 1(축소만). 좁은 스테이지는 >1로 화면을 채워 여백을 없앤다. */
+  maxScale?: number;
 }
 
 const STAGE_W = 1420;
@@ -787,15 +791,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setFollowups((cur) => (cur.some((x) => x.label === f.label) ? cur : cur.concat(f)));
   }, []);
 
-  // ── viewport fit (scale the 1420px stage down to the container) ──
+  // ── viewport fit (스테이지를 컨테이너에 맞춰 스케일) ──
+  // 기본은 1420px 합본 스테이지의 축소 전용. stageW/maxScale을 주면(고객 화면 등)
+  // 좁은 스테이지를 확대해 화면을 채운다 — 세로는 뷰포트 높이로 캡(offsetHeight는 스케일 무관 원치수).
+  const stageW = config.stageW ?? STAGE_W;
+  const maxScale = config.maxScale ?? 1;
   const fit = useCallback(() => {
     const w = rootRef.current ? rootRef.current.clientWidth : window.innerWidth;
     const avail = Math.max(320, w - 40);
-    const sc = Math.min(1, avail / STAGE_W);
-    setScale((prev) => (prev !== sc ? sc : prev));
     const h = stageRef.current ? stageRef.current.offsetHeight : 0;
+    const scH = h > 0 ? Math.max(0.4, (window.innerHeight - 40) / h) : maxScale;
+    const sc = Math.min(maxScale, avail / stageW, scH);
+    setScale((prev) => (prev !== sc ? sc : prev));
     setNatH((prev) => (prev !== h ? h : prev));
-  }, []);
+  }, [stageW, maxScale]);
 
   useEffect(() => {
     const onResize = () => fit();
@@ -986,7 +995,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     stageRef,
     // scaling
     scaleT: "scale(" + scale + ")",
-    scaledW: STAGE_W * scale + "px",
+    scaledW: stageW * scale + "px",
+    stageWpx: stageW + "px",
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,

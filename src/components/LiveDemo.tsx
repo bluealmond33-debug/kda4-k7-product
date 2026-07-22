@@ -24,7 +24,12 @@ export default function LiveDemo({
   view = "full",
   ...config
 }: CallFlowConfig & { view?: LiveDemoView } = {}) {
-  const vm = useCallFlow(config);
+  // 고객 화면은 콘텐츠 폭이 좁다(폰 260 + 패널 470) — 스테이지를 콘텐츠에 맞추고
+  // 확대를 허용해 큰 모니터에서 양옆 여백 없이 화면을 채운다
+  const vm = useCallFlow({
+    ...config,
+    ...(view === "phone" ? { stageW: 800, maxScale: 1.7 } : null),
+  });
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   // 데모 안내 팝업 등장/퇴장 모션 — 중앙에서 슉 뜨고 다시 접힌다. 등장 지연은 useCallFlow(700ms)가 담당.
@@ -64,7 +69,7 @@ export default function LiveDemo({
         <div
           ref={vm.stageRef}
           style={{
-            width: "1420px",
+            width: vm.stageWpx,
             transformOrigin: "top left",
             transform: vm.scaleT,
             display: "flex",
