@@ -58,6 +58,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    # Vercel 프리뷰 배포(k7product-git-<branch>-….vercel.app)도 허용 —
+    # 프로덕션 외 프리뷰 URL에서도 규정검색 등 API 호출이 가능해야 리뷰가 된다.
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],

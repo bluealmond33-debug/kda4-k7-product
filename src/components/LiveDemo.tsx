@@ -10,8 +10,19 @@ import WrapSheet from "./desktop/WrapSheet";
 /**
  * K7 라이브 상담 시연 — 왼쪽 아이폰(자연어 접수) + 오른쪽 상담사 데스크톱.
  * 전화 → 안내·녹음 → 무응답 → AI 요약 → 준비 카드 → 통화 → 후처리.
+ *
+ * view — 시연 구도 4화면 중 셋을 이 컴포넌트가 담당한다:
+ *   "full"    시연화면(기본): 폰 + 데스크톱 합본. 라이브 시연은 이 화면에서.
+ *   "phone"   고객 핸드폰 단독 (?role=customer)
+ *   "desktop" 직원 데스크톱 단독 (?role=employee)
+ * phone/desktop은 탭별 독립 인스턴스다(탭 간 통화 상태 동기화는 후속 — demoBus 확장).
  */
-export default function LiveDemo(config: CallFlowConfig = {}) {
+export type LiveDemoView = "full" | "phone" | "desktop";
+
+export default function LiveDemo({
+  view = "full",
+  ...config
+}: CallFlowConfig & { view?: LiveDemoView } = {}) {
   const vm = useCallFlow(config);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
@@ -174,20 +185,24 @@ export default function LiveDemo(config: CallFlowConfig = {}) {
             </div>
           )}
 
-          {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율. 안내 팝업은 이 영역 위 중앙 딤 모달로 뜬다 */}
+          {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율. 안내 팝업은 이 영역 위 중앙 딤 모달로 뜬다.
+              view에 따라 한쪽만 남긴다: customer=폰, employee=데스크톱 (스테이지·스케일은 공유) */}
           <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
-            <Phone vm={vm} />
-            <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
-              {vm.showWaiting && <Waiting vm={vm} />}
-              {vm.showPrep && <PrepCard vm={vm} />}
-              {/* 종료 후에도 통화 화면이 배경에 남고, 후처리 시트가 그 위로 올라온다 */}
-              {vm.showActive && <ActiveCall vm={vm} />}
-              {vm.showWrap && <WrapSheet vm={vm} />}
-            </div>
+            {view !== "desktop" && <Phone vm={vm} />}
+            {view !== "phone" && (
+              <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
+                {vm.showWaiting && <Waiting vm={vm} />}
+                {vm.showPrep && <PrepCard vm={vm} />}
+                {/* 종료 후에도 통화 화면이 배경에 남고, 후처리 시트가 그 위로 올라온다 */}
+                {vm.showActive && <ActiveCall vm={vm} />}
+                {vm.showWrap && <WrapSheet vm={vm} />}
+              </div>
+            )}
 
             {/* 데모 안내 팝업 — 화면 중앙 딤 모달. 폰·데스크톱은 그대로 두고(안 밀림) 뒤만 어두워진다.
-                단계 도달 시 자동, 스테퍼 번호 클릭 시 그 단계. × 또는 바깥(딤) 클릭으로 닫음 */}
-            {guideRender && (
+                단계 도달 시 자동, 스테퍼 번호 클릭 시 그 단계. × 또는 바깥(딤) 클릭으로 닫음.
+                단독 뷰(customer/employee)에선 안 띄운다 — 안내는 시연 합본의 것 */}
+            {view === "full" && guideRender && (
               <>
                 <div
                   onClick={vm.closeGuide}
