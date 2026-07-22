@@ -31,9 +31,11 @@ export default function LiveDemo({
     ...config,
     ...(view === "phone" ? { stageW: 800, maxScale: 1.7 } : null),
     // 직원 단독 화면 — 데스크톱 폭(1100)을 브라우저 가로에 100% 맞춘다(양옆 여백 없음)
-    ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 0, fitHeight: false } : null),
+    ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 24, fitHeight: false } : null),
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
+  // 고객 화면 실시간 상태 — demoBus 단일 소스 (알약 상태문구 + 패널 자막이 함께 쓴다)
+  const live = useLiveCallBus();
 
   // 데모 안내 팝업 등장/퇴장 모션 — 중앙에서 슉 뜨고 다시 접힌다. 등장 지연은 useCallFlow(700ms)가 담당.
   // 열려 있는 동안 단계가 바뀌면 딤 유지·내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝.
@@ -66,7 +68,7 @@ export default function LiveDemo({
   return (
     <div
       ref={vm.rootRef}
-      style={css("min-height:100vh;padding:" + (view === "desktop" ? "0" : "20px") + ";display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box")}
+      style={css("min-height:100vh;padding:" + (view === "desktop" ? "12px" : "20px") + ";display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box")}
     >
       <div style={{ width: vm.scaledW, height: vm.scaledH }}>
         <div

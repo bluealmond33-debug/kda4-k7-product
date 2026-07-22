@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CalendarClock, GraduationCap, History } from "lucide-react";
 import { css } from "../../lib/css";
+import LedClock from "./LedClock";
 import { highlight } from "../../lib/highlight";
 import { AGENT, SHEETS } from "../../data/demoContent";
 
@@ -500,17 +501,8 @@ export default function Standby() {
         <div style={css("flex:1;min-height:0")}>
           {/* 시계 — 헤더 아래 영역이 아니라 화면(루트) 전체 기준 정중앙 (루트가 position:relative) */}
           <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none")}>
-            <div style={css("display:flex;align-items:center;transition:opacity .3s" + (onBreak ? ";opacity:.55" : ""))}>
-              <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{hh}</span>
-              <span style={css("display:flex;flex-direction:column;gap:30px;margin:0 26px")}>
-                <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
-                <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
-              </span>
-              <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{mm}</span>
-              <span style={css("margin-left:22px;background:var(--gray-100);border-radius:8px;padding:9px 13px")}>
-                <span className="clocknum" style={css("font-size:27px;color:var(--gray-800)")}>{ss}</span>
-              </span>
-            </div>
+            {/* 실물 LED 디지털 시계 — 요일·실시간 기온까지 (LedClock) */}
+            <LedClock dimmed={onBreak} />
             {onBreak && (
               <>
                 <div style={css("margin-top:18px;display:flex;align-items:center;gap:8px;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
