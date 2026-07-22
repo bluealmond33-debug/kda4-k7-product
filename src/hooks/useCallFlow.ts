@@ -105,14 +105,10 @@ const GLASS: Partial<Record<Phase, string>> = {
 const PREP_ITEMS = [
   {
     title: "본인확인 우선 진행",
-    sub: "연결 직후 연락처·생년월일 등으로 본인확인 — 완료 전에는 고객 상세 조회가 잠깁니다",
+    sub: "연결 직후 연락처·생년월일 등으로 본인확인",
   },
   { title: "확정적 반환 표현 금지", sub: "“무조건 돌려받는다” 대신 반환지원 제도 절차로 안내" },
   { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
-  {
-    title: "녹취 고지 자동 재생 — 연결 시 자동",
-    sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
-  },
 ];
 
 /** 데모 안내(가이드 모드) — 화면별로 "이 화면이 무엇이고 왜 이렇게 생겼는지"를 설명한다.
@@ -1190,6 +1186,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       card.routing_confidence != null
         ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
         : "확신도 산출 전 · 상담사 확인 필요",
+    // 배정 확신도 % 숫자만 (상단 배지용)
+    prepConfidencePct:
+      card.routing_confidence != null ? Math.round(card.routing_confidence * 100) : null,
+    // 감정온도 숫자(당근 매너온도 스타일) — 신호등 대신 큰 숫자로
+    prepEmotionScore: temperature.score ?? null,
     transcriptQuote: consultationResponse.transcript.text,
     // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
     summaryPoints: SUMMARY_POINTS[incoming],

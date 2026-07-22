@@ -424,14 +424,14 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
             {/* 카드의 주인 문장 — Title 18px: 통화 시작 순간 첫 시선이 꽂히는 곳 */}
             <div style={css("font:600 18px/1.4 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:11px")}>{vm.prepHeadline}</div>
-            {/* 해야 할 일 — 통화 중 상담사가 실제로 처리할 실행 항목(요약이 텍스트로 날아가지 않게 구체화) */}
-            <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:8px")}>
-              <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>checklist</span>해야 할 일
+            {/* 전화 요약 — 고객 발화 STT를 요약한 내용(대화 요약) */}
+            <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>
+              <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>summarize</span>전화 요약 <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· 고객 발화 STT 요약</span>
             </div>
             <div style={css("display:flex;flex-direction:column;gap:8px")}>
               {vm.summaryPoints.map((t, i) => (
                 <div key={i} style={css("display:flex;gap:10px;align-items:baseline")}>
-                  <span style={css("font:700 12px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-500);flex:none")}>{i + 1}</span>
+                  <span style={css("flex:none;width:5px;height:5px;border-radius:9999px;background:var(--gray-500);transform:translateY(-2px)")} />
                   <span style={css("font:400 14px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
                 </div>
               ))}
