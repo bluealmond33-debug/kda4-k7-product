@@ -182,7 +182,7 @@ export default function PipelineFlowPanel({
                   </span>
                 )}
                 {explain && (
-                  <span style={css("font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:7px 9px;text-align:left;animation:dockDown .25s var(--ease-out)")}>
+                  <span style={css("font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:7px 9px;text-align:left;animation:dockDown .25s var(--ease-out)")}>
                     {node.explain}
                     <span style={css("display:block;margin-top:4px;font:600 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>
                       클릭 → 실사용 모델 상세

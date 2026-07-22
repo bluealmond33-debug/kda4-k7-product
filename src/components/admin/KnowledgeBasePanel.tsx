@@ -39,7 +39,7 @@ export default function KnowledgeBasePanel({
           <span className="sechd" style={css("display:block;white-space:nowrap")}>DB · 지식베이스</span>
           {/* 설명 모드 — 다른 패널과 같은 회색 블록 캡션 문법 */}
           {explain && (
-            <span style={css("display:inline-block;margin-top:4px;font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:4px 9px;white-space:nowrap;animation:dockDown .25s var(--ease-out)")}>
+            <span style={css("display:inline-block;margin-top:4px;font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:4px 9px;white-space:nowrap;animation:dockDown .25s var(--ease-out)")}>
               모든 규정검색의 지식원 — PDF를 올리면 즉시 자랍니다
             </span>
           )}

@@ -42,7 +42,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
           style={css(
             "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 11px 'Geist Sans','Pretendard',sans-serif;" +
               (explain
-                ? "color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:4px 9px;animation:dockDown .25s var(--ease-out)"
+                ? "color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:4px 9px;animation:dockDown .25s var(--ease-out)"
                 : "color:var(--gray-600)")
           )}
         >
