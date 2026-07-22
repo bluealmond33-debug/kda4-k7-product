@@ -224,7 +224,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <div className="card" style={css("padding:16px" + (vm.verified ? "" : ";min-height:418px") + (focus === "customer" ? ";box-shadow:var(--sh-focus)" : ""))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;margin-bottom:12px")}>
               <span className="sechd">고객</span>
-              <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>고객 동의 시 열람</span>
+              {/* 개인정보 안내 배지 — 경고가 아니라 중립 정보라 회색 톤 + 자물쇠 아이콘으로 */}
+              <span style={css("display:inline-flex;align-items:center;gap:4px;font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);background:var(--gray-100);border:1px solid var(--gray-200);border-radius:9999px;padding:3px 10px")}>
+                <span className="mi" style={css("font-size:12px")}>lock</span>고객 동의 시 열람
+              </span>
             </div>
             <div style={css("display:flex;align-items:center;gap:12px")}>
               <span className="av" style={css("width:46px;height:46px")}><span className="mi" style={css("font-size:26px")}>person</span></span>
@@ -255,8 +258,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             ) : (
-              <div style={css("margin-top:13px;background:var(--gray-100);border-radius:8px;padding:12px")}>
-                <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px")}>본인확인 · 미완료</div>
+              <div style={css("margin-top:13px;background:var(--amber-100);border:1px solid var(--amber-400);border-radius:8px;padding:12px")}>
+                {/* 진짜 대기 상태 — 앰버 배경+테두리로 또렷하게, 점으로 '진행 필요' 신호 */}
+                <div style={css("display:flex;align-items:center;gap:6px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px")}>
+                  <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--amber-700)")} />
+                  본인확인 · 미완료
+                </div>
                 <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>
                   고객이 말한 <span style={css("font-weight:700;color:var(--blue-900)")}>{vm.authAskLabel}</span>를 빈칸에 입력하면 자동 대조됩니다
                 </div>
