@@ -4,10 +4,44 @@ import {
   incidentRiskPolicy,
   routingDepartments,
 } from "../../features/stt-classification/rules";
-import { SGE_META } from "../../services";
+import { SGE_META, type Sge } from "../../services";
 
-/** 분류 정책 · 업무 카탈로그 모달 — 판정 순서(E→S→G), 위험 정책, 부서×담당 업무.
- *  발표에서 "무슨 기준으로 나뉘는가"를 받는 질문에 이 화면 하나로 답한다. */
+/** 판정 순서 그대로의 세로 스테퍼 데이터 — 위에서 아래로 E → S → G */
+const STEPS: Array<{
+  k: Sge;
+  title: string;
+  dest: string;
+  items: readonly string[];
+  note: string | null;
+}> = [
+  {
+    k: "E",
+    title: "긴급 게이트",
+    dest: "사고·신고 직결 · 대기열 최우선",
+    items: incidentRiskPolicy.high,
+    note: "단일 단어로는 판정하지 않습니다 — “기관 사칭 + 송금 요구”처럼 정황이 결합될 때 긴급.",
+  },
+  {
+    k: "S",
+    title: "단순 판정",
+    dest: "ARS·AI 즉시 응대 — 대기열 없음",
+    items: ["정형 조회·신청·변경·재발송", "본인확인 후 자동 처리 가능한 업무"],
+    note: null,
+  },
+  {
+    k: "G",
+    title: "일반 상담",
+    dest: "부서 대기열 → 상담사 배정",
+    items: incidentRiskPolicy.low,
+    note: null,
+  },
+];
+
+/**
+ * 분류 정책 · 업무 카탈로그 — 왼쪽은 판정 파이프라인(세로 스테퍼, E→S→G 순서 그대로),
+ * 오른쪽은 8부서 카탈로그. 색은 점·글자·가는 선으로만(ONAIR).
+ * 발표에서 "무슨 기준으로 나뉘는가"를 받는 질문에 이 화면 하나로 답한다.
+ */
 export default function ClassificationPolicyModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -20,7 +54,7 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
   return (
     <>
       <div onClick={onClose} style={css("position:fixed;inset:0;z-index:900;background:rgba(22,20,17,.45);animation:fadeIn .25s ease-out;cursor:pointer")} />
-      <div style={css("position:fixed;left:50%;top:50%;z-index:901;transform:translate(-50%,-50%);width:760px;max-width:94vw;max-height:88vh;display:flex;flex-direction:column;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);animation:modalIn .3s var(--ease-out);overflow:hidden")}>
+      <div style={css("position:fixed;left:50%;top:50%;z-index:901;transform:translate(-50%,-50%);width:880px;max-width:94vw;max-height:88vh;display:flex;flex-direction:column;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);animation:modalIn .3s var(--ease-out);overflow:hidden")}>
         {/* 헤더 */}
         <div style={css("display:flex;align-items:center;gap:9px;padding:16px 20px 13px;flex:none")}>
           <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>rule</span>
@@ -32,82 +66,86 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
           </span>
         </div>
 
-        <div style={css("flex:1;overflow-y:auto;padding:2px 20px 20px;display:flex;flex-direction:column;gap:14px")}>
-          {/* 판정 순서 */}
-          <div style={css("display:flex;align-items:center;gap:8px;background:var(--background-200);border-radius:12px;padding:13px 16px")}>
-            {(["E", "S", "G"] as const).map((k, i) => (
-              <span key={k} style={css("display:flex;align-items:center;gap:8px;flex:1")}>
-                {i > 0 && <span className="mi" style={css("flex:none;font-size:16px;color:var(--gray-600)")}>arrow_forward</span>}
-                <span style={css("flex:1;display:flex;flex-direction:column;gap:3px;border-radius:10px;padding:9px 12px;background:var(--onair-surface);box-shadow:var(--sh-near)")}>
-                  <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + SGE_META[k].fg)}>
-                    <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + SGE_META[k].bar)} />
-                    {i + 1}. {k} · {SGE_META[k].label}
-                  </span>
-                  <span style={css("font:400 11px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{SGE_META[k].desc}</span>
+        <div style={css("flex:1;overflow-y:auto;padding:4px 20px 18px")}>
+          <div style={css("display:flex;gap:18px;align-items:flex-start")}>
+            {/* ── 왼쪽: 판정 파이프라인 (세로 스테퍼) ── */}
+            <div style={css("flex:none;width:340px;position:relative")}>
+              <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.3px;color:var(--gray-700);padding:2px 0 10px")}>
+                판정 파이프라인 — 위에서 순서대로
+              </div>
+              <div style={css("position:relative")}>
+                {/* 스텝 원들을 잇는 세로 헤어라인 */}
+                <div style={css("position:absolute;left:13px;top:14px;bottom:14px;width:1px;background:var(--gray-300)")} />
+                {STEPS.map((s, i) => {
+                  const meta = SGE_META[s.k];
+                  return (
+                    <div key={s.k} style={css("position:relative;display:flex;gap:12px;padding:0 0 " + (i < STEPS.length - 1 ? "16px" : "0"))}>
+                      {/* 번호 원 — 색 테두리(가는 선) + 색 잉크, 축 위에 앉음 */}
+                      <span style={css("flex:none;width:26px;height:26px;border-radius:9999px;border:1.5px solid " + meta.bar + ";background:var(--onair-surface);display:flex;align-items:center;justify-content:center;font:700 11.5px 'Geist Mono',monospace;color:" + meta.fg + ";z-index:1")}>
+                        {s.k}
+                      </span>
+                      <div style={css("flex:1;min-width:0;padding-top:2px")}>
+                        <div style={css("display:flex;align-items:baseline;gap:7px;flex-wrap:wrap")}>
+                          <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
+                            {i + 1}. {s.title}
+                          </span>
+                          <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:" + meta.fg)}>{meta.label}</span>
+                        </div>
+                        <div style={css("font:500 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>{s.dest}</div>
+                        <div style={css("margin-top:7px;display:flex;flex-direction:column;gap:4px")}>
+                          {s.items.map((t) => (
+                            <div key={t} style={css("display:flex;gap:7px;align-items:flex-start")}>
+                              <span style={css("flex:none;width:4px;height:4px;border-radius:9999px;background:var(--gray-600);margin-top:6px")} />
+                              <span style={css("font:400 11.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {s.note && (
+                          <div style={css("margin-top:7px;font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:" + meta.fg)}>{s.note}</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 가는 세로 구분선 */}
+            <div style={css("flex:none;width:1px;align-self:stretch;background:var(--gray-200);margin-top:26px")} />
+
+            {/* ── 오른쪽: 부서 카탈로그 (2층 taxonomy) ── */}
+            <div style={css("flex:1;min-width:0")}>
+              <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.3px;color:var(--gray-700);padding:2px 0 10px")}>
+                라우팅 부서 8종 — RAG 8대분류와 코드 공유
+              </div>
+              <div style={css("display:grid;grid-template-columns:1fr 1fr;gap:8px")}>
+                {routingDepartments.map((d) => {
+                  const incident = d.name === "사고·신고";
+                  return (
+                    <div key={d.name} style={css("background:var(--background-200);border-radius:10px;padding:10px 12px" + (incident ? ";outline:1.5px solid var(--red-400)" : ""))}>
+                      <div style={css("display:flex;align-items:center;gap:6px")}>
+                        <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);white-space:nowrap")}>{d.name}</span>
+                        {incident && (
+                          <span style={css("font:700 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900);white-space:nowrap")}>긴급 직결</span>
+                        )}
+                      </div>
+                      <div style={css("margin-top:4px;font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>
+                        {d.tasks.join(" · ")}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 3층 구조 각주 */}
+              <div style={css("margin-top:12px;display:flex;gap:8px;align-items:flex-start;border-top:1px solid var(--gray-200);padding-top:10px")}>
+                <span className="mi" style={css("flex:none;font-size:15px;color:var(--blue-700);margin-top:1px")}>info</span>
+                <span style={css("font:400 11px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+                  라우팅은 3층입니다 — <b>1층 S/G/E</b>(우선순위) → <b>2층 부서 8종</b>(누가 받나) → <b>3층 업무코드</b>(무슨 일).
+                  부서 코드가 규정검색(RAG) 분류와 같아서 <b>부서 확정 = 규정검색 필터 확정</b>. 긴급 게이트는 규칙 기반이라 LLM 판단보다 먼저 겁니다.
                 </span>
-              </span>
-            ))}
-          </div>
-
-          {/* 위험 판정 정책 */}
-          <div style={css("display:grid;grid-template-columns:1fr 1fr;gap:10px")}>
-            <div style={css("border-radius:12px;background:var(--background-200);padding:13px 16px")}>
-              <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:8px")}>
-                <span className="mi" style={css("font-size:15px;color:var(--red-900)")}>warning</span>
-                <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>사고징후 높음(high) → 긴급 E</span>
-              </div>
-              {incidentRiskPolicy.high.map((t) => (
-                <div key={t} style={css("display:flex;gap:7px;align-items:flex-start;padding:2.5px 0")}>
-                  <span style={css("flex:none;width:5px;height:5px;border-radius:9999px;background:var(--red-700);margin-top:6px")} />
-                  <span style={css("font:400 11.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{t}</span>
-                </div>
-              ))}
-              <div style={css("margin-top:8px;font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>
-                단일 단어만으로 긴급 판정하지 않습니다 — “기관 사칭 + 송금 요구”처럼 정황이 결합될 때 긴급.
               </div>
             </div>
-            <div style={css("border-radius:12px;background:var(--background-200);padding:13px 16px")}>
-              <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:8px")}>
-                <span className="mi" style={css("font-size:15px;color:var(--green-900)")}>verified</span>
-                <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>사고징후 낮음(low) → 단순 S / 일반 G</span>
-              </div>
-              {incidentRiskPolicy.low.map((t) => (
-                <div key={t} style={css("display:flex;gap:7px;align-items:flex-start;padding:2.5px 0")}>
-                  <span style={css("flex:none;width:5px;height:5px;border-radius:9999px;background:var(--green-700);margin-top:6px")} />
-                  <span style={css("font:400 11.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{t}</span>
-                </div>
-              ))}
-              <div style={css("margin-top:8px;font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
-                정형 조회·신청·변경은 ARS(AI)로 — 단순(S). 그 외 상담사 판단이 필요하면 일반(G).
-              </div>
-            </div>
-          </div>
-
-          {/* 부서 × 담당 업무 카탈로그 */}
-          <div>
-            <div style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:8px")}>라우팅 부서 × 담당 업무 (8개 부서 · RAG 8대분류와 공유)</div>
-            <div style={css("display:flex;flex-direction:column;gap:6px")}>
-              {routingDepartments.map((d) => (
-                <div key={d.name} style={css("display:flex;align-items:center;gap:10px;background:var(--background-200);border-radius:10px;padding:9px 13px")}>
-                  <span style={css("flex:none;width:132px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name}</span>
-                  <span style={css("display:flex;flex-wrap:wrap;gap:5px")}>
-                    {d.tasks.map((t) => (
-                      <span key={t} style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px")}>{t}</span>
-                    ))}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 3개 축 주의 */}
-          <div style={css("display:flex;gap:9px;align-items:flex-start;background:var(--gray-100);border-radius:10px;padding:11px 13px")}>
-            <span className="mi" style={css("flex:none;font-size:16px;color:var(--blue-700);margin-top:1px")}>info</span>
-            <span style={css("font:400 11.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
-              라우팅은 3층입니다 — <b>1층 S/G/E</b>(대기열 우선순위) → <b>2층 부서 8종</b>(누가 받나) → <b>3층 업무코드</b>(무슨 일).
-              부서 코드는 규정검색(RAG) 8대분류와 공유되어, <b>부서가 확정되면 규정검색 필터도 함께 확정</b>됩니다.
-              긴급(E)은 사고·신고(SG) 부서와 직결 — 긴급 게이트(규칙)가 LLM 판단보다 먼저 겁니다.
-            </span>
           </div>
         </div>
       </div>

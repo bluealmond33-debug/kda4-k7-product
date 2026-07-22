@@ -133,12 +133,19 @@ export default function RoutingFeed({
           </div>
         )}
 
-        {/* 완료된 콜 — 아래로 겹쳐 쌓이는 스트립 (최신 순) */}
+        {/* 완료된 콜 — 관제실 처리 로그(타임라인): 시각 거터 + 헤어라인 위의 색 점 */}
         {strips.length > 0 && (
-          <div style={css("margin-top:9px;display:flex;flex-direction:column")}>
-            {strips.map((r, i) => (
-              <StripCard key={r.callId} r={r} idx={i} />
-            ))}
+          <div style={css("margin-top:12px")}>
+            <div style={css("font:700 9.5px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.4px;color:var(--gray-700);padding:0 2px 7px")}>
+              완료 흐름 · {strips.length}건
+            </div>
+            <div style={css("position:relative")}>
+              {/* 타임라인 축 — 점들이 이 선 위에 앉는다 */}
+              <div style={css("position:absolute;left:57px;top:7px;bottom:7px;width:1px;background:var(--gray-300)")} />
+              {strips.map((r) => (
+                <TimelineRow key={r.callId} r={r} />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -217,39 +224,34 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
   );
 }
 
-/** 이전 콜 스트립 — 최신 카드 아래로 겹쳐 쌓인다. 색 바 + 업무명 + 부서 + 시각. */
-function StripCard({ r, idx }: { r: AdminCallRecord; idx: number }) {
+/** 완료 로그 한 줄 — 시각(거터) · 축 위의 색 점 · 업무명 · 부서.
+ *  카드 더미 대신 관제실 처리 대장(ledger)으로 읽힌다. S는 AI 응대 표시가 붙는다. */
+function TimelineRow({ r }: { r: AdminCallRecord }) {
   const sge = r.sge;
   const meta = sge ? SGE_META[sge] : null;
-  const live = r.endedAt === null;
   return (
-    <div
-      style={css(
-        "position:relative;border-radius:9px;background:var(--background-200);box-shadow:var(--sh-near);padding:8px 12px;overflow:hidden;transition:opacity .3s;" +
-          (idx === 0 ? "" : "margin-top:-3px;") +
-          (live ? "" : "opacity:.72")
-      )}
-    >
-      <div style={css("display:flex;align-items:center;gap:8px")}>
-        {/* S/G/E 신호 — 점 + 잉크 (틴트·색 바 금지) */}
-        {meta ? (
-          <span style={css("flex:none;display:inline-flex;align-items:center;gap:5px;font:700 10.5px 'Geist Mono',monospace;color:" + meta.fg)}>
-            <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + meta.bar)} />
-            {sge}
-          </span>
-        ) : (
-          <span className="mi" style={css("flex:none;font-size:13px;color:var(--blue-700);animation:spin 1.2s linear infinite")}>progress_activity</span>
+    <div style={css("display:flex;align-items:center;gap:9px;padding:4.5px 2px;min-height:24px")}>
+      <span style={css("flex:none;width:40px;text-align:right;font:500 10px 'Geist Mono',monospace;color:var(--gray-700)")}>
+        {fmtTime(r.startedAt)}
+      </span>
+      {/* 축 위의 점 — z-index로 헤어라인 위에 올라앉고, 흰 테두리가 선을 살짝 끊는다 */}
+      <span
+        style={css(
+          "flex:none;position:relative;z-index:1;width:9px;height:9px;border-radius:9999px;border:2px solid var(--onair-surface);box-sizing:content-box;background:" +
+            (meta ? meta.bar : "var(--gray-500)")
         )}
-        <span style={css("flex:1;min-width:0;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
-          {r.card ? r.card.businessType : "분류 중…"}
+      />
+      <span style={css("flex:1;min-width:0;font:500 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
+        {r.card ? r.card.businessType : "분류 중…"}
+      </span>
+      {sge === "S" && (
+        <span style={css("flex:none;display:inline-flex;align-items:center;gap:3px;font:600 9.5px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
+          <span className="mi" style={css("font-size:12px")}>smart_toy</span>AI
         </span>
-        {/* 진행 중인 콜은 스트립에서도 제 프로세스가 돈다 */}
-        {live && <MiniPipeline stages={r.stages} compact />}
-        <span style={css("flex:none;font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px")}>
-          {r.department ?? r.card?.department ?? ""}
-        </span>
-        <span style={css("flex:none;font:500 10px 'Geist Mono',monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
-      </div>
+      )}
+      <span style={css("flex:none;font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px")}>
+        {r.department ?? r.card?.department ?? ""}
+      </span>
     </div>
   );
 }
