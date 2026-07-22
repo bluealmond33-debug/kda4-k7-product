@@ -75,28 +75,30 @@ export default function RoutingFeed({
   totalCards: number;
   explain: boolean;
 }) {
-  const front = feed[0] ?? null;
-  const rest = feed.slice(1);
+  // 진행 중 콜은 전부 풀 카드(각자 미니 파이프라인이 돈다), 완료는 스트립으로 내려간다.
+  // 진행 중이 없으면 가장 최근 완료 1건을 풀 카드로 승격(첫인상용).
+  const live = feed.filter((r) => r.endedAt === null);
+  const done = feed.filter((r) => r.endedAt !== null);
+  const heroes = live.length > 0 ? live : done.slice(0, 1);
+  const strips = live.length > 0 ? done : done.slice(1);
 
   return (
     <div className="card" style={css("display:flex;flex-direction:column;min-height:0;padding:16px 0 8px")}>
-      {/* 헤더 — 누적 카운트가 '쌓임'의 숫자 지표 */}
-      <div style={css("display:flex;align-items:center;gap:10px;padding:0 18px 10px")}>
-        <span className="sechd">실시간 라우팅 피드</span>
-        <span style={css("display:inline-flex;align-items:baseline;gap:4px;background:var(--gray-100);border-radius:9999px;padding:3px 11px")}>
+      {/* 헤더 — 범례는 카드가 스스로 말하므로 없앴다(중복). 전부 nowrap: 좁아도 안 꺾인다 */}
+      <div style={css("display:flex;align-items:center;gap:10px;padding:0 18px 10px;white-space:nowrap")}>
+        <span className="sechd" style={css("white-space:nowrap")}>실시간 라우팅 피드</span>
+        <span style={css("flex:none;display:inline-flex;align-items:baseline;gap:4px;background:var(--gray-100);border-radius:9999px;padding:3px 11px;white-space:nowrap")}>
           <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>오늘 누적</span>
           <span className="bignum" style={css("font-size:14px;color:var(--gray-1000)")}>{totalCards}</span>
           <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
         <div style={css("flex:1")} />
-        {(["E", "G", "S"] as const).map((k) => (
-          <span key={k} style={css("display:inline-flex;align-items:center;gap:5px")}>
-            <span style={css("width:8px;height:8px;border-radius:9999px;background:" + SGE_META[k].bar)} />
-            <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
-              {k} {SGE_META[k].label}
-            </span>
+        {live.length > 0 && (
+          <span style={css("flex:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}>
+            <span className="onairdot" style={{ animation: "recBlink 1.4s infinite" }} />
+            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>진행 {live.length}건</span>
           </span>
-        ))}
+        )}
       </div>
 
       {/* 설명 모드 — 이 패널의 백엔드 역할 한 줄 */}
@@ -107,7 +109,7 @@ export default function RoutingFeed({
       )}
 
       <div style={css("flex:1;overflow-y:auto;padding:4px 16px 10px;min-height:0;display:flex;flex-direction:column")}>
-        {!front && (
+        {feed.length === 0 && (
           /* 빈 상태 — 세로 중앙 + 바로 시작할 수 있는 고스트 CTA (발표자가 어디서든 쇼를 연다) */
           <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:20px;color:var(--gray-700)")}>
             <span className="mi" style={css("font-size:32px;color:var(--gray-500)")}>quickreply</span>
@@ -122,13 +124,19 @@ export default function RoutingFeed({
           </div>
         )}
 
-        {/* 최신 카드 — 맨 위, 전체 상세 + 드롭인 */}
-        {front && <FrontCard key={front.callId} r={front} />}
+        {/* 진행 중 콜 전부 — 카드마다 제 프로세스(미니 파이프라인)가 돈다 */}
+        {heroes.length > 0 && (
+          <div style={css("display:flex;flex-direction:column;gap:8px")}>
+            {heroes.map((r) => (
+              <FrontCard key={r.callId} r={r} />
+            ))}
+          </div>
+        )}
 
-        {/* 이전 콜 — 아래로 겹쳐 쌓이는 색 스트립 (최신 순) */}
-        {rest.length > 0 && (
+        {/* 완료된 콜 — 아래로 겹쳐 쌓이는 스트립 (최신 순) */}
+        {strips.length > 0 && (
           <div style={css("margin-top:9px;display:flex;flex-direction:column")}>
-            {rest.map((r, i) => (
+            {strips.map((r, i) => (
               <StripCard key={r.callId} r={r} idx={i} />
             ))}
           </div>

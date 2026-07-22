@@ -17,30 +17,36 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
 
   return (
     <div className="card" style={css("display:flex;flex-direction:column;padding:14px 16px 12px;min-height:0")}>
-      <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:12px")}>
-        <span className="sechd">부서 현황 보드</span>
-        {/* 설명 모드에선 이 패널의 백엔드 역할을, 평소엔 조작 힌트를 */}
-        <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + (explain ? "var(--gray-800)" : "var(--gray-600)"))}>
+      <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:12px;white-space:nowrap")}>
+        <span className="sechd" style={css("white-space:nowrap")}>부서 현황 보드</span>
+        {/* 설명 모드에선 이 패널의 백엔드 역할을, 평소엔 조작 힌트를. 좁아지면 말줄임(줄바꿈 금지) */}
+        <span style={css("flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + (explain ? "var(--gray-800)" : "var(--gray-600)"))}>
           {explain
-            ? "라우팅의 종착지 — E→S→G 판정이 8개 부서 대기열로 떨어지고, 연결·이관이 여기서 일어납니다"
+            ? "라우팅의 종착지 — G·E는 부서 대기열로, S는 AI가 즉시 응대. 연결·이관이 여기서"
             : "부서를 누르면 대기 목록 · 연결·이관은 여기서 처리"}
         </span>
-        <div style={css("flex:1")} />
         {/* 긴급 대기 — 관제 KPI의 맨 앞. 0이면 조용히, 있으면 빨간 잉크로 */}
-        <span style={css("display:inline-flex;align-items:baseline;gap:5px")}>
+        <span style={css("flex:none;display:inline-flex;align-items:baseline;gap:5px")}>
           <span style={css("align-self:center;width:8px;height:8px;border-radius:9999px;flex:none;background:" + (urgentWaiting > 0 ? "var(--red-700)" : "rgba(188,63,43,.25)"))} />
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>긴급 대기</span>
           <span className="bignum" style={css("font-size:20px;color:" + (urgentWaiting > 0 ? "var(--red-900)" : "var(--gray-600)"))}>{urgentWaiting}</span>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
-        <span style={css("display:inline-flex;align-items:baseline;gap:5px;margin-left:10px")}>
+        <span style={css("flex:none;display:inline-flex;align-items:baseline;gap:5px;margin-left:10px")}>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>전체 대기</span>
           <span className="bignum" style={css("font-size:20px;color:var(--gray-1000)")}>{totalWaiting}</span>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
-        <span style={css("display:inline-flex;align-items:baseline;gap:5px;margin-left:10px")}>
-          <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>오늘 처리</span>
-          <span className="bignum" style={css("font-size:20px;color:var(--green-900)")}>{feed.state.handled}</span>
+        {/* S(단순)는 대기열이 아니라 AI가 즉시 받는다 — 별도 카운터 */}
+        <span style={css("flex:none;display:inline-flex;align-items:baseline;gap:5px;margin-left:10px")}>
+          <span className="mi" style={css("align-self:center;font-size:14px;color:var(--green-900)")}>smart_toy</span>
+          <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 자동 응대</span>
+          <span className="bignum" style={css("font-size:20px;color:var(--green-900)")}>{feed.state.aiHandled}</span>
+          <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+        </span>
+        <span style={css("flex:none;display:inline-flex;align-items:baseline;gap:5px;margin-left:10px")}>
+          <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>상담사 처리</span>
+          <span className="bignum" style={css("font-size:20px;color:var(--gray-1000)")}>{feed.state.handled}</span>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
       </div>
@@ -84,11 +90,12 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
               {/* S/G/E 카운트 칩 — 0건은 흐리게. 카드 바닥에 고정(order+margin-top:auto)해
                   남는 세로 공간이 카드 내부의 호흡으로 흡수된다 */}
               <div style={css("order:3;margin-top:auto;padding-top:9px;display:flex;align-items:center;gap:6px")}>
-                {/* 신호등 문법 — 켜진 점은 제 색, 꺼진 점은 흐린 제 색(.lampdots와 동일 원리). 틴트 면 금지 */}
-                {(["E", "G", "S"] as const).map((k) => {
-                  const n = k === "S" ? counts.s : k === "G" ? counts.g : counts.e;
+                {/* 신호등 문법 — 켜진 점은 제 색, 꺼진 점은 흐린 제 색(.lampdots와 동일 원리). 틴트 면 금지.
+                    S는 대기열에 없으므로(AI 즉시 응대) E·G만 */}
+                {(["E", "G"] as const).map((k) => {
+                  const n = k === "G" ? counts.g : counts.e;
                   const meta = SGE_META[k];
-                  const dim = { E: "rgba(188,63,43,.4)", G: "rgba(47,95,196,.35)", S: "rgba(62,122,78,.42)" }[k];
+                  const dim = { E: "rgba(188,63,43,.4)", G: "rgba(47,95,196,.35)" }[k];
                   return (
                     <span
                       key={k}

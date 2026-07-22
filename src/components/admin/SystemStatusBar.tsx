@@ -30,7 +30,7 @@ export default function SystemStatusBar({
     </span>
   );
 
-  // 시연 리모컨 — 직원 알약의 '다음 콜' 선택기와 같은 자리. ONAIR: 면은 중립, 색은 점·잉크로만
+  // 시연 리모컨 — 색 테두리(가는 선) 버튼. ONAIR: 색은 점·글자·가는 요소에만 — 1.5px 선이 그 '가는 요소'
   const testBtn = (sge: Sge) => {
     const meta = SGE_META[sge];
     return (
@@ -39,11 +39,12 @@ export default function SystemStatusBar({
         onClick={() => playTestCall(sge)}
         title={`${sge} · ${meta.label} 테스트 콜 재생`}
         style={css(
-          "flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;border-radius:9999px;padding:6px 11px;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:var(--gray-100);color:" +
+          "flex:none;white-space:nowrap;display:inline-flex;align-items:center;border-radius:9999px;padding:5px 12px;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:var(--onair-surface);border:1.5px solid " +
+            meta.bar +
+            ";color:" +
             meta.fg
         )}
       >
-        <span style={css("width:7px;height:7px;border-radius:9999px;flex:none;background:" + meta.bar)} />
         {sge} {meta.label}
       </span>
     );

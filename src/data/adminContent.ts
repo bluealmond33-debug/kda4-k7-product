@@ -111,26 +111,17 @@ export function normalizeDeptLabel(label: string): string {
 }
 
 /** 부서별 시드 대기열 — 대시보드가 비어 보이지 않게 하는 가상 현황.
- *  키는 rules.ts의 8부서 taxonomy. 라이브 이벤트(routing.assigned)가 이 위에 쌓인다. */
+ *  키는 rules.ts의 8부서 taxonomy. 라이브 이벤트(routing.assigned)가 이 위에 쌓인다.
+ *  S(단순)는 상담사 대기열에 들어가지 않는다 — ARS·AI가 즉시 응대(별도 카운터). 그래서 G/E만. */
 export const DEPT_SEED_QUEUES: Record<string, QueueItem[]> = {
-  "수신·예적금": [
-    { id: "seed-dep-1", label: "잔액·거래내역 조회", sge: "S", callId: null },
-    { id: "seed-dep-2", label: "이체한도 상향", sge: "G", callId: null },
-  ],
+  "수신·예적금": [{ id: "seed-dep-2", label: "이체한도 상향", sge: "G", callId: null }],
   "여신·대출": [
     { id: "seed-lon-1", label: "주담대 만기 연장", sge: "G", callId: null },
     { id: "seed-lon-2", label: "전세자금대출 조건변경", sge: "G", callId: null },
   ],
-  "카드·결제": [
-    { id: "seed-crd-1", label: "카드 사용내역 조회", sge: "S", callId: null },
-    { id: "seed-crd-2", label: "결제대금 확인", sge: "S", callId: null },
-    { id: "seed-crd-3", label: "리볼빙 해지 문의", sge: "G", callId: null },
-  ],
+  "카드·결제": [{ id: "seed-crd-3", label: "리볼빙 해지 문의", sge: "G", callId: null }],
   "외환·수출입": [{ id: "seed-fx-1", label: "해외송금 취소·반환", sge: "G", callId: null }],
-  "전자금융·디지털": [
-    { id: "seed-efn-1", label: "OTP 재발급", sge: "S", callId: null },
-    { id: "seed-efn-2", label: "공동인증서 오류", sge: "G", callId: null },
-  ],
+  "전자금융·디지털": [{ id: "seed-efn-2", label: "공동인증서 오류", sge: "G", callId: null }],
   "연금·신탁·투자": [{ id: "seed-inv-1", label: "IRP 디폴트옵션 안내", sge: "G", callId: null }],
   "사고·신고": [
     { id: "seed-sg-1", label: "보이스피싱 의심 신고", sge: "E", callId: null },
@@ -138,6 +129,9 @@ export const DEPT_SEED_QUEUES: Record<string, QueueItem[]> = {
   ],
   "제도·민원·기타": [{ id: "seed-etc-1", label: "피해보상 요구", sge: "G", callId: null }],
 };
+
+/** 오늘 AI(ARS)가 자동 응대한 단순(S) 콜 시드 — S는 대기열이 아니라 이 카운터로 쌓인다 */
+export const AI_HANDLED_SEED = 6;
 
 /** 오늘 누적 상담카드 시드 — card.created 이벤트마다 +1 */
 export const SEED_CARD_TOTAL = 12;

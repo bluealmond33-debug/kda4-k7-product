@@ -15,6 +15,7 @@ import {
   type Sge,
 } from "../services";
 import {
+  AI_HANDLED_SEED,
   DEPARTMENTS,
   DEPT_SEED_QUEUES,
   SEED_CARD_TOTAL,
@@ -46,7 +47,10 @@ export interface FeedState {
   order: string[];
   queues: Record<string, QueueItem[]>;
   totalCards: number;
+  /** 상담사가 처리한 건수 (대기열에서 연결·완료) */
   handled: number;
+  /** AI(ARS)가 자동 응대한 단순(S) 건수 — S는 대기열에 들어가지 않는다 */
+  aiHandled: number;
   ticker: { callId: string; text: string } | null;
 }
 
@@ -95,6 +99,7 @@ const initialState = (): FeedState => {
     ),
     totalCards: SEED_CARD_TOTAL,
     handled: 0,
+    aiHandled: AI_HANDLED_SEED,
     ticker: null,
   };
 };
@@ -194,6 +199,8 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
         confidence: p.confidence,
         risk: p.risk,
       }));
+      // 단순(S)은 상담사 대기열로 가지 않는다 — ARS·AI가 즉시 받아 자동 응대 카운터로
+      if (p.sge === "S") return { ...next, aiHandled: next.aiHandled + 1 };
       const rec = next.calls[p.callId];
       const label = rec?.card?.businessType ?? "신규 상담";
       const queue = next.queues[dept];
