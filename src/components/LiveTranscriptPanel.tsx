@@ -51,11 +51,15 @@ export default function LiveTranscriptPanel({
     return () => window.clearInterval(id);
   }, [active]);
 
-  // 새 조각이 붙으면 스트림을 바닥으로 — 라이브 자막은 항상 최신이 보인다
+  // 라이브 자막 스크롤 — 타이핑으로 글자가 한 자씩 자라도 항상 바닥(최신)을 본다.
+  // 옛 텍스트는 위로 밀려 올라가 상단 페이드 아래로 사라진다 (발표용: 스크롤바 없음)
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [stream]);
+    const id = window.setInterval(() => {
+      const el = scrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 150);
+    return () => window.clearInterval(id);
+  }, []);
 
   // 같은 화자의 연속 조각은 한 그룹(문단)으로 — 고객은 이어지는 STT, AI는 별도 줄
   const groups: { who: "cust" | "ai"; texts: string[]; lastId: string }[] = [];
@@ -86,8 +90,9 @@ export default function LiveTranscriptPanel({
         </div>
       </div>
 
-      {/* 전사 — 검은 배경 위 코딩 글자. 고객은 이어지는 문단, AI 멘트는 별도 줄 */}
-      <div ref={scrollRef} style={css("flex:1;min-height:0;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px")}>
+      {/* 전사 — 검은 배경 위 코딩 글자. 오래 말하면 위로 흘러가며 상단 페이드로 사라진다 */}
+      <div style={css("position:relative;flex:1;min-height:0")}>
+      <div ref={scrollRef} style={css("height:100%;overflow:hidden;padding:18px 22px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box")}>
         {groups.length === 0 ? (
           <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#565b66")}>
             <span className="mi" style={css("font-size:30px")}>graphic_eq</span>
@@ -107,6 +112,9 @@ export default function LiveTranscriptPanel({
             />
           ))
         )}
+      </div>
+      {/* 상단 페이드 — 올라간 텍스트가 어둠 속으로 잦아든다 */}
+      <div style={css("position:absolute;top:0;left:0;right:0;height:64px;background:linear-gradient(#0a0a0e,rgba(10,10,14,0));pointer-events:none")} />
       </div>
     </div>
   );
