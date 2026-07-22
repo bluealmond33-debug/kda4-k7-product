@@ -51,12 +51,15 @@ export default function SystemStatusBar({
 
   return (
     <div style={css("display:flex;align-items:center;gap:11px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 22px;box-shadow:0 10px 34px rgba(0,0,0,.28);white-space:nowrap")}>
-      {/* 타이틀 */}
+      {/* 타이틀 — 이 화면의 정체는 '관제': AI 콜센터가 실제로 돌아가는 것을 실시간으로 증명하는 방 */}
       <span style={css("display:inline-flex;align-items:center;gap:8px")}>
         <span style={css("width:24px;height:24px;border-radius:7px;background:var(--gray-1000);display:flex;align-items:center;justify-content:center")}>
           <span className="mi" style={css("font-size:14px;color:#fff")}>monitoring</span>
         </span>
-        <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.2px")}>관리자 콘솔</span>
+        <span>
+          <span style={css("display:block;font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.2px;line-height:1.15")}>AI 관제 콘솔</span>
+          <span style={css("display:block;font:500 8.5px 'Geist Mono',monospace;color:var(--gray-700);letter-spacing:.4px")}>LIVE OPERATIONS</span>
+        </span>
       </span>
 
       <span style={css("width:1px;height:20px;background:var(--color-border)")} />

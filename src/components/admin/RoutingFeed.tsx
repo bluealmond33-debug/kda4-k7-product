@@ -17,9 +17,11 @@ const fmtTime = (ts: number) => {
 export default function RoutingFeed({
   feed,
   totalCards,
+  explain,
 }: {
   feed: AdminCallRecord[];
   totalCards: number;
+  explain: boolean;
 }) {
   const front = feed[0] ?? null;
   const rest = feed.slice(1);
@@ -44,6 +46,13 @@ export default function RoutingFeed({
           </span>
         ))}
       </div>
+
+      {/* 설명 모드 — 이 패널의 백엔드 역할 한 줄 */}
+      {explain && (
+        <div style={css("margin:0 16px 8px;font:400 11px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:7px 11px;animation:dockDown .25s var(--ease-out)")}>
+          분류 파이프라인의 출구 — 카드 1장이 PostgreSQL 상담카드 1건입니다. 카드가 쌓이는 속도가 곧 시스템 처리량입니다.
+        </div>
+      )}
 
       <div style={css("flex:1;overflow-y:auto;padding:4px 16px 10px;min-height:0;display:flex;flex-direction:column")}>
         {!front && (

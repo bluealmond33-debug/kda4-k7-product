@@ -7,21 +7,33 @@ import type { AdminFeed } from "../../hooks/useAdminFeed";
 /** [D] 부서 현황 보드 — 6개 라우팅 부서 × S/G/E 대기열.
  *  상담사 화면에서 옮겨온 운영 기능이 여기 있다: 대기 건 "연결"과 부서 간 "이관".
  *  이관도 demoBus를 타므로(transfer.requested) 라이브 콜과 같은 경로로 반영된다. */
-export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
+export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; explain: boolean }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [transferFrom, setTransferFrom] = useState<{ dept: string; id: string } | null>(null);
 
   const totalWaiting = Object.values(feed.state.queues).reduce((n, q) => n + q.length, 0);
+  // 관제의 첫 번째 질문 — "지금 긴급이 몇 건인가"
+  const urgentWaiting = Object.values(feed.queueCounts).reduce((n, c) => n + c.e, 0);
 
   return (
     <div className="card" style={css("display:flex;flex-direction:column;padding:14px 16px 12px;min-height:0")}>
       <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:12px")}>
         <span className="sechd">부서 현황 보드</span>
-        <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-          부서를 누르면 대기 목록 · 연결·이관은 여기서 처리
+        {/* 설명 모드에선 이 패널의 백엔드 역할을, 평소엔 조작 힌트를 */}
+        <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + (explain ? "var(--gray-800)" : "var(--gray-600)"))}>
+          {explain
+            ? "라우팅의 종착지 — E→S→G 판정이 8개 부서 대기열로 떨어지고, 연결·이관이 여기서 일어납니다"
+            : "부서를 누르면 대기 목록 · 연결·이관은 여기서 처리"}
         </span>
         <div style={css("flex:1")} />
+        {/* 긴급 대기 — 관제 KPI의 맨 앞. 0이면 조용히, 있으면 빨간 잉크로 */}
         <span style={css("display:inline-flex;align-items:baseline;gap:5px")}>
+          <span style={css("align-self:center;width:8px;height:8px;border-radius:9999px;flex:none;background:" + (urgentWaiting > 0 ? "var(--red-700)" : "rgba(188,63,43,.25)"))} />
+          <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>긴급 대기</span>
+          <span className="bignum" style={css("font-size:20px;color:" + (urgentWaiting > 0 ? "var(--red-900)" : "var(--gray-600)"))}>{urgentWaiting}</span>
+          <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+        </span>
+        <span style={css("display:inline-flex;align-items:baseline;gap:5px;margin-left:10px")}>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>전체 대기</span>
           <span className="bignum" style={css("font-size:20px;color:var(--gray-1000)")}>{totalWaiting}</span>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>

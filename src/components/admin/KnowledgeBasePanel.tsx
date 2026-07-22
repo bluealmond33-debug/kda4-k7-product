@@ -9,10 +9,12 @@ export default function KnowledgeBasePanel({
   totalCards,
   status,
   onOpenUpload,
+  explain,
 }: {
   totalCards: number;
   status: AdminStatus;
   onOpenUpload: () => void;
+  explain: boolean;
 }) {
   const live = status.rag.documents != null;
   const docs = status.rag.documents ?? RAG_STATS.docs;
@@ -33,7 +35,15 @@ export default function KnowledgeBasePanel({
     <div className="card" style={css("flex:1;display:flex;align-items:center;gap:16px;padding:12px 18px")}>
       <span style={css("display:inline-flex;align-items:center;gap:8px;flex:none")}>
         <span className="mi" style={css("font-size:19px;color:var(--gray-800)")}>database</span>
-        <span className="sechd">DB · 지식베이스</span>
+        <span>
+          <span className="sechd" style={css("display:block;white-space:nowrap")}>DB · 지식베이스</span>
+          {/* 설명 모드 — 이 패널의 백엔드 역할 한 줄 */}
+          {explain && (
+            <span style={css("display:block;font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);white-space:nowrap")}>
+              모든 규정검색의 지식원 — PDF를 올리면 즉시 자랍니다
+            </span>
+          )}
+        </span>
       </span>
       {divider}
       {stat(String(totalCards), "오늘 누적 상담카드", "var(--blue-900)")}

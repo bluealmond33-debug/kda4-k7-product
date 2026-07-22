@@ -109,8 +109,8 @@ export default function AdminDashboard() {
                 concurrent={feed.concurrent}
               />
               <div style={css("flex:1;display:grid;grid-template-columns:400px 1fr;gap:12px;min-height:0")}>
-                <RoutingFeed feed={feed.feed} totalCards={feed.state.totalCards} />
-                <DepartmentBoard feed={feed} />
+                <RoutingFeed feed={feed.feed} totalCards={feed.state.totalCards} explain={explain} />
+                <DepartmentBoard feed={feed} explain={explain} />
               </div>
               {/* 하단 행 — 지식베이스 풀폭 (테스트 콜 리모컨은 상단 알약으로 이동) */}
               <div style={css("display:flex;flex:none")}>
@@ -118,6 +118,7 @@ export default function AdminDashboard() {
                   totalCards={feed.state.totalCards}
                   status={status}
                   onOpenUpload={() => setUploadOpen(true)}
+                  explain={explain}
                 />
               </div>
             </div>
