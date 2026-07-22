@@ -164,12 +164,41 @@ const CALL_CONTROLS: {
   dy?: number;
 }[] = [
   { icon: "speaker", label: "오디오" },
-  { icon: "facetime", label: "FaceTime", size: 30, dy: 1 },
+  { icon: "facetime", label: "FaceTime", size: 38 },
   { icon: "micSlash", label: "소리 끔" },
   { icon: "more", label: "기타" },
   { icon: "callEnd", label: "종료", end: true },
   { icon: "keypad", label: "키패드" },
 ];
+
+/** FaceTime 버튼 글리프 — 실기기(IMG_7571): 카메라 본체 + 오른쪽 렌즈 + 본체에 '?' 녹아웃.
+ *  (iOS가 FaceTime 미지원 번호에 표시하는 아이콘). mask로 '?'를 뚫어 배경이 비치게 한다. */
+function FaceTimeGlyph({ size = 38 }: { size?: number }) {
+  const mid = "ftcam"; // 단일 인스턴스라 고정 id로 충분
+  return (
+    <svg width={size} height={size} viewBox="0 0 56 56" aria-hidden>
+      <defs>
+        <mask id={mid}>
+          <rect width="56" height="56" fill="black" />
+          <rect x="8" y="18" width="29" height="21" rx="6.5" fill="white" />
+          <polygon points="39,24 49,18 49,38 39,32" fill="white" />
+          <text
+            x="21.5"
+            y="34.5"
+            fontSize="17"
+            fontWeight="800"
+            textAnchor="middle"
+            fill="black"
+            fontFamily="'Geist Sans','Pretendard',system-ui,sans-serif"
+          >
+            ?
+          </text>
+        </mask>
+      </defs>
+      <rect width="56" height="56" fill="#fff" mask={`url(#${mid})`} />
+    </svg>
+  );
+}
 
 /** 통화 화면 — IMG_7570/7571: 웜 그라데이션, 상단 타이머→이름, 하단 컨트롤 */
 function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
@@ -246,11 +275,15 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
                         : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px)")
                   )}
                 >
-                  <AppleIcon
-                    name={c.icon}
-                    size={c.size ?? 36}
-                    style={c.dy ? { transform: `translateY(${c.dy}px)` } : undefined}
-                  />
+                  {c.icon === "facetime" ? (
+                    <FaceTimeGlyph size={c.size ?? 38} />
+                  ) : (
+                    <AppleIcon
+                      name={c.icon}
+                      size={c.size ?? 36}
+                      style={c.dy ? { transform: `translateY(${c.dy}px)` } : undefined}
+                    />
+                  )}
                 </span>
                 <span style={css("font-size:13px;color:rgba(255,255,255,.92)")}>{c.label}</span>
               </div>
