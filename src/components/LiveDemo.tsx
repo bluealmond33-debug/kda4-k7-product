@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
+import { useLiveCallBus } from "../hooks/useLiveCallBus";
 import Phone from "./Phone";
 import LiveTranscriptPanel from "./LiveTranscriptPanel";
 import Waiting from "./desktop/Waiting";
@@ -189,24 +190,35 @@ export default function LiveDemo({
           </div>
           )}
 
-          {/* 고객 화면 상황 알약 — 폰에서 걷어낸 시연 표기(상태·녹음점·타이머)가 여기로 온다.
-              실제 휴대폰 화면은 깨끗하게, 상황은 알약이 말한다 */}
+          {/* 고객 화면 상황 알약 — on/off(대기·통화) + 지금 무슨 일이 일어나는지 한 줄.
+              실제 휴대폰 화면은 깨끗하게, 상황은 전부 이 알약이 말한다 */}
           {view === "phone" && (
-            <div style={css("display:flex;align-items:center;gap:12px;background:var(--onair-surface);border-radius:9999px;padding:8px 12px 8px 20px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
-              <span style={css("display:inline-flex;align-items:center;gap:7px;font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
-                <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>support_agent</span>
-                키움은행 고객센터
-              </span>
-              <span style={css("width:1px;height:18px;background:var(--color-border)")} />
-              <span style={css("display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 12px")}>
-                {vm.showRecDot && (
-                  <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--red-700);animation:recBlink 1.1s infinite")} />
+            <div style={css("display:flex;align-items:center;gap:10px;background:var(--onair-surface);border-radius:9999px;padding:8px 10px 8px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+              <span
+                style={css(
+                  "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;border-radius:9999px;padding:5px 13px;" +
+                    (live.active
+                      ? "color:var(--green-900);background:var(--green-100,#e6f6ec)"
+                      : "color:var(--gray-700);background:var(--gray-100)")
                 )}
-                {vm.phoneStatus || vm.phaseLabel}
+              >
+                <span
+                  style={css(
+                    "width:7px;height:7px;border-radius:9999px;background:" +
+                      (live.active ? "var(--green-700);animation:recBlink 1.1s infinite" : "var(--gray-400)")
+                  )}
+                />
+                {live.active ? "통화 중" : "대기 중"}
                 {vm.showTimer && (
                   <span className="mono" style={css("font-weight:600;color:var(--gray-1000)")}>{vm.clockStr}</span>
                 )}
               </span>
+              {live.status && (
+                <>
+                  <span style={css("width:1px;height:18px;background:var(--color-border)")} />
+                  <span style={css("font-size:12.5px;font-weight:600;color:var(--blue-900)")}>{live.status}</span>
+                </>
+              )}
               <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:6px 13px;background:var(--gray-100);border-radius:9999px;font-size:12.5px;font-weight:600;cursor:pointer")}>
                 <span className="mi" style={css("font-size:16px")}>restart_alt</span>초기화
               </span>
@@ -225,7 +237,7 @@ export default function LiveDemo({
           <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
             {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}
             {/* 고객 화면 — 폰은 살짝 왼쪽, 오른쪽에 실시간 현황·발화 스트림(타이핑 애니메이션) */}
-            {view === "phone" && <LiveTranscriptPanel />}
+            {view === "phone" && <LiveTranscriptPanel lines={live.lines} active={live.active} />}
             {view !== "phone" && (
               <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
                 {vm.showWaiting && <Waiting vm={vm} />}

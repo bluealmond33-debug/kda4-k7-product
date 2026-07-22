@@ -16,8 +16,10 @@
     "check:release": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-release-gates.ps1"
   },
   "dependencies": {
+    "dseg": "^0.46.0",
     "gsap": "^3.15.0",
     "lucide-react": "^1.25.0",
+    "ogl": "^1.0.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "^0.18.5"

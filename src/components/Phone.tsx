@@ -33,7 +33,9 @@ const CONTROLS = [
   { icon: "person", label: "연락처" },
 ];
 
-export default function Phone({ vm }: { vm: CallFlowVM }) {
+/** clean — 고객 화면(?role=customer)용: 실제 휴대폰에 없는 시연 표기(상태·타이머·안내 유리판·파형)를
+ *  전부 숨긴다. 그 정보는 상단 상황 알약과 실시간 통화 패널이 대신 보여준다. */
+export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
   return (
     <div style={css("flex:none;width:260px;height:532px")}>
       <div
@@ -59,7 +61,7 @@ export default function Phone({ vm }: { vm: CallFlowVM }) {
           <div style={css("position:absolute;top:11px;left:50%;transform:translateX(-50%);width:122px;height:35px;border-radius:9999px;background:#000;z-index:50")} />
 
           {vm.phIdle && <IdleScreen vm={vm} />}
-          {vm.phInCall && <InCallScreen vm={vm} />}
+          {vm.phInCall && <InCallScreen vm={vm} clean={clean} />}
         </div>
       </div>
     </div>
@@ -154,7 +156,7 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
   );
 }
 
-function InCallScreen({ vm }: { vm: CallFlowVM }) {
+function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
   return (
     <div style={css("position:absolute;inset:0;color:#1c1c1e;display:flex;flex-direction:column")}>
       <StatusBar />
@@ -169,7 +171,9 @@ function InCallScreen({ vm }: { vm: CallFlowVM }) {
         </div>
         <div style={css("font-size:28px;font-weight:600;letter-spacing:-.3px;margin-top:16px")}>키움은행 고객센터</div>
 
-        {/* 상태 표시 — 실제 고객 화면엔 없는 정보라 '시연 표기'를 명시한다 */}
+        {/* 상태 표시 — 실제 고객 화면엔 없는 정보라 '시연 표기'를 명시한다.
+            clean(고객 화면)에선 통째로 숨기고 상단 상황 알약이 대신 보여준다 */}
+        {!clean && (
         <div style={css("display:flex;align-items:center;gap:7px;margin-top:10px")}>
           <span style={css("font-size:10.5px;font-weight:700;letter-spacing:.4px;color:#8a8a8e;border:1px solid #d1d1d6;border-radius:9999px;padding:2px 8px;background:#fff")}>시연 표기</span>
           <span style={css("display:flex;align-items:center;gap:6px;font-size:15px;font-weight:500;color:#3a3a3c")}>
@@ -180,8 +184,9 @@ function InCallScreen({ vm }: { vm: CallFlowVM }) {
             {vm.showTimer && <span className="mono" style={css("color:#1c1c1e")}>{vm.clockStr}</span>}
           </span>
         </div>
+        )}
 
-        {vm.showGlass && (
+        {!clean && vm.showGlass && (
           <div
             style={css(
               "margin-top:22px;width:100%;background:rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.07);border-radius:18px;padding:14px 16px;text-align:center;font-size:13.5px;line-height:1.55;color:#3a3a3c"
@@ -191,7 +196,7 @@ function InCallScreen({ vm }: { vm: CallFlowVM }) {
           </div>
         )}
 
-        {vm.showWave && (
+        {!clean && vm.showWave && (
           <div style={css("margin-top:18px;display:flex;align-items:center;justify-content:center;gap:5px;height:24px")}>
             {/* 바 높이는 22px 고정, 신축은 scaleY(GPU) — 위상차는 delay가 만든다 */}
             <span style={css("width:4px;height:22px;border-radius:9999px;background:#8a8a8e;animation:wave 1s infinite")} />
