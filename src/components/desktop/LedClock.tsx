@@ -119,15 +119,15 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
             <Ic key={i} size={22} strokeWidth={2.4} color={i === wxIdx ? INK : ICON_GHOST} />
           ))}
         </div>
-        <span style={css("align-self:center;width:1.5px;height:28px;background:var(--gray-200);border-radius:1px")} />
+        <span style={css("align-self:center;width:1.5px;height:24px;margin:0 6px;background:var(--gray-200);border-radius:1px")} />
         <div style={css("display:flex;align-items:flex-start;gap:5px")}>
-          <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={30} />
-          <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: LABEL, marginTop: 2 }}>°C</span>
+          <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={24} />
+          <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: LABEL, marginTop: 2 }}>°C</span>
         </div>
         <Droplets size={20} strokeWidth={2.2} color={INK} />
         <div style={css("display:flex;align-items:flex-start;gap:5px")}>
-          <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={30} />
-          <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: LABEL, marginTop: 2 }}>%</span>
+          <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={24} />
+          <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: LABEL, marginTop: 2 }}>%</span>
         </div>
       </div>
 
