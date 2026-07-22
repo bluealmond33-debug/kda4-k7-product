@@ -119,7 +119,7 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
                 <span
                   style={css(
                     "position:absolute;left:0;right:0;text-align:center;font-size:42px;font-weight:400;color:#fff;line-height:1;transform:translateY(-50%);top:" +
-                      (k.d === "*" ? "60%" : symbol ? "52%" : "42%")
+                      (k.d === "*" ? "66%" : symbol ? "55%" : "42%")
                   )}
                 >
                   {k.d}

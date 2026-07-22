@@ -33,23 +33,32 @@ export default function LiveTranscriptPanel({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // 발화 반응 파형 — 새 조각마다 즉시 스파이크(어택) 후 기저로 천천히 감쇠(릴리즈)
+  // 발화 반응 파형 — 기준: "음성이 들리는 동안"(=STT 타이핑이 진행되는 동안)
+  // 랜덤 목표(1.4~2.9)를 계속 갈아끼우며 요동친다. 소리 크기와 무관한 랜덤 변조.
+  // 조각 도착 → 그 텍스트의 타이핑 예상 시간만큼 '말하는 중'으로 간주(+여유 0.5s),
+  // 끝나면 기저(0.9)로 천천히 가라앉는다 — 빠른 어택, 느린 릴리즈.
   const [amp, setAmp] = useState(0.9);
   const prevCount = useRef(0);
+  const speakingUntil = useRef(0);
   useEffect(() => {
-    if (stream.length > prevCount.current) setAmp(3.0);
+    if (stream.length > prevCount.current) {
+      const last = stream[stream.length - 1];
+      speakingUntil.current = Date.now() + last.text.length * 32 + 500;
+      setAmp(2.6); // 어택 — 말이 시작되는 순간 즉시 출렁
+    }
     prevCount.current = stream.length;
   }, [stream]);
   useEffect(() => {
     const id = window.setInterval(() => {
+      const speaking = Date.now() < speakingUntil.current;
       setAmp((a) => {
-        const base = active ? 1.1 : 0.9;
-        const next = a + (base - a) * 0.04;
-        return Math.abs(next - base) < 0.01 ? base : next;
+        const target = speaking ? 1.4 + Math.random() * 1.5 : 0.9;
+        const k = speaking ? 0.3 : 0.04; // 말할 땐 빠르게 요동, 멈추면 천천히 릴리즈
+        return a + (target - a) * k;
       });
-    }, 80);
+    }, 160);
     return () => window.clearInterval(id);
-  }, [active]);
+  }, []);
 
   // 라이브 자막 스크롤 — 타이핑으로 글자가 한 자씩 자라도 항상 바닥(최신)을 본다.
   // 옛 텍스트는 위로 밀려 올라가 상단 페이드 아래로 사라진다 (발표용: 스크롤바 없음)
