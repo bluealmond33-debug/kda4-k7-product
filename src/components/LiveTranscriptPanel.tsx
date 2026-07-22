@@ -91,7 +91,7 @@ export default function LiveTranscriptPanel({
             </span>
           </div>
         ) : (
-          {/* 코딩 글자 — STT 원출력의 러프한 터미널 감각 */}
+          /* 코딩 글자 — STT 원출력의 러프한 터미널 감각 */
           <div style={css("font:400 13px/1.95 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-1000);letter-spacing:-.2px;word-break:break-all")}>
             {settled && <span style={css("color:var(--gray-700)")}>{settled + " "}</span>}
             <TextType
