@@ -275,10 +275,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             ) : (
-              <div style={css("margin-top:13px;background:var(--amber-100);border:1px solid var(--amber-400);border-radius:8px;padding:12px")}>
-                {/* 진짜 대기 상태 — 앰버 배경+테두리로 또렷하게, 점으로 '진행 필요' 신호 */}
-                <div style={css("display:flex;align-items:center;gap:6px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px")}>
-                  <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--amber-700)")} />
+              <div style={css("margin-top:13px;background:var(--gray-100);border:1px solid var(--gray-300);border-radius:8px;padding:12px")}>
+                {/* 대기 상태 — 틴트 없이 중립(잉크·그레이). 점으로 '진행 필요' 신호 */}
+                <div style={css("display:flex;align-items:center;gap:6px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:3px")}>
+                  <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--gray-500)")} />
                   본인확인 · 미완료
                 </div>
                 <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>
