@@ -102,12 +102,7 @@ export default function AdminDashboard() {
           {/* 직원 데스크톱과 동일한 캔버스 — 1100×688, 내부 1440×900 @0.76389 */}
           <DesktopShell flex>
             <div style={css("flex:1;display:flex;flex-direction:column;gap:12px;padding:16px;min-height:0")}>
-              <PipelineFlowPanel
-                flowCall={feed.flowCall}
-                ticker={feed.state.ticker}
-                explain={explain}
-                concurrent={feed.concurrent}
-              />
+              <PipelineFlowPanel flowCall={feed.flowCall} explain={explain} concurrent={feed.concurrent} />
               <div style={css("flex:1;display:grid;grid-template-columns:400px 1fr;gap:12px;min-height:0")}>
                 <RoutingFeed feed={feed.feed} totalCards={feed.state.totalCards} explain={explain} />
                 <DepartmentBoard feed={feed} explain={explain} />

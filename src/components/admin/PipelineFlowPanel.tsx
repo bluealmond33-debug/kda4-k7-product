@@ -1,6 +1,6 @@
 import { css } from "../../lib/css";
 import { PIPELINE_NODES } from "../../data/adminContent";
-import type { AdminCallRecord, FeedState } from "../../hooks/useAdminFeed";
+import type { AdminCallRecord } from "../../hooks/useAdminFeed";
 
 const KIND_LABEL = { normal: "일반", urgent: "긴급", transfer: "이관 수신" } as const;
 
@@ -9,12 +9,10 @@ const KIND_LABEL = { normal: "일반", urgent: "긴급", transfer: "이관 수�
  *  설명 모드를 켜면 각 노드 아래 "왜 이렇게 연결되는가" 캡션이 펼쳐진다. */
 export default function PipelineFlowPanel({
   flowCall,
-  ticker,
   explain,
   concurrent,
 }: {
   flowCall: AdminCallRecord | null;
-  ticker: FeedState["ticker"];
   explain: boolean;
   concurrent: number;
 }) {
@@ -125,23 +123,6 @@ export default function PipelineFlowPanel({
         })}
       </div>
 
-      {/* 라이브 티커 — 지금 STT가 받아 적는 문장 */}
-      <div style={css("margin-top:12px;display:flex;align-items:center;gap:9px;background:var(--background-200);border-radius:9999px;padding:7px 15px;min-height:32px")}>
-        <span className="mi" style={css("font-size:16px;color:" + (ticker ? "var(--blue-700)" : "var(--gray-500)"))}>graphic_eq</span>
-        {ticker ? (
-          <>
-            <span style={css("font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
-              “{ticker.text}”
-            </span>
-            <div style={css("flex:1")} />
-            <span style={css("flex:none;font:500 10px 'Geist Mono',monospace;color:var(--gray-700)")}>STT · {ticker.callId}</span>
-          </>
-        ) : (
-          <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-            수신 발화 없음 — 콜이 시작되면 실시간 전사가 여기로 흐릅니다
-          </span>
-        )}
-      </div>
     </div>
   );
 }

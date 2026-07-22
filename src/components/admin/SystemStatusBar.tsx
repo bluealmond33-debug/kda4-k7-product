@@ -57,7 +57,7 @@ export default function SystemStatusBar({
           <span className="mi" style={css("font-size:14px;color:#fff")}>monitoring</span>
         </span>
         <span>
-          <span style={css("display:block;font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.2px;line-height:1.15")}>AI 관제 콘솔</span>
+          <span style={css("display:block;font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.2px;line-height:1.15")}>관제 대시보드</span>
           <span style={css("display:block;font:500 8.5px 'Geist Mono',monospace;color:var(--gray-700);letter-spacing:.4px")}>LIVE OPERATIONS</span>
         </span>
       </span>

@@ -138,10 +138,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           ) : (
             !vm.showWrap && (
               <span
-                title="부서 이관·대기열 배정은 관리자 콘솔에서 실시간 처리됩니다"
+                title="부서 이관·대기열 배정은 관제 대시보드에서 실시간 처리됩니다"
                 style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}
               >
-                <span className="mi" style={css("font-size:13px")}>sync_alt</span> 자동 라우팅 · 이관은 관리자 콘솔
+                <span className="mi" style={css("font-size:13px")}>sync_alt</span> 자동 라우팅 · 이관은 관제 대시보드
               </span>
             )
           )}

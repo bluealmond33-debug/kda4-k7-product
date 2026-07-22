@@ -220,7 +220,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           <div style={css("flex:1")} />
           {/* 이관 조작 자리 → 안내 노트. 상담사는 응대 준비에 집중, 배정·이관은 관리자 콘솔이 맡는다 */}
           <span style={css("display:flex;align-items:center;gap:5px;font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-            <span className="mi" style={css("font-size:14px")}>sync_alt</span> 부서 이관은 관리자 콘솔에서 실시간 처리됩니다
+            <span className="mi" style={css("font-size:14px")}>sync_alt</span> 부서 이관은 관제 대시보드에서 실시간 처리됩니다
           </span>
           <span
             onClick={vm.answerCall}

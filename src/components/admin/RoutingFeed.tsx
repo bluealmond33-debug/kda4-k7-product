@@ -1,12 +1,64 @@
 import { css } from "../../lib/css";
 import { SGE_META } from "../../services";
 import { playTestCall } from "../../services/adminScenario";
+import { PIPELINE_NODES } from "../../data/adminContent";
 import type { AdminCallRecord } from "../../hooks/useAdminFeed";
 
 const fmtTime = (ts: number) => {
   const d = new Date(ts);
   return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
 };
+
+/** 카드 속 미니 파이프라인 — 이 콜이 지금 8단계 중 어디를 지나는지.
+ *  상단 큰 플로우가 '개념도'라면 이건 '이 콜의 실제 진행'이다 — 카드마다 제 프로세스가 돈다.
+ *  done=초록 점 · 진행=파랑 점(점멸) · 대기=꺼진 점. compact는 스트립용(라벨 없음). */
+function MiniPipeline({
+  stages,
+  compact = false,
+}: {
+  stages: AdminCallRecord["stages"];
+  compact?: boolean;
+}) {
+  const active = PIPELINE_NODES.find((n) => stages[n.id] === "start") ?? null;
+  const dots = (
+    <span style={css("display:inline-flex;align-items:center;gap:" + (compact ? "3px" : "4px"))}>
+      {PIPELINE_NODES.map((n) => {
+        const st = stages[n.id];
+        const size = compact ? 5 : 6;
+        return (
+          <span
+            key={n.id}
+            title={n.label}
+            style={{
+              width: size,
+              height: size,
+              borderRadius: 9999,
+              flex: "none",
+              background:
+                st === "done"
+                  ? "var(--green-700)"
+                  : st === "start"
+                  ? "var(--blue-700)"
+                  : "rgba(107,111,116,.28)",
+              ...(st === "start" ? { animation: "recBlink 1.2s infinite" } : null),
+            }}
+          />
+        );
+      })}
+    </span>
+  );
+  if (compact) return dots;
+  return (
+    <div style={css("margin-top:8px;display:flex;align-items:center;gap:8px")}>
+      {dots}
+      {active && (
+        <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>
+          {active.label} 진행 중
+        </span>
+      )}
+    </div>
+  );
+}
 
 /**
  * [C] 실시간 라우팅 피드 — 최신 카드가 맨 위.
@@ -104,6 +156,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
         <div style={css("margin-top:8px;font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
           {r.utterances[r.utterances.length - 1] ?? "발화 수신 대기 중"}
         </div>
+        <MiniPipeline stages={r.stages} />
       </div>
     );
   }
@@ -125,6 +178,8 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
       <div style={css("margin-top:7px;font:400 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>
         {r.card.summary}
       </div>
+      {/* 이 콜의 프로세스 진행 — 진행 중일 때만 (완료 카드는 조용히) */}
+      {live && <MiniPipeline stages={r.stages} />}
       <div style={css("margin-top:9px;display:flex;align-items:center;gap:6px;flex-wrap:wrap")}>
         <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;background:var(--gray-100);color:var(--gray-900);border-radius:9999px;padding:3px 9px")}>
           {r.department ?? r.card.department}
@@ -180,6 +235,8 @@ function StripCard({ r, idx }: { r: AdminCallRecord; idx: number }) {
         <span style={css("flex:1;min-width:0;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
           {r.card ? r.card.businessType : "분류 중…"}
         </span>
+        {/* 진행 중인 콜은 스트립에서도 제 프로세스가 돈다 */}
+        {live && <MiniPipeline stages={r.stages} compact />}
         <span style={css("flex:none;font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px")}>
           {r.department ?? r.card?.department ?? ""}
         </span>
