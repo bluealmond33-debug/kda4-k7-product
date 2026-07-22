@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
-import TextType from "./TextType";
 import Threads from "./Threads";
 
 /**
@@ -12,7 +11,8 @@ import Threads from "./Threads";
  *
  * 스트림에는 고객 발화(cust)와 AI 안내 멘트(ai)가 도착 순서로 섞인다 —
  * 고객 조각들은 STT답게 한 문단으로 이어 붙고, AI 멘트는 별도 줄로 끊는다.
- * 마지막 조각만 커서와 함께 타이핑된다(TextType).
+ * 타이핑은 연속 타자기(useTypewriter): 목표 텍스트가 자라나도 재시작 없이
+ * 이어서 따라간다 — 문장 단위로 끊기지 않는 진짜 STT 스트림 감각.
  *
  * 물결은 가만히 있어도 잔잔히 흐르고(기저 0.9/1.1), 발화가 도착하면
  * 크게 요동(3.0)쳤다가 천천히 가라앉는다 — Siri 파형의 어택·릴리즈 원리.
@@ -98,46 +98,72 @@ export default function LiveTranscriptPanel({
             </span>
           </div>
         ) : (
-          groups.map((g, gi) => {
-            const isLastGroup = gi === groups.length - 1;
-            const settled = (isLastGroup ? g.texts.slice(0, -1) : g.texts).join(" ");
-            const lastText = isLastGroup ? g.texts[g.texts.length - 1] : null;
-            const isAi = g.who === "ai";
-            return (
-              <div
-                key={g.lastId}
-                style={css(
-                  "font:400 13px/1.9 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:-.2px;word-break:break-all;animation:fadeIn .2s ease-out;color:" +
-                    (isAi ? "#8a919d" : "#a9b0bb")
-                )}
-              >
-                {isAi && (
-                  <span style={css("display:inline-block;margin-right:8px;padding:1px 6px;border:1px solid #3a3f49;border-radius:5px;font-size:10px;color:#8a919d;transform:translateY(-1px)")}>
-                    AI
-                  </span>
-                )}
-                {settled && (
-                  <span>{settled + (lastText ? " " : "")}</span>
-                )}
-                {lastText && (
-                  <span style={css("color:" + (isAi ? "#c6cbd4" : "#eef1f6"))}>
-                    <TextType
-                      key={g.lastId}
-                      as="span"
-                      text={lastText}
-                      typingSpeed={34}
-                      loop={false}
-                      showCursor
-                      cursorCharacter="▍"
-                      cursorBlinkDuration={0.45}
-                    />
-                  </span>
-                )}
-              </div>
-            );
-          })
+          groups.map((g, gi) => (
+            <GroupLine
+              key={gi + ":" + g.who}
+              who={g.who}
+              full={g.texts.join(" ")}
+              isLast={gi === groups.length - 1}
+            />
+          ))
         )}
       </div>
+    </div>
+  );
+}
+
+/** 연속 타자기 — 목표 텍스트가 자라나도 타이핑이 재시작 없이 이어서 따라간다.
+ *  조각(문장) 단위로 끊기지 않는 진짜 STT 스트림 감각의 핵심. */
+function useTypewriter(target: string, speedMs: number, enabled: boolean) {
+  const [shown, setShown] = useState(0);
+  const targetRef = useRef(target);
+  targetRef.current = target;
+  useEffect(() => {
+    if (!enabled) {
+      setShown(target.length);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setShown((s) => (s < targetRef.current.length ? s + 1 : s));
+    }, speedMs);
+    return () => window.clearInterval(id);
+  }, [enabled, speedMs, target.length]);
+  // 새 콜로 목표가 짧아지면 처음부터
+  useEffect(() => {
+    setShown((s) => (s > target.length ? 0 : s));
+  }, [target.length]);
+  return target.slice(0, shown);
+}
+
+function GroupLine({
+  who,
+  full,
+  isLast,
+}: {
+  who: "cust" | "ai";
+  full: string;
+  isLast: boolean;
+}) {
+  const typed = useTypewriter(full, 32, isLast);
+  const text = isLast ? typed : full;
+  const typing = isLast && typed.length < full.length;
+  const isAi = who === "ai";
+  return (
+    <div
+      style={css(
+        "font:400 13px/1.9 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:-.2px;word-break:break-all;animation:fadeIn .2s ease-out;color:" +
+          (isAi ? "#8a919d" : "#dfe3ea")
+      )}
+    >
+      {isAi && (
+        <span style={css("display:inline-block;margin-right:8px;padding:1px 6px;border:1px solid #3a3f49;border-radius:5px;font-size:10px;color:#8a919d;transform:translateY(-1px)")}>
+          AI
+        </span>
+      )}
+      {text}
+      {isLast && (
+        <span style={css("display:inline-block;margin-left:2px;color:#eef1f6;animation:recBlink 1s infinite" + (typing ? "" : ";opacity:.5"))}>▍</span>
+      )}
     </div>
   );
 }
