@@ -67,8 +67,13 @@ export default function LiveTranscriptPanel({
         "flex:none;width:470px;height:532px;display:flex;flex-direction:column;background:var(--onair-surface);border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.4);overflow:hidden"
       )}
     >
-      {/* 파형 — 검은 무대 위 흰 물결 (React Bits 원본의 대비). 늘 흐르고, 말하면 요동친다 */}
-      <div style={css("flex:none;height:120px;position:relative;background:#0a0a0e")}>
+      {/* 파형 — 상자 안 상자: 흰 패널 속 여백을 둔 검은 라운드 무대, 그 위 흰 물결.
+          늘 흐르고, 말하면 요동친다 */}
+      <div
+        style={css(
+          "flex:none;margin:16px 16px 0;height:112px;position:relative;background:#0a0a0e;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 10px 26px rgba(10,10,14,.22)"
+        )}
+      >
         <div style={css("position:absolute;inset:0")}>
           <Threads amplitude={amp} distance={0} color={[1, 1, 1]} />
         </div>
