@@ -98,28 +98,44 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
     <div style={css("position:absolute;inset:0;background:#000;color:#fff;display:flex;flex-direction:column")}>
       <StatusBar />
       <div style={css("flex:1;display:flex;flex-direction:column;padding:0 0 30px")}>
-        {/* 다이얼 대상 — 다이내믹 아일랜드와 간격 확보 */}
-        <div style={css("text-align:center;margin-top:56px")}>
-          <div style={css("font-size:26px;font-weight:500;letter-spacing:.2px;color:#fff")}>키움은행 고객센터</div>
-          <div style={css("font-size:14px;color:#409cff;margin-top:6px;font-weight:400")}>1588-0000</div>
+        {/* 다이얼 대상 — 실기기처럼 번호가 크게 위, 이름은 작게 아래 (다이내믹 아일랜드와 간격 확보) */}
+        <div style={css("text-align:center;margin-top:60px")}>
+          <div style={css("font-size:40px;font-weight:500;letter-spacing:.5px;color:#fff;line-height:1.1")}>1588-0000</div>
+          <div style={css("font-size:15px;color:#fff;margin-top:10px;font-weight:400")}>
+            키움은행 고객센터 <span style={css("font-weight:700")}>mobile</span>
+          </div>
         </div>
         <div style={css("flex:1")} />
-        {/* 키패드 — 어두운 원(#2c2c2e), 흰 숫자. 실기기 비율(IMG_7572): 큼직한 원 88px */}
+        {/* 키패드 — 어두운 원(#2c2c2e), 흰 숫자. 실기기 비율(IMG_7572): 큼직한 원 88px.
+            정렬: 숫자는 중심보다 살짝 위(서브레터 자리 확보), *·#은 완전 중앙(iOS 동일) */}
         <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:16px")}>
-          {KEYS.map((k) => (
-            <div
-              key={k.d}
-              style={css(
-                "display:flex;flex-direction:column;align-items:center;justify-content:center;width:88px;height:88px;border-radius:9999px;background:#2c2c2e"
-              )}
-            >
-              <span style={css("font-size:42px;font-weight:400;color:#fff;line-height:1" + (k.sub ? "" : ";margin-top:6px"))}>{k.d}</span>
-              <span style={css("font-size:10.5px;font-weight:700;letter-spacing:2px;color:#9a9aa0;height:12px;margin-top:2px;text-indent:2px")}>{k.sub}</span>
-            </div>
-          ))}
+          {KEYS.map((k) => {
+            const symbol = k.d === "*" || k.d === "#";
+            return (
+              <div
+                key={k.d}
+                style={css("position:relative;width:88px;height:88px;border-radius:9999px;background:#2c2c2e")}
+              >
+                <span
+                  style={css(
+                    "position:absolute;left:0;right:0;text-align:center;font-size:42px;font-weight:400;color:#fff;line-height:1;transform:translateY(-50%);top:" +
+                      (k.d === "*" ? "60%" : symbol ? "52%" : "42%")
+                  )}
+                >
+                  {k.d}
+                </span>
+                {!symbol && (
+                  <span style={css("position:absolute;left:0;right:0;bottom:14px;text-align:center;font-size:10.5px;font-weight:700;letter-spacing:2px;text-indent:2px;color:#9a9aa0")}>
+                    {k.sub.trim()}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
-        {/* 발신 — 키패드 아래 중앙 초록 원 (애플 핸드셋 글리프). 하단 메뉴는 시연 화면에선 뺐다 */}
-        <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center;margin-top:16px;margin-bottom:14px")}>
+        {/* 발신 — 키패드 아래 중앙 초록 원 (애플 핸드셋 글리프). 하단 메뉴는 시연 화면에선 뺐다.
+            margin-bottom 29 = 통화 화면 빨간 종료 버튼과 화면상 같은 위치(중심 y 정렬) */}
+        <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center;margin-top:16px;margin-bottom:29px")}>
           <span />
           <div
             onClick={vm.startCall}
@@ -210,13 +226,13 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
         )}
 
         {vm.showControls && (
-          <div style={css("display:grid;grid-template-columns:repeat(3,86px);justify-content:center;column-gap:24px;row-gap:22px;margin-bottom:6px")}>
+          <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:22px;margin-bottom:5px")}>
             {CALL_CONTROLS.map((c) => (
               <div key={c.label} style={css("display:flex;flex-direction:column;align-items:center;gap:8px")}>
                 <span
                   onClick={c.end ? vm.endCall : undefined}
                   style={css(
-                    "width:86px;height:86px;border-radius:9999px;display:flex;align-items:center;justify-content:center;" +
+                    "width:88px;height:88px;border-radius:9999px;display:flex;align-items:center;justify-content:center;" +
                       (c.end
                         ? "background:#eb332a;cursor:pointer;box-shadow:0 0 26px rgba(235,51,42,.45)"
                         : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px)")
