@@ -1,5 +1,6 @@
 import { css } from "../../lib/css";
 import { PIPELINE_NODES } from "../../data/adminContent";
+import type { AdminStatus } from "../../services";
 import type { AdminCallRecord } from "../../hooks/useAdminFeed";
 
 const KIND_LABEL = { normal: "일반", urgent: "긴급", transfer: "이관 수신" } as const;
@@ -11,12 +12,28 @@ export default function PipelineFlowPanel({
   flowCall,
   explain,
   concurrent,
+  status,
 }: {
   flowCall: AdminCallRecord | null;
   explain: boolean;
   concurrent: number;
+  status: AdminStatus;
 }) {
   const stages = flowCall?.stages ?? {};
+
+  // 시스템 레일 — 관제가 흘끗 보고 안심하는 자리. 전부 초록이면 LIVE가 잔잔히 숨쉰다(실측).
+  const lampBackend = status.backend === "online" ? true : status.lastChecked === null ? null : false;
+  const lampDb = status.database === "connected" ? true : status.database === "unknown" ? null : false;
+  const lampRag = status.rag.available;
+  const allOn = lampBackend === true && lampDb === true && lampRag === true;
+  const lampColor = (on: boolean | null) =>
+    on === null ? "var(--gray-500)" : on ? "var(--green-700)" : "var(--red-700)";
+  const railLamp = (on: boolean | null, label: string) => (
+    <span style={css("display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}>
+      <span style={css("width:7px;height:7px;border-radius:9999px;flex:none;background:" + lampColor(on))} />
+      <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>{label}</span>
+    </span>
+  );
 
   return (
     <div className="card" style={css("flex:none;padding:14px 18px 12px")}>
@@ -52,8 +69,29 @@ export default function PipelineFlowPanel({
         )}
       </div>
 
-      {/* 노드 행 */}
+      {/* 노드 행 — 왼쪽엔 시스템 레일: 이 파이프라인을 받치는 장비가 전부 켜져 있다는 실측 신호 */}
       <div style={css("display:flex;align-items:flex-start")}>
+        <div style={css("flex:none;display:flex;flex-direction:column;gap:5px;padding:2px 0 0 2px")}>
+          <span style={css("display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}>
+            <span
+              style={{
+                width: 9,
+                height: 9,
+                borderRadius: 9999,
+                flex: "none",
+                background: allOn ? "var(--green-700)" : "var(--amber-700)",
+                ...(allOn ? { animation: "livePulse 2.2s ease-in-out infinite" } : null),
+              }}
+            />
+            <span style={css("font:700 11px 'Geist Mono',monospace;letter-spacing:.5px;color:" + (allOn ? "var(--green-900)" : "var(--amber-900)"))}>
+              {allOn ? "LIVE" : "데모 모드"}
+            </span>
+          </span>
+          {railLamp(lampBackend, "백엔드")}
+          {railLamp(lampDb, "DB")}
+          {railLamp(lampRag, "RAG")}
+        </div>
+        <span style={css("flex:none;width:1px;align-self:stretch;background:var(--gray-200);margin:2px 14px 2px 12px")} />
         {PIPELINE_NODES.map((node, i) => {
           const st = stages[node.id];
           const on = st === "start";

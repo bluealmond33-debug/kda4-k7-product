@@ -51,9 +51,10 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
         </span>
       </div>
 
-      {/* 행 높이를 패널에 꽉 채워(minmax(0,1fr)) 죽은 공간을 카드 내부 호흡으로 흡수한다 */}
+      {/* 행 높이를 패널에 꽉 채워(minmax(0,1fr)) 죽은 공간을 카드 내부 호흡으로 흡수한다.
+          사고·신고(긴급 직결)는 우하단 고정 — taxonomy 순서는 rules.ts가 진실원, 표시만 재배치 */}
       <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(0,1fr);gap:8px;min-height:0")}>
-        {DEPARTMENTS.map((dept) => {
+        {[...DEPARTMENTS.filter((d) => d.name !== "사고·신고"), ...DEPARTMENTS.filter((d) => d.name === "사고·신고")].map((dept) => {
           const items = feed.state.queues[dept.name] ?? [];
           const counts = feed.queueCounts[dept.name] ?? { s: 0, g: 0, e: 0 };
           const open = expanded === dept.name;
