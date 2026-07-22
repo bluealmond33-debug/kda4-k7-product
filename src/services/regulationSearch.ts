@@ -1,0 +1,67 @@
+// 규정 의미 검색 — 백엔드 pgvector 하이브리드 검색(/api/v1/regulations/search) 클라이언트.
+//
+// 2단 검색 UX의 2단째: 로컬 시트 필터(0ms)는 그대로 두고, 디바운스 후 이 모듈이
+// "잘못 송금했어요" → "착오송금 반환" 같은 의미 매칭을 더한다.
+// 백엔드가 없거나(NO VITE_API_BASE_URL) 인덱스가 비어 있으면(available:false)
+// 조용히 빈 결과로 강등한다 — 로컬 필터는 계속 동작하므로 화면은 깨지지 않는다.
+
+import { API_BASE_URL, DATA_API_PREFIX } from "./config";
+
+export interface RegulationHit {
+  doc_id: string;
+  title: string;
+  page: number;
+  section: string | null;
+  kind: "text" | "table";
+  categories: string[];
+  version: string;
+  excerpt: string;
+  score: number;
+  score_dense: number;
+  score_keyword: number;
+}
+
+export interface RegulationSearchResponse {
+  query: string;
+  category: string | null;
+  available: boolean;
+  documents: RegulationHit[];
+}
+
+// 부서 라벨 → 규정검색 category 코드 (backend/app/routing/taxonomy.py와 동일 라벨).
+// 카드의 전달부서가 확정되면 그 부서의 규정만 좁혀 검색한다(부서 → 필터 항등 매핑).
+const DEPARTMENT_CATEGORY: Record<string, string> = {
+  "수신·예적금": "DEP",
+  "여신·대출": "LON",
+  "카드·결제": "CRD",
+  "외환·수출입": "FX",
+  "전자금융·디지털": "EFN",
+  "연금·신탁·투자": "INV",
+  "사고·신고": "SG",
+  "제도·민원·기타": "ETC",
+};
+
+export function categoryForDepartment(label: string | undefined | null): string | null {
+  if (!label) return null;
+  return DEPARTMENT_CATEGORY[label.trim()] ?? null;
+}
+
+export const semanticSearchEnabled = !!API_BASE_URL;
+
+export async function searchRegulations(
+  query: string,
+  opts: { category?: string | null; k?: number; signal?: AbortSignal } = {}
+): Promise<RegulationSearchResponse> {
+  const q = query.trim();
+  if (!q || !semanticSearchEnabled) {
+    return { query: q, category: opts.category ?? null, available: false, documents: [] };
+  }
+  const params = new URLSearchParams({ q, k: String(opts.k ?? 5) });
+  if (opts.category) params.set("category", opts.category);
+  const res = await fetch(
+    `${API_BASE_URL}${DATA_API_PREFIX}/regulations/search?${params}`,
+    { headers: { Accept: "application/json" }, signal: opts.signal }
+  );
+  if (!res.ok) throw new Error(`regulation search failed: ${res.status}`);
+  return (await res.json()) as RegulationSearchResponse;
+}

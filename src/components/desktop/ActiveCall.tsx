@@ -589,6 +589,37 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <div style={css("display:flex;align-items:center;gap:5px;margin-top:7px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
                     <span className="mi" style={css("font-size:14px")}>info</span> 열기를 누르면 오른쪽에서 규정집이 펼쳐집니다
                   </div>
+                  {/* 의미 검색(2단째) — 타이핑 멈추면 pgvector 하이브리드가 규정 원문 청크를 더한다.
+                      로컬 시트 필터(위 시트 검색)와 별개 섹션: 글자 일치가 아니라 뜻 일치 */}
+                  {vm.regSearch.trim() && (vm.semLoading || vm.semHits.length > 0) && (
+                    <div style={css("margin-top:11px")}>
+                      <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);margin-bottom:7px")}>
+                        <span className="mi" style={css("font-size:14px")}>manage_search</span>
+                        규정 원문 의미 검색{vm.semLoading ? " · 검색 중…" : ` · ${vm.semHits.length}건`}
+                      </div>
+                      <div style={css("display:flex;flex-direction:column;gap:7px")}>
+                        {vm.semHits.map((h) => (
+                          <div
+                            key={`${h.doc_id}-${h.page}-${h.section ?? ""}`}
+                            style={css("border:1px solid var(--gray-200);border-radius:10px;padding:9px 11px;background:var(--onair-surface);animation:fadeIn .2s ease-out")}
+                          >
+                            <div style={css("display:flex;align-items:center;gap:5px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
+                              <span style={css("flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>{h.title}</span>
+                              <span style={css("flex:none;font:400 10px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>
+                                p{h.page}{h.kind === "table" ? " · 표" : ""}
+                              </span>
+                            </div>
+                            {h.section && (
+                              <div style={css("margin-top:2px;font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700)")}>{h.section}</div>
+                            )}
+                            <div style={css("margin-top:4px;font:400 11.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>
+                              {highlight(h.excerpt, vm.regSearch)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div style={css("padding:13px 15px;display:flex;flex-direction:column;gap:14px")}>
                   <div>

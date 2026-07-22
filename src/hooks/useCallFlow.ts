@@ -29,11 +29,19 @@ import {
   getDemoConsultationCard,
   parseEmotionSource,
   emotionSourceBadge,
+  demoBus,
+  deriveSge,
   type CallSummary,
   type ConsultationCardResponse,
   type TranscriptChunk,
   type SttSession,
 } from "../services";
+import {
+  searchRegulations,
+  categoryForDepartment,
+  semanticSearchEnabled,
+  type RegulationHit,
+} from "../services/regulationSearch";
 
 export type Phase =
   | "idle"
@@ -213,6 +221,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [manualData, setManualData] = useState<SheetData | null>(null);
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
+  // 의미 검색(2단 검색의 2단째) — 로컬 시트 필터는 0ms 즉시, 시맨틱은 디바운스 후
+  // 백엔드 pgvector 하이브리드(/api/v1/regulations/search)가 규정 원문 청크를 더한다
+  const [semHits, setSemHits] = useState<RegulationHit[]>([]);
+  const [semLoading, setSemLoading] = useState(false);
 
   // 데모 안내(가이드 모드) — 화면별 소개 팝업. 로드/단계도달 후 '잠시 뒤' 자동으로 뜬다(아래 효과).
   const [guideOpen, setGuideOpen] = useState(false);
@@ -246,6 +258,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const transcript = useRef<TranscriptChunk[]>([]);
   const phaseRef = useRef<Phase>("idle");
   phaseRef.current = phase;
+  // 데모 이벤트 버스용 참조 — 타이머(비동기) 콜백이 최신 카드·콜 유형·이관 상태를 읽는다
+  const respRef = useRef<ConsultationCardResponse>(consultationResponse);
+  respRef.current = consultationResponse;
+  const incomingRef = useRef<IncomingKind>("normal");
+  incomingRef.current = incoming;
+  const transferRef = useRef<{ reserved: boolean; target: string | null }>({
+    reserved: false,
+    target: null,
+  });
+  transferRef.current = { reserved: transferReserved, target: transferTarget };
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -279,6 +301,64 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     clockT.current = window.setInterval(() => setClock((c) => c + 1), 1000);
   }, []);
 
+  // 분류 파이프라인 이벤트 연출 — 관리자 대시보드(?role=admin)가 구독한다.
+  // 실제 처리(픽스처)는 즉시 끝나므로 스테이지 진행을 step 간격으로 흘린다.
+  // 여기서는 emit만 한다 — 통화 상태 로직에는 일절 관여하지 않는다.
+  const emitCardPipeline = useCallback(
+    (source: "demo" | "backend", step = 700) => {
+      const callId = respRef.current.call_id;
+      demoBus.emit("pipeline.stage", { callId, stage: "stt", status: "done" });
+      demoBus.emit("pipeline.stage", { callId, stage: "classify", status: "start" });
+      after(step, () => {
+        demoBus.emit("pipeline.stage", { callId, stage: "classify", status: "done" });
+        demoBus.emit("pipeline.stage", { callId, stage: "risk", status: "start" });
+      });
+      after(step * 2, () => {
+        demoBus.emit("pipeline.stage", { callId, stage: "risk", status: "done" });
+        demoBus.emit("pipeline.stage", { callId, stage: "persist", status: "start" });
+      });
+      after(step * 3, () => {
+        const { consultation_card: card } = respRef.current;
+        demoBus.emit("pipeline.stage", {
+          callId,
+          stage: "persist",
+          status: "done",
+          detail: "mvp-1.0 카드 저장",
+        });
+        demoBus.emit("card.created", {
+          callId,
+          summary: card.summary,
+          businessType: card.business_type,
+          department: card.department,
+          routingReason: card.routing_reason,
+          incidentRisk: card.incident_risk,
+          riskReason: card.risk_reason,
+          confidence: card.routing_confidence,
+          emotionLevel: card.emotion.level,
+          source,
+        });
+        demoBus.emit("pipeline.stage", { callId, stage: "route", status: "start" });
+      });
+      after(step * 4, () => {
+        const { consultation_card: card } = respRef.current;
+        demoBus.emit("pipeline.stage", {
+          callId,
+          stage: "route",
+          status: "done",
+          detail: card.department,
+        });
+        demoBus.emit("routing.assigned", {
+          callId,
+          department: card.department,
+          sge: deriveSge(card.incident_risk, card.department, incomingRef.current),
+          confidence: card.routing_confidence,
+          risk: card.incident_risk,
+        });
+      });
+    },
+    [after]
+  );
+
   // ── silence detection (drives confirm → summary) ──
   const runSummary = useCallback(async () => {
     const text = transcript.current
@@ -304,7 +384,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setPhase("prep");
     setPrepChecks(PREP_ITEMS.map(() => false));
     void runSummary();
-  }, [runSummary]);
+    emitCardPipeline("demo");
+  }, [emitCardPipeline, runSummary]);
 
   const armFirst = useCallback(() => {
     silStage.current = "first";
@@ -339,7 +420,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     transcript.current = [];
     stt.current = startSttSession(
       {
-        onChunk: (c) => transcript.current.push(c),
+        onChunk: (c) => {
+          transcript.current.push(c);
+          demoBus.emit("stt.utterance", {
+            callId: respRef.current.call_id,
+            text: c.text,
+            isFinal: c.isFinal,
+            atMs: c.at,
+          });
+        },
       },
       lineGap
     );
@@ -349,24 +438,39 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setPhase("recording");
     silStage.current = null;
     silT.current = window.setInterval(silTick, 200);
+    demoBus.emit("pipeline.stage", {
+      callId: respRef.current.call_id,
+      stage: "utterance",
+      status: "done",
+    });
+    demoBus.emit("pipeline.stage", {
+      callId: respRef.current.call_id,
+      stage: "stt",
+      status: "start",
+    });
     runScript(); // mic is simulation-only for this demo
   }, [runScript, silTick]);
 
   // ── public actions ──
-  const incomingRef = useRef<IncomingKind>("normal");
-  incomingRef.current = incoming;
-
   const startCall = useCallback(() => {
     clearAll();
     // 인입 유형에 맞는 상담카드 픽스처 선택 (데모)
     const kind = incomingRef.current;
-    setConsultationResponse(
+    const resp =
       kind === "urgent"
         ? (structuredClone(URGENT_RESPONSE) as unknown as ConsultationCardResponse)
         : kind === "transfer"
         ? (structuredClone(TRANSFER_RESPONSE) as unknown as ConsultationCardResponse)
-        : getDemoConsultationCard()
-    );
+        : getDemoConsultationCard();
+    setConsultationResponse(resp);
+    // 리렌더 전에 타이머 콜백이 읽을 수 있도록 ref는 즉시 동기화
+    respRef.current = resp;
+    demoBus.emit("call.incoming", { callId: resp.call_id, kind });
+    demoBus.emit("pipeline.stage", {
+      callId: resp.call_id,
+      stage: "utterance",
+      status: "start",
+    });
     // 후처리 프리셋도 콜 유형에 맞춰 채운다 — 상담 유형·결과·후속조치가 통화 내용과 어긋나지 않게
     const wrap = WRAP_DEFAULTS[kind];
     setWrapType(wrap.type);
@@ -635,6 +739,42 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const rgRows = regNeedle
     ? rg.rows.filter((r) => r.cells.some((c) => c.text.toLowerCase().includes(regNeedle)))
     : rg.rows;
+
+  // 의미 검색(2단째) — 로컬 필터는 위에서 0ms 즉시, 시맨틱은 250ms 디바운스 후 백엔드
+  // pgvector 하이브리드 검색. "잘못 송금했어요"→"착오송금 반환" 같은 의미 매칭을 더한다.
+  // 카드의 전달부서가 있으면 그 부서(category)의 규정만 좁혀 검색 — 카드 라우터와 한 몸.
+  // 연타 시 이전 요청은 abort. 백엔드/인덱스가 없으면 조용히 빈 결과(로컬 필터는 계속).
+  useEffect(() => {
+    if (!semanticSearchEnabled || !regSearch.trim()) {
+      setSemHits([]);
+      setSemLoading(false);
+      return;
+    }
+    const ctrl = new AbortController();
+    setSemLoading(true);
+    const t = window.setTimeout(async () => {
+      try {
+        const res = await searchRegulations(regSearch, {
+          category: categoryForDepartment(
+            consultationResponse.consultation_card.department
+          ),
+          k: 4,
+          signal: ctrl.signal,
+        });
+        setSemHits(res.available ? res.documents : []);
+        setSemLoading(false);
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
+          setSemHits([]);
+          setSemLoading(false);
+        }
+      }
+    }, 250);
+    return () => {
+      ctrl.abort();
+      window.clearTimeout(t);
+    };
+  }, [regSearch, consultationResponse]);
 
   // CSV/XLSX 버퍼 → SheetData (첫 시트, 첫 행 = 헤더). 업로드·레포 파일 공용 파서
   const parseSheetBuffer = useCallback(async (buf: ArrayBuffer, filename: string): Promise<SheetData | null> => {
@@ -1002,6 +1142,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     regSearch,
     onRegSearch: (e: React.ChangeEvent<HTMLInputElement>) => setRegSearch(e.target.value),
     clearRegSearch: () => setRegSearch(""),
+    // 의미 검색 — pgvector 하이브리드 결과 (규정 원문 청크)
+    semHits,
+    semLoading,
     loadManualFile,
     // 확장 폭 640 — 시트가 3컬럼 리플로우라 640이면 잘림 없이 들어가고, 중앙 스크립트 압착도 덜하다
     regW: regExpanded ? 640 : 372,

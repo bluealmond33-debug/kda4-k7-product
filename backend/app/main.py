@@ -1,3 +1,4 @@
+import threading
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
@@ -27,6 +28,7 @@ from app.rag import (
     initialize_rag,
     search_regulations,
 )
+from app.rag import embedder
 from app.rag.taxonomy import is_valid_category
 
 
@@ -42,6 +44,9 @@ async def lifespan(_: FastAPI):
             initialize_rag(settings)
         except RegulationSearchUnavailable:
             pass
+    # 임베더 warm-up — bge-m3 lazy load가 첫 검색을 수 초 지연시키지 않도록
+    # 백그라운드 스레드에서 미리 로드한다 (부팅은 막지 않음, 실패해도 무해).
+    threading.Thread(target=embedder.is_available, daemon=True).start()
     yield
 
 
