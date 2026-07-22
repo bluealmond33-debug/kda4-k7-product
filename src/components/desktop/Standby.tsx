@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, CalendarClock, GraduationCap, History, PhoneIncoming } from "lucide-react";
+import { Bell, CalendarClock, GraduationCap, History } from "lucide-react";
 import { css } from "../../lib/css";
 import { highlight } from "../../lib/highlight";
 import { AGENT, SHEETS } from "../../data/demoContent";
@@ -196,11 +196,8 @@ export default function Standby() {
           </div>
           {!onBreak && !view && (
             <>
-              {/* 운영 정보 — 램프가 상태를 말하니 여기는 숫자만 작게 */}
+              {/* 개인 일정만 — 대기열(집계)은 관리자 콘솔 몫, 여기는 내 다음 콜백만 남긴다 */}
               <div style={css("display:flex;align-items:center;gap:6px;font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-                <PhoneIncoming size={12} color="var(--gray-500)" strokeWidth={2} />
-                대기열 <span className="bignum" style={css("font-size:11.5px;color:var(--gray-800)")}>0</span>건
-                <span style={css("width:1px;height:10px;background:var(--gray-300)")} />
                 <CalendarClock size={12} color="var(--gray-500)" strokeWidth={2} />
                 다음 콜백 <span className="bignum" style={css("font-size:11.5px;color:var(--gray-800)")}>11:00</span>
               </div>

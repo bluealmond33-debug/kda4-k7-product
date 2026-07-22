@@ -1,23 +1,12 @@
-import { useRef, useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
 /** 1c — 상담 준비 카드 (dim 배경 + 모달). 유의사항 확인 시 통화 연결 활성화.
- *  인입 유형별 변주: urgent = 긴급 배지·빨간 램프·우선 배정 / transfer = 이관 배지 + AI 인수인계 블록. */
+ *  인입 유형별 변주: urgent = 긴급 배지·빨간 램프·우선 배정 / transfer = 이관 배지 + AI 인수인계 블록.
+ *  부서 이관 조작은 관리자 콘솔(?role=admin)로 이전 — 여기는 상담사 준비 신호만 남는다. */
 export default function PrepCard({ vm }: { vm: CallFlowVM }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickDeep, setPickDeep] = useState(false); // 다른 부서 선택 목록(한 단계 더)
-  const [sentTo, setSentTo] = useState("");
-  const resetT = useRef<number | null>(null);
-  const sendTo = (name: string) => {
-    setPickerOpen(false);
-    setPickDeep(false);
-    setSentTo(name);
-    if (resetT.current) window.clearTimeout(resetT.current);
-    resetT.current = window.setTimeout(() => vm.reset(), 2000);
-  };
   return (
     <DesktopShell>
       {/* 뒤 배경 (인입 대기) — 상태는 모달 배지 줄이 말하므로 여기는 침묵 */}
@@ -229,55 +218,9 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <span className="mi" style={css("font-size:16px")}>info</span> {vm.prepHint}
           </span>
           <div style={css("flex:1")} />
-          <span style={css("position:relative")}>
-            <span
-              onClick={() => setPickerOpen((v) => !v)}
-              style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1px solid var(--gray-500);border-radius:9999px;font-size:14px;color:var(--gray-900);cursor:pointer;background:var(--onair-surface)")}
-            >
-              <span className="mi" style={css("font-size:17px")}>alt_route</span> 다른 부서로 이관
-            </span>
-            {pickerOpen && (
-              <div style={css("position:absolute;bottom:52px;right:0;width:300px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:12px;z-index:20;animation:dockUp .18s cubic-bezier(0.2,0.8,0.2,1)")}>
-                <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:3px")}>담당 부서로 이관</div>
-                <div style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>개인이 아닌 부서 대기열로 넘겨 책임 소재를 분명히 합니다 · AI 인계 메모 자동 첨부</div>
-                {/* 기본이 먼저 — AI 추천 부서로 한 번 클릭. 다른 부서는 한 단계 더 */}
-                <span
-                  onClick={() => sendTo(vm.suggestedDept)}
-                  style={css("display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:8px;background:var(--blue-700);color:#fff;cursor:pointer;margin-bottom:6px")}
-                >
-                  <span className="mi" style={css("font-size:18px")}>auto_awesome</span>
-                  <span style={css("flex:1")}>
-                    <span style={css("display:block;font:700 12.5px 'Geist Sans','Pretendard',sans-serif")}>AI 추천 — {vm.suggestedDept}</span>
-                    <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;opacity:.85")}>부서 대기열로 이관 · 수신 가능 상담사에게 자동 배정</span>
-                  </span>
-                </span>
-                <span
-                  onClick={() => setPickDeep((v) => !v)}
-                  style={css("display:flex;align-items:center;gap:6px;padding:8px 11px;border-radius:8px;cursor:pointer;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:" + (pickDeep ? "var(--gray-100)" : "transparent"))}
-                >
-                  다른 부서 선택
-                  <span className="mi" style={css("font-size:16px;color:var(--gray-600);transition:transform .2s;transform:rotate(" + (pickDeep ? "180deg" : "0deg") + ")")}>expand_more</span>
-                </span>
-                {pickDeep && (
-                  <div style={css("display:flex;flex-direction:column;gap:6px;margin-top:5px")}>
-                    {vm.transferDepts.map((d) => (
-                      <span
-                        key={d.name}
-                        onClick={() => sendTo(d.name)}
-                        style={css("display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;background:var(--gray-100);cursor:pointer")}
-                      >
-                        <span className="av" style={css("width:30px;height:30px;font-size:15px;background:var(--onair-surface)")}><span className="mi">groups</span></span>
-                        <span style={css("flex:1")}>
-                          <span style={css("display:block;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name} <span style={css("font:600 10.5px;color:var(--gray-600)")}>{d.state}</span></span>
-                          <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
-                        </span>
-                        <span className="mi" style={css("font-size:16px;color:var(--gray-500)")}>chevron_right</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+          {/* 이관 조작 자리 → 안내 노트. 상담사는 응대 준비에 집중, 배정·이관은 관리자 콘솔이 맡는다 */}
+          <span style={css("display:flex;align-items:center;gap:5px;font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+            <span className="mi" style={css("font-size:14px")}>sync_alt</span> 부서 이관은 관리자 콘솔에서 실시간 처리됩니다
           </span>
           <span
             onClick={vm.answerCall}
@@ -295,16 +238,6 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           </span>
         </div>
 
-        {/* 이관 완료 — 카드가 상대에게 넘어가고 화면은 대기로 복귀 */}
-        {sentTo && (
-          <div style={css("position:absolute;inset:0;background:rgba(248,249,249,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:30")}>
-            <span style={css("width:52px;height:52px;border-radius:9999px;background:var(--green-700);color:#fff;display:flex;align-items:center;justify-content:center")}>
-              <span className="mi" style={css("font-size:28px")}>sync_alt</span>
-            </span>
-            <div style={css("font:700 16px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{sentTo}로 이관 완료</div>
-            <div style={css("font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>부서 대기열에 배정 · AI 인계 메모가 함께 전달되었습니다</div>
-          </div>
-        )}
       </div>
     </DesktopShell>
   );

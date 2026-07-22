@@ -503,6 +503,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const answerCall = useCallback(() => {
     if (prepChecks.every(Boolean)) {
       setPhase("active");
+      // 통화 연결과 동시에 우측 규정 추천이 뜬다 — RAG 스테이지도 같은 시점에 점등
+      demoBus.emit("pipeline.stage", {
+        callId: respRef.current.call_id,
+        stage: "rag",
+        status: "start",
+      });
+      after(1200, () =>
+        demoBus.emit("pipeline.stage", {
+          callId: respRef.current.call_id,
+          stage: "rag",
+          status: "done",
+          detail: "규정 2건 추천",
+        })
+      );
       // 상담이 진행되며 고객이 진정되는 흐름 — 감정온도가 살아있는 신호임을 보여준다
       after(20000, () =>
         setEmoDrift({ score: 22, level: "stable", reason: "상담 진행 후 안정 — 응대 톤 유지" })
@@ -512,6 +526,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const reset = useCallback(() => {
     clearAll();
+    demoBus.emit("demo.reset", {});
     setPhase("idle");
     setClock(0);
     setEmo(0);
@@ -544,7 +559,33 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setPhase("summarizing");
       // 종료와 동시에 후처리 시트가 자동으로 올라온다 — 통화→후처리는 한 흐름
       setWrapSheetOpen(true);
-      after(3600, () => setPhase("wrap"));
+      demoBus.emit("pipeline.stage", {
+        callId: respRef.current.call_id,
+        stage: "wrap",
+        status: "start",
+      });
+      after(3600, () => {
+        setPhase("wrap");
+        const callId = respRef.current.call_id;
+        const preset = WRAP_DEFAULTS[incomingRef.current];
+        demoBus.emit("pipeline.stage", {
+          callId,
+          stage: "wrap",
+          status: "done",
+          detail: "후처리 초안 자동 작성",
+        });
+        demoBus.emit("call.ended", {
+          callId,
+          wrapType: preset.type,
+          wrapResult: preset.result,
+        });
+        if (transferRef.current.reserved) {
+          demoBus.emit("transfer.completed", {
+            callId,
+            toDept: transferRef.current.target ?? SUGGESTED_DEPT[incomingRef.current],
+          });
+        }
+      });
     } else {
       reset();
     }
@@ -576,12 +617,27 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       try {
         const response = await createConsultationFromAudio(file);
         setConsultationResponse(response);
+        respRef.current = response;
         transcript.current = [
           { text: response.transcript.text, at: 0, isFinal: true },
         ];
+        // 실백엔드 경로 — 같은 이벤트 열을 압축 발행 (source: backend)
+        demoBus.emit("call.incoming", { callId: response.call_id, kind: "normal" });
+        demoBus.emit("pipeline.stage", {
+          callId: response.call_id,
+          stage: "utterance",
+          status: "done",
+        });
+        demoBus.emit("stt.utterance", {
+          callId: response.call_id,
+          text: response.transcript.text,
+          isFinal: true,
+          atMs: 0,
+        });
         setSummary(null);
         setPrepChecks([false, false, false]);
         setPhase("prep");
+        emitCardPipeline("backend", 250);
       } catch (error) {
         const message = error instanceof Error ? error.message : "음성 처리에 실패했습니다.";
         setMicErr(message);
@@ -590,7 +646,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setAudioBusy(false);
       }
     },
-    [clearAll, startClock]
+    [clearAll, emitCardPipeline, startClock]
   );
 
   // ── auth ──
@@ -935,10 +991,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     reserveTransfer: (target?: string) => {
       setTransferReserved(true);
       setTransferTarget(target ?? null);
+      demoBus.emit("transfer.requested", {
+        callId: respRef.current.call_id,
+        toDept: target ?? SUGGESTED_DEPT[incomingRef.current],
+        mode: "reserve",
+      });
     },
     toggleTransferReserve: () =>
       setTransferReserved((v) => {
         if (v) setTransferTarget(null);
+        else
+          demoBus.emit("transfer.requested", {
+            callId: respRef.current.call_id,
+            toDept: SUGGESTED_DEPT[incomingRef.current],
+            mode: "reserve",
+          });
         return !v;
       }),
     micErr,

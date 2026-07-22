@@ -1,17 +1,20 @@
-// S/G/E(단순·일반·긴급) 축 — 리터럴 enum이 계약에 없으므로 여기가 단일 파생 정의처다.
-// 판정 순서는 긴급 우선: E → S → G.
-//   E = incident_risk high(또는 긴급 인입) · S = ARS 셀프서비스 부서 · G = 나머지 일반 상담
-// 주의: 이 축은 RAG 8대분류(categories)·이관 부서(department)와 다른 축이다 — 섞지 않는다.
+// S/G/E(단순·일반·긴급) 축 — 3층 라우팅 taxonomy의 1층 (routing).
+// 원본: backend/app/routing/taxonomy.py. 판정 순서는 긴급 우선: E → S → G.
+//   E = incident_risk high(또는 긴급 인입) · S = 정형 조회·신청(ARS·AI 처리) · G = 나머지 일반 상담
+// 주의: 이 축은 부서 8종(2층)·업무코드(3층)와 다른 층이다 — 섞지 않는다.
 
 export type Sge = "S" | "G" | "E";
 
 export function deriveSge(
   risk: "low" | "high",
   department: string,
-  kind?: "normal" | "urgent" | "transfer"
+  kind?: "normal" | "urgent" | "transfer",
+  /** 백엔드/픽스처가 routing(1층)을 명시하면 그 값이 우선한다 */
+  routing?: Sge
 ): Sge {
   if (risk === "high" || kind === "urgent") return "E";
-  if (department === "ARS") return "S";
+  if (routing) return routing;
+  if (department === "ARS") return "S"; // 구 부서 라벨 호환
   return "G";
 }
 

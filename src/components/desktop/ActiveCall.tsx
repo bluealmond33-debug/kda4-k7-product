@@ -26,9 +26,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [muted, setMuted] = useState(false);
   const [held, setHeld] = useState(false);
   const [endConfirm, setEndConfirm] = useState(false);
-  // 이관 패널 — 버튼을 눌렀을 때만 알약이 옆으로 늘어나며 선택지가 드러난다
-  const [transferOpen, setTransferOpen] = useState(false);
-  const [transferPick, setTransferPick] = useState(false);
   // 메모 인라인 수정 — editIdx 행이 input으로 바뀐다
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
@@ -61,7 +58,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, [showHistory, showAccounts]);
 
-  // 키보드 단축키 — 입력 중에는 무시(Esc 제외). M 음소거 / H 보류 / T 이관 예약 / R 규정집 / N 메모
+  // 키보드 단축키 — 입력 중에는 무시(Esc 제외). M 음소거 / H 보류 / R 규정집 / N 메모
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -70,8 +67,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       if (e.key === "Escape") {
         setEndConfirm(false);
         setEditIdx(null);
-        setTransferOpen(false);
-        setTransferPick(false);
         if (typing) el.blur();
         return;
       }
@@ -80,7 +75,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       const k = e.key.toLowerCase();
       if (k === "m") setMuted((v) => !v);
       else if (k === "h") setHeld((v) => !v);
-      else if (k === "t") vm.toggleTransferReserve();
       else if (k === "r") (vm.regCollapsed ? vm.openManual : vm.closeReg)();
       else if (k === "n") {
         e.preventDefault();
@@ -135,34 +129,21 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </span>
           <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          {vm.transferReserved && (
+          {/* 이관 조작은 관리자 콘솔(?role=admin)로 이전 — 상담사에겐 상태만 보인다.
+              예약이 걸리면(관리자 조작·자동) 기존 문구 그대로, 아니면 자동 라우팅 안내 칩 */}
+          {vm.transferReserved ? (
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
               <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · 종료 시 {vm.transferTarget ?? vm.suggestedDept}로
             </span>
-          )}
-          {/* 이관 패널 — 기본(자동 배정)이 먼저, 지정은 한 단계 더.
-              max-width 0↔340px 전환으로 알약이 옆으로 부드럽게 늘어난다 */}
-          {!vm.showWrap && (
-            <span style={css("display:flex;align-items:center;overflow:hidden;transition:max-width .4s cubic-bezier(0.2,0.8,0.2,1),opacity .3s;max-width:" + (transferOpen && !vm.transferReserved ? "340px" : "0px") + ";opacity:" + (transferOpen && !vm.transferReserved ? "1" : "0"))}>
-              <span style={css("display:flex;align-items:center;gap:6px;white-space:nowrap")}>
-                <span
-                  onClick={() => {
-                    vm.reserveTransfer(vm.suggestedDept);
-                    setTransferOpen(false);
-                    setTransferPick(false);
-                  }}
-                  style={css("display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:9999px;background:var(--blue-700);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}
-                >
-                  <span className="mi" style={css("font-size:14px")}>auto_awesome</span>종료 시 {vm.suggestedDept}로
-                </span>
-                <span
-                  onClick={() => setTransferPick((v) => !v)}
-                  style={css("display:flex;align-items:center;gap:3px;padding:7px 12px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-800);font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:" + (transferPick ? "var(--gray-100)" : "var(--onair-surface)"))}
-                >
-                  다른 부서<span className="mi" style={css("font-size:15px")}>expand_more</span>
-                </span>
+          ) : (
+            !vm.showWrap && (
+              <span
+                title="부서 이관·대기열 배정은 관리자 콘솔에서 실시간 처리됩니다"
+                style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}
+              >
+                <span className="mi" style={css("font-size:13px")}>sync_alt</span> 자동 라우팅 · 이관은 관리자 콘솔
               </span>
-            </span>
+            )
           )}
           {held && (
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
@@ -192,47 +173,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               style={held ? { background: "var(--amber-700)", color: "#fff", borderColor: "var(--amber-700)" } : undefined}
             >
               <span className="mi" style={css("font-size:19px")}>{held ? "play_arrow" : "pause"}</span>
-            </span>
-            <span style={css("position:relative;display:flex")}>
-              <span
-                className="cbtn"
-                title={(vm.transferReserved ? "이관 예약 취소" : "이관 — 통화를 끊지 않고 종료 시 인계") + " · 단축키 T"}
-                onClick={() => {
-                  if (vm.transferReserved) {
-                    vm.toggleTransferReserve();
-                  } else {
-                    setTransferOpen((v) => !v);
-                    setTransferPick(false);
-                  }
-                }}
-                style={vm.transferReserved || transferOpen ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : undefined}
-              >
-                <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
-              </span>
-              {/* 다른 부서 팝오버 — grid 클리핑을 피해 버튼 기준으로 띄운다 */}
-              {transferPick && (
-                <div style={css("position:absolute;top:46px;right:0;width:290px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:11px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
-                  <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:8px")}>종료 시 인계할 부서</div>
-                  <div style={css("display:flex;flex-direction:column;gap:5px")}>
-                    {vm.transferDepts.map((d) => (
-                      <span
-                        key={d.name}
-                        onClick={() => {
-                          vm.reserveTransfer(d.name);
-                          setTransferOpen(false);
-                          setTransferPick(false);
-                        }}
-                        style={css("display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--gray-100);cursor:pointer;white-space:nowrap")}
-                      >
-                        <span style={css("flex:1")}>
-                          <span style={css("display:block;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name} <span style={css("font:600 10.5px;color:var(--gray-600)")}>{d.state}</span></span>
-                          <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </span>
           </span>
           )}
