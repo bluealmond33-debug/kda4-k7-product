@@ -85,13 +85,13 @@ export default function LiveTranscriptPanel({
   return (
     <div
       style={css(
-        "flex:none;width:400px;height:532px;display:flex;flex-direction:column;background:#0a0a0e;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden"
+        "flex:none;width:260px;height:532px;display:flex;flex-direction:column;background:#0a0a0e;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden"
       )}
     >
       {/* 파형 — 상자 안 상자: 어두운 패널 속 더 깊은 무대, 그 위 흰 물결 */}
       <div
         style={css(
-          "flex:none;margin:16px 38px 0;height:180px;position:relative;background:#000;border-radius:14px;overflow:hidden"
+          "flex:none;margin:16px 22px 0;height:130px;position:relative;background:#000;border-radius:14px;overflow:hidden"
         )}
       >
         <div style={css("position:absolute;inset:0")}>

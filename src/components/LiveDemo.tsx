@@ -29,7 +29,7 @@ export default function LiveDemo({
   // 확대를 허용해 큰 모니터에서 양옆 여백 없이 화면을 채운다
   const vm = useCallFlow({
     ...config,
-    ...(view === "phone" ? { stageW: 740, maxScale: 1.7 } : null),
+    ...(view === "phone" ? { stageW: 600, maxScale: 1.9 } : null),
     // 직원 단독 화면 — 데스크톱 폭(1100)을 브라우저 가로에 100% 맞춘다(양옆 여백 없음)
     ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 24, fitHeight: false } : null),
   });
