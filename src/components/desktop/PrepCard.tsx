@@ -113,12 +113,15 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             </div>
-            <div style={css("border-radius:8px;padding:14px 15px;background:" + (riskHigh ? "var(--red-800)" : "var(--green-100)"))}>
-              <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:6px;color:" + (riskHigh ? "rgba(255,255,255,.9)" : "var(--green-900)"))}>
-                <span className="mi" style={css("font-size:14px")}>{riskHigh ? "gpp_bad" : "verified_user"}</span>사고 징후
+            <div style={css("border-radius:8px;padding:14px 15px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
+              <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:7px;color:" + (riskHigh ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
+                사고 징후 <span style={css("font-weight:400;opacity:.7")}>(위험도)</span>
               </div>
-              <div style={css("font:800 34px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.2px;color:" + (riskHigh ? "#fff" : "var(--green-900)"))}>{vm.prepRiskLabel}</div>
-              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;margin-top:5px;color:" + (riskHigh ? "rgba(255,255,255,.88)" : "var(--green-900)"))}>{vm.prepRiskSignal}</div>
+              <div style={css("display:flex;align-items:center;gap:9px")}>
+                <span style={css("width:12px;height:12px;border-radius:9999px;flex:none;background:" + (riskHigh ? "#fff" : "var(--green-700)"))} />
+                <span style={css("font:800 30px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1px;color:" + (riskHigh ? "#fff" : "var(--gray-1000)"))}>{vm.prepRiskLabel}</span>
+              </div>
+              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;margin-top:6px;color:" + (riskHigh ? "rgba(255,255,255,.88)" : "var(--gray-600)"))}>{vm.prepRiskSignal}</div>
             </div>
             </div>
 
@@ -195,20 +198,28 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
   );
 }
 
-/** 세로 온도계 — 수은 높이가 감정 점수(0~100)에 비례, 색은 레벨 색. 재질 아이콘보다 길고 명확. */
+/** 세로 온도계 — 흰 유리관 + 회색 외곽 + 눈금 + 하이라이트, 수은 높이=감정 점수(0~100), 색은 레벨 색. */
 function Thermometer({ score, color }: { score: number | null; color: string }) {
-  const W = 20, H = 62;
-  const bulbCy = 52, bulbR = 8, tubeX = 7, tubeW = 6, tubeTop = 5, tubeBot = 46;
+  const W = 24, H = 72, cx = 12;
+  const tubeW = 9, tubeX = cx - tubeW / 2, top = 5, bulbCy = 58, bulbR = 10, tubeBot = bulbCy;
+  const innerW = 4, innerX = cx - innerW / 2, innerTop = top + 3, innerBot = bulbCy - 4;
   const pct = Math.max(0, Math.min(100, score ?? 0)) / 100;
-  const fillTop = tubeBot - (tubeBot - tubeTop) * pct;
+  const fillTop = innerBot - (innerBot - innerTop) * pct;
+  const ticks = [0.75, 0.5, 0.25].map((t) => innerBot - (innerBot - innerTop) * t);
   return (
     <svg width={W} height={H} viewBox={"0 0 " + W + " " + H} style={{ flex: "none", display: "block" }}>
-      {/* 배경 관 + 구 */}
-      <rect x={tubeX} y={tubeTop} width={tubeW} height={tubeBot - tubeTop + 4} rx={tubeW / 2} fill="var(--gray-300)" />
-      <circle cx={W / 2} cy={bulbCy} r={bulbR} fill="var(--gray-300)" />
-      {/* 수은 — 구는 항상 채우고 관은 점수만큼 */}
-      <circle cx={W / 2} cy={bulbCy} r={bulbR - 1.5} fill={color} />
-      <rect x={tubeX + 1.5} y={fillTop} width={tubeW - 3} height={bulbCy - fillTop} rx={(tubeW - 3) / 2} fill={color} />
+      {/* 유리관 + 구 (흰 유리, 회색 외곽) */}
+      <rect x={tubeX} y={top} width={tubeW} height={tubeBot - top} rx={tubeW / 2} fill="#fff" stroke="var(--gray-300)" strokeWidth="1.5" />
+      <circle cx={cx} cy={bulbCy} r={bulbR} fill="#fff" stroke="var(--gray-300)" strokeWidth="1.5" />
+      {/* 눈금 */}
+      {ticks.map((y, i) => (
+        <line key={i} x1={tubeX + tubeW} y1={y} x2={tubeX + tubeW + 3} y2={y} stroke="var(--gray-300)" strokeWidth="1.2" strokeLinecap="round" />
+      ))}
+      {/* 수은 — 구는 항상, 관은 점수만큼 */}
+      <circle cx={cx} cy={bulbCy} r={bulbR - 3.5} fill={color} />
+      <rect x={innerX} y={fillTop} width={innerW} height={bulbCy - fillTop} rx={innerW / 2} fill={color} />
+      {/* 유리 하이라이트 */}
+      <rect x={tubeX + 1.5} y={top + 3} width="1.5" height={tubeBot - top - 14} rx="0.75" fill="rgba(255,255,255,.75)" />
     </svg>
   );
 }
