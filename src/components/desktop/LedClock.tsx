@@ -46,7 +46,7 @@ function Seg({
   color?: string;
 }) {
   return (
-    <span style={{ position: "relative", display: "inline-block", fontFamily: font, fontSize: size, lineHeight: 1 }}>
+    <span style={{ position: "relative", display: "inline-block", fontFamily: font, fontSize: size, lineHeight: 1, fontWeight: "bold" }}>
       <span style={{ color: GHOST }}>{ghost}</span>
       <span style={{ position: "absolute", inset: 0, color }}>{text}</span>
     </span>
@@ -56,7 +56,7 @@ function Seg({
 /** 우측 스택 셀 — 실물 LCD의 구획: 상단에 작은 라벨, 아래 세그먼트 값 */
 function Cell({ label, children, last = false }: { label: string; children: React.ReactNode; last?: boolean }) {
   return (
-    <div style={css("padding:13px 20px 14px" + (last ? "" : ";border-bottom:1.5px solid var(--gray-300)"))}>
+    <div style={css("padding:15px 22px 16px" + (last ? "" : ";border-bottom:1.5px solid var(--gray-300)"))}>
       <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, letterSpacing: 2, color: LABEL, marginBottom: 7 }}>{label}</div>
       {children}
     </div>
@@ -108,44 +108,44 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
     <div
       style={{
         ...css(
-          "display:flex;align-items:stretch;border-radius:20px;background:var(--gray-100);border:1.5px solid var(--gray-300);box-shadow:inset 0 2px 10px rgba(22,20,17,.06), 0 1px 0 rgba(255,255,255,.8);overflow:hidden;transition:opacity .3s"
+          "display:flex;align-items:stretch;border-radius:22px;background:var(--gray-100);box-shadow:inset 0 2px 12px rgba(22,20,17,.05);overflow:hidden;transition:opacity .3s"
         ),
         opacity: dimmed ? 0.55 : 1,
       }}
     >
       {/* ── 좌: AM/PM + 시:분 + 초 ── */}
-      <div style={css("display:flex;align-items:center;gap:16px;padding:38px 34px 38px 30px")}>
+      <div style={css("display:flex;align-items:center;gap:16px;padding:44px 40px 44px 34px")}>
         <div style={css("display:flex;flex-direction:column;gap:8px;align-self:flex-start;padding-top:4px")}>
-          <span style={{ fontFamily: SEG14, fontSize: 20, color: isAm ? INK : GHOST }}>AM</span>
-          <span style={{ fontFamily: SEG14, fontSize: 20, color: !isAm ? INK : GHOST }}>PM</span>
+          <span style={{ fontFamily: SEG14, fontSize: 24, fontWeight: "bold", color: isAm ? INK : GHOST }}>AM</span>
+          <span style={{ fontFamily: SEG14, fontSize: 24, fontWeight: "bold", color: !isAm ? INK : GHOST }}>PM</span>
         </div>
-        <Seg text={hh} ghost="88" font={SEG7} size={132} />
+        <Seg text={hh} ghost="88" font={SEG7} size={172} />
         {/* 콜론 — 1초 점멸 */}
-        <span style={{ position: "relative", fontFamily: SEG7, fontSize: 132, lineHeight: 1 }}>
+        <span style={{ position: "relative", fontFamily: SEG7, fontSize: 172, lineHeight: 1, fontWeight: "bold" }}>
           <span style={{ color: GHOST }}>:</span>
           <span style={{ position: "absolute", inset: 0, color: INK, opacity: colonOn ? 1 : 0, transition: "opacity .12s" }}>:</span>
         </span>
-        <Seg text={mm} ghost="88" font={SEG7} size={132} />
+        <Seg text={mm} ghost="88" font={SEG7} size={172} />
         <div style={css("align-self:flex-end;padding-bottom:6px")}>
-          <Seg text={ss} ghost="88" font={SEG7} size={32} color={INK_DIM} />
+          <Seg text={ss} ghost="88" font={SEG7} size={40} color={INK_DIM} />
         </div>
       </div>
 
       {/* ── 우: DATE · DAY · TEMP 스택 — 구분선으로 나뉜 실물 LCD 구획 ── */}
-      <div style={css("display:flex;flex-direction:column;justify-content:center;border-left:1.5px solid var(--gray-300);min-width:188px")}>
+      <div style={css("display:flex;flex-direction:column;justify-content:center;border-left:1.5px solid var(--gray-300);min-width:225px")}>
         <Cell label="DATE">
-          <Seg text={dateStr} ghost={dateStr.replace(/\d/g, "8")} font={SEG14} size={34} />
+          <Seg text={dateStr} ghost={dateStr.replace(/\d/g, "8")} font={SEG14} size={44} />
         </Cell>
         <Cell label="DAY">
-          <Seg text={DAY_EN[now.getDay()]} ghost="~~~" font={SEG14} size={34} />
+          <Seg text={DAY_EN[now.getDay()]} ghost="~~~" font={SEG14} size={44} />
         </Cell>
         <Cell label="TEMP · SEOUL" last>
           <div style={css("display:flex;align-items:flex-start;gap:7px")}>
-            <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={34} />
-            <span style={{ fontFamily: SEG14, fontSize: 17, color: INK_DIM, marginTop: 1 }}>°C</span>
+            <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={44} />
+            <span style={{ fontFamily: SEG14, fontSize: 20, fontWeight: "bold", color: INK_DIM, marginTop: 2 }}>°C</span>
           </div>
           <div style={css("margin-top:8px")}>
-            <Seg text={(wx ? weatherSeg(wx.code) : "").padEnd(5, "!")} ghost="~~~~~" font={SEG14} size={17} color={INK_DIM} />
+            <Seg text={(wx ? weatherSeg(wx.code) : "").padEnd(5, "!")} ghost="~~~~~" font={SEG14} size={21} color={INK_DIM} />
           </div>
         </Cell>
       </div>
