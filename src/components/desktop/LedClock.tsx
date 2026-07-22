@@ -137,6 +137,12 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
       {/* ── 시계 — 시간이 주인공(최대). 오른쪽에 PM·초를 한 덩어리로 묶는다(같은 잉크, 위계는 크기로).
               날짜·요일은 상단 헤더에 이미 있어 여기서 뺐다(중복 제거) ── */}
       <div style={css("display:flex;align-items:center;gap:20px")}>
+        {/* 좌측 균형 스페이서 — 오른쪽 PM·초 그룹과 동일 폭(invisible)으로 콜론을 진짜 중앙에 둔다.
+            그래야 위 날씨 줄의 가운데 바와 세로축이 정확히 맞는다 */}
+        <div aria-hidden style={css("visibility:hidden;display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;padding:20px 0")}>
+          <Seg text={isAm ? "AM" : "PM"} ghost="~~" font={SEG14} size={36} />
+          <Seg text={ss} ghost="88" font={SEG7} size={36} />
+        </div>
         <Seg text={hh} ghost="88" font={SEG7} size={196} />
         {/* 콜론 — 1초 점멸 */}
         <span style={{ position: "relative", fontFamily: SEG7, fontSize: 196, lineHeight: 1, fontWeight: "bold" }}>
