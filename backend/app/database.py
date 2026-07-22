@@ -1,3 +1,8 @@
+"""PostgreSQL 저장/조회 — 이찬희 파트(kda4-k7-product/lch) database.py 이식.
+
+calls/transcripts/consultation_cards 세 테이블만 쓰는 MVP 스키마(database/mvp/schema.sql).
+"""
+
 from pathlib import Path
 from uuid import UUID
 
@@ -9,7 +14,7 @@ from app.config import Settings
 from app.contracts import MvpCallResponse
 
 
-SCHEMA_PATH = Path(__file__).resolve().parents[2] / "database" / "mvp" / "schema.sql"
+SCHEMA_PATH = Path(__file__).resolve().parents[1] / "database" / "mvp" / "schema.sql"
 
 
 class DatabaseUnavailable(RuntimeError):
@@ -24,12 +29,9 @@ def _database_url(settings: Settings) -> str:
 
 def initialize_database(settings: Settings) -> None:
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
-    try:
-        with psycopg.connect(_database_url(settings)) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(schema)
-    except psycopg.Error as exc:
-        raise DatabaseUnavailable("PostgreSQL schema initialization failed") from exc
+    with psycopg.connect(_database_url(settings)) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(schema)
 
 
 def ping_database(settings: Settings) -> bool:
@@ -44,100 +46,80 @@ def ping_database(settings: Settings) -> bool:
         return False
 
 
-def save_call(
-    settings: Settings,
-    response: MvpCallResponse,
-    raw_model_result: dict,
-    raw_emotion_result: dict | None = None,
-) -> None:
+def save_call(settings: Settings, response: MvpCallResponse, raw_model_result: dict) -> None:
     card = response.consultation_card
     transcript = response.transcript
-    try:
-        with psycopg.connect(_database_url(settings)) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    INSERT INTO calls (call_id, status, source_channel, audio_filename, created_at)
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    (
-                        response.call_id,
-                        response.status.value,
-                        response.source_channel,
-                        response.audio_filename,
-                        response.created_at,
-                    ),
+    with psycopg.connect(_database_url(settings)) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO calls (call_id, status, source_channel, audio_filename, created_at)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (
+                    response.call_id,
+                    response.status.value,
+                    response.source_channel,
+                    response.audio_filename,
+                    response.created_at,
+                ),
+            )
+            cursor.execute(
+                """
+                INSERT INTO transcripts (call_id, transcript_text, stt_model, duration_sec)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (response.call_id, transcript.text, transcript.stt_model, transcript.duration_sec),
+            )
+            cursor.execute(
+                """
+                INSERT INTO consultation_cards (
+                    call_id, schema_version, summary, business_type, department,
+                    routing_reason, incident_risk, risk_reason, routing_confidence,
+                    emotion_status, emotion_score, emotion_level, emotion_reason,
+                    raw_model_result
                 )
-                cursor.execute(
-                    """
-                    INSERT INTO transcripts (call_id, transcript_text, stt_model, duration_sec)
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    (
-                        response.call_id,
-                        transcript.text,
-                        transcript.stt_model,
-                        transcript.duration_sec,
-                    ),
-                )
-                cursor.execute(
-                    """
-                    INSERT INTO consultation_cards (
-                        call_id, schema_version, summary, business_type, department,
-                        routing_reason, incident_risk, risk_reason, routing_confidence,
-                        emotion_status, emotion_score, emotion_level, emotion_reason,
-                        raw_model_result, raw_emotion_result
-                    )
-                    VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s, %s
-                    )
-                    """,
-                    (
-                        response.call_id,
-                        response.schema_version,
-                        card.summary,
-                        card.business_type,
-                        card.department,
-                        card.routing_reason,
-                        card.incident_risk.value,
-                        card.risk_reason,
-                        card.routing_confidence,
-                        card.emotion.status.value,
-                        card.emotion.score,
-                        card.emotion.level,
-                        card.emotion.reason,
-                        Jsonb(raw_model_result),
-                        Jsonb(raw_emotion_result or {}),
-                    ),
-                )
-    except psycopg.Error as exc:
-        raise DatabaseUnavailable("PostgreSQL call save failed") from exc
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    response.call_id,
+                    response.schema_version,
+                    card.summary,
+                    card.business_type,
+                    card.department,
+                    card.routing_reason,
+                    card.incident_risk.value,
+                    card.risk_reason,
+                    card.routing_confidence,
+                    card.emotion.status.value,
+                    card.emotion.score,
+                    card.emotion.level,
+                    card.emotion.reason,
+                    Jsonb(raw_model_result),
+                ),
+            )
 
 
 def get_call(settings: Settings, call_id: UUID) -> MvpCallResponse | None:
-    try:
-        with psycopg.connect(_database_url(settings), row_factory=dict_row) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT
-                        c.call_id, c.status, c.source_channel, c.audio_filename, c.created_at,
-                        t.transcript_text, t.stt_model, t.duration_sec,
-                        card.schema_version, card.summary, card.business_type, card.department,
-                        card.routing_reason, card.incident_risk, card.risk_reason,
-                        card.routing_confidence, card.emotion_status, card.emotion_score,
-                        card.emotion_level, card.emotion_reason
-                    FROM calls AS c
-                    JOIN transcripts AS t ON t.call_id = c.call_id
-                    JOIN consultation_cards AS card ON card.call_id = c.call_id
-                    WHERE c.call_id = %s
-                    """,
-                    (call_id,),
-                )
-                row = cursor.fetchone()
-    except psycopg.Error as exc:
-        raise DatabaseUnavailable("PostgreSQL call lookup failed") from exc
+    with psycopg.connect(_database_url(settings), row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    c.call_id, c.status, c.source_channel, c.audio_filename, c.created_at,
+                    t.transcript_text, t.stt_model, t.duration_sec,
+                    card.schema_version, card.summary, card.business_type, card.department,
+                    card.routing_reason, card.incident_risk, card.risk_reason,
+                    card.routing_confidence, card.emotion_status, card.emotion_score,
+                    card.emotion_level, card.emotion_reason
+                FROM calls AS c
+                JOIN transcripts AS t ON t.call_id = c.call_id
+                JOIN consultation_cards AS card ON card.call_id = c.call_id
+                WHERE c.call_id = %s
+                """,
+                (call_id,),
+            )
+            row = cursor.fetchone()
     if row is None:
         return None
     return MvpCallResponse.model_validate(
