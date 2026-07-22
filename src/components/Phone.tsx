@@ -164,7 +164,7 @@ const CALL_CONTROLS: {
   dy?: number;
 }[] = [
   { icon: "speaker", label: "오디오" },
-  { icon: "facetime", label: "FaceTime", size: 38 },
+  { icon: "facetime", label: "FaceTime", size: 48 },
   { icon: "micSlash", label: "소리 끔" },
   { icon: "more", label: "기타" },
   { icon: "callEnd", label: "종료", end: true },
