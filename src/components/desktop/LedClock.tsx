@@ -117,10 +117,7 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
     <div style={{ ...css("display:flex;flex-direction:column;align-items:center;gap:22px;transition:opacity .3s"), opacity: dimmed ? 0.55 : 1 }}>
       {/* ── 위: 날씨 · 기온 · 습도 — 켜진 값은 전부 같은 잉크(검정), 단위·라벨만 인쇄체 옅은 회색 ── */}
       <div style={css("display:flex;align-items:center;gap:15px")}>
-        <div style={css("display:flex;flex-direction:column;align-items:center;gap:3px")}>
-          <WxIcon size={30} strokeWidth={2.2} color={wx ? INK : GHOST} />
-          <span style={{ fontFamily: SANS, fontWeight: 500, fontSize: 11, color: LABEL, whiteSpace: "nowrap" }}>{weather?.ko ?? "수신 중"}</span>
-        </div>
+        <WxIcon size={32} strokeWidth={2.2} color={wx ? INK : GHOST} />
         <div style={css("display:flex;align-items:flex-start;gap:5px")}>
           <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={34} />
           <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: LABEL, marginTop: 3 }}>°C</span>
@@ -145,8 +142,8 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
         <Seg text={mm} ghost="88" font={SEG7} size={196} />
         {/* PM·초 그룹 — 시(時) 높이에 맞춰 위=AM/PM, 아래=초 (실물 시계 우측 스택) */}
         <div style={css("display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;padding:14px 0")}>
-          <span style={{ fontFamily: SEG14, fontSize: 40, fontWeight: "bold", color: INK }}>{isAm ? "AM" : "PM"}</span>
-          <Seg text={ss} ghost="88" font={SEG7} size={52} />
+          <span style={{ fontFamily: SEG14, fontSize: 46, fontWeight: "bold", color: INK }}>{isAm ? "AM" : "PM"}</span>
+          <Seg text={ss} ghost="88" font={SEG7} size={46} />
         </div>
       </div>
     </div>
