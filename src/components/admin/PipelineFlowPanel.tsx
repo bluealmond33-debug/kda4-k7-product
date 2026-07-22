@@ -36,7 +36,7 @@ export default function PipelineFlowPanel({
             <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
               {flowCall.endedAt === null ? "처리 중" : "최근 처리"} · {KIND_LABEL[flowCall.kind]} 콜
             </span>
-            <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-600)")}>{flowCall.callId}</span>
+            <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700)")}>{flowCall.callId}</span>
           </span>
         ) : (
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
@@ -105,7 +105,8 @@ export default function PipelineFlowPanel({
                 <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.1px;color:" + (on || done ? "var(--gray-1000)" : "var(--gray-700)"))}>
                   {node.label}
                 </span>
-                <span style={css("font:500 10px 'Geist Mono',monospace;color:var(--gray-600);line-height:1.4")}>{node.tech}</span>
+                {/* keep-all — 한글이 음절 중간에서 꺾이지 않게(공백·`·`에서만 개행) */}
+                <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700);line-height:1.45;word-break:keep-all")}>{node.tech}</span>
                 {explain && (
                   <span style={css("font:400 10.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border-radius:8px;padding:7px 9px;text-align:left;animation:dockDown .25s var(--ease-out)")}>
                     {node.explain}
@@ -126,7 +127,7 @@ export default function PipelineFlowPanel({
               “{ticker.text}”
             </span>
             <div style={css("flex:1")} />
-            <span style={css("flex:none;font:500 10px 'Geist Mono',monospace;color:var(--gray-600)")}>STT · {ticker.callId}</span>
+            <span style={css("flex:none;font:500 10px 'Geist Mono',monospace;color:var(--gray-700)")}>STT · {ticker.callId}</span>
           </>
         ) : (
           <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>

@@ -18,6 +18,7 @@ import {
   DEPARTMENTS,
   DEPT_SEED_QUEUES,
   SEED_CARD_TOTAL,
+  SEED_FEED,
   normalizeDeptLabel,
   type QueueItem,
 } from "../data/adminContent";
@@ -49,16 +50,54 @@ export interface FeedState {
   ticker: { callId: string; text: string } | null;
 }
 
-const initialState = (): FeedState => ({
-  calls: {},
-  order: [],
-  queues: Object.fromEntries(
-    DEPARTMENTS.map((d) => [d.name, (DEPT_SEED_QUEUES[d.name] ?? []).slice()])
-  ),
-  totalCards: SEED_CARD_TOTAL,
-  handled: 0,
-  ticker: null,
-});
+const initialState = (): FeedState => {
+  // 피드 시드 — 완료 처리된 최근 콜 몇 건을 깔아 "이미 돌아가는 시스템"으로 시작한다.
+  // 헤더 누적(12건)·부서 대기열 시드와 숫자 서사가 이어진다. 오래된 순으로 order에 쌓는다.
+  const now = Date.now();
+  const calls: Record<string, AdminCallRecord> = {};
+  const order: string[] = [];
+  [...SEED_FEED].reverse().forEach((s, i) => {
+    const callId = `seed-feed-${i}`;
+    const startedAt = now - s.minutesAgo * 60_000;
+    calls[callId] = {
+      callId,
+      kind: s.sge === "E" ? "urgent" : "normal",
+      source: "server",
+      startedAt,
+      endedAt: startedAt + 3 * 60_000,
+      utterances: [],
+      stages: {},
+      card: {
+        callId,
+        summary: s.summary,
+        businessType: s.businessType,
+        department: s.department,
+        routingReason: "",
+        incidentRisk: s.sge === "E" ? "high" : "low",
+        riskReason: null,
+        confidence: null,
+        emotionLevel: null,
+        source: "demo",
+      },
+      sge: s.sge,
+      department: s.department,
+      confidence: null,
+      risk: s.sge === "E" ? "high" : "low",
+      transferTo: null,
+    };
+    order.push(callId);
+  });
+  return {
+    calls,
+    order,
+    queues: Object.fromEntries(
+      DEPARTMENTS.map((d) => [d.name, (DEPT_SEED_QUEUES[d.name] ?? []).slice()])
+    ),
+    totalCards: SEED_CARD_TOTAL,
+    handled: 0,
+    ticker: null,
+  };
+};
 
 type Action =
   | { type: "event"; env: DemoEnvelope }

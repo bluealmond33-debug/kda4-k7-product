@@ -60,7 +60,7 @@ export default function SystemStatusBar({
       <span style={css("display:inline-flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
         <span className={"onairdot" + (concurrent ? "" : " off")} />
         <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>동시 처리</span>
-        <span className="bignum" style={css("font-size:13px;color:var(--gray-1000)")}>{concurrent}</span>
+        <span className="bignum" style={css("font-size:15px;color:var(--gray-1000)")}>{concurrent}</span>
         <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
       </span>
 

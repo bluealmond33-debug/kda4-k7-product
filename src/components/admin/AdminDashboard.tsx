@@ -46,10 +46,13 @@ export default function AdminDashboard() {
 
   const fit = useCallback(() => {
     const w = rootRef.current ? rootRef.current.clientWidth : window.innerWidth;
-    const sc = Math.min(MAX_SCALE, Math.max(0.2, (w - FIT_PAD) / STAGE_W));
+    const natural = stageRef.current ? stageRef.current.offsetHeight : 0;
+    // 가로 + 세로 둘 다 클램프 — 모니터링 화면은 스크롤 없이 한 화면에 다 보여야 한다
+    // (테스트 콜·지식베이스가 폴드 아래로 내려가면 발표에서 조작 지점이 사라진다)
+    const scH = natural > 0 ? (window.innerHeight - FIT_PAD) / natural : MAX_SCALE;
+    const sc = Math.min(MAX_SCALE, Math.max(0.2, (w - FIT_PAD) / STAGE_W), scH);
     setScale((prev) => (Math.abs(prev - sc) > 0.0005 ? sc : prev));
-    const h = stageRef.current ? stageRef.current.offsetHeight : 0;
-    setNatH((prev) => (prev !== h ? h : prev));
+    setNatH((prev) => (prev !== natural ? natural : prev));
   }, []);
 
   useEffect(() => {
@@ -105,7 +108,8 @@ export default function AdminDashboard() {
                 <RoutingFeed feed={feed.feed} totalCards={feed.state.totalCards} />
                 <DepartmentBoard feed={feed} />
               </div>
-              <div style={css("display:flex;gap:12px;flex:none")}>
+              {/* 하단 행 — KB가 남는 폭을 갖고 테스트 콜은 자연 폭 고정(수축으로 인한 한글 세로 꺾임 방지) */}
+              <div style={css("display:grid;grid-template-columns:1fr auto;gap:12px;flex:none")}>
                 <KnowledgeBasePanel
                   totalCards={feed.state.totalCards}
                   status={status}

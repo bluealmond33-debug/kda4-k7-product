@@ -1,5 +1,6 @@
 import { css } from "../../lib/css";
 import { SGE_META } from "../../services";
+import { playTestCall } from "../../services/adminScenario";
 import type { AdminCallRecord } from "../../hooks/useAdminFeed";
 
 const fmtTime = (ts: number) => {
@@ -29,7 +30,7 @@ export default function RoutingFeed({
       <div style={css("display:flex;align-items:center;gap:10px;padding:0 18px 10px")}>
         <span className="sechd">실시간 라우팅 피드</span>
         <span style={css("display:inline-flex;align-items:baseline;gap:4px;background:var(--gray-100);border-radius:9999px;padding:3px 11px")}>
-          <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>누적</span>
+          <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>오늘 누적</span>
           <span className="bignum" style={css("font-size:14px;color:var(--gray-1000)")}>{totalCards}</span>
           <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
@@ -44,14 +45,18 @@ export default function RoutingFeed({
         ))}
       </div>
 
-      <div style={css("flex:1;overflow-y:auto;padding:4px 16px 10px;min-height:0")}>
+      <div style={css("flex:1;overflow-y:auto;padding:4px 16px 10px;min-height:0;display:flex;flex-direction:column")}>
         {!front && (
-          <div style={css("display:flex;flex-direction:column;align-items:center;gap:9px;padding:52px 20px;color:var(--gray-600)")}>
+          /* 빈 상태 — 세로 중앙 + 바로 시작할 수 있는 고스트 CTA (발표자가 어디서든 쇼를 연다) */
+          <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:20px;color:var(--gray-700)")}>
             <span className="mi" style={css("font-size:32px;color:var(--gray-500)")}>quickreply</span>
             <span style={css("font:400 12.5px 'Geist Sans','Pretendard',sans-serif;text-align:center;line-height:1.65")}>
               아직 분류된 콜이 없습니다.
               <br />
               상담사 화면의 콜 또는 테스트 콜이 여기 카드로 쌓입니다.
+            </span>
+            <span className="ghosttile" onClick={() => playTestCall("G")}>
+              <span className="mi" style={css("font-size:15px")}>play_arrow</span>테스트 콜로 흐름 보기
             </span>
           </div>
         )}
@@ -86,7 +91,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
           <span className="mi" style={css("font-size:16px;color:var(--blue-700);animation:spin 1.2s linear infinite")}>progress_activity</span>
           <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>분류 중…</span>
           <div style={css("flex:1")} />
-          <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-600)")}>{fmtTime(r.startedAt)}</span>
+          <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
         </div>
         <div style={css("margin-top:8px;font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
           {r.utterances[r.utterances.length - 1] ?? "발화 수신 대기 중"}
@@ -106,7 +111,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
           {r.card.businessType}
         </span>
         <div style={css("flex:1")} />
-        <span style={css("flex:none;font:500 10.5px 'Geist Mono',monospace;color:var(--gray-600)")}>{fmtTime(r.startedAt)}</span>
+        <span style={css("flex:none;font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
       </div>
       <div style={css("margin-top:7px;font:400 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>
         {r.card.summary}
@@ -131,10 +136,10 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
           </span>
         )}
         <div style={css("flex:1")} />
-        <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:" + (r.card.source === "backend" ? "var(--green-900)" : "var(--gray-600)"))}>
+        <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:" + (r.card.source === "backend" ? "var(--green-900)" : "var(--gray-700)"))}>
           {r.card.source === "backend" ? "실백엔드" : "데모"}
         </span>
-        {!live && <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 완료</span>}
+        {!live && <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>· 완료</span>}
       </div>
     </div>
   );
@@ -166,7 +171,7 @@ function StripCard({ r, idx }: { r: AdminCallRecord; idx: number }) {
         <span style={css("flex:none;font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px")}>
           {r.department ?? r.card?.department ?? ""}
         </span>
-        <span style={css("flex:none;font:500 10px 'Geist Mono',monospace;color:var(--gray-600)")}>{fmtTime(r.startedAt)}</span>
+        <span style={css("flex:none;font:500 10px 'Geist Mono',monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
       </div>
     </div>
   );

@@ -36,7 +36,7 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
   {
     id: "classify",
     label: "sLLM 분류·요약",
-    tech: "strict-JSON · 업무유형·요약",
+    tech: "strict-JSON · 업무유형",
     icon: "psychology",
     explain:
       "언어모델이 발화를 요약하고 업무유형을 뽑습니다. 출력은 스키마 강제(strict-JSON) — 화면과 DB가 같은 계약(mvp-1.0)을 공유합니다.",
@@ -44,7 +44,7 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
   {
     id: "risk",
     label: "위험·감정 분석",
-    tech: "사고징후 low/high · 감정온도",
+    tech: "사고징후 · 감정온도",
     icon: "warning",
     explain:
       "보이스피싱·명의도용 같은 사고 징후와 감정온도를 판단합니다. 긴급(E) 판정의 근거가 여기서 나옵니다.",
@@ -60,7 +60,7 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
   {
     id: "route",
     label: "부서 라우팅",
-    tech: "긴급 게이트 + 8부서 · E→S→G",
+    tech: "긴급 게이트 · 8부서 · E→S→G",
     icon: "alt_route",
     explain:
       "규칙 기반 긴급 게이트가 먼저 걸러내고(E→S→G 순 판정), 8개 부서 대기열에 배정합니다. 단순(S) 업무는 상담사 대신 ARS·AI가 받습니다.",
@@ -68,7 +68,7 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
   {
     id: "rag",
     label: "RAG 규정검색",
-    tech: "pgvector · 밀집 0.65 + 키워드 0.35",
+    tech: "pgvector · dense .65 + kw .35",
     icon: "menu_book",
     explain:
       "상담 맥락으로 규정·매뉴얼을 하이브리드 검색해 상담사 화면에 근거 조항을 띄웁니다. 라우팅과 같은 분류 축을 씁니다.",
@@ -76,7 +76,7 @@ export const PIPELINE_NODES: PipelineNodeDef[] = [
   {
     id: "wrap",
     label: "후처리 자동화",
-    tech: "유형·결과·후속조치 초안",
+    tech: "유형·결과·후속조치",
     icon: "edit_note",
     explain:
       "통화 종료와 동시에 후처리 초안이 자동 작성됩니다 — 상담사는 확인·보정만 합니다.",
@@ -141,6 +141,47 @@ export const DEPT_SEED_QUEUES: Record<string, QueueItem[]> = {
 
 /** 오늘 누적 상담카드 시드 — card.created 이벤트마다 +1 */
 export const SEED_CARD_TOTAL = 12;
+
+/** 피드 시드 — 켜자마자 "이미 돌아가는 시스템"으로 보이게 최근 처리분 몇 건을 깔아둔다.
+ *  헤더의 누적 12건·부서 대기열 시드와 숫자 서사가 이어진다. minutesAgo = 표시 시각용. */
+export interface SeedFeedItem {
+  businessType: string;
+  summary: string;
+  department: string;
+  sge: Sge;
+  minutesAgo: number;
+}
+
+export const SEED_FEED: SeedFeedItem[] = [
+  {
+    businessType: "OTP 재발급",
+    summary: "고객이 모바일 OTP 재발급 절차를 문의함 — 본인확인 후 정형 처리.",
+    department: "전자금융·디지털",
+    sge: "S",
+    minutesAgo: 4,
+  },
+  {
+    businessType: "전세자금대출 조건변경",
+    summary: "고객이 전세자금대출 금리·만기 변경과 중도상환수수료를 복합 문의함.",
+    department: "여신·대출",
+    sge: "G",
+    minutesAgo: 11,
+  },
+  {
+    businessType: "명의도용 지급정지",
+    summary: "본인 미신청 거래 문자 수신 — 지급정지 접수 및 사고 등록 처리.",
+    department: "사고·신고",
+    sge: "E",
+    minutesAgo: 19,
+  },
+  {
+    businessType: "해외송금 취소·반환",
+    summary: "고객이 전일 해외송금 건의 취소 가능 여부와 반환 절차를 문의함.",
+    department: "외환·수출입",
+    sge: "G",
+    minutesAgo: 27,
+  },
+];
 
 /** 지식베이스(RAG) 통계 — database/rag 전처리 산출물 기준 상수 */
 export const RAG_STATS = { docs: 32, chunks: 1153, categories: 8 } as const;

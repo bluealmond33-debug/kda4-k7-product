@@ -23,17 +23,18 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
         <div style={css("flex:1")} />
         <span style={css("display:inline-flex;align-items:baseline;gap:5px")}>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>전체 대기</span>
-          <span className="bignum" style={css("font-size:17px;color:var(--gray-1000)")}>{totalWaiting}</span>
+          <span className="bignum" style={css("font-size:20px;color:var(--gray-1000)")}>{totalWaiting}</span>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
         <span style={css("display:inline-flex;align-items:baseline;gap:5px;margin-left:10px")}>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>오늘 처리</span>
-          <span className="bignum" style={css("font-size:17px;color:var(--green-900)")}>{feed.state.handled}</span>
+          <span className="bignum" style={css("font-size:20px;color:var(--green-900)")}>{feed.state.handled}</span>
           <span style={css("font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
       </div>
 
-      <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-content:start;overflow-y:auto;min-height:0")}>
+      {/* 행 높이를 패널에 꽉 채워(minmax(0,1fr)) 죽은 공간을 카드 내부 호흡으로 흡수한다 */}
+      <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(0,1fr);gap:8px;min-height:0")}>
         {DEPARTMENTS.map((dept) => {
           const items = feed.state.queues[dept.name] ?? [];
           const counts = feed.queueCounts[dept.name] ?? { s: 0, g: 0, e: 0 };
@@ -44,7 +45,7 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
             <div
               key={dept.name}
               style={css(
-                "border-radius:11px;background:var(--background-200);padding:10px 12px;cursor:pointer;transition:box-shadow .25s var(--ease-out);align-self:start;" +
+                "display:flex;flex-direction:column;min-height:0;border-radius:11px;background:var(--background-200);padding:10px 12px;cursor:pointer;transition:box-shadow .25s var(--ease-out);" +
                   (open ? "box-shadow:var(--sh-focus);background:var(--onair-surface)" : "") +
                   (urgent ? ";outline:1.5px solid var(--red-400)" : "")
               )}
@@ -70,8 +71,9 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
                 {dept.tasks.slice(0, 3).join(" · ")}
               </div>
 
-              {/* S/G/E 카운트 칩 — 0건은 흐리게 */}
-              <div style={css("margin-top:9px;display:flex;align-items:center;gap:6px")}>
+              {/* S/G/E 카운트 칩 — 0건은 흐리게. 카드 바닥에 고정(order+margin-top:auto)해
+                  남는 세로 공간이 카드 내부의 호흡으로 흡수된다 */}
+              <div style={css("order:3;margin-top:auto;padding-top:9px;display:flex;align-items:center;gap:6px")}>
                 {(["E", "G", "S"] as const).map((k) => {
                   const n = k === "S" ? counts.s : k === "G" ? counts.g : counts.e;
                   const meta = SGE_META[k];
@@ -91,9 +93,9 @@ export default function DepartmentBoard({ feed }: { feed: AdminFeed }) {
                 <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>대기 {items.length}건</span>
               </div>
 
-              {/* 펼친 대기 목록 */}
+              {/* 펼친 대기 목록 — 카운트 행 위의 남는 공간을 차지하고 넘치면 카드 안에서 스크롤 */}
               {open && (
-                <div style={css("margin-top:10px;display:flex;flex-direction:column;gap:5px;animation:dockDown .25s var(--ease-out)")} onClick={(e) => e.stopPropagation()}>
+                <div style={css("order:2;flex:1;min-height:0;overflow-y:auto;margin-top:9px;display:flex;flex-direction:column;gap:5px;animation:dockDown .25s var(--ease-out)")} onClick={(e) => e.stopPropagation()}>
                   {items.length === 0 && (
                     <div style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);padding:6px 2px")}>대기 중인 상담이 없습니다</div>
                   )}
