@@ -3,8 +3,6 @@ import {
   Sun,
   CloudSun,
   Cloud,
-  CloudFog,
-  CloudDrizzle,
   CloudRain,
   CloudSnow,
   CloudLightning,
@@ -27,22 +25,22 @@ const SEG7 = "'DSEG7-Classic',monospace";
 const SEG14 = "'DSEG14-Classic',monospace";
 const INK = "var(--gray-1000)";
 const GHOST = "rgba(22,20,17,.08)";
+const ICON_GHOST = "var(--gray-200)"; // 꺼진 날씨 아이콘
 const LABEL = "var(--gray-500)";
 const SANS = "'Geist Sans','Pretendard',sans-serif";
 
 
-/** Open-Meteo weather_code → 해/구름 아이콘 + 한글 라벨 */
-function weatherOf(code: number): { Icon: LucideIcon; ko: string } {
-  if (code === 0) return { Icon: Sun, ko: "맑음" };
-  if (code <= 2) return { Icon: CloudSun, ko: "구름 조금" };
-  if (code === 3) return { Icon: Cloud, ko: "흐림" };
-  if (code === 45 || code === 48) return { Icon: CloudFog, ko: "안개" };
-  if (code <= 57) return { Icon: CloudDrizzle, ko: "이슬비" };
-  if (code <= 67) return { Icon: CloudRain, ko: "비" };
-  if (code <= 77) return { Icon: CloudSnow, ko: "눈" };
-  if (code <= 82) return { Icon: CloudRain, ko: "소나기" };
-  if (code <= 86) return { Icon: CloudSnow, ko: "소낙눈" };
-  return { Icon: CloudLightning, ko: "뇌우" };
+/** 실물 기상 LCD처럼 아이콘을 다 깔아두고 현재 날씨만 켠다(나머지는 고스트로 끔). */
+const WX_ICONS: LucideIcon[] = [Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudLightning];
+/** Open-Meteo weather_code → 켜둘 아이콘 인덱스 (WX_ICONS 기준) */
+function activeWxIndex(code: number): number {
+  if (code === 0) return 0; // 맑음
+  if (code <= 2) return 1; // 구름 조금
+  if (code === 3 || code === 45 || code === 48) return 2; // 흐림·안개
+  if (code <= 67) return 3; // 이슬비·비
+  if (code <= 77) return 4; // 눈
+  if (code <= 86) return 3; // 소나기
+  return 5; // 뇌우
 }
 
 /** 세그먼트 텍스트 — 고스트(전점등)를 깔고 위에 실제 값을 겹친다. '!' = 빈 칸(고스트만) */
@@ -110,22 +108,25 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
   const colonOn = now.getSeconds() % 2 === 0;
   const tempStr = wx ? (wx.temp < 0 ? "-" : "") + Math.abs(wx.temp) : "--";
   const humStr = wx ? String(wx.humidity) : "--";
-  const weather = wx ? weatherOf(wx.code) : null;
-  const WxIcon = weather?.Icon ?? Cloud;
+  const wxIdx = wx ? activeWxIndex(wx.code) : -1;
 
   return (
     <div style={{ ...css("display:flex;flex-direction:column;align-items:center;gap:22px;transition:opacity .3s"), opacity: dimmed ? 0.55 : 1 }}>
-      {/* ── 위: 날씨 · 기온 · 습도 — 켜진 값은 전부 같은 잉크(검정), 단위·라벨만 인쇄체 옅은 회색 ── */}
-      <div style={css("display:flex;align-items:center;gap:15px")}>
-        <WxIcon size={32} strokeWidth={2.2} color={wx ? INK : GHOST} />
-        <div style={css("display:flex;align-items:flex-start;gap:5px")}>
-          <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={34} />
-          <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: LABEL, marginTop: 3 }}>°C</span>
+      {/* ── 위: 날씨 아이콘 행(전부 깔고 현재만 켜짐) · 기온 · 습도 — 값은 전부 같은 검정, 단위만 라벨 ── */}
+      <div style={css("display:flex;align-items:center;gap:16px")}>
+        <div style={css("display:flex;align-items:center;gap:8px")}>
+          {WX_ICONS.map((Ic, i) => (
+            <Ic key={i} size={26} strokeWidth={2.4} color={i === wxIdx ? INK : ICON_GHOST} />
+          ))}
         </div>
         <span style={css("width:1.5px;height:22px;background:var(--gray-200);border-radius:1px")} />
+        <div style={css("display:flex;align-items:flex-start;gap:5px")}>
+          <Seg text={tempStr} ghost={tempStr.replace(/[0-9-]/g, "8")} font={SEG7} size={36} />
+          <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: LABEL, marginTop: 3 }}>°C</span>
+        </div>
         <Droplets size={24} strokeWidth={2.2} color={INK} />
         <div style={css("display:flex;align-items:flex-start;gap:5px")}>
-          <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={34} />
+          <Seg text={humStr} ghost={humStr.replace(/[0-9]/g, "8")} font={SEG7} size={36} />
           <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: LABEL, marginTop: 3 }}>%</span>
         </div>
       </div>
@@ -141,9 +142,9 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
         </span>
         <Seg text={mm} ghost="88" font={SEG7} size={196} />
         {/* PM·초 그룹 — 시(時) 높이에 맞춰 위=AM/PM, 아래=초 (실물 시계 우측 스택) */}
-        <div style={css("display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;padding:14px 0")}>
-          <Seg text={isAm ? "AM" : "PM"} ghost="~~" font={SEG14} size={46} />
-          <Seg text={ss} ghost="88" font={SEG7} size={46} />
+        <div style={css("display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;padding:20px 0")}>
+          <Seg text={isAm ? "AM" : "PM"} ghost="~~" font={SEG14} size={36} />
+          <Seg text={ss} ghost="88" font={SEG7} size={36} />
         </div>
       </div>
     </div>
