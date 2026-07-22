@@ -27,19 +27,21 @@ export default function LiveTranscriptPanel({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // 발화 반응 파형 — 새 조각마다 스파이크(2.3) 후 기저로 감쇠.
-  // 기저: 대기 0.5(잔잔한 물결) · 통화 중 0.7(살아있는 물결)
-  const [amp, setAmp] = useState(0.5);
+  // 발화 반응 파형 — Siri 파형 원리(음량 비례 진폭 + 빠른 어택·느린 릴리즈)를
+  // 발화 이벤트에 적용: 새 조각마다 즉시 스파이크(3.0) 후 기저로 천천히 감쇠.
+  // 기저: 대기 0.9 · 통화 중 1.1 — 가만히 있어도 물결이 살아서 흐른다.
+  // (Threads 자체가 40겹 라인 + Perlin 노이즈라 겹침·랜덤 변조는 셰이더가 담당)
+  const [amp, setAmp] = useState(0.9);
   const prevCount = useRef(0);
   useEffect(() => {
-    if (lines.length > prevCount.current) setAmp(2.3);
+    if (lines.length > prevCount.current) setAmp(3.0);
     prevCount.current = lines.length;
   }, [lines]);
   useEffect(() => {
     const id = window.setInterval(() => {
       setAmp((a) => {
-        const base = active ? 0.7 : 0.5;
-        const next = a + (base - a) * 0.045;
+        const base = active ? 1.1 : 0.9;
+        const next = a + (base - a) * 0.04;
         return Math.abs(next - base) < 0.01 ? base : next;
       });
     }, 80);
@@ -65,10 +67,10 @@ export default function LiveTranscriptPanel({
         "flex:none;width:470px;height:532px;display:flex;flex-direction:column;background:var(--onair-surface);border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.4);overflow:hidden"
       )}
     >
-      {/* 파형 — 늘 흐르고, 말하면 요동친다 */}
-      <div style={css("flex:none;height:110px;position:relative;border-bottom:1px dashed var(--color-border)")}>
+      {/* 파형 — 검은 무대 위 흰 물결 (React Bits 원본의 대비). 늘 흐르고, 말하면 요동친다 */}
+      <div style={css("flex:none;height:120px;position:relative;background:#0a0a0e")}>
         <div style={css("position:absolute;inset:0")}>
-          <Threads amplitude={amp} distance={0} color={[0.12, 0.14, 0.19]} />
+          <Threads amplitude={amp} distance={0} color={[1, 1, 1]} />
         </div>
       </div>
 
