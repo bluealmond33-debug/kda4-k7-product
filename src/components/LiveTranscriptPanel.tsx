@@ -91,7 +91,7 @@ export default function LiveTranscriptPanel({
       {/* 파형 — 상자 안 상자: 어두운 패널 속 더 깊은 무대, 그 위 흰 물결 */}
       <div
         style={css(
-          "flex:none;margin:16px 38px 0;height:180px;position:relative;background:#000;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)"
+          "flex:none;margin:16px 38px 0;height:180px;position:relative;background:#000;border-radius:14px;overflow:hidden"
         )}
       >
         <div style={css("position:absolute;inset:0")}>
