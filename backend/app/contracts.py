@@ -1,15 +1,13 @@
+"""K7 표준 응답 계약(mvp-1.0) — 이찬희 파트(kda4-k7-product/lch)와 동일한 스키마.
+
+app/schemas.py의 기존 모델(EmotionResult 등)과 이름이 겹치므로 별도 모듈로 분리했다.
+"""
+
 from datetime import datetime
 from enum import Enum
-from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
-
-def _reject_boolean_number(value):
-    if isinstance(value, bool):
-        raise ValueError("boolean is not a valid numeric score")
-    return value
+from pydantic import BaseModel, Field, model_validator
 
 
 class CallStatus(str, Enum):
@@ -25,19 +23,12 @@ class IncidentRisk(str, Enum):
 
 class EmotionStatus(str, Enum):
     UNAVAILABLE = "unavailable"
+    DEMO = "demo"
     COMPLETED = "completed"
 
 
-class EmotionTemperatureLevel(str, Enum):
-    STABLE = "stable"
-    CAUTION = "caution"
-    ELEVATED = "elevated"
-
-
 class ModelConsultationResult(BaseModel):
-    """One normalized model boundary for summary, classification and routing."""
-
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    """요약·분류·라우팅을 위한 정규화된 모델 경계 하나."""
 
     summary: str = Field(min_length=1, max_length=2000)
     business_type: str = Field(min_length=1, max_length=200)
@@ -47,10 +38,6 @@ class ModelConsultationResult(BaseModel):
     risk_reason: str | None = Field(default=None, max_length=2000)
     routing_confidence: float | None = Field(default=None, ge=0, le=1)
 
-    _validate_routing_confidence = field_validator(
-        "routing_confidence", mode="before"
-    )(_reject_boolean_number)
-
     @model_validator(mode="after")
     def require_high_risk_reason(self) -> "ModelConsultationResult":
         if self.incident_risk == IncidentRisk.HIGH and not self.risk_reason:
@@ -59,97 +46,51 @@ class ModelConsultationResult(BaseModel):
 
 
 class TranscriptResult(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
     text: str = Field(min_length=1)
-    stt_model: str = Field(min_length=1, max_length=100)
+    stt_model: str
     duration_sec: float = Field(default=0, ge=0)
 
-    _validate_duration = field_validator("duration_sec", mode="before")(
-        _reject_boolean_number
-    )
 
-
-class EmotionResult(BaseModel):
-    """Emotion is optional for MVP and must never pretend a stub is a model."""
-
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+class MvpEmotionResult(BaseModel):
+    """감정은 MVP에서 선택사항 — 스텁을 진짜 모델인 척 하지 않는다."""
 
     status: EmotionStatus = EmotionStatus.UNAVAILABLE
     score: float | None = Field(default=None, ge=0, le=100)
-    level: EmotionTemperatureLevel | None = None
-    reason: str | None = Field(default=None, max_length=2000)
-
-    _validate_score = field_validator("score", mode="before")(_reject_boolean_number)
+    level: str | None = None
+    reason: str | None = None
 
     @model_validator(mode="after")
-    def keep_unavailable_empty(self) -> "EmotionResult":
+    def keep_unavailable_empty(self) -> "MvpEmotionResult":
         if self.status == EmotionStatus.UNAVAILABLE and (
             self.score is not None or self.level is not None
         ):
             raise ValueError("unavailable emotion cannot include a score or level")
-        if self.status == EmotionStatus.COMPLETED and (
-            self.score is None or not self.level
-        ):
-            raise ValueError("available emotion requires a score and level")
-        if self.score is not None and self.level is not None:
-            if (
-                self.level == EmotionTemperatureLevel.STABLE
-                and self.score > 33
-            ):
-                raise ValueError("stable emotion score must be 0..33")
-            if (
-                self.level == EmotionTemperatureLevel.CAUTION
-                and not 33 < self.score <= 66
-            ):
-                raise ValueError("caution emotion score must be >33..66")
-            if (
-                self.level == EmotionTemperatureLevel.ELEVATED
-                and self.score <= 66
-            ):
-                raise ValueError("elevated emotion score must be >66..100")
         return self
 
 
 class ConsultationCard(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    summary: str = Field(min_length=1, max_length=2000)
-    business_type: str = Field(min_length=1, max_length=200)
-    department: str = Field(min_length=1, max_length=200)
-    routing_reason: str = Field(min_length=1, max_length=2000)
+    summary: str
+    business_type: str
+    department: str
+    routing_reason: str
     incident_risk: IncidentRisk
-    risk_reason: str | None = Field(default=None, max_length=2000)
-    routing_confidence: float | None = Field(default=None, ge=0, le=1)
-    emotion: EmotionResult = Field(default_factory=EmotionResult)
-
-    _validate_routing_confidence = field_validator(
-        "routing_confidence", mode="before"
-    )(_reject_boolean_number)
-
-    @model_validator(mode="after")
-    def require_high_risk_reason(self) -> "ConsultationCard":
-        if self.incident_risk == IncidentRisk.HIGH and not self.risk_reason:
-            raise ValueError("risk_reason is required when incident_risk is high")
-        return self
+    risk_reason: str | None = None
+    routing_confidence: float | None = None
+    emotion: MvpEmotionResult = Field(default_factory=MvpEmotionResult)
 
 
 class MvpCallResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    schema_version: Literal["mvp-1.0"] = "mvp-1.0"
+    schema_version: str = "mvp-1.0"
     call_id: UUID
     status: CallStatus
-    source_channel: Literal["voice"] = "voice"
-    audio_filename: str = Field(min_length=1, max_length=255)
+    source_channel: str = "voice"
+    audio_filename: str
     transcript: TranscriptResult
     consultation_card: ConsultationCard
     created_at: datetime
 
 
-class HealthResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class MvpHealthResponse(BaseModel):
     status: str
     database: str
     contract_version: str = "mvp-1.0"
