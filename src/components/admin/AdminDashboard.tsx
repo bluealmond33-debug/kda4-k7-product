@@ -133,6 +133,8 @@ export default function AdminDashboard() {
                 />
               </div>
             </div>
+            {/* 상담카드 상세 — 캔버스 안의 딤+모달(PrepCard 문법)이라 직원 화면 카드와 같은 크기로 읽힌다 */}
+            {cardDetail && <CallCardModal record={cardDetail} onClose={() => setCardDetail(null)} />}
           </DesktopShell>
         </div>
       </div>
@@ -142,7 +144,6 @@ export default function AdminDashboard() {
         <RegulationUploadModal onClose={() => setUploadOpen(false)} onLoaded={refreshStatus} />
       )}
       {nodeDetail && <NodeDetailModal node={nodeDetail} onClose={() => setNodeDetail(null)} />}
-      {cardDetail && <CallCardModal record={cardDetail} onClose={() => setCardDetail(null)} />}
     </div>
   );
 }
