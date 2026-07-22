@@ -153,10 +153,18 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
   );
 }
 
-/** 통화 컨트롤 2×3 — IMG_7570/7571: 반투명 원, 가운데 아래 빨간 종료 */
-const CALL_CONTROLS: { icon: "speaker" | "facetime" | "micSlash" | "more" | "callEnd" | "keypad"; label: string; end?: boolean }[] = [
+/** 통화 컨트롤 2×3 — IMG_7570/7571: 반투명 원, 가운데 아래 빨간 종료.
+ *  글리프마다 56박스 안 여백이 달라 광학 보정(size·dy)으로 원 중심에 맞춘다 —
+ *  FaceTime 카메라는 박스를 꽉 채우는 글리프라 축소+살짝 내림 */
+const CALL_CONTROLS: {
+  icon: "speaker" | "facetime" | "micSlash" | "more" | "callEnd" | "keypad";
+  label: string;
+  end?: boolean;
+  size?: number;
+  dy?: number;
+}[] = [
   { icon: "speaker", label: "오디오" },
-  { icon: "facetime", label: "FaceTime" },
+  { icon: "facetime", label: "FaceTime", size: 30, dy: 1 },
   { icon: "micSlash", label: "소리 끔" },
   { icon: "more", label: "기타" },
   { icon: "callEnd", label: "종료", end: true },
@@ -238,7 +246,11 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
                         : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px)")
                   )}
                 >
-                  <AppleIcon name={c.icon} size={36} />
+                  <AppleIcon
+                    name={c.icon}
+                    size={c.size ?? 36}
+                    style={c.dy ? { transform: `translateY(${c.dy}px)` } : undefined}
+                  />
                 </span>
                 <span style={css("font-size:13px;color:rgba(255,255,255,.92)")}>{c.label}</span>
               </div>
