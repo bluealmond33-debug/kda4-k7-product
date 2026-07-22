@@ -50,9 +50,12 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 전화 받기 전 미리 듣고 정리했어요</span>
                 <div style={css("flex:1")} />
                 {vm.prepConfidencePct != null && (
-                  <span style={css("display:inline-flex;align-items:baseline;gap:4px;background:var(--gray-100);border-radius:9999px;padding:4px 12px;flex:none")}>
-                    <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>AI 배정 확신</span>
-                    <span style={css("font:800 13px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000)")}>{vm.prepConfidencePct}%</span>
+                  <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 14px 4px 6px;flex:none;box-shadow:var(--sh-near)")}>
+                    <ConfidenceRing pct={vm.prepConfidencePct} />
+                    <span style={css("display:flex;flex-direction:column")}>
+                      <span style={css("font:600 8.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.3px")}>AI 배정 확신</span>
+                      <span style={css("font:800 16px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.4px;color:var(--gray-1000);line-height:1")}>{vm.prepConfidencePct}%</span>
+                    </span>
                   </span>
                 )}
               </div>
@@ -95,9 +98,9 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           )}
 
           {/* 좌: 감정온도·사고징후 세로 스택 / 우: 해야 할 일(상담 중 가장 중요한 실행 항목) */}
-          <div style={css("display:flex;gap:12px;align-items:flex-start")}>
+          <div style={css("display:flex;gap:12px;align-items:stretch")}>
             <div style={css("flex:none;width:238px;display:flex;flex-direction:column;gap:12px")}>
-            <div style={css("background:var(--gray-100);border-radius:8px;padding:14px 15px")}>
+            <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:14px 15px")}>
               <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 고객 감정온도
                 <span
@@ -113,7 +116,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             </div>
-            <div style={css("border-radius:8px;padding:14px 15px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
+            <div style={css("flex:1;border-radius:8px;padding:14px 15px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
               <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:7px;color:" + (riskHigh ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
                 사고 징후 <span style={css("font-weight:400;opacity:.7")}>(위험도)</span>
               </div>
@@ -159,7 +162,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
             {/* 첫 응대 문장 — 준비의 결론. 잠금 없이 바로 보여준다 */}
             <div style={css("display:flex;align-items:baseline;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
-              <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:var(--onair-surface);font:700 10.5px 'Geist Sans','Pretendard',sans-serif;flex:none;transform:translateY(3px)")}>온</span>
+              <span style={css("display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:var(--gray-1000);color:#fff;flex:none;transform:translateY(2px)")}><span className="mi" style={css("font-size:14px")}>record_voice_over</span></span>
               <div>
                 <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>이 문장으로 통화를 여세요</div>
                 <div style={css("font:500 15px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
@@ -195,6 +198,18 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
       </div>
     </DesktopShell>
+  );
+}
+
+/** 확신도 링 게이지 — 잉크 아크가 %만큼 채워진다(색 없이 강조). */
+function ConfidenceRing({ pct }: { pct: number }) {
+  const r = 8, C = 2 * Math.PI * r;
+  const off = C * (1 - Math.max(0, Math.min(100, pct)) / 100);
+  return (
+    <svg width={22} height={22} viewBox="0 0 22 22" style={{ flex: "none", display: "block" }}>
+      <circle cx="11" cy="11" r={r} fill="none" stroke="var(--gray-300)" strokeWidth="3" />
+      <circle cx="11" cy="11" r={r} fill="none" stroke="var(--gray-1000)" strokeWidth="3" strokeDasharray={C} strokeDashoffset={off} strokeLinecap="round" transform="rotate(-90 11 11)" />
+    </svg>
   );
 }
 
