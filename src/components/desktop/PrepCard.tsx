@@ -130,7 +130,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
 
             {/* 우: 전화 요약 — 대기 중 고객 발화 STT를 요약한 내용 */}
-            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--onair-surface);border:1.5px solid var(--gray-300);border-radius:8px;padding:14px 16px")}>
+            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--onair-surface);border:1.5px solid var(--blue-400);border-radius:8px;padding:14px 16px")}>
             <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:10px")}>
               <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>summarize</span>전화 요약 <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· 고객 발화 STT 요약</span>
             </div>
