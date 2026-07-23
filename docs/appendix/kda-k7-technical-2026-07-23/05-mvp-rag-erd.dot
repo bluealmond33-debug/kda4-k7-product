@@ -1,0 +1,12 @@
+digraph physical_erd {
+  graph [rankdir=LR, bgcolor="transparent", nodesep=0.5, ranksep=0.8];
+  node [shape=record, fontname="IBM Plex Mono", fontsize=12];
+  calls [label="{calls|PK call_id uuid|status|audio_filename}"];
+  transcripts [label="{transcripts|PK transcript_id|FK+UQ call_id|transcript_text|stt_model}"];
+  consultation_cards [label="{consultation_cards|PK+FK call_id|summary|department|risk|emotion}"];
+  rag_documents [label="{rag_documents|PK doc_id|status|version|source_file}"];
+  rag_chunks [label="{rag_chunks|PK chunk_id|FK doc_id|embedding vector(1024)|tsv}"];
+  calls -> transcripts [label=" 1 : 0..1 / CASCADE"];
+  calls -> consultation_cards [label=" 1 : 0..1 / CASCADE"];
+  rag_documents -> rag_chunks [label=" 1 : N / CASCADE"];
+}

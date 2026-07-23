@@ -1,0 +1,13 @@
+flowchart TD
+    A[발화 분석과 업무 분류] --> B{인증이 필요한 업무인가?}
+    B -->|NO| C[조회 업무: 인증 없이 계속]
+    B -->|YES| D[변경·민감 업무: 키패드 인증]
+    B -.->|UNKNOWN| E[불명확·실패: 상담 연결 유지]
+    B -->|EMERGENCY| F[긴급 업무: 인증 면제]
+    D --> G{DTMF 종류}
+    G -->|인증 입력| H[auth_input]
+    G -->|일반 키패드| I[dtmf]
+    H -.-> J[PII /verify]
+    J -.-> K[auth_result]
+    K --> L[고객·계좌·상담 이력 조회]
+

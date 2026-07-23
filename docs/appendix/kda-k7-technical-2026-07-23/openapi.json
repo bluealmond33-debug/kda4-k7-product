@@ -1,0 +1,1513 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "K7 상담카드 통합 API",
+    "version": "mvp-1.1"
+  },
+  "paths": {
+    "/stt": {
+      "post": {
+        "tags": [
+          "legacy-demo-compatibility"
+        ],
+        "summary": "Legacy Stt",
+        "operationId": "legacy_stt_stt_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_legacy_stt_stt_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Legacy Stt Stt Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/emotion": {
+      "post": {
+        "tags": [
+          "legacy-demo-compatibility"
+        ],
+        "summary": "Legacy Emotion",
+        "operationId": "legacy_emotion_emotion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Legacy Emotion Emotion Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/summarize": {
+      "post": {
+        "tags": [
+          "legacy-demo-compatibility"
+        ],
+        "summary": "Legacy Summarize",
+        "operationId": "legacy_summarize_summarize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Legacy Summarize Summarize Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/analyze-text": {
+      "post": {
+        "tags": [
+          "legacy-demo-compatibility"
+        ],
+        "summary": "Legacy Analyze Text",
+        "operationId": "legacy_analyze_text_analyze_text_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Legacy Analyze Text Analyze Text Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/analyze": {
+      "post": {
+        "tags": [
+          "legacy-demo-compatibility"
+        ],
+        "summary": "Legacy Analyze",
+        "operationId": "legacy_analyze_analyze_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_legacy_analyze_analyze_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Legacy Analyze Analyze Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/judge": {
+      "post": {
+        "tags": [
+          "legacy-demo-compatibility"
+        ],
+        "summary": "Legacy Judge",
+        "operationId": "legacy_judge_judge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Legacy Judge Judge Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/rag": {
+      "post": {
+        "tags": [
+          "legacy-demo-compatibility"
+        ],
+        "summary": "Legacy Rag",
+        "operationId": "legacy_rag_rag_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Legacy Rag Rag Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/briefing": {
+      "post": {
+        "tags": [
+          "legacy-demo-compatibility"
+        ],
+        "summary": "Legacy Briefing",
+        "operationId": "legacy_briefing_briefing_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_legacy_briefing_briefing_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Legacy Briefing Briefing Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/api/live-stt/analyze": {
+      "post": {
+        "summary": "Analyze Live Stt",
+        "description": "Prefer a real Ollama summary and use an explicitly labelled fallback.",
+        "operationId": "analyze_live_stt_api_live_stt_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Analyze Live Stt Api Live Stt Analyze Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/live-stt/analysis-status": {
+      "get": {
+        "summary": "Live Analysis Status",
+        "operationId": "live_analysis_status_api_live_stt_analysis_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Live Analysis Status Api Live Stt Analysis Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/live-stt/calls": {
+      "post": {
+        "summary": "Create Live Call",
+        "description": "Allocate or idempotently register a URL-safe LAN demo call id.\n\nEvery live websocket must use an id registered here.  This prevents a typo\nin a phone or edge-sender URL from silently creating a disconnected phantom\nsession.  A requested id (for example ``demo1``) lets independently opened\ndemo screens agree on a stable value without weakening that invariant.",
+        "operationId": "create_live_call_api_live_stt_calls_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LiveCallCreateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Live Call Api Live Stt Calls Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calls": {
+      "post": {
+        "summary": "Create Call",
+        "operationId": "create_call_api_v1_calls_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_call_api_v1_calls_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MvpCallResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regulations/search": {
+      "get": {
+        "summary": "Search Regulations Endpoint",
+        "description": "Hybrid regulation search for the \"관련 규정 및 매뉴얼\" panel.\n\nReturns {available, documents}. `available` is False (not an error) when the\nRAG index or embedding model is not provisioned, so the panel can fall back\nto its manual file list instead of showing a failure.",
+        "operationId": "search_regulations_endpoint_api_v1_regulations_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "K"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Search Regulations Endpoint Api V1 Regulations Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regulations/stats": {
+      "get": {
+        "summary": "Regulation Stats",
+        "description": "지식베이스 실측 통계(활성 문서·청크 수) — 관리자 콘솔 'DB·지식베이스' 패널용.",
+        "operationId": "regulation_stats_api_v1_regulations_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Regulation Stats Api V1 Regulations Stats Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regulations/upload": {
+      "post": {
+        "summary": "Upload Regulation",
+        "description": "관리자 콘솔 규정 PDF 자동 적재 — 업로드 한 번으로 청킹→카테고리 추천→임베딩→적재.\n\nhippo RAG 설계 8장의 (A) '백엔드 업로드 화면' 경로. auto_ingest의 preview+commit을\n한 번에 실행한다 — 데모에선 추천 카테고리를 자동 채택하고, 근거(키워드·확신도)를\n응답에 담아 화면에서 사후 확인한다. 같은 파일명 재업로드는 동일 doc_id로 멱등 갱신,\nregistry 대장에 있는 파일명이면 개정본 처리(옛 버전은 superseded로 보관).\n스캔본 PDF는 OCR 의존성이 있으면 자동 처리, 없으면 안내 메시지로 실패한다.",
+        "operationId": "upload_regulation_api_v1_regulations_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_regulation_api_v1_regulations_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Upload Regulation Api V1 Regulations Upload Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regulations/documents/{doc_id}": {
+      "get": {
+        "summary": "Read Regulation Document",
+        "description": "규정 문서 원문 열람 — 메타 + 페이지순 청크 전체 (프론트 원문 시트용).",
+        "operationId": "read_regulation_document_api_v1_regulations_documents__doc_id__get",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Read Regulation Document Api V1 Regulations Documents  Doc Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calls/{call_id}/consultation-card": {
+      "get": {
+        "summary": "Read Consultation Card",
+        "operationId": "read_consultation_card_api_v1_calls__call_id__consultation_card_get",
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Call Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MvpCallResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AttentionLevel": {
+        "type": "string",
+        "enum": [
+          "none",
+          "medium",
+          "high"
+        ],
+        "title": "AttentionLevel"
+      },
+      "Body_create_call_api_v1_calls_post": {
+        "properties": {
+          "audio": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Audio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio"
+        ],
+        "title": "Body_create_call_api_v1_calls_post"
+      },
+      "Body_legacy_analyze_analyze_post": {
+        "properties": {
+          "audio": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Audio"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio",
+          "transcript"
+        ],
+        "title": "Body_legacy_analyze_analyze_post"
+      },
+      "Body_legacy_briefing_briefing_post": {
+        "properties": {
+          "audio": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Audio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio"
+        ],
+        "title": "Body_legacy_briefing_briefing_post"
+      },
+      "Body_legacy_stt_stt_post": {
+        "properties": {
+          "audio": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Audio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio"
+        ],
+        "title": "Body_legacy_stt_stt_post"
+      },
+      "Body_upload_regulation_api_v1_regulations_upload_post": {
+        "properties": {
+          "pdf": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Pdf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pdf"
+        ],
+        "title": "Body_upload_regulation_api_v1_regulations_upload_post"
+      },
+      "CallStatus": {
+        "type": "string",
+        "enum": [
+          "processing",
+          "ready",
+          "failed"
+        ],
+        "title": "CallStatus"
+      },
+      "ChecklistItem": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Detail"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "model",
+              "policy",
+              "rag"
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "detail",
+          "source"
+        ],
+        "title": "ChecklistItem",
+        "description": "One counselor action generated from the call and reviewed policy."
+      },
+      "ConsultationCard": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "business_type": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Business Type"
+          },
+          "department": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Department"
+          },
+          "routing_reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Routing Reason"
+          },
+          "incident_risk": {
+            "$ref": "#/components/schemas/IncidentRisk"
+          },
+          "risk_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Reason"
+          },
+          "routing_confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Confidence"
+          },
+          "customer_requests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Customer Requests"
+          },
+          "missing_information": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Missing Information"
+          },
+          "required_actions": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItem"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Required Actions"
+          },
+          "knowledge_references": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeReference"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Knowledge References"
+          },
+          "emotion": {
+            "$ref": "#/components/schemas/EmotionResult"
+          },
+          "attention_level": {
+            "$ref": "#/components/schemas/AttentionLevel"
+          },
+          "reason_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 100,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 16
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Codes"
+          },
+          "routing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoutingResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text_emotion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextEmotionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary",
+          "business_type",
+          "department",
+          "routing_reason",
+          "incident_risk",
+          "attention_level",
+          "reason_codes",
+          "routing",
+          "text_emotion"
+        ],
+        "title": "ConsultationCard"
+      },
+      "EmotionResult": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/EmotionStatus",
+            "default": "unavailable"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmotionTemperatureLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EmotionResult",
+        "description": "Emotion is optional for MVP and must never pretend a stub is a model."
+      },
+      "EmotionStatus": {
+        "type": "string",
+        "enum": [
+          "unavailable",
+          "completed"
+        ],
+        "title": "EmotionStatus"
+      },
+      "EmotionTemperatureLevel": {
+        "type": "string",
+        "enum": [
+          "stable",
+          "caution",
+          "elevated"
+        ],
+        "title": "EmotionTemperatureLevel"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version",
+            "default": "mvp-1.1"
+          },
+          "pipeline_mode": {
+            "type": "string",
+            "enum": [
+              "cloud",
+              "local"
+            ],
+            "title": "Pipeline Mode"
+          },
+          "stt_provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "faster_whisper"
+            ],
+            "title": "Stt Provider"
+          },
+          "analysis_provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "ollama"
+            ],
+            "title": "Analysis Provider"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "pipeline_mode",
+          "stt_provider",
+          "analysis_provider"
+        ],
+        "title": "HealthResponse"
+      },
+      "IncidentRisk": {
+        "type": "string",
+        "enum": [
+          "low",
+          "high"
+        ],
+        "title": "IncidentRisk"
+      },
+      "KnowledgeReference": {
+        "properties": {
+          "doc_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Doc Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "section": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Section"
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Excerpt"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "doc_id",
+          "title",
+          "section",
+          "excerpt",
+          "source",
+          "score"
+        ],
+        "title": "KnowledgeReference",
+        "description": "A local knowledge-base passage used to ground the briefing."
+      },
+      "LiveAnalysisRequest": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 12000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/LiveAnalysisTurn"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "title": "Turns"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "intake",
+              "full"
+            ],
+            "title": "Scope",
+            "default": "intake"
+          }
+        },
+        "type": "object",
+        "title": "LiveAnalysisRequest"
+      },
+      "LiveAnalysisTurn": {
+        "properties": {
+          "speaker": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "agent"
+            ],
+            "title": "Speaker"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "seq": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seq"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "speaker",
+          "text"
+        ],
+        "title": "LiveAnalysisTurn"
+      },
+      "LiveCallCreateRequest": {
+        "properties": {
+          "call_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id"
+          }
+        },
+        "type": "object",
+        "title": "LiveCallCreateRequest",
+        "description": "Optionally register a shared, human-readable LAN demo call id."
+      },
+      "MvpCallResponse": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "mvp-1.1",
+            "title": "Schema Version",
+            "default": "mvp-1.1"
+          },
+          "call_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Call Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CallStatus"
+          },
+          "source_channel": {
+            "type": "string",
+            "const": "voice",
+            "title": "Source Channel",
+            "default": "voice"
+          },
+          "audio_filename": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Audio Filename"
+          },
+          "transcript": {
+            "$ref": "#/components/schemas/TranscriptResult"
+          },
+          "consultation_card": {
+            "$ref": "#/components/schemas/ConsultationCard"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "call_id",
+          "status",
+          "audio_filename",
+          "transcript",
+          "consultation_card",
+          "created_at"
+        ],
+        "title": "MvpCallResponse"
+      },
+      "RoutingResult": {
+        "properties": {
+          "task_code": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Task Code"
+          },
+          "task_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Task Name"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "EMERGENCY",
+              "SIMPLE",
+              "GENERAL"
+            ],
+            "title": "Classification"
+          },
+          "handler": {
+            "type": "string",
+            "enum": [
+              "HUMAN",
+              "AI"
+            ],
+            "title": "Handler"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "task_code",
+          "task_name",
+          "classification",
+          "handler"
+        ],
+        "title": "RoutingResult",
+        "description": "Three-stage task routing selected by the local routing classifier."
+      },
+      "TextEmotionResult": {
+        "properties": {
+          "content_emotion": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Content Emotion"
+          },
+          "situation_severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Situation Severity"
+          },
+          "urgency_score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Urgency Score"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "content_emotion",
+          "situation_severity",
+          "urgency_score"
+        ],
+        "title": "TextEmotionResult",
+        "description": "Text-only severity, kept separate from the audio emotion result."
+      },
+      "TranscriptResult": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          },
+          "stt_model": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Stt Model"
+          },
+          "duration_sec": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Duration Sec",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "stt_model"
+        ],
+        "title": "TranscriptResult"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

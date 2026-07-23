@@ -1,0 +1,63 @@
+snapshot: '2026-07-23'
+protocol: KDA-K7 realtime contracts
+identity:
+  isolation_key: call_id
+  lifecycle_version: generation
+  speakers: [customer, agent]
+  audio:
+    encoding: signed PCM16 little-endian
+    sample_rate_hz: 16000
+    channels: 1
+    framed_magic: K7A1
+    metadata: [generation, audio_seq, captured_at_ms]
+
+endpoints:
+  /ws/audio/{call_id}:
+    query: {speaker: 'customer | agent', sender_id: string}
+    purpose: persistent edge audio ingest
+  /ws/call/{call_id}:
+    query: {role: 'customer | agent'}
+    purpose: transcript and capture observer channel
+  /ws/ars/{call_id}:
+    query: {role: 'mobile | desktop'}
+    purpose: call lifecycle and DTMF control
+  /ws/demo/{call_id}:
+    query: {role: 'customer | employee | admin'}
+    purpose: role-scoped demo relay and replay
+
+events:
+  lifecycle:
+    - state_request
+    - ars_state
+    - call_start
+    - intake_complete
+    - agent_connected
+    - call_end
+    - peer_status
+  keypad:
+    - dtmf
+  authentication:
+    - auth_gate
+    - auth_state
+    - auth_prompt
+    - auth_input
+    - auth_result
+  demo_pipeline:
+    - call.incoming
+    - stt.utterance
+    - pipeline.stage
+    - card.created
+    - routing.assigned
+    - transfer.requested
+    - transfer.completed
+    - call.ended
+    - queue.snapshot
+    - demo.reset
+
+invariants:
+  - Events from an older generation cannot mutate a newer call.
+  - agent_connected requires completed customer intake and drained STT work.
+  - customer and agent audio use separate speaker buffers.
+  - call_end records ended_by and end_reason, then drains pending STT tasks.
+  - repeated intake_complete is idempotent.
+

@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-07-23T12:00:00+09:00",
+  "snapshotDate": "2026-07-23",
+  "width": 1920,
+  "height": 1080,
+  "contactSheet": "final-contact-sheet.png",
+  "slides": [
+    "final-01-system-context.png",
+    "final-02-system-layers.png",
+    "final-03-realtime-sequence.png",
+    "final-04-ai-data-pipeline.png",
+    "final-05-call-lifecycle.png",
+    "final-06-auth-dtmf.png",
+    "final-07a-service-erd.png",
+    "final-07b-mvp-rag-erd.png",
+    "final-08-api-websocket-contract.png",
+    "final-09-runtime-model-profile.png"
+  ],
+  "contracts": [
+    "schema.dbml",
+    "openapi.yaml",
+    "openapi.json",
+    "websocket-events.yaml"
+  ]
+}

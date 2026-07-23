@@ -1,0 +1,27 @@
+digraph service_erd {
+  graph [rankdir=LR, bgcolor="transparent", nodesep=0.35, ranksep=0.7];
+  node [shape=record, fontname="IBM Plex Mono", fontsize=12];
+  departments [label="{departments|PK department_id|department_code|is_active}"];
+  counselors [label="{counselors|PK counselor_id|FK department_id|employment_status}"];
+  counselor_permissions [label="{counselor_permissions|PK permission_id|FK counselor_id|granted_by}"];
+  customers [label="{customers|PK customer_id|lookup_hash|customer_status}"];
+  consultation_sessions [label="{consultation_sessions|PK session_id|FK customer_id|FK assigned_counselor_id}"];
+  utterances [label="{utterances|PK utterance_id|FK session_id|speaker_type}"];
+  model_analysis_results [label="{model_analysis_results|PK analysis_result_id|FK session_id|emotion_level}"];
+  ai_consultation_cards [label="{ai_consultation_cards|PK card_id|UQ session_id|FK analysis_result_id}"];
+  routing_recommendations [label="{routing_recommendations|PK routing_id|FK session_id|FK department_id}"];
+  consultation_history [label="{consultation_history|PK history_id|FK customer_id|FK source_session_id}"];
+  customer_cautions [label="{customer_cautions|PK caution_id|FK customer_id|FK registered_by}"];
+  access_logs [label="{access_logs|PK access_log_id|FK counselor_id|FK customer_id/session_id}"];
+  departments -> counselors;
+  counselors -> counselor_permissions;
+  customers -> consultation_sessions;
+  consultation_sessions -> utterances;
+  consultation_sessions -> model_analysis_results;
+  consultation_sessions -> ai_consultation_cards;
+  consultation_sessions -> routing_recommendations;
+  customers -> consultation_history;
+  customers -> customer_cautions;
+  customers -> access_logs;
+}
+

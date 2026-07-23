@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    participant C as 고객 Galaxy/PWA
+    participant E as Windows Audio Edge
+    participant W as FastAPI WS
+    participant S as faster-whisper
+    participant A as AI·DB
+    participant U as 관리자·상담사
+    C->>W: call_start
+    W-->>C: call_id + generation
+    C->>E: 고객 발화
+    E->>W: K7A1 + PCM16 (speaker=customer)
+    W->>S: 무음/VAD 단위 오디오 버퍼
+    S-->>U: 중간 STT
+    S->>A: 확정 STT
+    A->>U: pipeline.stage + card.created
+    U-->>W: agent_connected
+    U->>E: 상담사 발화 (speaker=agent)
+    C-->>W: call_end
+    W->>A: pending STT drain + 저장·후처리
+

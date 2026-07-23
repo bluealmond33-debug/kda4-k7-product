@@ -1,0 +1,274 @@
+Project KDA_K7 {
+  database_type: 'PostgreSQL 17'
+  Note: '2026-07-23 code snapshot. Logical service schema plus active MVP and RAG schemas.'
+}
+
+Table departments {
+  department_id bigint [pk, increment]
+  department_code text [not null, unique]
+  department_name text [not null, unique]
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table customers {
+  customer_id bigint [pk, increment]
+  customer_number text [not null, unique]
+  full_name_masked text [not null]
+  phone_masked text [not null]
+  phone_lookup_hash text [not null, unique]
+  account_number_masked text
+  account_lookup_hash text [unique]
+  birth_year smallint
+  birth_date_masked text
+  customer_status text [not null, default: 'active']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table counselors {
+  counselor_id bigint [pk, increment]
+  counselor_code text [not null, unique]
+  counselor_name text [not null]
+  department_id bigint [not null]
+  employment_status text [not null, default: 'active']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table counselor_permissions {
+  permission_id bigint [pk, increment]
+  counselor_id bigint [not null]
+  permission_scope text [not null]
+  access_level text [not null]
+  granted_reason text [not null]
+  granted_by bigint
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  revoked_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table consultation_sessions {
+  session_id bigint [pk, increment]
+  external_session_key text [not null, unique]
+  customer_id bigint [not null]
+  assigned_counselor_id bigint
+  inquiry_type text [not null, default: 'unclassified']
+  session_status text [not null, default: 'waiting']
+  channel text [not null, default: 'voice']
+  risk_level text [not null, default: 'low']
+  consent_to_record boolean [not null, default: false]
+  started_at timestamptz [not null]
+  ended_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table utterances {
+  utterance_id bigint [pk, increment]
+  session_id bigint [not null]
+  speaker_type text [not null, note: 'customer | counselor | system']
+  transcript_ciphertext bytea
+  encryption_key_version text
+  masked_transcript text [not null]
+  contains_sensitive_data boolean [not null, default: false]
+  stt_confidence numeric
+  spoken_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table model_analysis_results {
+  analysis_result_id bigint [pk, increment]
+  session_id bigint [not null]
+  result_key text [not null, unique]
+  model_name text [not null]
+  model_version text [not null]
+  output_schema_version text [not null]
+  analysis_status text [not null]
+  emotion_temperature_score numeric
+  emotion_temperature_level text
+  voice_arousal_score numeric
+  voice_dominance_score numeric
+  voice_valence_score numeric
+  negative_activation_score numeric
+  audio_quality text [not null]
+  failure_code text
+  generated_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table ai_consultation_cards {
+  card_id bigint [pk, increment]
+  session_id bigint [not null, unique]
+  analysis_result_id bigint
+  card_schema_version text [not null]
+  summary text [not null]
+  customer_request text
+  keywords text[] [not null]
+  risk_factors text[] [not null]
+  urgency_level text [not null]
+  risk_level text [not null]
+  related_manual_refs text[] [not null]
+  suggested_opening text
+  recommended_actions text[] [not null]
+  confirmation_items text[] [not null]
+  confirmation_status text [not null]
+  confirmed_at timestamptz
+  model_name text [not null]
+  model_version text [not null]
+  generated_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table consultation_history {
+  history_id bigint [pk, increment]
+  customer_id bigint [not null]
+  source_session_id bigint [unique]
+  counselor_id bigint
+  inquiry_type text [not null]
+  ai_summary text [not null]
+  resolution_result text [not null]
+  department_id bigint [not null]
+  risk_level text [not null]
+  consulted_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table customer_cautions {
+  caution_id bigint [pk, increment]
+  customer_id bigint [not null]
+  caution_type text [not null]
+  reason text [not null]
+  severity text [not null]
+  caution_status text [not null]
+  registered_by bigint
+  registered_at timestamptz [not null]
+  expires_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table routing_recommendations {
+  routing_id bigint [pk, increment]
+  session_id bigint [not null]
+  recommended_department_id bigint [not null]
+  recommended_counselor_id bigint
+  recommendation_rank smallint [not null]
+  confidence numeric [not null]
+  rationale text [not null]
+  selected boolean [not null, default: false]
+  model_name text [not null]
+  model_version text [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table access_logs {
+  access_log_id bigint [pk, increment]
+  counselor_id bigint [not null]
+  customer_id bigint [not null]
+  session_id bigint
+  information_scope text [not null]
+  action_type text [not null]
+  access_purpose text [not null]
+  result_status text [not null]
+  request_id text
+  source_ip inet
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table calls {
+  call_id uuid [pk]
+  status text [not null, note: 'processing | ready | failed']
+  source_channel text [not null, default: 'voice']
+  audio_filename text [not null]
+  created_at timestamptz [not null]
+}
+
+Table transcripts {
+  transcript_id bigint [pk, increment]
+  call_id uuid [not null, unique]
+  transcript_text text [not null]
+  stt_model text [not null]
+  duration_sec numeric [not null]
+  created_at timestamptz [not null]
+}
+
+Table consultation_cards {
+  call_id uuid [pk]
+  schema_version text [not null, default: 'mvp-1.1']
+  summary text [not null]
+  business_type text [not null]
+  department text [not null]
+  routing_reason text [not null]
+  incident_risk text [not null]
+  risk_reason text
+  routing_confidence numeric
+  emotion_status text [not null]
+  emotion_score numeric
+  emotion_level text
+  emotion_reason text
+  raw_model_result jsonb [not null]
+  raw_emotion_result jsonb [not null]
+  briefing_payload jsonb [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table rag_documents {
+  doc_id text [pk]
+  title text [not null]
+  doc_type text [not null]
+  categories text[] [not null]
+  version text [not null]
+  effective_date date
+  status text [not null]
+  source_file text [not null]
+  ingested_at timestamptz [not null]
+}
+
+Table rag_chunks {
+  chunk_id text [pk]
+  doc_id text [not null]
+  page int [not null]
+  kind text [not null]
+  section text
+  raw text [not null]
+  text text [not null]
+  embedding vector(1024)
+  tsv tsvector [note: 'generated column; GIN index']
+}
+
+Ref: counselors.department_id > departments.department_id
+Ref: counselor_permissions.counselor_id > counselors.counselor_id
+Ref: counselor_permissions.granted_by > counselors.counselor_id
+Ref: consultation_sessions.customer_id > customers.customer_id
+Ref: consultation_sessions.assigned_counselor_id > counselors.counselor_id
+Ref: utterances.session_id > consultation_sessions.session_id
+Ref: model_analysis_results.session_id > consultation_sessions.session_id
+Ref: ai_consultation_cards.session_id - consultation_sessions.session_id
+Ref: ai_consultation_cards.analysis_result_id > model_analysis_results.analysis_result_id
+Ref: consultation_history.customer_id > customers.customer_id
+Ref: consultation_history.source_session_id - consultation_sessions.session_id
+Ref: consultation_history.counselor_id > counselors.counselor_id
+Ref: consultation_history.department_id > departments.department_id
+Ref: customer_cautions.customer_id > customers.customer_id
+Ref: customer_cautions.registered_by > counselors.counselor_id
+Ref: routing_recommendations.session_id > consultation_sessions.session_id
+Ref: routing_recommendations.recommended_department_id > departments.department_id
+Ref: routing_recommendations.recommended_counselor_id > counselors.counselor_id
+Ref: access_logs.counselor_id > counselors.counselor_id
+Ref: access_logs.customer_id > customers.customer_id
+Ref: access_logs.session_id > consultation_sessions.session_id
+Ref: transcripts.call_id - calls.call_id [delete: cascade]
+Ref: consultation_cards.call_id - calls.call_id [delete: cascade]
+Ref: rag_chunks.doc_id > rag_documents.doc_id [delete: cascade]
+
