@@ -148,8 +148,9 @@ JSON으로 제약되기 때문이다. 정상 발화 예시:
 예제 JSON을 빠뜨리면 `npm run validate:contracts`와 mock 경로가 깨진다
 (`src/services/consultation.ts`가 `mvp_call_response.example.json`을 실제로 파싱한다).
 
-`SUMMARY_POINTS` 상수는 mock 경로(`VITE_USE_REAL_DATA_API=false`)용으로 남긴다. 명시적
-mock이므로 고정값이어도 무방하다.
+mock 경로도 같은 필드를 쓴다. `useCallFlow`의 `consultationResponse` 초기값이
+`getDemoConsultationCard()`(예제 JSON 파싱)이므로 예제 JSON에 필드를 넣으면 mock에도 값이
+생긴다. 따라서 `SUMMARY_POINTS` 폴백은 불필요하다 — import만 끊고 상수 정의는 남긴다.
 
 ## 테스트
 
