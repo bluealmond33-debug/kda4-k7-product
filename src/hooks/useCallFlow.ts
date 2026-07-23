@@ -1250,6 +1250,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }),
     prepDone: prepChecks.filter(Boolean).length,
     prepTotal: prepDefinitions.length,
+    // 본인인증 상태 — 인수인계(transfer) 콜은 전임 상담사가 이미 인증(재인증 생략),
+    // 신규·긴급은 연결 직후 상담사가 인증한다(=아직 미완료). 유의사항 첫 항목과 일치.
+    prepVerified: incoming === "transfer",
     prepHeadline: card.summary || summary?.headline || "상담카드 생성 중",
     // 문의유형은 배정권고 타일이 담당 — 여기 반복하지 않는다
     prepCustomerLine: `발신 ${CUSTOMER.phoneMasked} · 음성 접수`,
