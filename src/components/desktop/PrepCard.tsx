@@ -157,6 +157,13 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           <div data-tour="prep-checks">
             <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:9px")}>
               <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>이번 상담 유의사항</span>
+              <div style={css("flex:1")} />
+              {/* 본인인증 상태 — 완료=차분(회색 테두리·초록 방패), 미완료=주의(앰버) */}
+              <span style={css("display:inline-flex;align-items:center;gap:6px;background:var(--onair-surface);border:1px solid " + (vm.prepVerified ? "var(--gray-300)" : "var(--amber-700)") + ";border-radius:9999px;padding:4px 11px 4px 8px")}>
+                <span className="mi" style={css("font-size:15px;color:" + (vm.prepVerified ? "var(--green-900)" : "var(--amber-900)"))}>{vm.prepVerified ? "verified_user" : "gpp_maybe"}</span>
+                <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:" + (vm.prepVerified ? "var(--gray-900)" : "var(--amber-900)"))}>본인인증 {vm.prepVerified ? "완료" : "미완료"}</span>
+                <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{vm.prepVerified ? "· 전임 상담사 확인" : "· 연결 직후 확인"}</span>
+              </span>
             </div>
             <div style={css("display:flex;flex-direction:column;gap:8px;margin-bottom:12px")}>
               {vm.prepRows.map((r, i) => (
