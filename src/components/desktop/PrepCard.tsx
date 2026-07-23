@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
@@ -9,6 +10,8 @@ import { Thermometer, ConfidenceRing } from "./CardSignals";
  *  부서 이관 조작은 관리자 콘솔(?role=admin)로 이전 — 여기는 상담사 준비 신호만 남는다. */
 export default function PrepCard({ vm }: { vm: CallFlowVM }) {
   const riskHigh = vm.prepRiskLabel === "높음"; // 위험일 때만 강한 색(빨강)
+  const [scriptOpen, setScriptOpen] = useState(false); // 상담 스크립트 읽어보기 — 통화 화면과 같은 아코디언(기본 접힘)
+  const [transferMenu, setTransferMenu] = useState(false); // 부서 이관 드롭다운
 
   return (
     <DesktopShell>
@@ -26,9 +29,10 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       {/* dim — 광원이 모달에 있으므로 뒤는 웜 블랙으로 가라앉는다 */}
       <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5);animation:fadeIn .18s ease-out")} />
 
-      {/* 모달 */}
-      <div data-tour="prep-card" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
-        <div style={css("padding:22px 28px 20px;border-bottom:1px solid var(--gray-200)")}>
+      {/* 모달 — 카드 + (카드 밖) 스크립트 영역을 세로로 묶어 중앙 정렬. 스크립트는 카드에 포함되지 않은 별도 패널 */}
+      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;width:800px;max-width:94%;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
+        <div data-tour="prep-card" style={css("width:100%;max-height:600px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
+        <div style={css("padding:13px 24px 13px;border-bottom:1px solid var(--gray-200)")}>
           {/* 배지 = 콜 유형 신호. 떴다는 것 자체가 의미이므로 긴급·이관일 때만 표시(일반=배지 없음) */}
           {vm.isUrgent ? (
             <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:#fff;background:var(--red-800);border-radius:9999px;padding:4px 11px;margin-bottom:13px")}>
@@ -41,40 +45,23 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               {vm.handover.fromDept} → {AGENT.dept}
             </span>
           ) : null}
-          {/* AI 사전 녹음 요약 = 이 카드의 히어로. 라벨을 붙여 '제목'이 아니라 '요약'으로 읽히게 한다 */}
-          <div style={css("display:flex;gap:13px")}>
-            <span style={css("width:4px;border-radius:2px;background:var(--blue-500);flex:none")} />
-            <div style={css("flex:1;min-width:0")}>
-              <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:7px")}>
-                <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
-                <span style={css("font:800 12px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
-                <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· {vm.summarySourceLabel}</span>
-                <div style={css("flex:1")} />
-                {vm.prepConfidencePct != null && (
-                  <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 6px 4px 13px;flex:none;box-shadow:var(--sh-near)")}>
-                    <span style={css("display:flex;flex-direction:column;line-height:1.15")}>
-                      <span style={css("font:600 9px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.2px")}>AI 배정</span>
-                      <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>확신도</span>
-                    </span>
-                    <ConfidenceRing pct={vm.prepConfidencePct} />
-                  </span>
-                )}
-              </div>
-              <div style={css("font:600 23px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>
-                {vm.prepHeadline}
-              </div>
-              <div style={css("font:400 12.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:7px")}>
-                근거 발화 · <span style={css("font-style:italic;color:var(--gray-800)")}>“{vm.transcriptQuote}”</span>
-              </div>
-            </div>
-            {/* 라우팅 배지 — AI가 배정한 담당 부서(우측 상단) */}
-            <div style={css("flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:4px")}>
-              <span style={css("display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9999px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.28);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);white-space:nowrap")}>
-                <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>alt_route</span>
-                {vm.prepRoutingTitle} 라우팅
+          {/* KARI-NA 브리핑 헤더 — 슬림 1행: 라벨·출처 | AI 확신도 | 라우팅 경로(부서 › 업무).
+              한줄 요약·근거 발화는 전화 요약 상자 상단으로 옮겼다(헤더 비대 해소). */}
+          <div style={css("display:flex;align-items:center;gap:9px")}>
+            <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
+            <span style={css("font:800 12px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
+            <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· {vm.summarySourceLabel}</span>
+            <div style={css("flex:1")} />
+            {vm.prepConfidencePct != null && (
+              <span style={css("display:inline-flex;align-items:center;gap:6px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:2px 5px 2px 11px;flex:none;box-shadow:var(--sh-near)")}>
+                <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 확신도</span>
+                <ConfidenceRing pct={vm.prepConfidencePct} />
               </span>
-              <span style={css("font:600 10px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900);opacity:.7")}>{vm.prepConfidence}</span>
-            </div>
+            )}
+            <span style={css("display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:9999px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.28);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);white-space:nowrap")}>
+              <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>alt_route</span>
+              {vm.prepRoutingTitle}<span style={css("opacity:.45;margin:0 2px")}>›</span>{vm.prepBusinessType}
+            </span>
           </div>
         </div>
 
@@ -137,8 +124,12 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
             </div>
 
-            {/* 우: 전화 요약 — 대기 중 고객 발화 STT를 요약한 내용 */}
-            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--onair-surface);border:1.5px solid var(--blue-500);border-radius:8px;padding:14px 16px")}>
+            {/* 우: 전화 요약 — 상단에 한줄 요약 + 근거 발화(헤더에서 옮겨옴), 아래에 STT 요약 불릿 */}
+            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--onair-surface);border:1.5px solid var(--blue-500);border-radius:8px;padding:13px 16px")}>
+            <div style={css("font:600 14.5px/1.4 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepHeadline}</div>
+            <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:4px;padding-bottom:10px;margin-bottom:11px;border-bottom:1px solid var(--gray-200)")}>
+              근거 발화 · <span style={css("font-style:italic;color:var(--gray-800)")}>“{vm.transcriptQuote}”</span>
+            </div>
             <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:10px")}>
               <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>summarize</span>전화 요약 <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· 고객 발화 STT 요약</span>
             </div>
@@ -192,9 +183,41 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <span className="mi" style={css("font-size:16px")}>info</span> {vm.prepHint}
           </span>
           <div style={css("flex:1")} />
-          {/* 이관 조작 자리 → 안내 노트. 상담사는 응대 준비에 집중, 배정·이관은 관리자 콘솔이 맡는다 */}
-          <span style={css("display:flex;align-items:center;gap:5px;font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-            <span className="mi" style={css("font-size:14px")}>sync_alt</span> 부서 이관은 관제 대시보드에서 실시간 처리됩니다
+          {/* 부서 이관 — 통화 연결 옆. 연결 전에 다른 부서로 예약할 수 있다(종료 시 인계). 드롭다운은 위로 열린다 */}
+          <span style={css("position:relative;display:inline-flex")}>
+            <span
+              onClick={() => setTransferMenu((v) => !v)}
+              title="다른 부서로 이관 — 종료 시 예약"
+              style={css("display:flex;align-items:center;gap:5px;font:600 13px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:10px 18px;cursor:pointer;white-space:nowrap;" + (vm.transferReserved ? "background:var(--blue-700);color:#fff" : "background:var(--onair-surface);color:var(--blue-700);border:1px solid var(--blue-400)"))}
+            >
+              <span className="mi" style={css("font-size:18px")}>sync_alt</span>
+              {vm.transferReserved ? (vm.transferTarget ?? vm.suggestedDept) + " 예약됨" : "부서 이관"}
+              <span className="mi" style={css("font-size:16px;transition:transform .2s;transform:rotate(" + (transferMenu ? 180 : 0) + "deg)")}>expand_more</span>
+            </span>
+            {transferMenu && (
+              <>
+                <span onClick={() => setTransferMenu(false)} style={css("position:fixed;inset:0;z-index:40")} />
+                <div style={css("position:absolute;left:0;bottom:calc(100% + 8px);z-index:41;width:256px;background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);overflow:hidden")}>
+                  <div style={css("padding:9px 13px 7px;font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);border-bottom:1px solid var(--gray-200)")}>이관 부서 선택 · 종료 시 예약</div>
+                  {vm.transferReserved && (
+                    <div onClick={() => { vm.toggleTransferReserve(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-100);color:var(--red-800)")}>
+                      <span className="mi" style={css("font-size:15px")}>close</span>
+                      <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif")}>이관 예약 취소</span>
+                    </div>
+                  )}
+                  <div onClick={() => { vm.reserveTransfer(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-100)")}>
+                    <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
+                    <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>AI 추천 — {vm.suggestedDept}</span>
+                  </div>
+                  {vm.transferDepts.map((d) => (
+                    <div key={d.name} onClick={() => { vm.reserveTransfer(d.name); setTransferMenu(false); }} className="memorow" style={css("display:flex;flex-direction:column;gap:1px;padding:8px 13px;cursor:pointer")}>
+                      <span style={css("display:flex;align-items:center;gap:6px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name}<span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>{d.state}</span></span>
+                      <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </span>
           <span
             data-tour="prep-connect"
@@ -213,6 +236,34 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           </span>
         </div>
 
+        </div>
+
+        {/* 상담 스크립트 읽어보기 — 카드 밖 별도 패널. 통화 연결 아래에서 눌러 펼친다(통화 화면과 같은 아코디언) */}
+        <div style={css("width:100%;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near);overflow:hidden")}>
+          <div
+            onClick={() => setScriptOpen((v) => !v)}
+            style={css("display:flex;align-items:center;justify-content:space-between;padding:13px 20px;cursor:pointer;user-select:none")}
+          >
+            <span style={css("display:flex;align-items:center;gap:7px;font:700 13.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
+              <span className="mi" style={css("font-size:18px;color:var(--gray-600)")}>menu_book</span> 상담 스크립트 읽어보기
+              <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· {vm.steps.length}단계 · 통화 연결하면 상담 화면에서도 표시됩니다</span>
+            </span>
+            <span style={css("display:flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700)")}>
+              {scriptOpen ? "접기" : "펼쳐 보기"}
+              <span className="mi" style={css("font-size:19px;transition:transform .25s;transform:rotate(" + (scriptOpen ? 180 : 0) + "deg)")}>expand_more</span>
+            </span>
+          </div>
+          {scriptOpen && (
+            <div style={css("padding:2px 20px 18px;display:flex;flex-direction:column;gap:9px;max-height:260px;overflow:auto")}>
+              {vm.steps.map((st, i) => (
+                <div key={i} style={css("background:var(--gray-100);border-radius:8px;padding:11px 14px")}>
+                  <div style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:4px")}>{st.title}</div>
+                  <div style={css("font:400 13.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{st.text}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </DesktopShell>
   );
