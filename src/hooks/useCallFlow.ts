@@ -182,6 +182,16 @@ const fmt = (s: number) => {
 // 실시간 통화 데모용 고정 통화 ID (고객 마이크 송신 소켓 ↔ 상담사 전사 수신 소켓 매칭용)
 const LIVE_CALL_ID = "demo1";
 
+// ── 침묵 판정 민감도 ──────────────────────────────────────────────────────────
+// 마이크 레벨(onLevel, 초당 ~4회)로 "아직 말하는 중"을 판정해 침묵 카운트다운을 리셋한다.
+// 예전엔 임계 0.02를 **한 번만** 넘어도 즉시 리셋해서, 실제 시연장의 키보드·숨소리·주변
+// 잡음에 카운트다운이 계속 되돌아가 요약이 영영 시작되지 않았다(되돌이표).
+// 그래서 ①임계를 실제 발화 대역(0.05~0.3)에 가깝게 올리고 ②연속 N회 지속될 때만
+// 발화로 인정한다. 잠깐 튄 잡음은 무시되고, 실제 말은 0.5초면 인정된다.
+// 조용히 말해 레벨이 낮은 경우에도 STT 전사가 확정되면 onTranscript가 리셋하므로 안전하다.
+const SPEECH_LEVEL_THRESHOLD = 0.06; // 잡음(≈0.005~0.03) 위, 발화(≈0.05~0.3) 하단
+const SPEECH_SUSTAIN_TICKS = 2; // 연속 2회(≈0.5초) 이상 지속돼야 발화로 인정
+
 export function useCallFlow(config: CallFlowConfig = {}) {
   const s1 = config.silenceSec1 ?? 5;
   const s2 = config.silenceSec2 ?? 5;
@@ -294,6 +304,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const clockT = useRef<number | null>(null);
   const silT = useRef<number | null>(null);
   const silStage = useRef<null | "first" | "confirmPause" | "second">(null);
+  // 임계 이상 레벨이 연속 몇 회 이어졌는지 — 순간 잡음과 실제 발화를 가른다.
+  const loudRun = useRef(0);
   const silEnd = useRef(0);
   const stt = useRef<SttSession | null>(null);
   const live = useRef<{ stop: () => void } | null>(null);
@@ -332,6 +344,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       silT.current = null;
     }
     silStage.current = null;
+    loudRun.current = 0; // 다음 통화가 이전 통화의 레벨 연속 카운트를 물려받지 않도록
     if (stt.current) {
       stt.current.stop();
       stt.current = null;
@@ -548,9 +561,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       },
       onLevel: (l) => {
         setMicLevel(l);
-        // 전사가 확정되기 전이라도 유의미한 입력이 있으면 침묵 판정을 미룬다.
-        // 임계 0.02는 무음 잡음(≈0.005)보다 위, 실제 발화(≈0.05~0.3)보다 아래.
-        if (l > 0.02 && silStage.current) armFirst();
+        // 전사가 확정되기 전이라도 "지속되는" 입력이 있으면 침묵 판정을 미룬다.
+        // 순간적으로 튄 잡음 한 번으로는 리셋하지 않는다(위 상수 주석 참고).
+        if (l > SPEECH_LEVEL_THRESHOLD) {
+          loudRun.current += 1;
+          if (loudRun.current >= SPEECH_SUSTAIN_TICKS && silStage.current) armFirst();
+        } else {
+          loudRun.current = 0;
+        }
       },
     })
       .then((h) => {
