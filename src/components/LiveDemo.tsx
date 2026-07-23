@@ -34,9 +34,11 @@ export default function LiveDemo({
   // 통화 연결(answerCall) 시 자동 on, 상단 알약 토글로 끌 수 있다(발표자가 화면을 다시 키우고 싶을 때).
   const [deskSplit, setDeskSplit] = useState(false);
 
-  // 실제 Galaxy(좁은 화면)로 열었는지 — 무대의 큰 모니터 고객 화면과 레이아웃을 가른다
+  // 실제 Galaxy(좁은 폰 폭)로 열었는지 — 무대의 큰 모니터·TV 고객 화면과 레이아웃을 가른다.
+  // 폰+패널 가로 배치는 ~904px가 필요하므로, 진짜 폰 폭(≤620)에서만 세로로 쌓는다.
+  // (노트북·모니터 창은 620 초과 → 폰 오른쪽에 패널이 나란히 선다)
   const compactCustomer =
-    view === "phone" && window.matchMedia("(max-width: 760px)").matches;
+    view === "phone" && window.matchMedia("(max-width: 620px)").matches;
   // 고객 화면은 콘텐츠 폭이 좁다(폰 260 + 패널 470) — 스테이지를 콘텐츠에 맞추고
   // 확대를 허용해 큰 모니터에서 양옆 여백 없이 화면을 채운다
   const vm = useCallFlow({
@@ -51,7 +53,7 @@ export default function LiveDemo({
     ...(view === "phone"
       ? compactCustomer
         ? { stageW: 432, maxScale: 1, fitPad: 16, fitHeight: false }
-        : { stageW: 760, maxScale: 1.9 }
+        : { stageW: 904, maxScale: 1.6 } // 폰 432 + 간격 40 + 패널 432 = 904 (가로 나란히)
       : null),
     // 직원 단독 화면 — 가로·세로 모두 뷰포트에 맞춘다(fitHeight 기본 true).
     // 가로만 맞추면(fitHeight:false) 낮은 창에서 하단이 잘린다 — 33115b3에서 고친 부분이라 유지.
