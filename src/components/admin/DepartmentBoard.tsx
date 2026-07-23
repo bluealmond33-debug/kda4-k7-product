@@ -151,7 +151,8 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
 
       {/* ── 카드 그리드 보기 — 대기 목록 상시 노출, 행 호버 시 연결·이관 ── */}
       {view === "grid" && (
-        <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(0,1fr);gap:8px;min-height:0")}>
+        {/* 컬럼도 minmax(0,1fr) — 긴 항목 라벨(min-content)이 특정 칸을 넓히지 못하게, 7칸 폭 균일 */}
+        <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:8px;min-height:0")}>
           {ordered.map((dept) => {
             const items = feed.state.queues[dept.name] ?? [];
             const counts = feed.queueCounts[dept.name] ?? { s: 0, g: 0, e: 0 };
@@ -166,13 +167,19 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                 )}
               >
                 <div style={css("display:flex;align-items:center;gap:7px")}>
-                  <span className="mi" style={css("font-size:16px;color:" + (urgent ? "var(--red-900)" : "var(--gray-800)"))}>
+                  <span className="mi" style={css("flex:none;font-size:16px;color:" + (urgent ? "var(--red-900)" : "var(--gray-800)"))}>
                     {isIncident ? "e911_emergency" : "groups"}
                   </span>
-                  <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{dept.name}</span>
+                  <span style={css("min-width:0;font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{dept.name}</span>
                   {isIncident && (
                     <span style={css("flex:none;font:700 10px 'Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>긴급 직결</span>
                   )}
+                  <div style={css("flex:1")} />
+                  {/* 대기 건수 — 카드에서 제일 먼저 읽혀야 할 숫자라 헤더 우측에 크게 */}
+                  <span style={css("flex:none;display:inline-flex;align-items:baseline;gap:3px")}>
+                    <span className="bignum" style={css("font-size:17px;color:" + (urgent ? "var(--red-900)" : items.length > 0 ? "var(--gray-1000)" : "var(--gray-500)"))}>{items.length}</span>
+                    <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+                  </span>
                 </div>
 
                 {/* 대기 목록 — 항상 보인다. 넘치면 카드 안에서 스크롤 */}
@@ -245,8 +252,8 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                   })}
                 </div>
 
-                {/* E/G 카운트 — 신호등 문법, 카드 바닥 고정 */}
-                <div style={css("margin-top:auto;padding-top:7px;display:flex;align-items:center;gap:6px")}>
+                {/* E/G 분해 — 신호등 문법, 카드 바닥 고정. 총 건수는 헤더가 말하므로 여기는 분해만 크게 */}
+                <div style={css("margin-top:auto;padding-top:7px;display:flex;align-items:center;gap:10px")}>
                   {(["E", "G"] as const).map((k) => {
                     const n = k === "G" ? counts.g : counts.e;
                     const meta = SGE_META[k];
@@ -255,17 +262,15 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                       <span
                         key={k}
                         style={css(
-                          "display:inline-flex;align-items:center;gap:4px;font:700 11px 'Geist Mono',monospace;transition:opacity .3s;" +
+                          "display:inline-flex;align-items:center;gap:5px;font:700 12.5px 'Geist Mono',monospace;transition:opacity .3s;" +
                             (n > 0 ? "color:" + meta.fg : "color:var(--gray-500)")
                         )}
                       >
-                        <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + (n > 0 ? meta.bar : dim))} />
+                        <span style={css("width:9px;height:9px;border-radius:9999px;flex:none;background:" + (n > 0 ? meta.bar : dim))} />
                         {k} {n}
                       </span>
                     );
                   })}
-                  <div style={css("flex:1")} />
-                  <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>대기 {items.length}건</span>
                 </div>
               </div>
             );
