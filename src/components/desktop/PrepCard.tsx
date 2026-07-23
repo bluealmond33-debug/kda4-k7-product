@@ -96,31 +96,32 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           {/* 좌: 감정온도·사고징후 세로 스택 / 우: 해야 할 일(상담 중 가장 중요한 실행 항목) */}
           <div style={css("display:flex;gap:12px;align-items:stretch")}>
             <div style={css("flex:none;width:238px;display:flex;flex-direction:column;gap:12px")}>
-            <div style={css("flex:1;min-height:104px;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
-              <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>
-                고객 감정온도
+            <div style={css("flex:1;min-height:96px;background:var(--gray-100);border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;justify-content:center;gap:9px")}>
+              <div style={css("display:flex;align-items:center;gap:6px")}>
+                <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>고객 감정온도</span>
+                <div style={css("flex:1")} />
                 <span
                   title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델이 판정한 값입니다" : "실제 모델 미연동 — 데모용 값입니다"}
-                  style={css("font:600 9px 'Geist Mono',monospace;padding:2px 6px;border-radius:5px;background:var(--gray-200);color:var(--gray-600)")}
+                  style={css("font:600 8.5px 'Geist Mono',monospace;letter-spacing:.2px;padding:2px 7px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-500)")}
                 >{vm.prepEmotionSourceBadge.label}</span>
               </div>
-              <div style={css("display:flex;align-items:center;gap:11px")}>
+              <div style={css("display:flex;align-items:center;gap:12px")}>
                 <Thermometer score={vm.prepEmotionScore} color={vm.prepEmotionBar} />
-                <div style={css("display:flex;align-items:baseline;gap:7px")}>
-                  <span style={css("font:800 34px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.2px;color:" + vm.prepEmotionBar)}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
-                  <span style={css("font:800 15px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
+                <div style={css("display:flex;align-items:baseline;gap:8px")}>
+                  <span style={css("font:800 36px/1 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.4px;color:" + vm.prepEmotionBar)}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
+                  <span style={css("font:700 14px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
                 </div>
               </div>
             </div>
-            <div style={css("flex:1;min-height:104px;border-radius:8px;padding:12px 14px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
-              <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:7px;color:" + (riskHigh ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
-                사고 징후 <span style={css("font-weight:400;opacity:.7")}>(위험도)</span>
+            <div style={css("flex:1;min-height:96px;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;justify-content:center;gap:7px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
+              <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:" + (riskHigh ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
+                사고 징후 <span style={css("font-weight:400;opacity:.65")}>· 위험도</span>
               </div>
-              <div style={css("display:flex;align-items:center;gap:9px")}>
-                <span style={css("width:12px;height:12px;border-radius:9999px;flex:none;background:" + (riskHigh ? "#fff" : "var(--green-700)"))} />
-                <span style={css("font:800 26px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.8px;color:" + (riskHigh ? "#fff" : "var(--gray-1000)"))}>{vm.prepRiskLabel}</span>
+              <div style={css("display:flex;align-items:center;gap:10px")}>
+                <span style={css("width:11px;height:11px;border-radius:9999px;flex:none;background:" + (riskHigh ? "#fff" : "var(--green-700)"))} />
+                <span style={css("font:800 27px/1 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.8px;color:" + (riskHigh ? "#fff" : "var(--gray-1000)"))}>{vm.prepRiskLabel}</span>
               </div>
-              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;margin-top:6px;color:" + (riskHigh ? "rgba(255,255,255,.88)" : "var(--gray-600)"))}>{vm.prepRiskSignal}</div>
+              <div style={css("font:400 11.5px/1.4 'Geist Sans','Pretendard',sans-serif;color:" + (riskHigh ? "rgba(255,255,255,.88)" : "var(--gray-600)"))}>{vm.prepRiskSignal}</div>
             </div>
             </div>
 
@@ -146,7 +147,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
           {/* 이번 상담 유의사항 — 체크 없이 한눈에(멘토 피드백: 체크 피로 제거). 응대 전 참고 정보. */}
           <div data-tour="prep-checks">
-            <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:9px")}>
+            <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:7px")}>
               <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>이번 상담 유의사항</span>
               <div style={css("flex:1")} />
               {/* 본인인증 상태 — 완료=차분(회색 테두리·초록 방패), 미완료=주의(앰버) */}
@@ -156,30 +157,30 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{vm.prepVerified ? "· 전임 상담사 확인" : "· 연결 직후 확인"}</span>
               </span>
             </div>
-            <div style={css("display:flex;flex-direction:column;gap:8px;margin-bottom:12px")}>
+            <div style={css("display:flex;flex-direction:column;gap:6px;margin-bottom:9px")}>
               {vm.prepRows.map((r, i) => (
                 <div key={i} style={css("display:flex;gap:9px;align-items:baseline")}>
                   <span className="mi" style={css("font-size:15px;color:var(--gray-500);flex:none;transform:translateY(3px)")}>check_circle</span>
                   <div style={css("flex:1")}>
-                    <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.title}</span>
-                    <span style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-left:6px")}>{r.sub}</span>
+                    <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.title}</span>
+                    <span style={css("font:400 11.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-left:6px")}>{r.sub}</span>
                   </div>
                 </div>
               ))}
             </div>
             {/* 첫 응대 문장 — 준비의 결론. 잠금 없이 바로 보여준다 */}
-            <div data-tour="prep-firstline" style={css("display:flex;align-items:center;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
-              <span style={css("display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:var(--gray-1000);color:#fff;flex:none")}><span className="mi" style={css("font-size:14px")}>record_voice_over</span></span>
+            <div data-tour="prep-firstline" style={css("display:flex;align-items:center;gap:10px;background:var(--gray-100);border-radius:8px;padding:10px 14px")}>
+              <span style={css("display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:var(--gray-1000);color:#fff;flex:none")}><span className="mi" style={css("font-size:13px")}>record_voice_over</span></span>
               <div>
-                <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>이 문장으로 통화를 여세요</div>
-                <div style={css("font:500 15px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
+                <div style={css("font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:2px")}>이 문장으로 통화를 여세요</div>
+                <div style={css("font:500 13.5px/1.45 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
               </div>
             </div>
           </div>
         </div>
 
-        <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:15px 24px;box-shadow:var(--sh-joint);background:var(--gray-100)")}>
-          <span style={css("display:flex;align-items:center;gap:5px;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+        <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:11px 24px;box-shadow:var(--sh-joint);background:var(--gray-100)")}>
+          <span style={css("display:flex;align-items:center;gap:5px;font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
             <span className="mi" style={css("font-size:16px")}>info</span> {vm.prepHint}
           </span>
           <div style={css("flex:1")} />
