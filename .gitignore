@@ -15,5 +15,6 @@ app/services/routing/models/*.joblib
 app/services/k7modeling/models/hf_cache/
 app/services/k7modeling/models/*.pt
 
-# RAG FAISS 인덱스(청크에서 재생성 가능) — git 제외
+# RAG FAISS 인덱스와 코퍼스 지문(청크에서 재생성 가능) — git 제외
 app/services/rag_data/*.index
+app/services/rag_data/*.fingerprint

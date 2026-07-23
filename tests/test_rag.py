@@ -98,6 +98,23 @@ def test_추론된_부서는_결과를_독점하지_않는다():
     assert {d.category for d in docs} != {"FX"}, [(d.category, d.score) for d in docs]
 
 
+# ── 코퍼스 지문: 영속 인덱스가 낡았는지 판별 (2026-07-23) ──────────────────
+# 기존 검증은 index.ntotal == len(_DOCS) 즉 **개수만** 봤다. 재전처리로 내용이
+# 바뀌었는데 청크 수가 같으면 낡은 인덱스를 조용히 로드해 벡터와 문서가 어긋난다.
+
+def test_코퍼스_지문은_개수가_같아도_내용이_바뀌면_달라진다():
+    before = rag._corpus_fingerprint()
+    original = rag._DOCS[0]["text"]
+    try:
+        rag._DOCS[0]["text"] = original + " (재전처리로 문구 변경)"
+        after = rag._corpus_fingerprint()
+    finally:
+        rag._DOCS[0]["text"] = original
+
+    assert before != after
+    assert rag._corpus_fingerprint() == before  # 복원되면 지문도 돌아온다
+
+
 def test_가점이_붙어도_표시_점수는_내림차순이다():
     """가점은 선정에만 쓰고 순서는 원점수 기준 — 화면에서 정렬이 깨져 보이면 안 된다."""
     docs = rag.search_procedures(_SETTINGS, _FX_TRIGGER_BUT_SG_QUERY, top_k=3)

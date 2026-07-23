@@ -25,6 +25,7 @@
 두 임베딩은 차원이 다르므로 인덱스 캐시도 모드별로 분리한다.
 """
 
+import hashlib
 import json
 import logging
 import pathlib
@@ -492,23 +493,45 @@ def _embed(settings: Settings, texts: list[str]) -> np.ndarray:
     return _embed_openai(settings, texts)
 
 
+def _corpus_fingerprint() -> str:
+    """코퍼스 내용 지문. 영속 인덱스가 지금 코퍼스로 만들어졌는지 판별한다.
+
+    개수(index.ntotal)만 보면 재전처리로 **내용만** 바뀐 경우(청크 수는 그대로)를 놓쳐
+    낡은 벡터를 새 문서에 붙여 검색하게 된다 — 에러 없이 결과만 틀린다.
+    """
+    digest = hashlib.sha256()
+    for doc in _DOCS:
+        digest.update(str(doc.get("doc_id", "")).encode("utf-8"))
+        digest.update(b"\x00")
+        digest.update(str(doc.get("text", "")).encode("utf-8"))
+        digest.update(b"\x01")
+    return digest.hexdigest()[:16]
+
+
 def _ensure_index(settings: Settings) -> faiss.IndexFlatIP:
     cache_key = "local" if settings.use_local_models else "cloud"
     if cache_key in _index_cache:
         return _index_cache[cache_key]
 
-    # 디스크 영속 인덱스가 코퍼스 크기와 일치하면 로드(1,153청크 재임베딩 회피 — 재시작 빠름).
+    # 디스크 영속 인덱스가 지금 코퍼스와 일치하면 로드(1,153청크 재임베딩 회피 — 재시작 빠름).
     # FAISS(Windows)는 비ASCII 경로 IO에 실패("Illegal byte sequence")하므로 ASCII 임시경로를 경유한다.
     persist = _INDEX_DIR / f"faiss_{cache_key}.index"
+    stamp = _INDEX_DIR / f"faiss_{cache_key}.fingerprint"
     tmp = pathlib.Path(tempfile.gettempdir()) / f"_karina_faiss_{cache_key}.index"
+    fingerprint = _corpus_fingerprint()
     if persist.is_file():
         try:
+            saved = stamp.read_text(encoding="utf-8").strip() if stamp.is_file() else None
             shutil.copy(str(persist), str(tmp))
             index = faiss.read_index(str(tmp))
             tmp.unlink(missing_ok=True)
-            if index.ntotal == len(_DOCS):
+            if index.ntotal == len(_DOCS) and saved == fingerprint:
                 _index_cache[cache_key] = index
                 return index
+            logger.info(
+                "FAISS 인덱스가 현재 코퍼스와 불일치 — 재빌드 (청크 %d→%d, 지문 %s→%s)",
+                index.ntotal, len(_DOCS), saved, fingerprint,
+            )
         except Exception:
             logger.warning("FAISS 인덱스 로드 실패 — 재빌드", exc_info=True)
 
@@ -524,6 +547,8 @@ def _ensure_index(settings: Settings) -> faiss.IndexFlatIP:
         _INDEX_DIR.mkdir(parents=True, exist_ok=True)
         faiss.write_index(index, str(tmp))      # ASCII 임시경로에 쓰고
         shutil.move(str(tmp), str(persist))     # 유니코드 이동은 파이썬이 처리
+        # 지문은 인덱스를 쓴 **뒤에** 남긴다 — 중간에 실패하면 지문이 없어 다음 기동에 재빌드된다.
+        stamp.write_text(fingerprint, encoding="utf-8")
     except Exception:
         logger.warning("FAISS 인덱스 영속 실패(무해 — 다음 기동 시 재빌드)", exc_info=True)
     _index_cache[cache_key] = index
@@ -548,11 +573,13 @@ def register_chunks(settings: Settings, chunks: list[dict]) -> int:
     for other in [k for k in list(_index_cache) if k != cache_key]:
         _index_cache.pop(other, None)
         (_INDEX_DIR / f"faiss_{other}.index").unlink(missing_ok=True)
+        (_INDEX_DIR / f"faiss_{other}.fingerprint").unlink(missing_ok=True)
 
     index = _index_cache.get(cache_key)
     if index is None:
         # 아직 인덱스가 없으면 다음 검색 때 새 코퍼스 전체로 자연히 빌드된다.
         (_INDEX_DIR / f"faiss_{cache_key}.index").unlink(missing_ok=True)
+        (_INDEX_DIR / f"faiss_{cache_key}.fingerprint").unlink(missing_ok=True)
         return len(chunks)
 
     vectors = np.vstack(
@@ -567,6 +594,10 @@ def register_chunks(settings: Settings, chunks: list[dict]) -> int:
         tmp = pathlib.Path(tempfile.gettempdir()) / f"_karina_faiss_{cache_key}.index"
         faiss.write_index(index, str(tmp))
         shutil.move(str(tmp), str(_INDEX_DIR / f"faiss_{cache_key}.index"))
+        # 지문도 함께 갱신 — 안 하면 다음 기동에서 불일치로 판정돼 전체 재임베딩된다.
+        (_INDEX_DIR / f"faiss_{cache_key}.fingerprint").write_text(
+            _corpus_fingerprint(), encoding="utf-8"
+        )
     except Exception:
         logger.warning("FAISS 인덱스 영속 실패(무해 — 다음 기동 시 재빌드)", exc_info=True)
 
