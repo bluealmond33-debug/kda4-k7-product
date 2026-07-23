@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { css } from "../../lib/css";
 import { SGE_META } from "../../services";
 
@@ -82,10 +82,30 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
 
   const mE = SGE_META.E, mS = SGE_META.S, mG = SGE_META.G;
 
+  // 미니맵 — 스크롤 뷰포트 추적(캔버스가 창보다 커서 넘칠 때 현재 위치 표시)
+  const PAD = 20;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [vp, setVp] = useState({ sl: 0, st: 0, cw: 0, ch: 0 });
+  const syncVp = () => {
+    const el = scrollRef.current;
+    if (el) setVp({ sl: el.scrollLeft, st: el.scrollTop, cw: el.clientWidth, ch: el.clientHeight });
+  };
+  useEffect(() => { syncVp(); }, []);
+  const MMW = 172, MMH = Math.round((MMW * CH) / CW);
+  // 노드 색(미니맵) — 등급/사고신고만 색, 나머지 회색
+  const mmColor: Partial<Record<Key, string>> = { E: mE.bar, S: mS.bar, G: mG.bar, SG: "var(--red-400)" };
+  const vx = Math.max(0, vp.sl - PAD), vy = Math.max(0, vp.st - PAD);
+  const vw = Math.max(0, Math.min(CW, vp.sl - PAD + vp.cw) - vx), vh = Math.max(0, Math.min(CH, vp.st - PAD + vp.ch) - vy);
+  const jump = (e: React.MouseEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = ((e.clientX - r.left) / r.width) * CW, py = ((e.clientY - r.top) / r.height) * CH;
+    scrollRef.current?.scrollTo({ left: px - vp.cw / 2 + PAD, top: py - vp.ch / 2 + PAD, behavior: "smooth" });
+  };
+
   return (
     <>
       <div onClick={onClose} style={css("position:fixed;inset:0;z-index:900;background:rgba(22,20,17,.45);animation:fadeIn .25s ease-out;cursor:pointer")} />
-      <div style={css("position:fixed;left:50%;top:50%;z-index:901;transform:translate(-50%,-50%);width:1108px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;background:var(--gray-100);border-radius:16px;box-shadow:var(--sh-modal);animation:modalIn .3s var(--ease-out);overflow:hidden")}>
+      <div style={css("position:fixed;left:50%;top:50%;z-index:901;transform:translate(-50%,-50%);width:840px;max-width:94vw;height:76vh;max-height:760px;display:flex;flex-direction:column;background:var(--gray-100);border-radius:16px;box-shadow:var(--sh-modal);animation:modalIn .3s var(--ease-out);overflow:hidden")}>
         {/* 헤더 */}
         <div style={css("display:flex;align-items:center;gap:9px;padding:16px 20px 14px;flex:none;background:var(--onair-surface);border-bottom:1px solid var(--gray-200)")}>
           <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>account_tree</span>
@@ -97,7 +117,7 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
           </span>
         </div>
 
-        <div style={css("flex:1;overflow:auto;padding:20px")}>
+        <div ref={scrollRef} onScroll={syncVp} style={css("flex:1;overflow:auto;padding:20px")}>
           {/* ── n8n 캔버스: 점 그리드 배경 + 절대배치 노드 + SVG 엣지 ── */}
           <div style={css("position:relative;width:" + CW + "px;height:" + CH + "px;margin:0 auto;background-image:radial-gradient(var(--gray-300) 1px,transparent 0);background-size:19px 19px;background-position:8px 8px")}>
             {/* 엣지 레이어 */}
@@ -189,6 +209,24 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
               부서 코드(DEP·LON…)가 규정검색(RAG) 대분류와 같아 <b style={css("color:var(--gray-1000)")}>부서 확정 = 규정검색 필터 확정</b>. (ETC 제도·민원은 문서분류 전용 — 라우팅 큐 아님)
             </span>
           </div>
+        </div>
+
+        {/* ── 미니맵 (우측 하단) — 전체 그래프 축소도 + 현재 보이는 영역 ── */}
+        <div style={css("position:absolute;right:14px;bottom:14px;z-index:5;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9px;box-shadow:var(--sh-modal);padding:6px 6px 5px")}>
+          <div style={css("display:flex;align-items:center;gap:4px;padding:0 2px 4px")}>
+            <span className="mi" style={css("font-size:11px;color:var(--gray-500)")}>map</span>
+            <span style={css("font:700 8.5px " + FONT + ";letter-spacing:.3px;color:var(--gray-500)")}>미니맵</span>
+          </div>
+          <svg onClick={jump} width={MMW} height={MMH} viewBox={"0 0 " + CW + " " + CH}
+            style={{ display: "block", borderRadius: 5, background: "var(--gray-100)", cursor: "pointer" }}>
+            {(Object.keys(NODES) as Key[]).map((k) => {
+              const n = NODES[k];
+              return <rect key={k} x={n.x} y={n.y} width={n.w} height={n.h} rx={9} fill={mmColor[k] || "var(--gray-400)"} opacity={mmColor[k] ? 0.9 : 0.55} />;
+            })}
+            {vw > 0 && vh > 0 && (
+              <rect x={vx} y={vy} width={vw} height={vh} rx={6} fill="rgba(20,110,235,.12)" stroke="var(--blue-700)" strokeWidth={9} />
+            )}
+          </svg>
         </div>
       </div>
     </>
