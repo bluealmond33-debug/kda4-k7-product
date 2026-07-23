@@ -125,10 +125,11 @@ export default function LiveTranscriptPanel({
           "px;display:flex;flex-direction:column;background:#0a0a0e;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden"
       )}
     >
-      {/* 파형 — 상자 안 상자: 어두운 패널 속 더 깊은 무대, 그 위 흰 물결 */}
+      {/* 파형 — 상자 안 상자: 어두운 패널 속 더 깊은 무대, 그 위 흰 물결.
+          위쪽 여백을 키워 살짝 아래로 내리고, 좌우 여백을 키워 아래 텍스트 상자보다 가로를 짧게(inset) 한다. */}
       <div
         style={css(
-          "flex:none;margin:16px 22px 0;height:130px;position:relative;background:#000;border-radius:14px;overflow:hidden"
+          "flex:none;margin:30px 40px 0;height:120px;position:relative;background:#000;border-radius:14px;overflow:hidden"
         )}
       >
         <div style={css("position:absolute;inset:0")}>
@@ -148,7 +149,8 @@ export default function LiveTranscriptPanel({
         )}
       >
         {groups.length === 0 ? (
-          <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#565b66")}>
+          // 안내 문구를 화면 정중앙보다 조금 위로 — 파형 상자와 가깝게, 아래를 비워 균형을 맞춘다
+          <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#565b66;padding-bottom:120px")}>
             <span className="mi" style={css("font-size:30px")}>graphic_eq</span>
             {/* 안내 문구는 화면마다 다르다 — 직원 화면엔 옆에 전화기가 없다 */}
             <span style={css("font:400 12.5px 'Geist Sans','Pretendard',sans-serif;text-align:center;line-height:1.6")}>
