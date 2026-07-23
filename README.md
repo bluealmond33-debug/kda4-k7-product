@@ -65,6 +65,27 @@ SHA-256: `88e2c3f3e0d85497a3e59a84ac42835ccf8620aab999de27cdb9ff92fc27d4ac`
 - `app/contracts.py` — **이찬희 파트(kda4-k7-product)와 공유하는 mvp-1.0 계약** — 프론트가
   exactKeys로 엄격 검증하므로 필드 추가·변경 시 팀 논의 필요. `/api/v1/calls`가 이 계약을 씀
 
+## 규정 코퍼스 (두 저장소에 사본이 있다)
+
+ADR-0011의 역할 분담상 청크 파일이 두 벌 존재한다.
+
+| 위치 | 역할 |
+|---|---|
+| `kda4-k7-product/database/rag/chunks.jsonl` | **원본** — 적재 공장(PDF→청크)의 산출물 |
+| `app/services/rag_data/regulation_chunks.jsonl` | **런타임 사본** — 검색 엔진용 |
+
+실행 엔진이 product 저장소 없이도 돌아야 해서 사본을 들고 있다. 대신 원본이 갱신되면
+(예: CRD·EFN·SG 문서 채우기) 사본이 조용히 낡으므로 아래로 확인한다.
+
+```bash
+./.venv/Scripts/python.exe -m scripts.check_regulation_chunks          # 대조만
+./.venv/Scripts/python.exe -m scripts.check_regulation_chunks --apply  # 사본 갱신
+```
+
+갱신하면 코퍼스 지문이 바뀌어 FAISS 인덱스가 다음 검색에서 자동 재빌드된다(재임베딩에
+수 분 소요). 인덱스는 개수뿐 아니라 **지문**으로 검증하므로, 청크 수가 같은데 내용만
+바뀐 경우에도 낡은 벡터를 쓰지 않는다.
+
 ## 주요 폴더
 
 ```
