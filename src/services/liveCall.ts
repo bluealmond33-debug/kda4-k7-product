@@ -63,12 +63,19 @@ export async function startLiveCall(callId: string, handlers: LiveHandlers = {})
   if (ctx.state === "suspended") await ctx.resume();
   const cust = new WebSocket(`${base}/ws/call/${id}?role=customer`);
   cust.binaryType = "arraybuffer";
+  console.log("[liveCall] 고객 WS 생성:", `${base}/ws/call/${id}?role=customer`);
+  cust.onopen = () => console.log("[liveCall] 고객 WS 열림 (readyState=" + cust.readyState + ")");
+  cust.onclose = (ev) =>
+    console.log("[liveCall] 고객 WS 닫힘 code=" + ev.code + " reason='" + ev.reason + "' wasClean=" + ev.wasClean);
+  cust.onerror = () => console.log("[liveCall] 고객 WS 에러 발생");
 
   const source = ctx.createMediaStreamSource(stream);
   const proc = ctx.createScriptProcessor(4096, 1, 1);
   source.connect(proc);
   proc.connect(ctx.destination); // 출력에 아무것도 안 써서 무음 — 에코 없음
 
+  let sentChunks = 0;
+  let skippedChunks = 0;
   proc.onaudioprocess = (e: AudioProcessingEvent) => {
     const f32 = e.inputBuffer.getChannelData(0);
     if (handlers.onLevel) {
@@ -81,7 +88,12 @@ export async function startLiveCall(callId: string, handlers: LiveHandlers = {})
       const s = Math.max(-1, Math.min(1, f32[i]));
       i16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
     }
-    if (cust.readyState === 1) cust.send(i16.buffer);
+    if (cust.readyState === 1) {
+      cust.send(i16.buffer);
+      if (++sentChunks % 20 === 1) console.log("[liveCall] 오디오 전송 " + sentChunks + "청크 (readyState=1) ✅");
+    } else if (++skippedChunks % 20 === 1) {
+      console.log("[liveCall] ⚠️ 전송 스킵: cust.readyState=" + cust.readyState + " (1=OPEN이어야 전송)");
+    }
   };
 
   let stopped = false;
