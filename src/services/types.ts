@@ -60,12 +60,41 @@ export interface Transcript {
 export type MvpCallStatus = "processing" | "ready" | "failed";
 export type MvpIncidentRisk = "low" | "high";
 export type MvpEmotionStatus = "unavailable" | "completed";
+export type MvpAttentionLevel = "none" | "medium" | "high";
 
 export interface MvpEmotionResult {
   status: MvpEmotionStatus;
   score: number | null;
   level: EmotionTemperatureLevel | null;
   reason: string | null;
+}
+
+export interface MvpChecklistItem {
+  title: string;
+  detail: string;
+  source: "model" | "policy" | "rag";
+}
+
+export interface MvpKnowledgeReference {
+  doc_id: string;
+  title: string;
+  section: string;
+  excerpt: string;
+  source: string;
+  score: number;
+}
+
+export interface MvpRoutingResult {
+  task_code: string;
+  task_name: string;
+  classification: "EMERGENCY" | "SIMPLE" | "GENERAL";
+  handler: "HUMAN" | "AI";
+}
+
+export interface MvpTextEmotionResult {
+  content_emotion: string;
+  situation_severity: "low" | "medium" | "high";
+  urgency_score: number;
 }
 
 export interface MvpConsultationCard {
@@ -76,11 +105,19 @@ export interface MvpConsultationCard {
   incident_risk: MvpIncidentRisk;
   risk_reason: string | null;
   routing_confidence: number | null;
+  customer_requests: string[];
+  missing_information: string[];
+  required_actions: MvpChecklistItem[];
+  knowledge_references: MvpKnowledgeReference[];
   emotion: MvpEmotionResult;
+  attention_level: MvpAttentionLevel;
+  reason_codes: string[] | null;
+  routing: MvpRoutingResult | null;
+  text_emotion: MvpTextEmotionResult | null;
 }
 
 export interface ConsultationCardResponse {
-  schema_version: "mvp-1.0";
+  schema_version: "mvp-1.1";
   call_id: string;
   status: MvpCallStatus;
   source_channel: "voice";

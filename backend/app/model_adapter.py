@@ -56,6 +56,9 @@ _ACTIVE_FIELDS = _CANONICAL_REQUIRED_FIELDS | {
     "incident_risk",
     "risk_reason",
     "routing_confidence",
+    "customer_requests",
+    "missing_information",
+    "required_actions",
 }
 
 

@@ -661,11 +661,23 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       <span className="mi" style={css("font-size:14px")}>auto_awesome</span> 이번 상담 예상 규정 · AI 추천
                     </div>
                     <div style={css("display:flex;flex-direction:column;gap:9px")}>
-                      {vm.regRecos.map((r) => (
-                        <RegReco key={r.title} vm={vm} title={r.title} body={r.body} file={r.file} row={r.row} />
-                      ))}
-                      {vm.regRecos.length === 0 && (
-                        <div style={css("border:1px solid var(--gray-200);border-radius:10px;padding:11px 12px;background:var(--gray-100);font:400 11.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+                      {vm.knowledgeReferences.length ? (
+                        vm.knowledgeReferences.map((reference, index) => (
+                          <RegReco
+                            key={reference.doc_id}
+                            vm={vm}
+                            title={`${reference.title} · ${reference.section}`}
+                            body={reference.excerpt}
+                            file={`${reference.source} · 관련도 ${Math.round(reference.score * 100)}%`}
+                            row={index}
+                          />
+                        ))
+                      ) : vm.regRecos.length ? (
+                        vm.regRecos.map((r) => (
+                          <RegReco key={r.title} vm={vm} title={r.title} body={r.body} file={r.file} row={r.row} />
+                        ))
+                      ) : (
+                        <div style={css("font:400 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
                           실측 추천 규정 없음 · 위 검색창에서 실제 규정 DB를 조회해 주세요.
                         </div>
                       )}
@@ -674,8 +686,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   {!vm.isExplicitLiveCall && <div>
                     <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>규정집 파일 바로가기</div>
                     <div style={css("display:flex;flex-direction:column;gap:7px")}>
-                      <RegFile vm={vm} name="전자금융거래 업무매뉴얼_v24" />
-                      <RegFile vm={vm} name="착오송금_반환지원_안내" />
+                      {vm.knowledgeReferences.map((reference) => (
+                        <RegFile key={reference.doc_id} vm={vm} name={reference.source} />
+                      ))}
                     </div>
                   </div>}
                 </div>

@@ -122,6 +122,60 @@ for (const [score, level] of invalidBoundaries) {
   }
 }
 
+const mvpSchema = readJson("mvp_call_response.schema.json");
+const mvpExample = readJson("examples/mvp_call_response.example.json");
+const mvpAjv = new Ajv2020({ allErrors: true, strict: false });
+addFormats(mvpAjv);
+const validateMvp = mvpAjv.compile(mvpSchema);
+const cardWithoutAttention = structuredClone(mvpExample);
+delete cardWithoutAttention.consultation_card.attention_level;
+const invalidMvp11Cards = [
+  cardWithoutAttention,
+  {
+    ...mvpExample,
+    consultation_card: {
+      ...mvpExample.consultation_card,
+      attention_level: "high",
+    },
+  },
+  {
+    ...mvpExample,
+    consultation_card: {
+      ...mvpExample.consultation_card,
+      routing: {
+        task_code: "G004",
+        task_name: "기타·복합 일반 상담",
+        classification: "GENERAL",
+        handler: "BOT",
+      },
+    },
+  },
+  {
+    ...mvpExample,
+    consultation_card: {
+      ...mvpExample.consultation_card,
+      text_emotion: {
+        content_emotion: "불안",
+        situation_severity: "high",
+        urgency_score: true,
+      },
+    },
+  },
+];
+for (const candidate of invalidMvp11Cards) {
+  if (validateMvp(candidate)) {
+    throw new Error("invalid mvp-1.1 consultation card accepted");
+  }
+}
+
+const nullableMvp11Card = structuredClone(mvpExample);
+nullableMvp11Card.consultation_card.reason_codes = null;
+if (!validateMvp(nullableMvp11Card)) {
+  throw new Error(
+    `nullable mvp-1.1 result rejected: ${mvpAjv.errorsText(validateMvp.errors)}`
+  );
+}
+
 console.log(
-  `JSON_CONTRACTS_OK schemas=${pairs.length} examples=${pairs.length + extraExamples.length} invalid_boundaries_rejected=${invalidBoundaries.length} invalid_provisional_inputs_rejected=${invalidProvisionalInputs.length}`
+  `JSON_CONTRACTS_OK schemas=${pairs.length} examples=${pairs.length + extraExamples.length} invalid_boundaries_rejected=${invalidBoundaries.length} invalid_provisional_inputs_rejected=${invalidProvisionalInputs.length} invalid_mvp11_rejected=${invalidMvp11Cards.length}`
 );

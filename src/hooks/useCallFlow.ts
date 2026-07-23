@@ -1939,14 +1939,31 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     ? "상담 유형 분석 중"
     : card.business_type || summary?.type || "상담 유형 분석 중";
   // 요약 문장은 헤드라인 한 곳에만 — 불릿에는 근거만 남겨 중복을 없앤다.
-  const contractBullets = [card.routing_reason, card.risk_reason].filter(
+  const contractBullets = [
+    ...card.customer_requests,
+    ...card.missing_information.map((item) => `추가 확인 필요: ${item}`),
+    card.routing_reason,
+    card.risk_reason,
+  ].filter(
     (value): value is string => !!value
   );
   const prepSummaryBullets = (contractBullets.length
     ? contractBullets
     : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
   ).slice(0, 4);
-  const prepDefinitions = PREP_ITEMS;
+  const prepDefinitions = card.required_actions.length
+    ? card.required_actions.map((item) => ({
+        title: item.title,
+        sub: `${item.detail} · 근거: ${
+          item.source === "policy" ? "안전 규칙" : item.source === "rag" ? "관련 자료" : "AI 분석"
+        }`,
+      }))
+    : [
+        {
+          title: "상담카드 결과 확인",
+          sub: "자동 체크리스트가 생성되지 않았습니다. 고객 발화와 라우팅 결과를 직접 확인합니다.",
+        },
+      ];
   const emotionBars = temperature.score == null
     ? 0
     : temperature.score > 66
@@ -1981,6 +1998,43 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       text: "관련 규정과 처리 가능 여부를 확인한 뒤 안내하고, 필요한 추가 절차와 후속 연락 여부를 고객과 재확인합니다.",
     },
   ];
+  const ragSheet = card.knowledge_references.length
+    ? {
+        file: "K7_로컬_지식베이스",
+        sheet: "검색 근거",
+        cols: [
+          { l: "문서", w: 220 },
+          { l: "구간", w: 180 },
+          { l: "근거 내용", w: 430 },
+          { l: "관련도", w: 80 },
+        ],
+        rows: card.knowledge_references.map((reference, index) => ({
+          n: index + 1,
+          cells: [
+            { text: reference.title, w: 220 },
+            { text: reference.section, w: 180 },
+            { text: reference.excerpt, w: 430 },
+            { text: `${Math.round(reference.score * 100)}%`, w: 80 },
+          ],
+        })),
+      }
+    : rg;
+  const activeRegRows = card.knowledge_references.length
+    ? regNeedle
+      ? ragSheet.rows.filter((row) =>
+          row.cells.some((cell) => cell.text.toLowerCase().includes(regNeedle))
+        )
+      : ragSheet.rows
+    : rgRows;
+  const actualSummaryPoints = card.customer_requests.length
+    ? card.customer_requests
+    : SUMMARY_POINTS[incoming];
+  const actualCallSteps = card.required_actions.length
+    ? card.required_actions.map((action, index) => ({
+        title: `${index + 1}. ${action.title}`,
+        text: action.detail,
+      }))
+    : SCRIPTS[incoming].map((step) => ({ title: step.title, text: step.text }));
 
   return {
     // refs
@@ -2227,8 +2281,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       ? liveActionItems
       : EXPLICIT_LIVE_CALL_ID
       ? ["고객 문의 내용을 다시 확인해 주세요."]
-      : SUMMARY_POINTS[incoming],
+      : actualSummaryPoints,
     prepSummaryBullets,
+    knowledgeQuery: card.business_type,
+    knowledgeReferences: card.knowledge_references,
     externalSessionKey: consultationResponse.call_id,
     // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다
     customerName: verified ? `${CUSTOMER.name} 고객` : `${CUSTOMER.masked} 고객`,
@@ -2256,7 +2312,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setRegenerating(false);
       });
     },
-    summaryProse: SUMMARY_PROSE[incoming],
+    summaryProse: consultationResponse
+      ? [card.routing_reason, ...card.missing_information.map((item) => `추가 확인: ${item}`)]
+          .filter(Boolean)
+          .join(" · ") || card.summary || "고객 음성에서 확인된 상담 내용을 검토하고 있습니다."
+      : SUMMARY_PROSE[incoming],
     connectBg: canConnect ? "var(--blue-700)" : "var(--gray-200)",
     connectFg: canConnect ? "#fff" : "var(--gray-600)",
     connectCursor: canConnect ? "pointer" : "not-allowed",
@@ -2304,15 +2364,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
     steps: EXPLICIT_LIVE_CALL_ID
       ? liveSteps
-      : SCRIPTS[incoming].map((st) => ({ title: st.title, text: st.text })),
-    firstLine,
+      : actualCallSteps,
+    firstLine: EXPLICIT_LIVE_CALL_ID
+      ? firstLine
+      : actualCallSteps[0]?.text ?? firstLine,
     isExplicitLiveCall: !!EXPLICIT_LIVE_CALL_ID,
     regRecos: EXPLICIT_LIVE_CALL_ID ? [] : REG_RECOS[incoming],
     regQuery: EXPLICIT_LIVE_CALL_ID
       ? explicitSummaryPending
         ? "본인확인"
         : card.business_type || "본인확인"
-      : REG_QUERY[incoming],
+      : card.business_type || REG_QUERY[incoming],
     memoItems,
     memoEmpty: memoItems.length === 0,
     memoDraft,
@@ -2365,11 +2427,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     loadManualFile,
     // 확장 폭 640 — 시트가 3컬럼 리플로우라 640이면 잘림 없이 들어가고, 중앙 스크립트 압착도 덜하다
     regW: regExpanded ? 640 : 372,
-    regFile: rg.file,
-    regSheet: rg.sheet,
-    regCols: rg.cols,
-    regRows: rgRows,
-    regRowsTotal: rg.rows.length,
+    regFile: ragSheet.file,
+    regSheet: ragSheet.sheet,
+    regCols: ragSheet.cols,
+    regRows: activeRegRows,
+    regRowsTotal: ragSheet.rows.length,
     // wrap sheet
     wrapSheetOpen,
     notWrapSheetOpen: !wrapSheetOpen,

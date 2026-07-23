@@ -7,6 +7,28 @@ import {
 import { parseConsultationCardResponse } from "./consultationContract";
 import type { ConsultationCardResponse } from "./types";
 
+async function responseError(response: Response, path: string): Promise<Error> {
+  let detail = "";
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = (await response.json()) as { detail?: unknown };
+      if (typeof payload.detail === "string") detail = payload.detail;
+    } catch {
+      // Keep a stable user-facing fallback when an upstream emits malformed JSON.
+    }
+  }
+
+  if (response.status === 504) {
+    detail = "로컬 AI 분석 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.";
+  }
+
+  return new Error(
+    detail || `상담 분석 요청에 실패했습니다. (${path}, HTTP ${response.status})`
+  );
+}
+
 /** Fresh copy so UI state cannot mutate the shared contract fixture. */
 export function getDemoConsultationCard(): ConsultationCardResponse {
   const card = parseConsultationCardResponse(structuredClone(demoResponse));
@@ -36,13 +58,12 @@ export async function getConsultationCard(
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`${path} failed: ${response.status} ${detail}`.trim());
+    throw await responseError(response, path);
   }
   return parseConsultationCardResponse(await response.json());
 }
 
-/** Upload the customer's voice and receive the persisted mvp-1.0 card. */
+/** Upload the customer's voice and receive the persisted mvp-1.1 card. */
 export async function createConsultationFromAudio(
   audio: File
 ): Promise<ConsultationCardResponse> {
@@ -55,8 +76,7 @@ export async function createConsultationFromAudio(
     body,
   });
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`${path} failed: ${response.status} ${detail}`.trim());
+    throw await responseError(response, path);
   }
   return parseConsultationCardResponse(await response.json());
 }

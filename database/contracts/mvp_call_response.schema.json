@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://k7.example/contracts/mvp-call-response-1.0.schema.json",
+  "$id": "https://k7.example/contracts/mvp-call-response-1.1.schema.json",
   "title": "K7 MVP Voice Call Response",
   "type": "object",
   "additionalProperties": false,
@@ -15,7 +15,7 @@
     "created_at"
   ],
   "properties": {
-    "schema_version": { "const": "mvp-1.0" },
+    "schema_version": { "const": "mvp-1.1" },
     "call_id": { "type": "string", "format": "uuid" },
     "status": { "enum": ["processing", "ready", "failed"] },
     "source_channel": { "const": "voice" },
@@ -41,7 +41,15 @@
         "incident_risk",
         "risk_reason",
         "routing_confidence",
-        "emotion"
+        "customer_requests",
+        "missing_information",
+        "required_actions",
+        "knowledge_references",
+        "emotion",
+        "attention_level",
+        "reason_codes",
+        "routing",
+        "text_emotion"
       ],
       "properties": {
         "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
@@ -54,6 +62,47 @@
           "type": ["number", "null"],
           "minimum": 0,
           "maximum": 1
+        },
+        "customer_requests": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        },
+        "missing_information": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        },
+        "required_actions": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["title", "detail", "source"],
+            "properties": {
+              "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+              "detail": { "type": "string", "minLength": 1, "maxLength": 1000 },
+              "source": { "enum": ["model", "policy", "rag"] }
+            }
+          }
+        },
+        "knowledge_references": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["doc_id", "title", "section", "excerpt", "source", "score"],
+            "properties": {
+              "doc_id": { "type": "string", "minLength": 1, "maxLength": 100 },
+              "title": { "type": "string", "minLength": 1, "maxLength": 300 },
+              "section": { "type": "string", "minLength": 1, "maxLength": 300 },
+              "excerpt": { "type": "string", "minLength": 1, "maxLength": 2000 },
+              "source": { "type": "string", "minLength": 1, "maxLength": 500 },
+              "score": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
         },
         "emotion": {
           "type": "object",
@@ -137,12 +186,67 @@
               }
             }
           ]
+        },
+        "attention_level": { "enum": ["none", "medium", "high"] },
+        "reason_codes": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "array",
+              "maxItems": 16,
+              "items": { "type": "string", "minLength": 1, "maxLength": 100 }
+            }
+          ]
+        },
+        "routing": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["task_code", "task_name", "classification", "handler"],
+              "properties": {
+                "task_code": { "type": "string", "minLength": 1, "maxLength": 50 },
+                "task_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+                "classification": { "enum": ["EMERGENCY", "SIMPLE", "GENERAL"] },
+                "handler": { "enum": ["HUMAN", "AI"] }
+              }
+            }
+          ]
+        },
+        "text_emotion": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["content_emotion", "situation_severity", "urgency_score"],
+              "properties": {
+                "content_emotion": { "type": "string", "minLength": 1, "maxLength": 100 },
+                "situation_severity": { "enum": ["low", "medium", "high"] },
+                "urgency_score": { "type": "number", "minimum": 0, "maximum": 100 }
+              }
+            }
+          ]
         }
       },
       "allOf": [
         {
           "if": { "properties": { "incident_risk": { "const": "high" } } },
-          "then": { "properties": { "risk_reason": { "type": "string", "minLength": 1 } } }
+          "then": {
+            "properties": {
+              "risk_reason": { "type": "string", "minLength": 1 },
+              "attention_level": { "const": "high" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "incident_risk": { "const": "low" } } },
+          "then": {
+            "properties": {
+              "attention_level": { "enum": ["none", "medium"] }
+            }
+          }
         }
       ]
     },

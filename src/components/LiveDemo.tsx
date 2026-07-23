@@ -188,20 +188,24 @@ export default function LiveDemo({
                 event.target.value = "";
               }}
             />
-            <span
+            <button
+              type="button"
+              data-testid="audio-file-button"
+              aria-label={vm.audioBusy ? "음성 처리 중" : "음성 파일 선택"}
+              disabled={vm.audioBusy}
               onClick={() => !vm.audioBusy && audioInputRef.current?.click()}
               style={css(
                 "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:" +
                   (vm.audioBusy ? "var(--gray-200)" : "var(--green-700)") +
                   ";color:" +
                   (vm.audioBusy ? "var(--gray-600)" : "#fff") +
-                  ";border-radius:9999px;font-size:13px;font-weight:600;cursor:" +
+                  ";border:0;border-radius:9999px;font-size:13px;font-weight:600;cursor:" +
                   (vm.audioBusy ? "wait" : "pointer")
               )}
             >
               <span className="mi" style={css("font-size:17px")}>audio_file</span>
               {vm.audioBusy ? "음성 처리 중" : "음성 파일 선택"}
-            </span>
+            </button>
             {vm.showSkip && (
               <span onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
                 <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약

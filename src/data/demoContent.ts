@@ -30,7 +30,7 @@ export type IncomingKind = "normal" | "urgent" | "transfer";
 
 /** 긴급 콜 픽스처 — 명의도용 의심(사고 징후 high), 대기열 맨 앞 점프 */
 export const URGENT_RESPONSE = {
-  schema_version: "mvp-1.0",
+  schema_version: "mvp-1.1",
   call_id: "demo-urgent-0001",
   status: "ready",
   source_channel: "voice",
@@ -55,6 +55,19 @@ export const URGENT_RESPONSE = {
       level: "elevated",
       reason: "다급·불안 발화 반복 감지",
     },
+    attention_level: "high",
+    reason_codes: ["FINANCIAL_INCIDENT", "TEXT_HIGH_RISK_SIGNAL"],
+    routing: {
+      task_code: "E002",
+      task_name: "이상거래 신고",
+      classification: "EMERGENCY",
+      handler: "HUMAN",
+    },
+    text_emotion: {
+      content_emotion: "불안",
+      situation_severity: "high",
+      urgency_score: 95,
+    },
   },
   created_at: "2026-07-18T07:00:00Z",
 } as const;
@@ -65,7 +78,7 @@ export const URGENT_PRIORITY_REASON =
 
 /** 이관 수신 픽스처 — 주니어 상담사가 넘긴 복합 문의 */
 export const TRANSFER_RESPONSE = {
-  schema_version: "mvp-1.0",
+  schema_version: "mvp-1.1",
   call_id: "demo-transfer-0001",
   status: "ready",
   source_channel: "voice",
@@ -89,6 +102,19 @@ export const TRANSFER_RESPONSE = {
       score: 48,
       level: "caution",
       reason: "긴 상담으로 답답함 표현",
+    },
+    attention_level: "medium",
+    reason_codes: ["ATTENTION_REQUIRED"],
+    routing: {
+      task_code: "G004",
+      task_name: "기타·복합 일반 상담",
+      classification: "GENERAL",
+      handler: "HUMAN",
+    },
+    text_emotion: {
+      content_emotion: "걱정",
+      situation_severity: "medium",
+      urgency_score: 48,
     },
   },
   created_at: "2026-07-18T07:10:00Z",

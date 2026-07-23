@@ -8,8 +8,8 @@ const readJson = (relativePath) =>
 
 const manifest = readJson("database/active-manifest.json");
 if (manifest.status !== "active") throw new Error("active manifest status must be active");
-if (manifest.contract_version !== "mvp-1.0") {
-  throw new Error("active contract_version must be mvp-1.0");
+if (manifest.contract_version !== "mvp-1.1") {
+  throw new Error("active contract_version must be mvp-1.1");
 }
 if (manifest.source_channel !== "voice") {
   throw new Error("MVP source_channel must be voice");
@@ -27,7 +27,8 @@ if (
 if (
   manifest.audio_processing?.stt_input !== "audio" ||
   manifest.audio_processing?.summary_input !== "stt_text" ||
-  manifest.audio_processing?.summary_processor !== "openai" ||
+  manifest.audio_processing?.stt_processor !== "provider_configured" ||
+  manifest.audio_processing?.summary_processor !== "provider_configured" ||
   manifest.audio_processing?.emotion_input !== "same_audio_file_only"
 ) {
   throw new Error(
@@ -49,11 +50,19 @@ if (
 }
 if (
   JSON.stringify(manifest.audio_processing?.branches?.text_analysis) !==
-    JSON.stringify(["stt", "openai_summary_classification_routing"]) ||
+    JSON.stringify(["stt_provider", "analysis_provider"]) ||
   JSON.stringify(manifest.audio_processing?.branches?.audio_emotion) !==
     JSON.stringify(["audio_emotion_model"])
 ) {
   throw new Error("active text and audio model branches have drifted");
+}
+if (
+  manifest.audio_processing?.providers?.cloud?.stt !== "openai" ||
+  manifest.audio_processing?.providers?.cloud?.analysis !== "openai" ||
+  manifest.audio_processing?.providers?.local?.stt !== "faster_whisper" ||
+  manifest.audio_processing?.providers?.local?.analysis !== "ollama"
+) {
+  throw new Error("active cloud/local provider matrix has drifted");
 }
 if (
   JSON.stringify(

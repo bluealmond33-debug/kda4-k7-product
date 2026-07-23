@@ -3,17 +3,19 @@
 > 오늘 작업 요약: [Galaxy 마이크 실시간 상담 연동 보고서](docs/TODAY_WORK_SUMMARY.md)
 >
 > 상세 개발 인수인계: [기술 문서](docs/LIVE_CALL_HANDOFF.md) · [배포 페이지](https://k7-live-call-handoff.theonewhogazes.chatgpt.site)
-> 작업 브랜치: `codex/mingikim-live-call` — 원격 `main` 직접 push 금지
+> 통합 대상 브랜치: `lch` — 원격 `main` 직접 push 금지
 
-고객의 **통화 음성**을 동일 원본 기준으로 두 갈래 처리합니다. STT 텍스트는 OpenAI가 요약·업무유형·담당 부서·라우팅을 분석하고, 원본 음성은 음성 감정 모델이 점수를 생성합니다. 두 결과를 같은 `call_id`로 결합해 PostgreSQL에 저장한 뒤 상담사 화면에 표시하는 통합 저장소입니다.
+고객의 **통화 음성**을 상담 준비 카드로 만드는 MVP입니다. 인터넷 배포 프로필에서는 기존 클라우드 공급자를, 노트북 폐쇄망 프로필에서는 faster-whisper와 Ollama(EXAONE)를 사용합니다. 결과는 같은 `mvp-1.1` 계약으로 PostgreSQL에 저장하고 기존 React 상담 화면에 표시합니다.
+
+Galaxy WO Mic과 고객·상담사 오디오 edge는 동일한 `call_id` 세션으로 실시간 STT·DTMF·통화 생명주기 이벤트를 전달하며, 원본 음성 기반 감정 분석과 텍스트 기반 분류·요약을 분리해 처리합니다.
 
 ## 한 줄 흐름
 
 ```text
-통화 음성 → call_id 선발급
-├─ STT 텍스트 → OpenAI 요약·분류·라우팅
-└─ 동일 원본 음성 → 음성 감정 모델
-→ call_id 결과 결합 → mvp-1.0 → PostgreSQL → React/Vercel
+음성 파일 → faster-whisper STT
+→ Ollama 요약·요청·누락정보·업무유형·위험도·상담절차
+→ 로컬 업무가이드 검색(RAG) + 금융사고 안전 규칙
+→ call_id 결과 결합 → mvp-1.1 → PostgreSQL → 기존 React UI
 ```
 
 ## 단일 기준
@@ -26,6 +28,8 @@
 | 활성 자산 매니페스트 | `database/active-manifest.json` |
 | API 계약 | `database/contracts/mvp_call_response.schema.json` |
 | 모델 결과 어댑터 | `backend/app/model_adapter.py` |
+| 로컬 RAG·안전 규칙 | `backend/app/knowledge_base.py` |
+| 데모 업무가이드 | `database/knowledge/demo_guides.ko.json` |
 | 음성 감정 어댑터 | `backend/app/emotion_adapter.py` |
 | 이중 분석 명세 | `docs/AUDIO_TEXT_DUAL_PIPELINE.md` |
 | 기존 파이프라인 연결 함수 | `backend/app/integration_service.py` |
@@ -39,7 +43,7 @@
 ```text
 POST /api/v1/calls
   multipart/form-data audio=<고객 음성>
-  STT·분석·DB 저장 후 mvp-1.0 상담카드 반환
+  STT·분석·DB 저장 후 mvp-1.1 상담카드 반환
 
 GET /api/v1/calls/{call_id}/consultation-card
   DB에 저장된 같은 상담카드 재조회
@@ -121,7 +125,7 @@ Remove-Item Env:K7_TEST_DATABASE_URL
 .\scripts\check-production-readiness.ps1
 ```
 
-`ready=true`는 새 POST/GET, 기존 8개 호환 경로, `database=connected`, `contract_version=mvp-1.0`이 모두 확인됐다는 뜻입니다.
+`ready=true`는 새 POST/GET, 기존 8개 호환 경로, `database=connected`, `contract_version=mvp-1.1`이 모두 확인됐다는 뜻입니다.
 
 병합 후 GitHub의 **Actions → Production readiness → Run workflow**에서도 같은 읽기 전용 검사를 실행할 수 있습니다. 운영 백엔드가 아직 반영 전이면 누락 항목을 출력하고 실패하며, 반영 후에는 `ready=true`로 통과합니다.
 
@@ -130,9 +134,9 @@ Remove-Item Env:K7_TEST_DATABASE_URL
 - 활성 자산 매니페스트와 정확히 3개 테이블
 - JSON Schema와 예제
 - 기존 모델 결과 어댑터
-- `mvp-1.0` 활성 모델 결과 어댑터
+- `mvp-1.1` 활성 모델 결과 어댑터
 - TypeScript와 Vite 프로덕션 빌드
-- FastAPI `mvp-1.0` Pydantic 계약
+- FastAPI `mvp-1.1` Pydantic 계약
 - 비마스킹 3테이블 활성 SQL
 - 기존 Railway 9개 경로와 새 DB 경로의 OpenAPI 공존
 
@@ -165,9 +169,81 @@ response = persist_pipeline_result(
 )
 ```
 
-이 함수가 어댑터 실행, `mvp-1.0` 상담카드 조립, PostgreSQL 트랜잭션 저장과 `call_id` 생성을 담당합니다. STT나 모델을 다시 실행하지 않습니다.
+이 함수가 어댑터 실행, `mvp-1.1` 상담카드 조립, PostgreSQL 트랜잭션 저장과 `call_id` 생성을 담당합니다. STT나 모델을 다시 실행하지 않습니다.
 
 감정 모델이 아직 없으면 `emotion.status=unavailable`과 `score=null`을 사용합니다. 임의 숫자를 실제 모델 결과처럼 표시하지 않습니다.
+
+## 노트북 오프라인 데모
+
+Vercel은 인터넷 배포용 프론트입니다. 오프라인 데모에서는 Vercel을 사용하지 않고 React, FastAPI, PostgreSQL, faster-whisper와 Ollama를 한 노트북에서 함께 실행합니다.
+
+최초 한 번 인터넷이 연결된 상태에서 이미지와 모델을 준비합니다.
+
+```powershell
+Copy-Item .env.local-demo.example .env.local-demo
+# 데모 비밀번호와 하드웨어 프로필을 확인한 다음:
+.\scripts\prepare-local-demo.ps1
+```
+
+준비가 끝난 뒤 인터넷을 끊고 격리 네트워크 모드로 실행합니다.
+
+```powershell
+.\scripts\start-local-demo.ps1 -Offline
+```
+
+접속 주소:
+
+```text
+이 노트북: http://127.0.0.1:8080
+같은 LAN:  http://<서버 노트북 사설 IP>:8080
+```
+
+현재 사설 IP는 아래 명령으로 확인합니다. 핫스팟을 다시 연결하면 주소가 바뀔 수 있습니다.
+
+```powershell
+Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object { $_.IPAddress -like '192.168.*' }
+```
+
+상태 확인과 종료:
+
+```powershell
+.\scripts\doctor-local-demo.ps1
+.\scripts\stop-local-demo.ps1 -Offline
+```
+
+기본 CPU 프로필은 faster-whisper `small`/`int8`입니다. GPU 프로필은 Docker GPU 지원을 먼저 구성한 뒤 `.env.local-demo`에서 장치와 연산 형식을 변경합니다. 모델 파일이 준비되지 않았거나 Ollama에 지정 모델이 없으면 실제 음성 처리는 실패하며 fixture로 대체하지 않습니다.
+
+전달받은 `bank_topic_classifier.joblib`은 NIA 은행 일반업무 10종 보조
+분류기로 연결됩니다. 로드 전 SHA-256을 확인하고, decision margin `0.75`
+이상만 자동 채택하며 미만은 `G004 기타·복합 일반 상담`으로 폴백합니다.
+금융사고 안전 규칙의 고위험 라우팅이 이 결과보다 항상 우선합니다.
+전체 정확도 `74.2%`, 고확신 구간 정확도 `90.4%`, 고확신 적용 범위
+`61.3%`는 이 10종 모델의 검증값이며 긴급·단순·일반 전체나 ARS 17종의
+실제 발화 정확도가 아닙니다. 자세한 전달 기록은
+`backend/app/services/routing/MODEL_DELIVERY.md`를 확인합니다.
+
+`-Offline` 모드에서는 FastAPI·Ollama·PostgreSQL 데이터 처리망이 Docker `internal` 네트워크에만 연결됩니다. 프론트 Nginx의 8080 포트만 서버 노트북과 같은 LAN에 공개됩니다. 로컬 아이콘 글꼴도 번들에 포함되어 Google Fonts 연결이 필요 없습니다.
+
+실제 응답으로 바뀌는 화면 항목:
+
+- 상담 준비 카드의 요약, 고객 요청, 추가 확인 정보, 업무유형, 담당 부서, 위험도
+- 상담 전 체크리스트와 통화 중 단계별 스크립트
+- 통화 화면의 AI 사전 요약
+- 관련 규정 및 매뉴얼 카드와 검색 근거 표
+- `call_id` 단위 PostgreSQL 저장 및 재조회
+
+현재 남은 의도적 제한:
+
+- 입력은 실제 CTI 전화 연결이 아니라 WAV·MP3·M4A 파일 업로드입니다.
+- 감정 모델은 아직 연결하지 않았으므로 점수를 꾸며내지 않고 `모델 미연동`으로 표시합니다.
+- 번들 RAG 문서는 시연용 K7 업무가이드이며 실제 은행의 내부 규정이 아닙니다.
+- 본인확인, 고객 원장 조회, 실제 지급정지 실행은 UI 시연 경계이며 은행 시스템과 연결되지 않았습니다.
+- 긴급·단순·ARS 17종 규칙 코드는 현재 전달 번들에 없어 통합 완료가 아니며, 실제 발화 정확도도 별도로 평가해야 합니다.
+
+팀 데모 절차와 장애 대응은 `docs/LOCAL_DEMO_RUNBOOK.md`를 확인합니다.
+
+Docker CLI는 보이지만 `docker info`가 `dockerDesktopLinuxEngine` 또는 WSL 오류로 실패하면 Docker Desktop을 Windows 사용자 세션에서 직접 실행하고 엔진이 `Running`이 될 때까지 기다립니다. 계속 실패하면 관리자 PowerShell에서 WSL과 Docker Desktop Service 상태를 복구해야 합니다. 엔진이 정상화되기 전에는 모델 다운로드 스크립트를 실행하지 않습니다.
 
 상세 DB 설명은 `database/README.md`, STT 분류 경계는 `src/features/stt-classification/README.md`를 확인합니다.
 

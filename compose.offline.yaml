@@ -1,0 +1,3 @@
+networks:
+  k7_internal:
+    internal: true
