@@ -25,6 +25,35 @@ def test_unauthorized_transaction_is_emergency():
     assert result.task_code == "E002"
 
 
+# ── 해외 부정결제: 본인 아님을 '간접적으로' 말하는 경우 (2026-07-23) ──────────
+# 시연 전사문에서 발견. 고객은 "내가 안 한"이라고 직접 말하지 않고 위치 모순
+# ("전 지금 한국에 있는데")으로 표현해 unauthorized 신호가 하나도 잡히지 않았다.
+
+def test_해외_부정결제_정지요청은_긴급이다():
+    """실제 시연 전사문. 해외 결제 알림 + 즉시 정지 요청 = 사고 신고."""
+    result = classify_routing(
+        "저기요 지금 부산인데요 제 카드가 방금 해외에서 250달러 결제했다는 문자가 "
+        "왔어요 전 지금 한국에 있는데 이거 돈 아닌 것 같아요 빨리 정지시켜주세요"
+    )
+
+    assert result.classification == "EMERGENCY", result.reason
+    assert result.task_code == "E002"
+
+
+def test_해외결제_문의만으로는_긴급이_아니다():
+    """정지 요청 없이 묻기만 하면 일반 상담이어야 한다(오탐 방지)."""
+    result = classify_routing("해외에서 카드 결제 되나요? 수수료가 어떻게 되는지 궁금해요")
+
+    assert result.classification != "EMERGENCY"
+
+
+def test_해외결제_실패_문의는_긴급이_아니다():
+    """'정지'라는 말이 나와도 본인의 정지 요청이 아니면 긴급이 아니다(오탐 방지)."""
+    result = classify_routing("해외에서 카드 결제가 자꾸 안 되는데 혹시 정지된 건가요")
+
+    assert result.classification != "EMERGENCY"
+
+
 def test_loan_inquiry_is_general_human():
     result = classify_routing("대출 금리 좀 알아보려고요")
     assert result.classification == "GENERAL"

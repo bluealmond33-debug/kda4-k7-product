@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from app.services.routing.ars_catalog import ARS_SIMPLE_TASKS, ARS_TASK_KEYWORDS
 
 DEPARTMENTS = {
@@ -71,6 +73,15 @@ UNAUTHORIZED_SIGNALS = [
 ]
 TRANSACTION_SIGNALS = ["결제", "출금", "이체", "송금", "거래", "인출"]
 ABNORMAL_EXPLICIT = ["이상거래", "이상 거래", "명의도용", "명의 도용"]
+
+# 해외 승인 알림 + 즉시 정지 요청 = 카드 부정사용 신고. 고객이 "내가 안 한"이라고
+# 직접 말하지 않고 위치 모순("전 지금 한국에 있는데")으로 표현하는 경우가 많아
+# UNAUTHORIZED_SIGNALS만으로는 놓친다(2026-07-23 시연 전사문에서 확인).
+# 사이에 금액이 끼므로("해외에서 250달러 결제") 인접 매칭이 아닌 근접 매칭을 쓴다.
+FOREIGN_CHARGE_PATTERN = re.compile(r"(해외|국외|외국)[^.!?]{0,15}?(결제|승인|출금|인출)")
+# 단순 문의와 가르는 축 — '정지'가 아니라 **본인이 정지를 요청**하는 표현만 본다.
+# ("혹시 정지된 건가요" 같은 질문은 여기 걸리지 않는다.)
+STOP_REQUEST_SIGNALS = ["정지시켜", "정지해주", "차단해", "차단시켜", "막아주", "중지시켜"]
 
 TASK_KEYWORDS = {
     "E001": ["보이스피싱", "금융감독원", "검찰", "경찰", "안전계좌", "인증번호", "개인정보"],
@@ -159,9 +170,15 @@ def classify_transcript(transcript: str) -> dict:
     abnormal_explicit = find_matches(text, ABNORMAL_EXPLICIT)
     unauthorized = find_matches(text, UNAUTHORIZED_SIGNALS)
     transactions = find_matches(text, TRANSACTION_SIGNALS)
-    if abnormal_explicit or (unauthorized and transactions):
+    # 해외 승인 알림 + 즉시 정지 요청 — 본인 아님을 간접 표현하는 신고를 잡는다.
+    foreign_charge = FOREIGN_CHARGE_PATTERN.search(text)
+    stop_requests = find_matches(text, STOP_REQUEST_SIGNALS)
+    if abnormal_explicit or (unauthorized and transactions) or (foreign_charge and stop_requests):
         task = TASKS_BY_CODE["E002"]
-        matches = list(dict.fromkeys(abnormal_explicit + unauthorized + transactions))
+        foreign_matches = ["".join(foreign_charge.groups())] if foreign_charge and stop_requests else []
+        matches = list(dict.fromkeys(
+            abnormal_explicit + unauthorized + transactions + foreign_matches + stop_requests
+        ))
         return {
             **task,
             "matched_keywords": matches,
