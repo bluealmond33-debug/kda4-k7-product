@@ -14,6 +14,25 @@ const HISTORY = [
   { date: "2026.02.14", ago: "5개월 전", label: "대출 › 상환일정 문의" },
 ];
 
+// 규정 검색 필터 옵션 — 엑셀 컬럼필터 감각. 부서 코드는 backend taxonomy(DEP/LON/…)와 동일.
+// DB rag_documents.doc_type 실제 값(정확 매칭이라 문자열이 정확해야 함).
+const REG_DOC_TYPES = ["상품설명서", "요약 상품설명서", "핵심설명서", "설명서", "약관", "내부 업무지침 (합성 데모)"];
+const REG_DEPT_OPTS: { label: string; code: string }[] = [
+  { label: "수신·예적금", code: "DEP" },
+  { label: "여신·대출", code: "LON" },
+  { label: "카드·결제", code: "CRD" },
+  { label: "외환·수출입", code: "FX" },
+  { label: "전자금융·디지털", code: "EFN" },
+  { label: "연금·신탁·투자", code: "INV" },
+  { label: "사고·신고", code: "SG" },
+  { label: "제도·민원·기타", code: "ETC" },
+];
+const REG_EFF_OPTS: { label: string; from: string }[] = [
+  { label: "2025년~", from: "2025-01-01" },
+  { label: "2024년~", from: "2024-01-01" },
+  { label: "2023년~", from: "2023-01-01" },
+];
+
 const ACCOUNTS = [
   { kind: "입출금", name: "키움 주거래 통장", no: "***-**-4821", opened: "2019.03.11" },
   { kind: "적금", name: "키움 자유적금", no: "***-**-7745", opened: "2022.06.01" },
@@ -635,6 +654,49 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               )}
             </div>
 
+            {/* 검색 필터 — 엑셀 컬럼필터처럼. 확장 시에만. 문서유형·부서·시행일 드롭다운 + 표만 토글 */}
+            {regWide && (
+              <div style={css("display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--gray-200);background:var(--gray-100)")}>
+                <span className="mi" style={css("font-size:15px;color:var(--gray-500)")}>filter_alt</span>
+                <select
+                  value={vm.regDocType ?? ""}
+                  onChange={(e) => vm.setRegDocType(e.target.value || null)}
+                  style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:var(--onair-surface);border:1px solid " + (vm.regDocType ? "var(--blue-400)" : "var(--gray-300)") + ";border-radius:9999px;padding:4px 8px;cursor:pointer;outline:none")}
+                >
+                  <option value="">문서유형 전체</option>
+                  {REG_DOC_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+                </select>
+                <select
+                  value={vm.regDeptFilter ?? ""}
+                  onChange={(e) => vm.setRegDeptFilter(e.target.value || null)}
+                  style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:var(--onair-surface);border:1px solid " + (vm.regDeptFilter ? "var(--blue-400)" : "var(--gray-300)") + ";border-radius:9999px;padding:4px 8px;cursor:pointer;outline:none")}
+                >
+                  <option value="">부서 전체 · 카드 자동</option>
+                  {REG_DEPT_OPTS.map((d) => (<option key={d.code} value={d.code}>{d.label}</option>))}
+                </select>
+                <select
+                  value={vm.regEffFrom ?? ""}
+                  onChange={(e) => vm.setRegEffFrom(e.target.value || null)}
+                  style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:var(--onair-surface);border:1px solid " + (vm.regEffFrom ? "var(--blue-400)" : "var(--gray-300)") + ";border-radius:9999px;padding:4px 8px;cursor:pointer;outline:none")}
+                >
+                  <option value="">시행일 전체</option>
+                  {REG_EFF_OPTS.map((o) => (<option key={o.from} value={o.from}>{o.label}</option>))}
+                </select>
+                <span
+                  onClick={() => vm.setRegTableOnly(!vm.regTableOnly)}
+                  title="표(테이블) 청크만 보기"
+                  style={css("display:inline-flex;align-items:center;gap:3px;font:600 11px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:4px 10px;cursor:pointer;" + (vm.regTableOnly ? "background:var(--blue-700);color:#fff" : "background:var(--onair-surface);color:var(--gray-800);border:1px solid var(--gray-300)"))}
+                >
+                  <span className="mi" style={css("font-size:14px")}>table_rows</span>표만
+                </span>
+                {vm.regFilterCount > 0 && (
+                  <span onClick={vm.clearRegFilters} style={css("display:inline-flex;align-items:center;gap:2px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);cursor:pointer;margin-left:auto")}>
+                    <span className="mi" style={css("font-size:14px")}>filter_alt_off</span>필터 {vm.regFilterCount} 초기화
+                  </span>
+                )}
+              </div>
+            )}
+
             {!regWide ? (
               /* 내부 폭 고정 — 패널 width가 애니메이션되는 동안 텍스트가 재줄바꿈되며 끊겨 보이는 것을 방지 */
               <div style={css("flex:1;min-height:0;overflow:auto;width:372px;animation:fadeIn .25s ease-out")}>
@@ -770,10 +832,19 @@ function xlRowBg(hit: boolean, i: number): string {
  *  강조 청크(검색에서 들어온 자리)로 자동 스크롤한다. */
 function RegDocSheet({ vm }: { vm: CallFlowVM }) {
   const hitRef = useRef<HTMLDivElement | null>(null);
+  // 상담원이 읽기엔 원문 전체가 너무 길다 — 기본은 검색이 찾은 청크 ± 맥락 2줄만, '전체 보기'로 펼친다
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => setShowAll(false), [vm.regDoc, vm.regDocChunk]);
   useEffect(() => {
     hitRef.current?.scrollIntoView({ block: "center" });
-  }, [vm.regDoc, vm.regDocChunk]);
+  }, [vm.regDoc, vm.regDocChunk, showAll]);
   const doc = vm.regDoc;
+  const chunks = doc?.chunks ?? [];
+  const hitIdx = chunks.findIndex((c) => c.chunk_id === vm.regDocChunk);
+  const WIN = 2; // 히트 앞뒤 맥락 줄 수
+  const windowed = !showAll && hitIdx >= 0 && chunks.length > 2 * WIN + 1;
+  const from = windowed ? Math.max(0, hitIdx - WIN) : 0;
+  const to = windowed ? Math.min(chunks.length, hitIdx + WIN + 1) : chunks.length;
   return (
     <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
       <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
@@ -800,7 +871,14 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
                 <span key={i} style={{ ...css((w ? "width:" + w + "px;flex:none" : "flex:1;min-width:0") + ";padding:8px 10px;border-right:1px solid " + XL_GRID + ";font:700 12px 'Geist Sans','Pretendard',sans-serif"), background: XL_HEAD, color: XL_HEAD_FG }}>{l}</span>
               ))}
             </div>
-            {doc.chunks.map((c, ri) => {
+            {/* 앞 생략분 — 눌러서 전체 펼치기 */}
+            {windowed && from > 0 && (
+              <div onClick={() => setShowAll(true)} className="memorow" style={css("display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 0;background:" + XL_GUT + ";border-bottom:1px solid " + XL_GRID + ";cursor:pointer;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700)")}>
+                <span className="mi" style={css("font-size:15px")}>unfold_more</span>앞 {from}행 더 보기
+              </div>
+            )}
+            {chunks.slice(from, to).map((c, li) => {
+              const ri = from + li;
               const hit = c.chunk_id === vm.regDocChunk;
               const bg = xlRowBg(hit, ri);
               return (
@@ -817,12 +895,24 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
                 </div>
               );
             })}
+            {/* 뒤 생략분 */}
+            {windowed && to < chunks.length && (
+              <div onClick={() => setShowAll(true)} className="memorow" style={css("display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 0;background:" + XL_GUT + ";cursor:pointer;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700)")}>
+                <span className="mi" style={css("font-size:15px")}>unfold_more</span>뒤 {chunks.length - to}행 더 보기
+              </div>
+            )}
           </div>
         )}
       </div>
       <div style={{ ...css("display:flex;align-items:center;gap:6px;padding:6px 12px;background:" + XL_BAND + ";border-top:1px solid " + XL_GRID + ";font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)") }}>
         <span className="mi" style={css("font-size:13px")}>table_view</span>
-        규정 원문 · 파란 강조 = 검색이 찾은 위치
+        {windowed ? "검색 위치 ± 맥락만 표시 중" : "규정 원문 · 파란 강조 = 검색 위치"}
+        <span style={css("flex:1")} />
+        {hitIdx >= 0 && chunks.length > 2 * WIN + 1 && (
+          <span onClick={() => setShowAll((v) => !v)} style={css("display:inline-flex;align-items:center;gap:3px;font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);cursor:pointer")}>
+            <span className="mi" style={css("font-size:14px")}>{showAll ? "unfold_less" : "unfold_more"}</span>{showAll ? "맥락만 보기" : "전체 " + chunks.length + "행 보기"}
+          </span>
+        )}
       </div>
     </div>
   );

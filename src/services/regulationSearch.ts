@@ -11,6 +11,7 @@ export interface RegulationHit {
   chunk_id: string;
   doc_id: string;
   title: string;
+  doc_type: string;
   page: number;
   section: string | null;
   kind: "text" | "table";
@@ -51,7 +52,14 @@ export const semanticSearchEnabled = !!API_BASE_URL;
 
 export async function searchRegulations(
   query: string,
-  opts: { category?: string | null; k?: number; signal?: AbortSignal } = {}
+  opts: {
+    category?: string | null;
+    docType?: string | null;
+    kind?: "text" | "table" | null;
+    effectiveFrom?: string | null;
+    k?: number;
+    signal?: AbortSignal;
+  } = {}
 ): Promise<RegulationSearchResponse> {
   const q = query.trim();
   if (!q || !semanticSearchEnabled) {
@@ -59,6 +67,9 @@ export async function searchRegulations(
   }
   const params = new URLSearchParams({ q, k: String(opts.k ?? 5) });
   if (opts.category) params.set("category", opts.category);
+  if (opts.docType) params.set("doc_type", opts.docType);
+  if (opts.kind) params.set("kind", opts.kind);
+  if (opts.effectiveFrom) params.set("effective_from", opts.effectiveFrom);
   const res = await fetch(
     `${API_BASE_URL}${DATA_API_PREFIX}/regulations/search?${params}`,
     { headers: { Accept: "application/json" }, signal: opts.signal }

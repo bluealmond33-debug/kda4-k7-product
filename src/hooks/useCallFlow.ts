@@ -217,6 +217,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [regExpanded, setRegExpanded] = useState(false);
   // 규정집 실검색 — 비어 있으면 전체, 입력하면 조항·항목·내용·멘트를 훑는다
   const [regSearch, setRegSearch] = useState("");
+  // 검색 필터(엑셀 컬럼필터 감각) — 문서유형·부서(코드, null=카드 자동)·표만·시행일 이후
+  const [regDocType, setRegDocType] = useState<string | null>(null);
+  const [regDeptFilter, setRegDeptFilter] = useState<string | null>(null);
+  const [regTableOnly, setRegTableOnly] = useState(false);
+  const [regEffFrom, setRegEffFrom] = useState<string | null>(null);
   // 업로드한 실제 파일(CSV/XLSX)이 더미 시트를 대체한다 — 세션 동안 유지
   const [manualData, setManualData] = useState<SheetData | null>(null);
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
@@ -987,9 +992,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     const t = window.setTimeout(async () => {
       try {
         const res = await searchRegulations(regSearch, {
-          category: categoryForDepartment(
-            consultationResponse.consultation_card.department
-          ),
+          // 부서 필터 수동 선택이 있으면 우선, 없으면 카드 부서로 자동
+          category:
+            regDeptFilter ??
+            categoryForDepartment(consultationResponse.consultation_card.department),
+          docType: regDocType,
+          kind: regTableOnly ? "table" : null,
+          effectiveFrom: regEffFrom,
           k: 10,
           signal: ctrl.signal,
         });
@@ -1006,7 +1015,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       ctrl.abort();
       window.clearTimeout(t);
     };
-  }, [regSearch, consultationResponse]);
+  }, [regSearch, consultationResponse, regDocType, regDeptFilter, regTableOnly, regEffFrom]);
 
   // CSV/XLSX 버퍼 → SheetData (첫 시트, 첫 행 = 헤더). 업로드·레포 파일 공용 파서
   const parseSheetBuffer = useCallback(async (buf: ArrayBuffer, filename: string): Promise<SheetData | null> => {
@@ -1390,6 +1399,23 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     regSearch,
     onRegSearch: (e: React.ChangeEvent<HTMLInputElement>) => setRegSearch(e.target.value),
     clearRegSearch: () => setRegSearch(""),
+    // 검색 필터(엑셀 컬럼필터) — UI가 옵션을 정하고 값만 넘긴다
+    regDocType,
+    setRegDocType,
+    regDeptFilter,
+    setRegDeptFilter,
+    regTableOnly,
+    setRegTableOnly,
+    regEffFrom,
+    setRegEffFrom,
+    regFilterCount:
+      (regDocType ? 1 : 0) + (regDeptFilter ? 1 : 0) + (regTableOnly ? 1 : 0) + (regEffFrom ? 1 : 0),
+    clearRegFilters: () => {
+      setRegDocType(null);
+      setRegDeptFilter(null);
+      setRegTableOnly(false);
+      setRegEffFrom(null);
+    },
     // 의미 검색 — pgvector 하이브리드 결과 (규정 원문 청크)
     semHits,
     semLoading,
