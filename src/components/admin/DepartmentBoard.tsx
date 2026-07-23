@@ -149,9 +149,9 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
         </div>
       )}
 
-      {/* ── 카드 그리드 보기 — 대기 목록 상시 노출, 행 호버 시 연결·이관 ── */}
+      {/* ── 카드 그리드 보기 — 대기 목록 상시 노출, 행 호버 시 연결·이관.
+          컬럼도 minmax(0,1fr): 긴 항목 라벨(min-content)이 특정 칸을 넓히지 못하게 — 7칸 폭 균일 ── */}
       {view === "grid" && (
-        {/* 컬럼도 minmax(0,1fr) — 긴 항목 라벨(min-content)이 특정 칸을 넓히지 못하게, 7칸 폭 균일 */}
         <div style={css("flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:8px;min-height:0")}>
           {ordered.map((dept) => {
             const items = feed.state.queues[dept.name] ?? [];
