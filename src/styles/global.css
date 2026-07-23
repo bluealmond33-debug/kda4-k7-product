@@ -297,6 +297,17 @@ a:hover {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+/* 관제 LIVE 심장박동 — 전 시스템 정상일 때 초록 점이 잔잔하게 숨쉰다 (안심 신호) */
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
 /* 라우팅 피드 카드 덱 — 새 카드가 위에서 '딜'되듯 얹히고, 뒤 카드들은 스트립으로 쌓인다 */
 @keyframes cardDeal {
   from {
@@ -383,6 +394,15 @@ a:hover {
     to {
       opacity: 1;
       transform: none;
+    }
+  }
+  @keyframes livePulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 1;
     }
   }
   @keyframes wave {

@@ -25,6 +25,8 @@ export default function LiveDemo({
   view = "full",
   ...config
 }: CallFlowConfig & { view?: LiveDemoView } = {}) {
+  const compactCustomer =
+    view === "phone" && window.matchMedia("(max-width: 760px)").matches;
   // 고객 화면은 콘텐츠 폭이 좁다(폰 260 + 패널 470) — 스테이지를 콘텐츠에 맞추고
   // 확대를 허용해 큰 모니터에서 양옆 여백 없이 화면을 채운다
   const vm = useCallFlow({
@@ -34,12 +36,12 @@ export default function LiveDemo({
     // demo. With an explicit registered call_id, an external customer page can
     // drive the combined view's counselor side through the same server state.
     surface: view,
-    // The customer route is opened on a real Galaxy, not on a presentation
-    // canvas.  Keep the native 432px phone artboard, stack the transcript
-    // below it, and fit by width only so controls stay finger-sized instead of
-    // shrinking the whole two-column demo into a tiny thumbnail.
+    // 실제 Galaxy에서는 터치 크기를 유지하며 세로로 쌓고, 발표용 데스크톱에서는
+    // 최신 mingikim 고객 화면처럼 전화기와 전사 패널을 나란히 배치한다.
     ...(view === "phone"
-      ? { stageW: 432, maxScale: 1, fitPad: 16, fitHeight: false }
+      ? compactCustomer
+        ? { stageW: 432, maxScale: 1, fitPad: 16, fitHeight: false }
+        : { stageW: 760, maxScale: 1.9 }
       : null),
     // 직원 단독 화면 — 데스크톱 폭(1100)을 브라우저 가로에 100% 맞춘다(양옆 여백 없음)
     ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 24, fitHeight: false } : null),
@@ -111,15 +113,14 @@ export default function LiveDemo({
           {view !== "phone" && (
           <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
             <div style={css("display:flex;align-items:center;gap:10px")}>
-              {["접수", "준비", "통화", "후처리"].map((label, i) => {
-                const n = i + 1;
-                const active = vm.stepIndex === n;
-                const done = vm.stepIndex > n;
+              {["대기", "접수", "준비", "통화", "후처리"].map((label, i) => {
+                const active = vm.stepIndex === i;
+                const done = vm.stepIndex > i;
                 return (
                   <span key={label} style={css("display:inline-flex;align-items:center;gap:10px")}>
                     {i > 0 && <span style={css("width:14px;height:1.5px;background:" + (done || active ? "var(--gray-500)" : "var(--gray-300)"))} />}
                     <span
-                      onClick={() => vm.jumpToStep(i + 1)}
+                      onClick={() => vm.jumpToStep(i)}
                       title={label + " 화면으로 바로 이동"}
                       style={css("display:inline-flex;align-items:center;gap:6px;cursor:pointer")}
                     >
@@ -133,7 +134,8 @@ export default function LiveDemo({
                               : "background:var(--gray-100);color:var(--gray-600)")
                         )}
                       >
-                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : n}
+                        {/* 대기 = 0(아직 콜 시작 전). 접수부터 1 */}
+                        {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i}
                       </span>
                       <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
                     </span>
@@ -142,12 +144,8 @@ export default function LiveDemo({
               })}
             </div>
             <span style={css("width:1px;height:20px;background:var(--color-border)")} />
-            <span style={css("display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px")}>
-              {vm.phaseLabel}
-            </span>
             {/* 다음 인입 콜 유형 — 콜 유형은 접수 시점에 고정되므로 대기 중에만 바꿀 수 있다.
                 진행 중에는 흐려지고 잠금 아이콘이 이유를 말한다 */}
-            <span style={css("font-size:12px;color:var(--color-fg-muted)")}>다음 콜</span>
             <div
               title={vm.canPickIncoming ? "다음 콜의 인입 유형을 고릅니다" : "콜 유형은 접수 시점에 정해져요 — 이번 콜을 마치면 바꿀 수 있습니다"}
               style={css("display:flex;align-items:center;border:1px solid var(--color-border);border-radius:9999px;overflow:hidden;transition:opacity .2s" + (vm.canPickIncoming ? "" : ";opacity:.45"))}
@@ -215,24 +213,31 @@ export default function LiveDemo({
           </div>
           )}
 
-          {/* 고객 화면 상황 알약 — on/off(대기·통화) + 지금 무슨 일이 일어나는지 한 줄.
-              실제 휴대폰 화면은 깨끗하게, 상황은 전부 이 알약이 말한다 */}
+          {/* 고객 화면 상황 알약 — 발표용 화면: on/off(● 대기·통화)만. 상태 문구·초기화 없음.
+              (리셋은 새로고침 또는 폰의 통화 버튼 — 새 콜 시작이 곧 리셋) */}
           {view === "phone" && (
-            <div style={css("display:flex;align-items:center;gap:10px;background:var(--onair-surface);border-radius:9999px;padding:8px 10px 8px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
-              {/* on/off — 배경 없이 점+텍스트만. 통화 시간은 휴대폰 화면(실폰처럼)이 보여준다 */}
+            <div style={css("display:flex;align-items:center;background:var(--onair-surface);border-radius:9999px;padding:7px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
               <span
                 style={css(
                   "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 4px;color:" +
-                    (phoneActive ? "var(--green-900)" : "var(--gray-700)")
+                    (!vm.mobileServerConnected
+                      ? "var(--red-800)"
+                      : phoneActive
+                      ? "var(--green-900)"
+                      : "var(--gray-700)")
                 )}
               >
                 <span
                   style={css(
                     "width:7px;height:7px;border-radius:9999px;background:" +
-                      (phoneActive ? "var(--green-700);animation:recBlink 1.1s infinite" : "var(--gray-400)")
+                      (!vm.mobileServerConnected
+                        ? "var(--red-700)"
+                        : phoneActive
+                        ? "var(--green-700);animation:recBlink 1.1s infinite"
+                        : "var(--gray-400)")
                   )}
                 />
-                {phoneActive ? "통화 중" : "대기 중"}
+                {!vm.mobileServerConnected ? "서버 연결 중" : phoneActive ? "통화 중" : "대기 중"}
               </span>
             </div>
           )}
@@ -249,9 +254,9 @@ export default function LiveDemo({
           <div
             style={css(
               "position:relative;display:flex;gap:" +
-                (view === "phone" ? "16px" : "40px") +
+                (view === "phone" && compactCustomer ? "16px" : "40px") +
                 ";align-items:center;justify-content:center;flex-direction:" +
-                (view === "phone" ? "column" : "row")
+                (view === "phone" && compactCustomer ? "column" : "row")
             )}
           >
             {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}

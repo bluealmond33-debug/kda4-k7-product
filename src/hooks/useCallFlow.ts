@@ -131,17 +131,13 @@ const GLASS: Partial<Record<Phase, string>> = {
 const PREP_ITEMS = [
   {
     title: "본인확인 우선 진행",
-    sub: "연결 직후 연락처·생년월일 등으로 본인확인 — 완료 전에는 고객 상세 조회가 잠깁니다",
+    sub: "연결 직후 연락처·생년월일 등으로 본인확인",
   },
   {
     title: "단정적 안내 금지",
     sub: "조건·심사·처리 결과를 확인하기 전에는 확정 표현을 피하고 확인된 기준으로 안내",
   },
   { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
-  {
-    title: "녹취 상태·고객 동의 확인",
-    sub: "별도 안내음성 없이 즉시 시작된 녹취 상태와 고객 동의를 상담사가 확인합니다",
-  },
 ];
 
 /** 데모 안내(가이드 모드) — 화면별로 "이 화면이 무엇이고 왜 이렇게 생겼는지"를 설명한다.
@@ -286,7 +282,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [mobileIntakePending, setMobileIntakePending] = useState(false);
   const [mobileAgentConnected, setMobileAgentConnected] = useState(false);
 
-  const [prepChecks, setPrepChecks] = useState<boolean[]>(PREP_ITEMS.map(() => false));
+  const [prepChecks, setPrepChecks] = useState<boolean[]>(PREP_ITEMS.map(() => true));
   const [verified, setVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
@@ -748,7 +744,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setSummaryPending(true);
     }
     transitionPhase("prep");
-    setPrepChecks(PREP_ITEMS.map(() => false));
+    // 최신 준비 카드는 체크박스 없이 유의사항을 한 번에 제시한다.
+    // 연결 게이트는 체크 동작 대신 실제 요약 완료 여부로만 제어한다.
+    setPrepChecks(PREP_ITEMS.map(() => true));
     void runSummary({ forceLive, scope: "intake" }).then((completed) => {
       if (completed) {
         emitCardPipeline(forceLive ? "backend" : "demo", forceLive ? 250 : 700, {
@@ -1545,7 +1543,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAuthInput("");
       startClock();
       if (n === 2) {
-        setPrepChecks(PREP_ITEMS.map(() => false));
+        setPrepChecks(PREP_ITEMS.map(() => true));
         setWrapSheetOpen(false);
         setPhase("prep");
       } else if (n === 3) {
@@ -1634,7 +1632,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           speaker: "customer",
         });
         setSummary(null);
-        setPrepChecks(PREP_ITEMS.map(() => false));
+        setPrepChecks(PREP_ITEMS.map(() => true));
         transitionPhase("prep");
         emitCardPipeline("backend", 250);
       } catch (error) {
@@ -2091,6 +2089,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     clockStr: fmt(clock),
     callStartedAt: callStartedAt || "시작 시각 미기록",
     showTimer: inCall && p !== "connecting",
+    // 통화 누르자마자 00:01 — 실기기처럼 연결음 단계부터 타이머가 붙는다
+    phoneClockStr: fmt(Math.max(clock, 1)),
     showRecDot: p === "recording" || p === "confirm",
     phoneStatus:
       p === "prep"
@@ -2216,6 +2216,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         : card.routing_confidence != null
         ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
         : "확신도 산출 전 · 상담사 확인 필요",
+    // 배정 확신도 % 숫자만 (상단 배지용)
+    prepConfidencePct:
+      card.routing_confidence != null ? Math.round(card.routing_confidence * 100) : null,
+    // 감정온도 숫자(당근 매너온도 스타일) — 신호등 대신 큰 숫자로
+    prepEmotionScore: temperature.score ?? null,
     transcriptQuote: groundedTranscript,
     // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
     summaryPoints: liveActionItems.length
@@ -2258,8 +2263,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepHint: summaryPending
       ? "AI 사전 요약이 완료되면 통화 연결이 활성화됩니다"
       : canConnect
-      ? "유의사항·요약 확인 완료 · 통화를 연결하세요"
-      : `유의사항 ${PREP_ITEMS.length}개를 모두 확인하면 통화 연결이 활성화됩니다`,
+      ? "사전 요약 준비 완료 · 통화를 연결하세요"
+      : "상담 준비 정보를 확인하는 중입니다",
     // auth (1d)
     verified,
     notVerified: nv,
@@ -2336,6 +2341,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setRegTargetRow(null);
       setRegDoc(null);
       setRegDocChunk(null);
+      setRegSearch(""); // 축소 = 검색어까지 비워 완전히 접힘(다시 클릭하면 줄어들게)
     },
     // 실제 규정 원문 열람
     regDoc,

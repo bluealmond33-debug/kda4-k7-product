@@ -44,6 +44,8 @@ export interface DemoEventMap {
     callId: string;
     summary: string;
     businessType: string;
+    /** 3층 업무코드(ARS 코드) — 아는 경우에만 (mvp-1.0 계약엔 아직 없음) */
+    businessCode?: string;
     department: string;
     routingReason: string;
     incidentRisk: MvpIncidentRisk;

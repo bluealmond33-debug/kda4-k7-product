@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import Threads from "./Threads";
 
@@ -33,23 +33,45 @@ export default function LiveTranscriptPanel({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // 발화 반응 파형 — 새 조각마다 즉시 스파이크(어택) 후 기저로 천천히 감쇠(릴리즈)
-  const [amp, setAmp] = useState(0.9);
+  // Siri풍 파형 진폭 — 60fps rAF에서 '연속 사인 합성'으로 부드럽게 구동한다.
+  // (랜덤 스텝 대신 여러 저주파 사인을 겹쳐 자연스러운 출렁임을 만든다)
+  // React 재렌더 없이 ampRef만 갱신 → Threads가 매 프레임 getAmplitude로 읽는다.
+  // 기준: "음성이 들리는 동안"(=조각 타이핑 예상 시간 + 여유)만 크게 스웰.
+  const ampRef = useRef(0.9);
+  const speakingUntil = useRef(0);
   const prevCount = useRef(0);
   useEffect(() => {
-    if (stream.length > prevCount.current) setAmp(3.0);
+    if (stream.length > prevCount.current) {
+      const last = stream[stream.length - 1];
+      speakingUntil.current = performance.now() + last.text.length * 32 + 600;
+    }
     prevCount.current = stream.length;
   }, [stream]);
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setAmp((a) => {
-        const base = active ? 1.1 : 0.9;
-        const next = a + (base - a) * 0.04;
-        return Math.abs(next - base) < 0.01 ? base : next;
-      });
-    }, 80);
-    return () => window.clearInterval(id);
-  }, [active]);
+    let raf = 0;
+    let last = performance.now();
+    const loop = (t: number) => {
+      const dt = Math.min(0.05, (t - last) / 1000);
+      last = t;
+      const speaking = t < speakingUntil.current;
+      // 대기: 아주 느린 호흡. 말할 때: 주기가 다른 사인 3개를 겹쳐 유기적으로 출렁.
+      const idle = 0.12 * Math.sin(t * 0.0016);
+      const talk = speaking
+        ? 0.9 +
+          0.5 * Math.sin(t * 0.0075) +
+          0.28 * Math.sin(t * 0.0135 + 1.3) +
+          0.16 * Math.sin(t * 0.022 + 2.1)
+        : 0;
+      const target = 0.85 + idle + talk;
+      // 프레임 독립 이징(지수) — attack 빠르게, release 느리게. 계단 없이 매끄럽게 수렴.
+      const rate = target > ampRef.current ? 7 : 2.5;
+      ampRef.current += (target - ampRef.current) * (1 - Math.exp(-rate * dt));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const getAmp = useCallback(() => ampRef.current, []);
 
   // 라이브 자막 스크롤 — 타이핑으로 글자가 한 자씩 자라도 항상 바닥(최신)을 본다.
   // 옛 텍스트는 위로 밀려 올라가 상단 페이드 아래로 사라진다 (발표용: 스크롤바 없음)
@@ -77,23 +99,29 @@ export default function LiveTranscriptPanel({
   return (
     <div
       style={css(
-        "flex:none;width:400px;height:532px;display:flex;flex-direction:column;background:#0a0a0e;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden"
+        "flex:none;width:260px;height:532px;display:flex;flex-direction:column;background:#0a0a0e;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden"
       )}
     >
       {/* 파형 — 상자 안 상자: 어두운 패널 속 더 깊은 무대, 그 위 흰 물결 */}
       <div
         style={css(
-          "flex:none;margin:16px 16px 0;height:180px;position:relative;background:#000;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)"
+          "flex:none;margin:16px 22px 0;height:130px;position:relative;background:#000;border-radius:14px;overflow:hidden"
         )}
       >
         <div style={css("position:absolute;inset:0")}>
-          <Threads amplitude={amp} distance={0} color={[1, 1, 1]} />
+          <Threads getAmplitude={getAmp} amplitude={0.9} distance={0} color={[1, 1, 1]} />
         </div>
       </div>
 
-      {/* 전사 — 검은 배경 위 코딩 글자. 오래 말하면 위로 흘러가며 상단 페이드로 사라진다 */}
+      {/* 전사 — 검은 배경 위 코딩 글자. 오래 말하면 위로 흘러가며 상단이 점진적으로 투명해진다.
+          overlay 덮개 대신 mask 그라데이션 — 글자 자체가 위 88px에 걸쳐 서서히 사라진다 */}
       <div style={css("position:relative;flex:1;min-height:0")}>
-      <div ref={scrollRef} style={css("height:100%;overflow:hidden;padding:18px 22px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box")}>
+      <div
+        ref={scrollRef}
+        style={css(
+          "height:100%;overflow:hidden;padding:18px 22px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 88px);mask-image:linear-gradient(to bottom,transparent 0,#000 88px)"
+        )}
+      >
         {groups.length === 0 ? (
           <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#565b66")}>
             <span className="mi" style={css("font-size:30px")}>graphic_eq</span>
@@ -114,8 +142,6 @@ export default function LiveTranscriptPanel({
           ))
         )}
       </div>
-      {/* 상단 페이드 — 올라간 텍스트가 어둠 속으로 잦아든다 */}
-      <div style={css("position:absolute;top:0;left:0;right:0;height:64px;background:linear-gradient(#0a0a0e,rgba(10,10,14,0));pointer-events:none")} />
       </div>
     </div>
   );

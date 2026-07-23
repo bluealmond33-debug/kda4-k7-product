@@ -22,8 +22,14 @@ from app.routing.taxonomy import (
 # ── taxonomy 정합 ─────────────────────────────────────────────────────────
 
 def test_departments_align_with_rag_categories() -> None:
-    """부서 코드는 규정검색 8대분류와 같은 코드를 쓴다(부서→규정 필터 항등 매핑)."""
-    assert set(DEPARTMENTS) == set(RAG_CATEGORY_CODES)
+    """라우팅 부서(7종)는 규정검색 대분류의 부분집합 — 부서→규정 필터 항등 매핑.
+
+    hippo 7/22 확정 taxonomy: 라우팅 부서는 7종, RAG 대분류는 8종.
+    ETC(제도·민원·기타)는 문서 분류 전용이며 콜이 배정되는 큐가 아니다.
+    """
+    assert set(DEPARTMENTS) <= set(RAG_CATEGORY_CODES)
+    assert "ETC" not in DEPARTMENTS
+    assert len(DEPARTMENTS) == 7
 
 
 def test_business_codes_map_to_valid_departments() -> None:

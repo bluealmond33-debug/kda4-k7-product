@@ -24,6 +24,9 @@ ROUTING_LEVELS: dict[str, str] = {
 }
 
 # 2층 — 부서 8종 (닫힌 집합, 코드는 rag/taxonomy.CATEGORIES와 정렬)
+# 라우팅 부서(대기열) 7종 — hippo 7/22 확정 taxonomy 표 기준.
+# ETC(제도·민원·기타)는 RAG "문서 분류"(app/rag/taxonomy.py, 8종) 전용이며
+# 콜이 배정되는 큐가 아니다 — 여기(라우팅 목적지)에는 넣지 않는다.
 DEPARTMENTS: dict[str, str] = {
     "DEP": "수신·예적금",
     "LON": "여신·대출",
@@ -32,7 +35,6 @@ DEPARTMENTS: dict[str, str] = {
     "EFN": "전자금융·디지털",
     "INV": "연금·신탁·투자",
     "SG": "사고·신고",  # 긴급(E) 전담 부서 — E이면 반드시 SG
-    "ETC": "제도·민원·기타",
 }
 
 EMERGENCY_DEPARTMENT_CODE = "SG"

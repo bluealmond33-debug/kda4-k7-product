@@ -131,6 +131,9 @@ export interface ThreadsProps
   amplitude?: number;
   distance?: number;
   enableMouseInteraction?: boolean;
+  /** 매 프레임 라이브 진폭을 읽어온다(있으면 amplitude prop보다 우선).
+   *  React 재렌더 없이 60fps로 부드럽게 진폭을 구동할 때 쓴다. */
+  getAmplitude?: () => number;
 }
 
 const Threads = ({
@@ -138,6 +141,7 @@ const Threads = ({
   amplitude = 1,
   distance = 0,
   enableMouseInteraction = false,
+  getAmplitude,
   ...rest
 }: ThreadsProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -145,8 +149,8 @@ const Threads = ({
 
   // Keep the latest props in a ref so updating them mutates the live shader
   // uniforms instead of tearing down and rebuilding the whole WebGL context.
-  const propsRef = useRef({ color, amplitude, distance, enableMouseInteraction });
-  propsRef.current = { color, amplitude, distance, enableMouseInteraction };
+  const propsRef = useRef({ color, amplitude, distance, enableMouseInteraction, getAmplitude });
+  propsRef.current = { color, amplitude, distance, enableMouseInteraction, getAmplitude };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -236,10 +240,12 @@ const Threads = ({
       animationFrameId.current = requestAnimationFrame(update);
       if (!isVisible || document.hidden) return;
 
-      const { color, amplitude, distance, enableMouseInteraction } = propsRef.current;
+      const { color, amplitude, distance, enableMouseInteraction, getAmplitude } =
+        propsRef.current;
 
       program.uniforms.uColor.value.set(...color);
-      program.uniforms.uAmplitude.value = amplitude;
+      // 라이브 진폭이 있으면 매 프레임 그 값을 읽어 부드럽게 반영(React 재렌더 불필요)
+      program.uniforms.uAmplitude.value = getAmplitude ? getAmplitude() : amplitude;
       program.uniforms.uDistance.value = distance;
 
       if (enableMouseInteraction) {

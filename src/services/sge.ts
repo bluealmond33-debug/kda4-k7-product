@@ -18,30 +18,25 @@ export function deriveSge(
   return "G";
 }
 
-/** S=초록 · G=파랑 · E=빨강 — 참조 라우팅 데모와 동일한 컬러 규약 (ONAIR 토큰만 사용) */
-export const SGE_META: Record<
-  Sge,
-  { label: string; desc: string; fg: string; bg: string; bar: string }
-> = {
+/** S=초록 · G=파랑 · E=빨강 컬러 규약.
+ *  ONAIR: 색은 점(bar)·잉크(fg)로만 쓴다 — 틴트 면 배경은 두지 않는다(디자인 언어 위반). */
+export const SGE_META: Record<Sge, { label: string; desc: string; fg: string; bar: string }> = {
   S: {
     label: "단순",
     desc: "ARS·AI 셀프서비스 처리",
     fg: "var(--green-900)",
-    bg: "var(--green-100)",
     bar: "var(--green-700)",
   },
   G: {
     label: "일반",
     desc: "일반 상담사 대기열 배정",
     fg: "var(--blue-900)",
-    bg: "var(--blue-100)",
     bar: "var(--blue-700)",
   },
   E: {
     label: "긴급",
     desc: "사고 징후 · 긴급 우선 배정",
     fg: "var(--red-900)",
-    bg: "var(--red-100)",
     bar: "var(--red-700)",
   },
 };

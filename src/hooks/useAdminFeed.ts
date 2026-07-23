@@ -15,9 +15,11 @@ import {
   type Sge,
 } from "../services";
 import {
+  AI_HANDLED_SEED,
   DEPARTMENTS,
   DEPT_SEED_QUEUES,
   SEED_CARD_TOTAL,
+  SEED_FEED,
   normalizeDeptLabel,
   type QueueItem,
 } from "../data/adminContent";
@@ -56,20 +58,65 @@ export interface FeedState {
   order: string[];
   queues: Record<string, QueueItem[]>;
   totalCards: number;
+  /** 상담사가 처리한 건수 (대기열에서 연결·완료) */
   handled: number;
+  /** AI(ARS)가 자동 응대한 단순(S) 건수 — S는 대기열에 들어가지 않는다 */
+  aiHandled: number;
   ticker: { callId: string; text: string } | null;
 }
 
-const initialState = (): FeedState => ({
-  calls: {},
-  order: [],
-  queues: Object.fromEntries(
-    DEPARTMENTS.map((d) => [d.name, (DEPT_SEED_QUEUES[d.name] ?? []).slice()])
-  ),
-  totalCards: SEED_CARD_TOTAL,
-  handled: 0,
-  ticker: null,
-});
+const initialState = (): FeedState => {
+  // 피드 시드 — 완료 처리된 최근 콜 몇 건을 깔아 "이미 돌아가는 시스템"으로 시작한다.
+  // 헤더 누적(12건)·부서 대기열 시드와 숫자 서사가 이어진다. 오래된 순으로 order에 쌓는다.
+  const now = Date.now();
+  const calls: Record<string, AdminCallRecord> = {};
+  const order: string[] = [];
+  [...SEED_FEED].reverse().forEach((s, i) => {
+    const callId = `seed-feed-${i}`;
+    const startedAt = now - s.minutesAgo * 60_000;
+    calls[callId] = {
+      callId,
+      generation: 1,
+      kind: s.sge === "E" ? "urgent" : "normal",
+      source: "server",
+      startedAt,
+      endedAt: startedAt + 3 * 60_000,
+      utterances: [],
+      utteranceKeys: [],
+      stages: {},
+      card: {
+        callId,
+        summary: s.summary,
+        businessType: s.businessType,
+        department: s.department,
+        routingReason: "",
+        incidentRisk: s.sge === "E" ? "high" : "low",
+        riskReason: null,
+        confidence: null,
+        emotionLevel: null,
+        source: "demo",
+      },
+      sge: s.sge,
+      department: s.department,
+      confidence: null,
+      risk: s.sge === "E" ? "high" : "low",
+      routingApplied: true,
+      transferTo: null,
+    };
+    order.push(callId);
+  });
+  return {
+    calls,
+    order,
+    queues: Object.fromEntries(
+      DEPARTMENTS.map((d) => [d.name, (DEPT_SEED_QUEUES[d.name] ?? []).slice()])
+    ),
+    totalCards: SEED_CARD_TOTAL,
+    handled: 0,
+    aiHandled: AI_HANDLED_SEED,
+    ticker: null,
+  };
+};
 
 type Action =
   | { type: "event"; env: DemoEnvelope }
@@ -215,8 +262,10 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
       const existing = state.calls[p.callId];
       if (!existing) return state;
       const applyRouting = shouldApplyAdminRouting(existing.routingApplied);
-      // 구 부서 라벨(데모 픽스처)은 8부서 taxonomy로 정규화해 흡수
-      const dept = normalizeDeptLabel(p.department);
+      // 구 부서 라벨(데모 픽스처)은 7부서 taxonomy로 정규화해 흡수.
+      // 긴급(E)은 부서와 무관하게 사고·신고(SG) 강제 — taxonomy의 EMERGENCY_DEPARTMENT 규칙
+      // (긴급 게이트: E이면 반드시 SG. 구 픽스처가 다른 부서를 달고 와도 여기서 교정)
+      const dept = p.sge === "E" ? "사고·신고" : normalizeDeptLabel(p.department);
       const next = patchCall(state, p.callId, (r) => ({
         ...r,
         sge: p.sge,
@@ -226,11 +275,19 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
         routingApplied: true,
       }));
       if (!applyRouting) return next;
+      // 단순(S)은 상담사 대기열로 가지 않는다 — ARS·AI가 즉시 받아 자동 응대 카운터로
+      if (p.sge === "S") return { ...next, aiHandled: next.aiHandled + 1 };
       const rec = next.calls[p.callId];
       const label = rec?.card?.businessType ?? "신규 상담";
       const queue = next.queues[dept];
       if (!queue) return next; // 보드 밖 부서(내부 팀)는 배지로만
-      const item: QueueItem = { id: p.callId, label, sge: p.sge, callId: p.callId };
+      const item: QueueItem = {
+        id: p.callId,
+        label,
+        sge: p.sge,
+        callId: p.callId,
+        code: rec?.card?.businessCode,
+      };
       // 긴급(E)은 대기열 맨 앞으로 — 참조 라우팅 정책(긴급 우선) 그대로
       const nextQueue = p.sge === "E" ? [item, ...queue] : [...queue, item];
       return { ...next, queues: { ...next.queues, [dept]: nextQueue } };
