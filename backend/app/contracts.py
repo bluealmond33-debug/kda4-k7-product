@@ -24,6 +24,15 @@ class IncidentRisk(str, Enum):
 
 
 class EmotionStatus(str, Enum):
+    """활성 계약은 unavailable·completed만 허용한다.
+
+    실행 엔진(ADR-0012 이식원)에는 `DEMO = "demo"`가 선언돼 있었으나 코드
+    어디에서도 쓰지 않는 죽은 값이었다. product는 "스텁을 진짜 모델인 척하지
+    않는다"는 원칙으로 demo를 계약·DB 체크제약
+    (`consultation_cards_available_emotion_chk`)에서 모두 거부하므로 가져오지
+    않는다. 감정 미연동은 unavailable + [SOURCE=STUB] reason으로 표현한다.
+    """
+
     UNAVAILABLE = "unavailable"
     COMPLETED = "completed"
 
@@ -153,3 +162,12 @@ class HealthResponse(BaseModel):
     status: str
     database: str
     contract_version: str = "mvp-1.0"
+
+
+# ── 실행 엔진 호환 별칭 (ADR-0012 이식) ──────────────────────────────────
+# 실행 엔진 코드는 MvpEmotionResult·MvpHealthResponse라는 이름을 쓴다. 필드와
+# 의미가 같으므로 이름만 재노출한다. level은 실행 엔진이 "stable"·"caution"·
+# "elevated" 문자열을 넣는데 EmotionTemperatureLevel enum 값과 일치해 Pydantic이
+# 그대로 변환한다.
+MvpEmotionResult = EmotionResult
+MvpHealthResponse = HealthResponse
