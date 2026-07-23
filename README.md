@@ -1,15 +1,37 @@
-# K7 음성 상담카드 MVP
+# KARI-NA — K7 음성 상담카드 MVP
 
-고객의 **통화 음성**을 동일 원본 기준으로 두 갈래 처리합니다. STT 텍스트는 OpenAI가 요약·업무유형·담당 부서·라우팅을 분석하고, 원본 음성은 음성 감정 모델이 점수를 생성합니다. 두 결과를 같은 `call_id`로 결합해 PostgreSQL에 저장한 뒤 상담사 화면에 표시하는 통합 저장소입니다.
+고객의 **통화 음성**을 동일 원본 기준으로 두 갈래 처리합니다. STT 텍스트는 요약·업무유형·담당 부서·라우팅을 분석하고, 원본 음성은 음성 감정 모델이 점수를 생성합니다. 두 결과를 같은 `call_id`로 결합해 PostgreSQL에 저장한 뒤 상담사 화면에 표시하는 통합 저장소입니다.
+
+## ⚠️ 이 저장소를 처음 보는 사람이 먼저 알아야 할 것 — KARI-NA는 완전 온프레미스입니다
+
+금융 민감정보(음성·계좌·상담이력)를 외부로 반출하지 않는다는 것이 이 프로젝트의 설계 전제입니다([ADR-0007](https://github.com/bluealmond33-debug/kda4-k7-hippo/blob/main/02%20Decisions/ADR-0007-아키텍처-온프레미스.md) · [ADR-0011](https://github.com/bluealmond33-debug/kda4-k7-hippo/blob/main/02%20Decisions/ADR-0011-온프레미스-전면전환.md)).
+
+| | 실행 기준 (활성) | 폴백 (비활성) |
+|---|---|---|
+| **STT** | faster-whisper `large-v3-turbo` (로컬 GPU) | OpenAI Whisper API |
+| **요약·분류·라우팅** | Ollama `exaone3.5:7.8b` (로컬) | OpenAI GPT |
+| **임베딩** | bge-m3 (로컬) | — |
+| **RAG 벡터저장소** | 설계 표준 pgvector / 데모 실구동 FAISS (둘 다 로컬) | — |
+| **배포** | 호스트 직접 실행 (도커 미사용) | Railway / Vercel |
+
+**실행 엔진은 이 저장소가 아니라 [`HeeChang50/kda4-k7-backend`](https://github.com/HeeChang50/kda4-k7-backend)입니다** (`USE_LOCAL_MODELS=true`, 외부 호출 0).
+
+이 저장소(`kda4-k7-product`)가 담당하는 것은 **계약 · 저장 · 적재 · 프론트**입니다.
+
+- 이 저장소 `backend/`에 남아 있는 **OpenAI 호출 경로는 레거시**입니다. 모델 팀 산출물이 도착하기 전 `mvp-1.0` 계약을 자체 검증하려고 만든 것이며, **활성 데모 경로가 아닙니다.**
+- 온프레미스 장비가 없는 팀원이 화면만 확인하거나, 데모 당일 장비 장애 시 폴백으로만 사용합니다.
 
 ## 한 줄 흐름
 
 ```text
 통화 음성 → call_id 선발급
-├─ STT 텍스트 → OpenAI 요약·분류·라우팅
-└─ 동일 원본 음성 → 음성 감정 모델
-→ call_id 결과 결합 → mvp-1.0 → PostgreSQL → React/Vercel
+├─ STT 텍스트 → 요약·분류·라우팅 (온프레미스 exaone3.5)
+└─ 동일 원본 음성 → 음성 감정 모델 (온프레미스 eGeMAPS+LightGBM / WavLM)
+→ call_id 결과 결합 → mvp-1.0 → PostgreSQL → React 상담 콘솔
 ```
+
+> STT·모델 실행은 **실행 엔진 저장소**에서, 계약 검증·저장은 **이 저장소**에서 담당합니다.
+> 접점은 아래 "팀 연결 경계"의 `persist_pipeline_result()` 하나이며, 두 곳에서 각각 실행하지 않습니다.
 
 ## 단일 기준
 
@@ -35,6 +57,9 @@
 POST /api/v1/calls
   multipart/form-data audio=<고객 음성>
   STT·분석·DB 저장 후 mvp-1.0 상담카드 반환
+  ※ 이 경로 내부의 STT·분석은 OpenAI 호출(레거시·계약 검증용)입니다.
+    온프레미스 실행에서는 실행 엔진이 STT·모델을 돌리고
+    persist_pipeline_result()로 저장만 위임합니다.
 
 GET /api/v1/calls/{call_id}/consultation-card
   DB에 저장된 같은 상담카드 재조회
@@ -55,13 +80,27 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-실제 Railway API를 사용할 때 `.env`:
+**온프레미스 실행 엔진에 붙을 때 `.env` (기본·발표 데모 기준):**
+
+```dotenv
+VITE_API_BASE_URL=http://<온프레미스-서버-IP>:8000
+VITE_USE_REAL_DATA_API=true
+VITE_DATA_API_PREFIX=/api/v1
+```
+
+실시간 통화(`/ws/call/{call_id}`)와 온프레미스 STT·LLM은 이 경로에서만 동작합니다.
+
+<details>
+<summary>클라우드 폴백 <code>.env</code> (온프레미스 장비가 없을 때만)</summary>
 
 ```dotenv
 VITE_API_BASE_URL=https://kda4-k7-backend-production.up.railway.app
 VITE_USE_REAL_DATA_API=true
 VITE_DATA_API_PREFIX=/api/v1
 ```
+
+실시간 통화 스트리밍은 지원되지 않습니다.
+</details>
 
 상단의 `실제 음성 파일` 버튼으로 WAV·MP3·M4A 등을 업로드합니다. `VITE_USE_REAL_DATA_API=false`이면 표준 fixture로 화면만 시연합니다.
 
@@ -77,12 +116,15 @@ Copy-Item backend\.env.example .env
 백엔드 환경변수:
 
 ```dotenv
-OPENAI_API_KEY=
-OPENAI_CHAT_MODEL=gpt-4o-mini
-OPENAI_STT_MODEL=whisper-1
 DATABASE_URL=postgresql://...
 FRONTEND_ORIGIN=http://localhost:5173
 EXTRA_CORS_ORIGINS=https://k7product.vercel.app
+
+# ▼ 레거시 — 계약 검증용 OpenAI 경로에만 필요. 온프레미스 실행에는 불필요.
+#    활성 데모는 실행 엔진(HeeChang50/kda4-k7-backend, USE_LOCAL_MODELS=true)이 담당합니다.
+OPENAI_API_KEY=
+OPENAI_CHAT_MODEL=gpt-4o-mini
+OPENAI_STT_MODEL=whisper-1
 ```
 
 API 키와 `DATABASE_URL`은 GitHub나 Vite 환경변수에 넣지 않습니다.
