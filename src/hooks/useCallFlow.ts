@@ -109,6 +109,18 @@ const GLASS: Partial<Record<Phase, string>> = {
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
 const PREP_LEN = 4;
+// 업무 유형과 무관하게 항상 맞는 유의사항. 실제 규정(RAG)이 PREP_LEN보다 적게 잡혔을 때
+// 뒤를 채운다 — 규정이 0건인 통화(코퍼스에 해당 규정이 없는 경우)에도 카드가 비지 않고,
+// 무엇보다 엉뚱한 규정을 근거로 안내하는 것보다 일반 원칙을 보여주는 편이 안전하다.
+const GENERIC_CHECKS: { title: string; sub: string }[] = [
+  {
+    title: "본인확인 우선",
+    sub: "연락처·생년월일 뒷자리 등으로 본인확인 후 상세 조회 — 완료 전에는 잠깁니다",
+  },
+  { title: "개인정보 보호", sub: "민감정보는 마스킹, 확정 표현 대신 확인 후 안내" },
+  { title: "사고 여부 확인", sub: "금전피해·무단거래 정황이면 즉시 사고·지급정지 절차" },
+  { title: "규정 근거 안내", sub: "관련 규정을 확인하고 근거에 따라 정확히 안내" },
+];
 const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
   normal: [
     {
@@ -264,6 +276,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [followups, setFollowups] = useState<Followup[]>(WRAP_DEFAULTS.normal.followups);
 
   const [summary, setSummary] = useState<CallSummary | null>(null);
+  // 백엔드가 통화 내용으로 검색해 준 실제 규정(RAG). 준비 카드의 "이번 상담 유의사항"을
+  // 픽스처 대신 이걸로 채운다 — 관련 규정이 없으면 빈 배열이고, 그때는 GENERIC_CHECKS로
+  // 넘어간다(백엔드가 점수 하한 미달이면 일부러 비워 보낸다).
+  const [ragRefs, setRagRefs] = useState<{ title: string; excerpt: string; category?: string }[]>(
+    []
+  );
   const [consultationResponse, setConsultationResponse] =
     useState<ConsultationCardResponse>(() => getDemoConsultationCard());
   const summaryText = useRef("");
@@ -418,6 +436,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       const highRisk = (d?.urgency_score ?? 0) >= 60;
       const dept: string = d?.routing?.department || d?.category || "일반상담팀";
       const kw: string[] = Array.isArray(d?.keywords) ? d.keywords : [];
+      // 0) 관련 규정 — 준비 카드 유의사항의 근거. 백엔드가 부서 카테고리로 필터하고
+      //    점수 하한을 넘긴 것만 보내므로, 여기서는 그대로 신뢰하고 담기만 한다.
+      setRagRefs(Array.isArray(d?.references) ? d.references : []);
 
       // 1) AI 사전요약(CallSummary) — 실제 전사 기반
       setSummary({
@@ -520,8 +541,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           isFinal: true,
           atMs: t.at ?? 0,
         });
+        // 고객이 말했다 = 침묵이 아니다. 카운트다운을 처음부터 다시 건다.
+        // 이게 없으면 armFirst 이후 타이머가 한 번도 리셋되지 않아, 고객이 계속
+        // 말하는 중에도 s1초가 지나면 "더 하실 말씀 없으신가요"로 넘어가 말을 끊었다.
+        if (silStage.current) armFirst();
       },
-      onLevel: (l) => setMicLevel(l),
+      onLevel: (l) => {
+        setMicLevel(l);
+        // 전사가 확정되기 전이라도 유의미한 입력이 있으면 침묵 판정을 미룬다.
+        // 임계 0.02는 무음 잡음(≈0.005)보다 위, 실제 발화(≈0.05~0.3)보다 아래.
+        if (l > 0.02 && silStage.current) armFirst();
+      },
     })
       .then((h) => {
         live.current = h;
@@ -590,6 +620,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setFollowups(wrap.followups);
     setTransferReserved(false);
     setEmoDrift(null);
+    setRagRefs([]); // 지난 통화의 규정이 다음 통화 유의사항에 남지 않게
     setPhase("connecting");
     setClock(0);
     setEmo(0);
@@ -1094,7 +1125,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     ? contractBullets
     : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
   ).slice(0, 4);
-  const prepDefinitions = PREP_ITEMS[incoming];
+  // 유의사항 = 실제 규정(RAG) 우선, 모자란 만큼 일반 원칙으로 채움. 규정이 하나도 없으면
+  // (실데이터 미사용이거나 백엔드가 하한 미달로 비워 보낸 경우) 기존 데모 픽스처로 강등한다.
+  const prepDefinitions = ragRefs.length
+    ? [
+        ...ragRefs.map((r) => ({
+          title: r.title,
+          sub: (r.excerpt || "")
+            .replace(/^\[[^\]]*\]\s*/, "") // "[문서명 > p3 > 부서]" 머리말 제거
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 110),
+        })),
+        ...GENERIC_CHECKS,
+      ].slice(0, PREP_LEN)
+    : PREP_ITEMS[incoming];
   const emotionBars = temperature.score == null
     ? 0
     : temperature.score > 66
@@ -1272,8 +1317,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 감정온도 숫자(당근 매너온도 스타일) — 신호등 대신 큰 숫자로
     prepEmotionScore: temperature.score ?? null,
     transcriptQuote: consultationResponse.transcript.text,
-    // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
-    summaryPoints: SUMMARY_POINTS[incoming],
+    // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문.
+    // 실제 통화면 백엔드 요약의 불릿(키워드)을, 없으면 데모 픽스처를 쓴다.
+    summaryPoints: summary?.bullets?.length ? summary.bullets : SUMMARY_POINTS[incoming],
     prepSummaryBullets,
     externalSessionKey: consultationResponse.call_id,
     // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다
