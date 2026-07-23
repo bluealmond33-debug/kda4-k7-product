@@ -33,6 +33,9 @@ CORS_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://192.168.11.135:5173",
     "http://192.168.137.1:5173",  # 핫스팟 전환 대비
+    "http://localhost:4173",       # vite preview(프로덕션 빌드)
+    "http://127.0.0.1:4173",
+    "http://192.168.11.135:4173",
 ]
 
 # --- 데모 가상 고객 (프론트 demoContent.ts CUSTOMER/SHEETS와 동일 모양) ---

@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     # 같은 프로세스에서 GPU cuDNN을 동시에 로드하면 'cudnnGetLibConfig' 심볼 충돌로 크래시하므로,
     # STT는 GPU 유지하고 WavLM(짧은 발화)은 CPU로 격리한다. 충돌 해소 시 "cuda"로 바꿔도 됨.
     wavlm_anger_device: str = "cpu"
+    # 실시간 VAD 에너지 임계값(RMS). 낮출수록 작은 소리도 발화로 잡는다(노이즈도 잡힐 수 있음).
+    vad_rms_threshold: float = 120.0
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
@@ -47,7 +49,13 @@ class Settings(BaseSettings):
             "http://localhost:5500",
             "http://127.0.0.1:5500",
             "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://192.168.11.135:5173",
             "http://localhost:8788",
+            # vite preview(프로덕션 빌드) — dev StrictMode/HMR 회피용 안정 서버
+            "http://localhost:4173",
+            "http://127.0.0.1:4173",
+            "http://192.168.11.135:4173",
         ]
         origins.extend(o.strip() for o in self.extra_cors_origins.split(",") if o.strip())
         return origins

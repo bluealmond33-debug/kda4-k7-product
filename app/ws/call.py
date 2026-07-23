@@ -10,6 +10,7 @@ import logging
 import time
 import wave
 
+import numpy as np
 from fastapi import APIRouter, WebSocket
 from starlette.concurrency import run_in_threadpool
 
@@ -28,8 +29,10 @@ class CallSession:
         self.call_id = call_id
         self.agents: set[WebSocket] = set()
         self.customer: WebSocket | None = None
-        self.segmenter = UtteranceSegmenter()
+        self.segmenter = UtteranceSegmenter(rms_threshold=settings.vad_rms_threshold)
         self.seq = 0
+        self.frames_recv = 0        # 수신 오디오 청크 수(진단용)
+        self.peak_rms = 0.0         # 통화 중 관측된 최대 RMS(마이크 레벨 진단용)
 
 
 class CallRegistry:
@@ -135,6 +138,18 @@ async def call_ws(websocket: WebSocket, call_id: str, role: str = "customer") ->
             chunk = message.get("bytes")
             if chunk is None:
                 continue  # 텍스트/기타 프레임은 무시
+            # 진단: 수신 오디오 레벨(RMS)을 주기적으로 로깅 — 마이크가 실제로 잡히는지/얼마나 큰지.
+            arr = np.frombuffer(chunk, dtype=np.int16)
+            if arr.size:
+                rms = float(np.sqrt(np.mean(arr.astype(np.float32) ** 2)))
+                session.frames_recv += 1
+                session.peak_rms = max(session.peak_rms, rms)
+                if session.frames_recv % 50 == 1:
+                    logger.info(
+                        "[통화 %s] 오디오 수신 %d청크 · RMS=%.0f · 피크=%.0f (VAD기준 %.0f — 넘어야 전사)",
+                        session.call_id, session.frames_recv, rms, session.peak_rms,
+                        session.segmenter.rms_threshold,
+                    )
             for utterance in session.segmenter.accept_audio(chunk):
                 await _emit_transcript(session, utterance)
         # 정상 종료 시 진행 중이던 발화 마무리
