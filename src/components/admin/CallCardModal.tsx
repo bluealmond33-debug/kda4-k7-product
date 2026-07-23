@@ -94,12 +94,12 @@ export default function CallCardModal({
               </div>
             </div>
             {record.confidence != null && (
-              <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 14px 4px 6px;flex:none;box-shadow:var(--sh-near)")}>
-                <ConfidenceRing pct={Math.round(record.confidence * 100)} />
-                <span style={css("display:flex;flex-direction:column")}>
-                  <span style={css("font:600 8.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.3px")}>AI 배정 확신</span>
-                  <span style={css("font:800 16px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.4px;color:var(--gray-1000);line-height:1")}>{Math.round(record.confidence * 100)}%</span>
+              <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 6px 4px 13px;flex:none;box-shadow:var(--sh-near)")}>
+                <span style={css("display:flex;flex-direction:column;line-height:1.15")}>
+                  <span style={css("font:600 9px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.2px")}>AI 배정</span>
+                  <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>확신도</span>
                 </span>
+                <ConfidenceRing pct={Math.round(record.confidence * 100)} />
               </span>
             )}
             <span onClick={onClose} style={css("flex:none;cursor:pointer;display:flex;width:32px;height:32px;border-radius:9999px;align-items:center;justify-content:center;background:var(--gray-100)")}>
@@ -112,27 +112,27 @@ export default function CallCardModal({
           {/* 신호 밴드 — PrepCard와 동일한 2타일 (감정온도 · 사고징후) */}
           <div style={css("display:flex;gap:12px;align-items:stretch")}>
             {/* 감정온도 — 온도계 + 색 텍스트(준비 카드와 동일) */}
-            <div style={css("flex:1;min-height:118px;background:var(--gray-100);border-radius:8px;padding:14px 15px")}>
+            <div style={css("flex:1;min-height:104px;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
               <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 고객 감정온도
                 <span style={css("font:600 9px 'Geist Mono',monospace;padding:2px 6px;border-radius:5px;background:var(--gray-200);color:var(--gray-600)")}>데모값</span>
               </div>
               <div style={css("display:flex;align-items:center;gap:12px")}>
                 <Thermometer score={emotion ? EMOTION_SCORE[emotion] : null} color={emotion ? EMOTION_INK[emotion] : "var(--gray-400)"} />
-                <div style={css("display:flex;align-items:baseline;gap:8px")}>
-                  <span style={css("font:800 40px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.5px;color:" + (emotion ? EMOTION_INK[emotion] : "var(--gray-500)"))}>{emotion ? EMOTION_SCORE[emotion] : "--"}°</span>
-                  <span style={css("font:800 17px 'Geist Sans','Pretendard',sans-serif;color:" + (emotion ? EMOTION_INK[emotion] : "var(--gray-500)"))}>{emotion ? EMO_LABEL[emotion] : "—"}</span>
+                <div style={css("display:flex;align-items:baseline;gap:7px")}>
+                  <span style={css("font:800 34px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.2px;color:" + (emotion ? EMOTION_INK[emotion] : "var(--gray-500)"))}>{emotion ? EMOTION_SCORE[emotion] : "--"}°</span>
+                  <span style={css("font:800 15px 'Geist Sans','Pretendard',sans-serif;color:" + (emotion ? EMOTION_INK[emotion] : "var(--gray-500)"))}>{emotion ? EMO_LABEL[emotion] : "—"}</span>
                 </div>
               </div>
             </div>
             {/* 사고 징후(위험도) — 낮음=초록 점/중립, 높음=강한 빨강 경고 */}
-            <div style={css("flex:1;min-height:118px;border-radius:8px;padding:14px 15px;background:" + (record.risk === "high" ? "var(--red-800)" : "var(--gray-100)"))}>
+            <div style={css("flex:1;min-height:104px;border-radius:8px;padding:12px 14px;background:" + (record.risk === "high" ? "var(--red-800)" : "var(--gray-100)"))}>
               <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:7px;color:" + (record.risk === "high" ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
                 사고 징후 <span style={css("font-weight:400;opacity:.7")}>(위험도)</span>
               </div>
               <div style={css("display:flex;align-items:center;gap:9px")}>
                 <span style={css("width:12px;height:12px;border-radius:9999px;flex:none;background:" + (record.risk === "high" ? "#fff" : record.risk === "low" ? "var(--green-700)" : "var(--gray-400)"))} />
-                <span style={css("font:800 30px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1px;color:" + (record.risk === "high" ? "#fff" : "var(--gray-1000)"))}>{record.risk === "high" ? "높음" : record.risk === "low" ? "낮음" : "—"}</span>
+                <span style={css("font:800 26px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.8px;color:" + (record.risk === "high" ? "#fff" : "var(--gray-1000)"))}>{record.risk === "high" ? "높음" : record.risk === "low" ? "낮음" : "—"}</span>
               </div>
               <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;margin-top:6px;color:" + (record.risk === "high" ? "rgba(255,255,255,.88)" : "var(--gray-600)"))}>
                 {card?.riskReason ?? "특이 사고 징후 없음"}

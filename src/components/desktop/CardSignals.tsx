@@ -3,45 +3,34 @@
  * 색은 '신호'에만: 감정온도 온도계 수은/텍스트, 확신 링은 잉크(무채색).
  */
 
-/** 확신도 링 게이지 — 잉크 아크가 %만큼 채워진다(색 없이 강조). */
+/** 확신도 도넛 게이지 — 잉크 아크가 %만큼 채워지고 숫자는 링 안 중앙(색 없이 강조). */
 export function ConfidenceRing({ pct }: { pct: number }) {
-  const r = 8,
-    C = 2 * Math.PI * r;
+  const S = 40, cx = S / 2, r = 16, C = 2 * Math.PI * r;
   const off = C * (1 - Math.max(0, Math.min(100, pct)) / 100);
   return (
-    <svg width={22} height={22} viewBox="0 0 22 22" style={{ flex: "none", display: "block" }}>
-      <circle cx="11" cy="11" r={r} fill="none" stroke="var(--gray-300)" strokeWidth="3" />
-      <circle
-        cx="11"
-        cy="11"
-        r={r}
-        fill="none"
-        stroke="var(--gray-1000)"
-        strokeWidth="3"
-        strokeDasharray={C}
-        strokeDashoffset={off}
-        strokeLinecap="round"
-        transform="rotate(-90 11 11)"
-      />
+    <svg width={S} height={S} viewBox={"0 0 " + S + " " + S} style={{ flex: "none", display: "block" }}>
+      <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--gray-200)" strokeWidth="4" />
+      <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--gray-1000)" strokeWidth="4" strokeDasharray={C} strokeDashoffset={off} strokeLinecap="round" transform={"rotate(-90 " + cx + " " + cx + ")"} />
+      <text x={cx} y={cx + 0.5} textAnchor="middle" dominantBaseline="central" style={{ font: "800 14px 'Geist Sans','Pretendard',sans-serif", letterSpacing: "-0.5px", fill: "var(--gray-1000)" }}>{pct}</text>
     </svg>
   );
 }
 
 /** 세로 온도계 — 흰 유리관 + 회색 외곽 + 눈금 + 하이라이트, 수은 높이=감정 점수(0~100), 색은 레벨 색. */
 export function Thermometer({ score, color }: { score: number | null; color: string }) {
-  const W = 24,
-    H = 72,
-    cx = 12;
-  const tubeW = 9,
+  const W = 20,
+    H = 54,
+    cx = 10;
+  const tubeW = 8,
     tubeX = cx - tubeW / 2,
-    top = 5,
-    bulbCy = 58,
-    bulbR = 10,
+    top = 4,
+    bulbCy = 43,
+    bulbR = 8,
     tubeBot = bulbCy;
-  const innerW = 4,
+  const innerW = 3.5,
     innerX = cx - innerW / 2,
     innerTop = top + 3,
-    innerBot = bulbCy - 4;
+    innerBot = bulbCy - 3;
   const pct = Math.max(0, Math.min(100, score ?? 0)) / 100;
   const fillTop = innerBot - (innerBot - innerTop) * pct;
   const ticks = [0.75, 0.5, 0.25].map((t) => innerBot - (innerBot - innerTop) * t);
@@ -54,7 +43,7 @@ export function Thermometer({ score, color }: { score: number | null; color: str
       ))}
       <circle cx={cx} cy={bulbCy} r={bulbR - 3.5} fill={color} />
       <rect x={innerX} y={fillTop} width={innerW} height={bulbCy - fillTop} rx={innerW / 2} fill={color} />
-      <rect x={tubeX + 1.5} y={top + 3} width="1.5" height={tubeBot - top - 14} rx="0.75" fill="rgba(255,255,255,.75)" />
+      <rect x={tubeX + 1.3} y={top + 3} width="1.3" height={tubeBot - top - 12} rx="0.65" fill="rgba(255,255,255,.75)" />
     </svg>
   );
 }

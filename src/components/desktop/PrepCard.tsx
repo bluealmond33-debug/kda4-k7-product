@@ -51,12 +51,12 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 전화 받기 전 미리 듣고 정리했어요</span>
                 <div style={css("flex:1")} />
                 {vm.prepConfidencePct != null && (
-                  <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 14px 4px 6px;flex:none;box-shadow:var(--sh-near)")}>
-                    <ConfidenceRing pct={vm.prepConfidencePct} />
-                    <span style={css("display:flex;flex-direction:column")}>
-                      <span style={css("font:600 8.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.3px")}>AI 배정 확신</span>
-                      <span style={css("font:800 16px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.4px;color:var(--gray-1000);line-height:1")}>{vm.prepConfidencePct}%</span>
+                  <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 6px 4px 13px;flex:none;box-shadow:var(--sh-near)")}>
+                    <span style={css("display:flex;flex-direction:column;line-height:1.15")}>
+                      <span style={css("font:600 9px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.2px")}>AI 배정</span>
+                      <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>확신도</span>
                     </span>
+                    <ConfidenceRing pct={vm.prepConfidencePct} />
                   </span>
                 )}
               </div>
@@ -101,36 +101,36 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           {/* 좌: 감정온도·사고징후 세로 스택 / 우: 해야 할 일(상담 중 가장 중요한 실행 항목) */}
           <div style={css("display:flex;gap:12px;align-items:stretch")}>
             <div style={css("flex:none;width:238px;display:flex;flex-direction:column;gap:12px")}>
-            <div style={css("flex:1;min-height:130px;background:var(--gray-100);border-radius:8px;padding:14px 15px")}>
-              <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
+            <div style={css("flex:1;min-height:104px;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
+              <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:6px")}>
                 고객 감정온도
                 <span
                   title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델이 판정한 값입니다" : "실제 모델 미연동 — 데모용 값입니다"}
                   style={css("font:600 9px 'Geist Mono',monospace;padding:2px 6px;border-radius:5px;background:var(--gray-200);color:var(--gray-600)")}
                 >{vm.prepEmotionSourceBadge.label}</span>
               </div>
-              <div style={css("display:flex;align-items:center;gap:12px")}>
+              <div style={css("display:flex;align-items:center;gap:11px")}>
                 <Thermometer score={vm.prepEmotionScore} color={vm.prepEmotionBar} />
-                <div style={css("display:flex;align-items:baseline;gap:8px")}>
-                  <span style={css("font:800 42px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.5px;color:" + vm.prepEmotionBar)}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
-                  <span style={css("font:800 18px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
+                <div style={css("display:flex;align-items:baseline;gap:7px")}>
+                  <span style={css("font:800 34px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.2px;color:" + vm.prepEmotionBar)}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
+                  <span style={css("font:800 15px 'Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
                 </div>
               </div>
             </div>
-            <div style={css("flex:1;min-height:130px;border-radius:8px;padding:14px 15px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
+            <div style={css("flex:1;min-height:104px;border-radius:8px;padding:12px 14px;background:" + (riskHigh ? "var(--red-800)" : "var(--gray-100)"))}>
               <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:7px;color:" + (riskHigh ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
                 사고 징후 <span style={css("font-weight:400;opacity:.7")}>(위험도)</span>
               </div>
               <div style={css("display:flex;align-items:center;gap:9px")}>
                 <span style={css("width:12px;height:12px;border-radius:9999px;flex:none;background:" + (riskHigh ? "#fff" : "var(--green-700)"))} />
-                <span style={css("font:800 30px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1px;color:" + (riskHigh ? "#fff" : "var(--gray-1000)"))}>{vm.prepRiskLabel}</span>
+                <span style={css("font:800 26px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.8px;color:" + (riskHigh ? "#fff" : "var(--gray-1000)"))}>{vm.prepRiskLabel}</span>
               </div>
               <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;margin-top:6px;color:" + (riskHigh ? "rgba(255,255,255,.88)" : "var(--gray-600)"))}>{vm.prepRiskSignal}</div>
             </div>
             </div>
 
             {/* 우: 전화 요약 — 대기 중 고객 발화 STT를 요약한 내용 */}
-            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--onair-surface);border:1.5px solid var(--blue-400);border-radius:8px;padding:14px 16px")}>
+            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--onair-surface);border:1.5px solid var(--blue-500);border-radius:8px;padding:14px 16px")}>
             <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:10px")}>
               <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>summarize</span>전화 요약 <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· 고객 발화 STT 요약</span>
             </div>
