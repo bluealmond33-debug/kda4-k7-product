@@ -190,8 +190,10 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
     }
     case "routing.assigned": {
       const p = env.payload as DemoEventMap["routing.assigned"];
-      // 구 부서 라벨(데모 픽스처)은 8부서 taxonomy로 정규화해 흡수
-      const dept = normalizeDeptLabel(p.department);
+      // 구 부서 라벨(데모 픽스처)은 7부서 taxonomy로 정규화해 흡수.
+      // 긴급(E)은 부서와 무관하게 사고·신고(SG) 강제 — taxonomy의 EMERGENCY_DEPARTMENT 규칙
+      // (긴급 게이트: E이면 반드시 SG. 구 픽스처가 다른 부서를 달고 와도 여기서 교정)
+      const dept = p.sge === "E" ? "사고·신고" : normalizeDeptLabel(p.department);
       const next = patchCall(state, p.callId, (r) => ({
         ...r,
         sge: p.sge,

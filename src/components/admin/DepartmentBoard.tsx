@@ -252,9 +252,9 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                   })}
                 </div>
 
-                {/* E/G 분해 — 신호등 문법, 카드 바닥 고정. 총 건수는 헤더가 말하므로 여기는 분해만 크게 */}
+                {/* 분해 램프 — E는 taxonomy상 사고·신고에만 존재(E→SG 강제)하므로 다른 부서엔 G만 */}
                 <div style={css("margin-top:auto;padding-top:7px;display:flex;align-items:center;gap:10px")}>
-                  {(["E", "G"] as const).map((k) => {
+                  {(isIncident ? (["E", "G"] as const) : (["G"] as const)).map((k) => {
                     const n = k === "G" ? counts.g : counts.e;
                     const meta = SGE_META[k];
                     const dim = { E: "rgba(188,63,43,.4)", G: "rgba(47,95,196,.35)" }[k];
