@@ -177,6 +177,7 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
         <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center;margin-top:16px;margin-bottom:29px")}>
           <span />
           <div
+            data-tour="phone-call"
             onClick={vm.startCall}
             style={css("width:88px;height:88px;border-radius:9999px;background:#30d158;display:flex;align-items:center;justify-content:center;cursor:pointer")}
           >

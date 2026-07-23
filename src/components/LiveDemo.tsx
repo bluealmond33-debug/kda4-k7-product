@@ -146,7 +146,7 @@ export default function LiveDemo({
           {/* 상단 제어 바 — 4단계 스테퍼 알약(시연용 리모컨). 번호를 누르면 그 단계 안내가 팝업으로 뜬다.
               고객 화면(phone)에선 데모 제어를 걷어내고 아래의 '상황 알약'으로 대체한다 */}
           {view !== "phone" && (
-          <div style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+          <div data-tour="topbar" style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
             <div style={css("display:flex;align-items:center;gap:10px")}>
               {["대기", "접수", "준비", "통화", "후처리"].map((label, i) => {
                 const active = vm.stepIndex === i;
@@ -335,102 +335,16 @@ export default function LiveDemo({
               </div>
             )}
             {view !== "phone" && (
-              <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
+              <div data-tour="desk" style={css("flex:none;width:1100px;height:688px;position:relative")}>
                 {vm.showWaiting && <Waiting vm={vm} />}
                 {vm.showPrep && <PrepCard vm={vm} />}
                 {/* 종료 후에도 통화 화면이 배경에 남고, 후처리 시트가 그 위로 올라온다 */}
                 {vm.showActive && <ActiveCall vm={vm} />}
                 {vm.showWrap && <WrapSheet vm={vm} />}
+                {adminAvailable && <AdminQueueSheet open={adminOpen} onClose={() => setAdminOpen(false)} extras={vm.queueExtras} />}
               </div>
             )}
 
-            {/* 데모 안내 팝업 — 화면 중앙 딤 모달. 폰·데스크톱은 그대로 두고(안 밀림) 뒤만 어두워진다.
-                단계 도달 시 자동, 스테퍼 번호 클릭 시 그 단계. × 또는 바깥(딤) 클릭으로 닫음.
-                단독 뷰(customer/employee)에선 안 띄운다 — 안내는 시연 합본의 것 */}
-            {view === "full" && guideRender && (
-              <>
-                <div
-                  onClick={vm.closeGuide}
-                  style={css("position:absolute;inset:0;z-index:500;background:rgba(22,20,17,.42);transition:opacity .3s ease-out;cursor:pointer;opacity:" + (guideIn ? "1" : "0"))}
-                />
-                <div style={css("position:absolute;left:50%;top:50%;z-index:501;width:560px;max-width:92%;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);overflow:hidden;transform-origin:50% 40%;transition:transform .34s var(--ease-out),opacity .26s ease-out;" + (guideIn ? "opacity:1;transform:translate(-50%,-50%) scale(1)" : "opacity:0;transform:translate(-50%,-46%) scale(.92)"))}>
-                  {/* 헤더 */}
-                  <div style={css("display:flex;align-items:center;gap:9px;padding:15px 18px 13px")}>
-                    <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>tips_and_updates</span>
-                    <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>데모 안내</span>
-                    <span style={css("font:400 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 화면별 소개</span>
-                    <div style={css("flex:1")} />
-                    <span onClick={vm.closeGuide} title="닫기" style={css("cursor:pointer;display:flex;width:28px;height:28px;border-radius:9999px;align-items:center;justify-content:center;background:var(--gray-100)")}>
-                      <span className="mi" style={css("font-size:18px;color:var(--gray-600)")}>close</span>
-                    </span>
-                  </div>
-
-                  {/* 단계 인디케이터 — 대기·접수·준비·통화·후처리. 클릭하면 그 단계 안내로 */}
-                  <div style={css("display:flex;align-items:flex-start;padding:2px 18px 15px")}>
-                    {vm.guideSteps.map((s, i) => {
-                      const cur = i === vm.guideIndex;
-                      const done = i < vm.guideIndex;
-                      return (
-                        <span key={s.key} style={css("display:flex;align-items:flex-start;" + (i > 0 ? "flex:1" : "flex:none"))}>
-                          {i > 0 && (
-                            <span style={css("flex:1;height:2px;margin:10px 6px 0;border-radius:2px;transition:background .3s;background:" + (i <= vm.guideIndex ? "var(--gray-500)" : "var(--gray-200)"))} />
-                          )}
-                          <span
-                            onClick={() => vm.openGuideStep(s.key)}
-                            title={s.label + " 안내 보기"}
-                            style={css("display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;cursor:pointer")}
-                          >
-                            <span style={css("width:22px;height:22px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 10.5px 'Geist Mono',monospace;transition:background .25s,color .25s;" + (cur ? "background:var(--blue-700);color:#fff" : done ? "background:var(--gray-1000);color:#fff" : "background:var(--gray-100);color:var(--gray-500)"))}>
-                              {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i + 1}
-                            </span>
-                            <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;white-space:nowrap;color:" + (cur ? "var(--gray-1000)" : "var(--gray-500)"))}>{s.label}</span>
-                          </span>
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  {/* 슬라이드 콘텐츠 — 단계 전환 시 방향성 슬라이드(key=guideStep 재마운트로 애니 재생) */}
-                  <div style={css("padding:0 20px;min-height:174px")}>
-                    <div key={vm.guideStep} style={{ animation: (dir >= 0 ? "guideSlideFwd" : "guideSlideBack") + " .34s cubic-bezier(0.2,0.8,0.2,1)" }}>
-                      <div style={css("font:700 18px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:12px")}>{vm.guide.title}</div>
-                      <div style={css("display:flex;flex-direction:column;gap:10px")}>
-                        {vm.guide.points.map((pt, i) => (
-                          <div key={i} style={css("display:flex;gap:10px;align-items:flex-start")}>
-                            <span style={css("flex:none;width:6px;height:6px;border-radius:9999px;background:var(--blue-500);margin-top:7px")} />
-                            <span style={css("font:400 13px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{pt}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={css("margin-top:13px;display:flex;gap:9px;align-items:flex-start;background:var(--gray-100);border-radius:10px;padding:11px 13px")}>
-                        <span className="mi" style={css("font-size:17px;color:var(--blue-700);margin-top:1px")}>arrow_forward</span>
-                        <span style={css("font:600 12.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.guide.next}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 푸터 — 이전 / N·M / 다음(마지막은 완료). 데모는 안 움직이고 안내만 넘긴다 */}
-                  <div style={css("display:flex;align-items:center;gap:10px;padding:15px 18px 16px")}>
-                    <span
-                      onClick={vm.guidePrev}
-                      style={css("display:inline-flex;align-items:center;gap:3px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:8px 14px 8px 11px;background:var(--gray-100);transition:opacity .2s;" + (vm.guideIndex > 0 ? "color:var(--gray-800);cursor:pointer" : "color:var(--gray-400);opacity:.5;cursor:default"))}
-                    >
-                      <span className="mi" style={css("font-size:17px")}>arrow_back</span>이전
-                    </span>
-                    <div style={css("flex:1;text-align:center;font:600 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-500)")}>{vm.guideIndex + 1} / {vm.guideSteps.length}</div>
-                    {vm.guideIndex < vm.guideSteps.length - 1 ? (
-                      <span onClick={vm.guideNext} style={css("display:inline-flex;align-items:center;gap:3px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;background:var(--blue-700);color:#fff;border-radius:9999px;padding:8px 12px 8px 15px;cursor:pointer")}>
-                        다음 <span className="mi" style={css("font-size:17px")}>arrow_forward</span>
-                      </span>
-                    ) : (
-                      <span onClick={vm.guideNext} style={css("display:inline-flex;align-items:center;gap:4px;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;background:var(--gray-1000);color:#fff;border-radius:9999px;padding:8px 15px;cursor:pointer")}>
-                        완료 <span className="mi" style={css("font-size:16px")}>check</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>

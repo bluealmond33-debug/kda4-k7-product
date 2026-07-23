@@ -547,7 +547,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
         {/* ── 우 컬럼 : 규정 ── */}
         {/* 오토레이아웃 모션 — 규정 패널 확장(372↔640)이 스냅 대신 부드럽게 밀린다 */}
-        <div style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1)")}>
+        <div data-tour="call-right" style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1)")}>
           <div className="card" style={css("flex:" + (regWide ? "1" : "none") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "reg" ? ";box-shadow:var(--sh-focus)" : ";opacity:" + (vm.verified ? ".95" : ".9")))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>

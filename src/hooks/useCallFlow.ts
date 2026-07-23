@@ -108,69 +108,46 @@ const GLASS: Partial<Record<Phase, string>> = {
   confirm: "더 말씀하실 내용이 있으신가요?",
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
-const PREP_ITEMS = [
-  {
-    title: "본인확인 우선 진행",
-    sub: "연결 직후 연락처·생년월일 등으로 본인확인",
-  },
-  { title: "확정적 반환 표현 금지", sub: "“무조건 돌려받는다” 대신 반환지원 제도 절차로 안내" },
-  { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
-];
-
-/** 데모 안내(가이드 모드) — 화면별로 "이 화면이 무엇이고 왜 이렇게 생겼는지"를 설명한다.
- *  멘토·처음 보는 사람에게 시연할 때 켠다. phase → guideKey 로 매핑. */
-type GuideKey = "idle" | "intake" | "prep" | "active" | "wrap";
-const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; next: string }> = {
-  idle: {
-    step: "대기",
-    title: "시계가 화면의 주인공인 이유",
-    points: [
-      "직원 화면의 언어는 '설명'이 아니라 '상태'입니다. 대기 중 능동적으로 볼 정보는 시각 하나뿐이라, 시계를 주인공으로 뒀습니다.",
-      "전화는 자동으로 도착하므로 '전화 받기' 같은 입구 버튼은 존재감을 낮췄고, 하단 회색 항목(처리 내역·매뉴얼·코칭)은 짬에 하는 부차 활동이라 배경으로 물러나 있습니다.",
-      "상태(수신 가능·대기열·다음 콜백)는 우상단 한 곳에만 모읍니다 — 같은 정보를 두 번 표시하지 않습니다.",
-    ],
-    next: "왼쪽 전화기의 초록 통화 버튼을 눌러 전화를 걸어보세요.",
-  },
-  intake: {
-    step: "접수",
-    title: "AI가 용건을 먼저 정리합니다",
-    points: [
-      "고객이 대기 중 말한 용건을 AI가 실시간으로 접수·요약합니다. 상담사는 통화를 받기 전부터 '무슨 일인지'를 압니다.",
-      "이때 필요한 신호는 감정온도·접수 경과뿐 — 나머지는 요약이 끝나면 준비 카드로 옵니다.",
-    ],
-    next: "상단 '5초 건너뛰고 요약'으로 바로 넘어갈 수 있어요.",
-  },
-  prep: {
-    step: "준비",
-    title: "준비 카드 — 이 데모의 핵심",
-    points: [
-      "가장 큰 글씨(AI 사전 녹음 요약)가 '무슨 일'입니다. 아래 근거 발화·상담사가 할 일·배정 확신도가 그 요약을 뒷받침합니다.",
-      "오른쪽 감정온도·사고징후는 '어떻게 응대할지'의 신호입니다.",
-      "유의사항을 하나씩 확인하면 게이지가 차고, 4개를 모두 확인하면 그 자리가 '첫 응대 문장'으로 바뀌며 통화 연결이 열립니다 — 준비의 마지막 단계가 곧 오프닝 멘트입니다.",
-    ],
-    next: "유의사항의 '확인'을 네 번 눌러 통화를 열어보세요.",
-  },
-  active: {
-    step: "통화",
-    title: "통화 콘솔 — 3열 작업대",
-    points: [
-      "왼쪽=고객 정보와 본인확인(인증 전엔 상세 조회가 잠깁니다) · 가운데=AI 요약과 단계별 스크립트·메모 · 오른쪽=이 상담에 필요한 규정·매뉴얼.",
-      "빛·글로우·깜빡임 대신 그림자 깊이만으로 초점을 줍니다 — 8시간 응시해도 눈이 덜 피로하도록.",
-      "감정온도는 고정값이 아니라 통화 중 실시간으로 갱신됩니다(잠시 후 주의→안정).",
-    ],
-    next: "오른쪽 위 빨간 '통화 종료'를 누르면 후처리로 이어집니다.",
-  },
-  wrap: {
-    step: "후처리",
-    title: "상담사의 유일한 산출물 = 초안 검증",
-    points: [
-      "통화 종료와 동시에 시트가 자동으로 올라옵니다. 통화 화면은 배경에 남아 방금 내용을 다시 볼 수 있습니다.",
-      "왼쪽 상담 정보는 녹취·메모에서 자동으로 채워지고, 상담사는 필요한 것만 고칩니다(연필 아이콘). 오른쪽 초안도 클릭해 편집합니다.",
-      "상담 유형·결과·후속조치는 이번 콜 유형에 맞춰 미리 채워집니다.",
-    ],
-    next: "'저장 후 다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
-  },
+const PREP_LEN = 4;
+const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
+  normal: [
+    {
+      title: "본인확인 우선 진행",
+      sub: "연결 직후 연락처·생년월일 등으로 본인확인 — 완료 전에는 고객 상세 조회가 잠깁니다",
+    },
+    { title: "확정 표현 금지", sub: "“연장 확정” 단정 대신 재약정 심사 결과에 따라 달라질 수 있음을 안내" },
+    { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
+    {
+      title: "녹취 고지 자동 재생 — 연결 시 자동",
+      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
+    },
+  ],
+  urgent: [
+    {
+      title: "본인확인 우선 진행",
+      sub: "명의도용 의심 콜 — 본인확인 없이는 어떤 조치도 진행하지 않습니다",
+    },
+    { title: "사실관계 먼저 확인", sub: "지급정지 전 '본인이 신청한 대출인지'를 반드시 확인 — 오인 접수 방지" },
+    { title: "추가 피해 방지 안내", sub: "통화 중 다른 금융기관 앱·문자 링크를 열지 않도록 안내" },
+    {
+      title: "녹취 고지 자동 재생 — 연결 시 자동",
+      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
+    },
+  ],
+  transfer: [
+    {
+      title: "본인확인 상태 확인",
+      sub: "전임 상담사가 본인확인을 마쳤는지 인수인계에서 확인 — 완료면 재인증 생략",
+    },
+    { title: "인수인계 메모 확인", sub: "앞서 진행된 내용(금리 인하 요구권 안내)을 중복 안내하지 않기" },
+    { title: "확정 표현 금지", sub: "수수료 면제는 약정서 특약 확인 전에 단정하지 않기" },
+    {
+      title: "녹취 고지 자동 재생 — 연결 시 자동",
+      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
+    },
+  ],
 };
+
 
 // 화면별 데모 안내(투어링)는 src/tour 로 분리 — 시연 전용 레이어라 훅에 두지 않는다.
 
@@ -214,7 +191,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [micErr, setMicErr] = useState("");
   const [audioBusy, setAudioBusy] = useState(false);
 
-  const [prepChecks, setPrepChecks] = useState<boolean[]>(PREP_ITEMS.map(() => true));
+  const [prepChecks, setPrepChecks] = useState<boolean[]>(Array(PREP_LEN).fill(true));
   const [verified, setVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
@@ -495,7 +472,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       stt.current = null;
     }
     setPhase("prep");
-    setPrepChecks(PREP_ITEMS.map(() => true));
+    setPrepChecks(Array(PREP_LEN).fill(true));
     void runSummary();
     emitCardPipeline("demo");
   }, [emitCardPipeline, runSummary]);
@@ -532,17 +509,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 전사 소스: 실제 고객 마이크 스트리밍(고객→WS→로컬 STT). 마이크 거부/불가 시
     // 기존 대본 시뮬레이션으로 자동 폴백해 무대가 끊기지 않게 한다.
     transcript.current = [];
-    stt.current = startSttSession(
-      {
-        onChunk: (c) => {
-          transcript.current.push(c);
-          demoBus.emit("stt.utterance", {
-            callId: respRef.current.call_id,
-            text: c.text,
-            isFinal: c.isFinal,
-            atMs: c.at,
-          });
-        },
+    setLiveCaption("");
+    startLiveCall(LIVE_CALL_ID, {
+      onTranscript: (t) => {
+        transcript.current.push({ text: t.text, at: t.at ?? 0, isFinal: true });
+        setLiveCaption(t.text);
+        demoBus.emit("stt.utterance", {
+          callId: respRef.current.call_id,
+          text: t.text,
+          isFinal: true,
+          atMs: t.at ?? 0,
+        });
       },
       onLevel: (l) => setMicLevel(l),
     })
@@ -553,7 +530,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       .catch(() => {
         setMicActive(false);
         stt.current = startSttSession(
-          { onChunk: (c) => transcript.current.push(c) },
+          {
+            onChunk: (c) => {
+              transcript.current.push(c);
+              demoBus.emit("stt.utterance", {
+                callId: respRef.current.call_id,
+                text: c.text,
+                isFinal: c.isFinal,
+                atMs: c.at,
+              });
+            },
+          },
           lineGap
         );
       });
@@ -714,15 +701,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAuthInput("");
       startClock();
       if (n === 2) {
-        setPrepChecks(PREP_ITEMS.map(() => true));
+        setPrepChecks(Array(PREP_LEN).fill(true));
         setWrapSheetOpen(false);
         setPhase("prep");
       } else if (n === 3) {
-        setPrepChecks(PREP_ITEMS.map(() => true)); // 유의사항 확인을 거친 상태로 진입
+        setPrepChecks(Array(PREP_LEN).fill(true)); // 유의사항 확인을 거친 상태로 진입
         setWrapSheetOpen(false);
         setPhase("active");
       } else {
-        setPrepChecks(PREP_ITEMS.map(() => true));
+        setPrepChecks(Array(PREP_LEN).fill(true));
         setWrapSheetOpen(true);
         setPhase("wrap");
       }
@@ -812,7 +799,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           atMs: 0,
         });
         setSummary(null);
-        setPrepChecks(PREP_ITEMS.map(() => true));
+        setPrepChecks(Array(PREP_LEN).fill(true));
         setPhase("prep");
         emitCardPipeline("backend", 250);
       } catch (error) {

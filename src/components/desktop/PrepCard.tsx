@@ -154,7 +154,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
           </div>
 
           {/* 이번 상담 유의사항 — 체크 없이 한눈에(멘토 피드백: 체크 피로 제거). 응대 전 참고 정보. */}
-          <div>
+          <div data-tour="prep-checks">
             <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:9px")}>
               <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>이번 상담 유의사항</span>
             </div>
@@ -170,7 +170,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               ))}
             </div>
             {/* 첫 응대 문장 — 준비의 결론. 잠금 없이 바로 보여준다 */}
-            <div style={css("display:flex;align-items:center;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
+            <div data-tour="prep-firstline" style={css("display:flex;align-items:center;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
               <span style={css("display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:var(--gray-1000);color:#fff;flex:none")}><span className="mi" style={css("font-size:14px")}>record_voice_over</span></span>
               <div>
                 <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>이 문장으로 통화를 여세요</div>
