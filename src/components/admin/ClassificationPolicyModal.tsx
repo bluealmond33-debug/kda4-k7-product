@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { css } from "../../lib/css";
 import { SGE_META } from "../../services";
 
-const FONT = "'Geist Sans','Pretendard',sans-serif";
+const FONT = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
 const MONO = "'Geist Mono',monospace";
 
 /* ── 노드 좌표 (절대 캔버스, 콜 인입→게이트→E/S/G→목적지 왼→오른) ── */

@@ -46,6 +46,16 @@ export default function LiveTranscriptPanel({
   width?: number;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  // 로그 스타일 — 각 발화 턴의 '처음 등장 시각'을 고정 캐시(재렌더에도 안 흔들리게).
+  const seenAt = useRef<Map<string, string>>(new Map());
+  const stamp = (id: string) => {
+    if (!seenAt.current.has(id)) {
+      const d = new Date();
+      const p = (n: number) => (n < 10 ? "0" + n : "" + n);
+      seenAt.current.set(id, p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds()));
+    }
+    return seenAt.current.get(id)!;
+  };
 
   // Siri풍 파형 진폭 — 60fps rAF에서 '연속 사인 합성'으로 부드럽게 구동한다.
   // (랜덤 스텝 대신 여러 저주파 사인을 겹쳐 자연스러운 출렁임을 만든다)
@@ -104,14 +114,14 @@ export default function LiveTranscriptPanel({
 
   // 같은 화자의 연속 조각은 한 그룹(문단)으로 묶되 고객·상담원 표시는
   // 유지한다. 두 채널이 실제로 섞이는 통화에서 발화자를 지워서는 안 된다.
-  const groups: { who: StreamItem["who"]; texts: string[]; lastId: string }[] = [];
+  const groups: { who: StreamItem["who"]; texts: string[]; firstId: string; lastId: string; time: string }[] = [];
   stream.forEach((it) => {
     const g = groups[groups.length - 1];
     if (g && g.who === it.who) {
       g.texts.push(it.text);
       g.lastId = it.id;
     } else {
-      groups.push({ who: it.who, texts: [it.text], lastId: it.id });
+      groups.push({ who: it.who, texts: [it.text], firstId: it.id, lastId: it.id, time: stamp(it.id) });
     }
   });
 
@@ -145,7 +155,7 @@ export default function LiveTranscriptPanel({
         style={css(
           // justify-content:flex-end — 대화는 바닥에 붙어 위로 자란다(카톡·메신저 규칙).
           // 위로 스크롤하지 않고 항상 바닥을 보므로 flex-end의 상단 클리핑 문제는 없다.
-          "height:100%;overflow:hidden;padding:18px 22px;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;box-sizing:border-box;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 88px);mask-image:linear-gradient(to bottom,transparent 0,#000 88px)"
+          "height:100%;overflow:hidden;padding:16px 20px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;box-sizing:border-box;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 72px);mask-image:linear-gradient(to bottom,transparent 0,#000 72px)"
         )}
       >
         {groups.length === 0 ? (
@@ -153,7 +163,7 @@ export default function LiveTranscriptPanel({
           <div style={css("height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#565b66;padding-bottom:120px")}>
             <span className="mi" style={css("font-size:30px")}>graphic_eq</span>
             {/* 안내 문구는 화면마다 다르다 — 직원 화면엔 옆에 전화기가 없다 */}
-            <span style={css("font:400 12.5px 'Geist Sans','Pretendard',sans-serif;text-align:center;line-height:1.6")}>
+            <span style={css("font:400 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;text-align:center;line-height:1.6")}>
               {self === "customer" ? (
                 <>
                   전화 버튼을 누르면
@@ -171,8 +181,9 @@ export default function LiveTranscriptPanel({
           </div>
         ) : (
           groups.map((g, gi) => (
-            <Bubble
-              key={gi + ":" + g.who}
+            <LogLine
+              key={g.firstId}
+              time={g.time}
               who={g.who}
               self={self}
               full={g.texts.join(" ")}
@@ -209,15 +220,18 @@ function useTypewriter(target: string, speedMs: number, enabled: boolean) {
   return target.slice(0, shown);
 }
 
-/** 말풍선 — 카톡 규칙: 내 말은 오른쪽·선명, 상대 말은 왼쪽·흐림.
- *  정렬과 명암이 이미 화자를 말해주므로 내 말엔 라벨을 달지 않는다(상대만 붙인다).
- *  AI 안내는 대화 참여자가 아니라 시스템이라 가운데·작게 흘린다. */
-function Bubble({
+/** 로그 라인 — STT 전사 로그 스타일: [시각] [화자] 텍스트, 모노폰트.
+ *  말풍선 없이 한 줄. 이 화면의 주인(self)은 밝게, 상대는 흐리게, KARI-NA(AI)는 파란 강조.
+ *  마지막 줄은 타자기+커서로 실시간 전사 감각을 유지한다. */
+const SPEAKER: Record<StreamItem["who"], string> = { customer: "고객", agent: "상담원", ai: "KARI-NA" };
+function LogLine({
+  time,
   who,
   self,
   full,
   isLast,
 }: {
+  time: string;
   who: StreamItem["who"];
   self: "customer" | "agent";
   full: string;
@@ -226,48 +240,19 @@ function Bubble({
   const typed = useTypewriter(full, 32, isLast);
   const text = isLast ? typed : full;
   const typing = isLast && typed.length < full.length;
-
-  if (who === "ai") {
-    return (
-      <div
-        style={css(
-          "align-self:center;max-width:92%;text-align:center;font:400 11.5px/1.7 'Geist Sans','Pretendard',sans-serif;color:#7c828d;animation:fadeIn .2s ease-out"
-        )}
-      >
-        {text}
-      </div>
-    );
-  }
-
   const mine = who === self;
+  const labelColor = who === "ai" ? "#6f8cff" : mine ? "#e6e9ef" : "#6d7480";
+  const textColor = who === "ai" ? "#8f96a3" : mine ? "#d9dde4" : "#868c98";
   return (
-    <div style={css("display:flex;flex-direction:column;gap:3px;align-items:" + (mine ? "flex-end" : "flex-start"))}>
-      {!mine && (
-        <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.3px;color:#6d7480;padding:0 4px")}>
-          {who === "agent" ? "상담원" : "고객"}
-        </span>
-      )}
-      <div
-        style={css(
-          "max-width:80%;padding:8px 11px;border-radius:14px;word-break:break-all;animation:fadeIn .2s ease-out;font:400 13px/1.75 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:-.2px;" +
-            (mine
-              ? "background:#2f6bd8;color:#f4f7ff;border-bottom-right-radius:5px"
-              : "background:#1b1e25;color:#9aa1ad;border-bottom-left-radius:5px")
-        )}
-      >
+    <div style={css("display:flex;gap:9px;align-items:baseline;animation:fadeIn .18s ease-out;font:400 12.5px/1.65 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:-.2px")}>
+      <span style={css("flex:none;color:#4c515c;font-size:10.5px;font-variant-numeric:tabular-nums")}>{time}</span>
+      <span style={css("flex:none;width:52px;font-weight:700;font-size:11px;color:" + labelColor)}>{SPEAKER[who]}</span>
+      <span style={css("flex:1;min-width:0;word-break:break-all;color:" + textColor)}>
         {text}
         {isLast && (
-          <span
-            style={css(
-              "display:inline-block;margin-left:2px;animation:recBlink 1s infinite;color:" +
-                (mine ? "#f4f7ff" : "#9aa1ad") +
-                (typing ? "" : ";opacity:.5")
-            )}
-          >
-            ▍
-          </span>
+          <span style={css("display:inline-block;margin-left:1px;animation:recBlink 1s infinite;color:" + labelColor + (typing ? "" : ";opacity:.45"))}>▍</span>
         )}
-      </div>
+      </span>
     </div>
   );
 }

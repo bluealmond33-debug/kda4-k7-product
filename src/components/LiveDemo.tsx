@@ -182,7 +182,7 @@ export default function LiveDemo({
                         {/* 대기 = 0(아직 콜 시작 전). 접수부터 1 */}
                         {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i}
                       </span>
-                      <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
+                      <span style={css("font:600 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
                       {label === "준비" && (
                         <span className="mi" title="이 데모의 핵심 — 상담 준비 카드" style={css("font-size:13px;color:var(--amber-700);margin-left:-3px")}>star</span>
                       )}
@@ -257,7 +257,7 @@ export default function LiveDemo({
             {/* '5초 건너뛰고 요약' — 실제 직원 화면에는 없는 데모 제어라 리모컨(여기)에 둔다 */}
             {vm.showSkip && (
               <span data-tour="skip" onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
-                <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약
+                <span className="mi" style={css("font-size:17px")}>skip_next</span>건너뛰기
               </span>
             )}
             {/* 직원 분할 뷰 토글 — 통화 연결 시 자동 켜지지만, 발표자가 화면을 다시 키우고 싶으면 여기서 끈다.

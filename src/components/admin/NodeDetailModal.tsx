@@ -29,8 +29,8 @@ export default function NodeDetailModal({
   const { spec } = node;
   const row = (label: string, value: string) => (
     <div style={css("display:flex;gap:12px;align-items:flex-start")}>
-      <span style={css("flex:none;width:64px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);padding-top:1px")}>{label}</span>
-      <span style={css("flex:1;font:400 12.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{value}</span>
+      <span style={css("flex:none;width:64px;font:600 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700);padding-top:1px")}>{label}</span>
+      <span style={css("flex:1;font:400 12.5px/1.6 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{value}</span>
     </div>
   );
 
@@ -44,13 +44,13 @@ export default function NodeDetailModal({
             <span className="mi" style={css("font-size:19px;color:var(--gray-800)")}>{node.icon}</span>
           </span>
           <span>
-            <span style={css("display:block;font:700 14.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.2px")}>{node.label}</span>
+            <span style={css("display:block;font:700 14.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.2px")}>{node.label}</span>
             <span style={css("display:block;font:500 10px 'Geist Mono',monospace;color:var(--gray-700)")}>{node.tech}</span>
           </span>
           <div style={css("flex:1")} />
           <span style={css("display:inline-flex;align-items:center;gap:5px")}>
             <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + (spec.status === "실가동" ? "var(--green-700)" : spec.status === "연동 대기" ? "var(--amber-700)" : "var(--gray-500)"))} />
-            <span style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:" + STATUS_COLOR[spec.status])}>{spec.status}</span>
+            <span style={css("font:700 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + STATUS_COLOR[spec.status])}>{spec.status}</span>
           </span>
           <span onClick={onClose} style={css("cursor:pointer;display:flex;width:28px;height:28px;border-radius:9999px;align-items:center;justify-content:center;background:var(--gray-100)")}>
             <span className="mi" style={css("font-size:18px;color:var(--gray-600)")}>close</span>
@@ -70,7 +70,7 @@ export default function NodeDetailModal({
             {spec.lines.map((t) => (
               <div key={t} style={css("display:flex;gap:8px;align-items:flex-start")}>
                 <span style={css("flex:none;width:4px;height:4px;border-radius:9999px;background:var(--gray-600);margin-top:7px")} />
-                <span style={css("font:400 12px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
+                <span style={css("font:400 12px/1.6 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
               </div>
             ))}
           </div>

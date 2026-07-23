@@ -9,7 +9,7 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
   return (
     <div
       style={css(
-        "width:1100px;height:688px;background:var(--onair-bg);border-radius:12px;box-shadow:var(--sh-near);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:'Geist Sans','Pretendard',system-ui,sans-serif"
+        "width:1100px;height:688px;background:var(--onair-bg);border-radius:12px;box-shadow:var(--sh-near);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:'Avenir Next','Geist Sans','Pretendard',system-ui,sans-serif"
       )}
     >
       {vm.waitingSpin && (
@@ -26,23 +26,23 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
       {vm.waitingSpin && (
         <div data-tour="intake-live" style={css("display:flex;align-items:center;gap:22px;margin-top:10px;background:var(--onair-surface);border-radius:9999px;padding:10px 22px;box-shadow:var(--sh-far)")}>
           <span style={css("display:flex;align-items:center;gap:8px")} title="실시간 감정온도">
-            <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
+            <span style={css("font:600 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
             <span className="lampdots">
               <i className={"g" + (vm.emo === 1 ? " lit" : "")} />
               <i className={"a" + (vm.emo === 2 ? " lit" : "")} />
               <i className={"r" + (vm.emo >= 3 ? " lit" : "")} />
             </span>
-            <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--gray-700)"))}>
+            <span style={css("font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--gray-700)"))}>
               {vm.emo >= 3 ? "고조" : vm.emo >= 1 ? "상승 중" : "안정"}
             </span>
           </span>
           <span style={css("width:1.3px;height:18px;background:var(--gray-200)")} />
           {/* 접수 경과 = 고객이 기다린 시간 — 길어지면 상담사가 개입을 판단한다 */}
-          <span style={css("display:flex;align-items:center;gap:5px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+          <span style={css("display:flex;align-items:center;gap:5px;font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
             접수 경과 <span className="mono" style={css("color:var(--gray-1000)")}>{vm.clockStr}</span>
           </span>
           <span style={css("width:1.3px;height:18px;background:var(--gray-200)")} />
-          <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+          <span style={css("font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
             {vm.silenceLeft > 0 ? (
               <>무음 <span className="mono" style={css("color:var(--gray-1000)")}>{vm.silenceLeft}초</span> 후 요약 시작</>
             ) : (

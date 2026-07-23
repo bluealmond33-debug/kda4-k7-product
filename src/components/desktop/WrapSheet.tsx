@@ -55,9 +55,9 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
           <div style={css("display:flex;align-items:center;gap:12px;padding:4px 24px 12px")}>
             <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>edit_note</span>
             <div style={css("flex:1;min-width:0")}>
-              <div style={css("font:600 18px/1.2 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000)")}>
+              <div style={css("font:600 18px/1.2 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000)")}>
                 후처리 작성
-                <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-left:10px")}>
+                <span style={css("font:400 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-left:10px")}>
                   {open ? "녹취 + 메모 기반 자동 작성 · 모두 수정 가능" : "접힘 — 클릭해 열기 · 뒤로 방금 통화 화면이 보입니다"}
                 </span>
               </div>
@@ -75,8 +75,8 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
         {vm.wrapLoading ? (
           <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px")}>
             <span style={css("width:42px;height:42px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
-            <div style={css("font:600 18px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>통화 내용을 요약하고 있습니다…</div>
-            <div style={css("font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>녹취와 상담원 메모를 바탕으로 후처리 초안을 작성 중입니다</div>
+            <div style={css("font:600 18px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>통화 내용을 요약하고 있습니다…</div>
+            <div style={css("font:400 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>녹취와 상담원 메모를 바탕으로 후처리 초안을 작성 중입니다</div>
           </div>
         ) : (
           <>
@@ -92,7 +92,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 <SelectField label="상담 유형" value={vm.wrapType} open={vm.typeMenu} onToggle={vm.toggleTypeMenu} opts={vm.typeOpts} />
                 <SelectField label="상담 결과" value={vm.wrapResult} open={vm.resultMenu} onToggle={vm.toggleResultMenu} opts={vm.resultOpts} />
                 <div style={css("flex:1")} />
-                <div style={css("font:400 11px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                <div style={css("font:400 11px/1.6 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
                   저장 API 미연동 · 화면 전환 시 이 초안은 폐기됩니다
                 </div>
               </div>
@@ -105,8 +105,8 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                   <div style={css("flex:1.4;background:var(--gray-100);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:8px")}>
                     <div style={css("display:flex;align-items:center;gap:5px")}>
                       <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
-                      <span style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>음성 녹취</span>
-                      <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 통화 {vm.clockStr}</span>
+                      <span style={css("font:700 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>음성 녹취</span>
+                      <span style={css("font:400 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 통화 {vm.clockStr}</span>
                     </div>
                     {/* 재생바 — 실제 녹음 파일을 public/demo/recording.mp3 에 넣으면 그대로 재생된다(발표 시 실녹취 교체) */}
                     <audio
@@ -116,23 +116,23 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                       style={{ width: "100%", height: 34 }}
                     />
                     {/* 전사(STT) — 넉넉한 높이로 통화 내용을 그대로 보여준다 */}
-                    <div style={css("flex:none;font:400 12.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:var(--onair-surface);border-radius:6px;padding:9px 11px;height:96px;overflow:auto")}>{vm.wrapSummaryDefault}</div>
+                    <div style={css("flex:none;font:400 12.5px/1.6 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:var(--onair-surface);border-radius:6px;padding:9px 11px;height:96px;overflow:auto")}>{vm.wrapSummaryDefault}</div>
                   </div>
                   {/* 상담원 메모 */}
                   <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column")}>
-                    <div style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:7px")}>✎ 상담원 메모 · {vm.memoItems.length}건</div>
+                    <div style={css("font:700 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:7px")}>✎ 상담원 메모 · {vm.memoItems.length}건</div>
                     <div style={css("flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:3px")}>
                       {vm.memoItems.map((m, i) => (
                         <div key={i} style={css("display:flex;gap:5px;align-items:baseline")}>
                           <span style={css("color:var(--blue-700);font-weight:700;flex:none;font-size:11px")}>•</span>
-                          <span style={css("font:400 12px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{m}</span>
+                          <span style={css("font:400 12px/1.45 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{m}</span>
                         </div>
                       ))}
-                      {vm.memoEmpty && <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>작성한 메모가 없습니다</span>}
+                      {vm.memoEmpty && <span style={css("font:400 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>작성한 메모가 없습니다</span>}
                     </div>
                     <div style={css("flex:none;display:flex;align-items:center;gap:6px;margin-top:7px;background:var(--onair-surface);border-radius:9999px;padding:6px 11px")}>
                       <span style={css("color:var(--blue-700);font-weight:700;font-size:12px")}>•</span>
-                      <input value={vm.memoDraft} onChange={vm.onMemoDraft} onKeyDown={vm.onMemoKey} placeholder="메모 추가 후 Enter" style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")} />
+                      <input value={vm.memoDraft} onChange={vm.onMemoDraft} onKeyDown={vm.onMemoKey} placeholder="메모 추가 후 Enter" style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")} />
                     </div>
                   </div>
                 </div>
@@ -140,11 +140,11 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 {/* 최종 초안 — 재료 아래. 녹취 블록이 커진 만큼 높이는 짧아진다 */}
                 <div style={css("flex:1;display:flex;flex-direction:column;min-height:0")}>
                   <div style={css("display:flex;justify-content:space-between;align-items:center;margin-bottom:6px")}>
-                    <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
+                    <span style={css("font:700 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>
                       <span className="mi" style={css("font-size:15px;color:var(--blue-700);vertical-align:-2px;margin-right:4px")}>auto_awesome</span>
                       후처리 초안 <span style={css("font-weight:400;font-size:12px;color:var(--gray-600)")}>· 클릭해 편집</span>
                     </span>
-                    <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                    <span style={css("font:500 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
                       자동 저장·재생성 미연동
                     </span>
                   </div>
@@ -154,7 +154,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                     contentEditable
                     suppressContentEditableWarning
                     onInput={vm.onSummary}
-                    style={css("flex:1;border:1px solid var(--gray-300);border-radius:8px;padding:15px 18px;font:400 14px/1.8 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none;transition:opacity .25s;opacity:" + (vm.regenerating ? ".4" : "1"))}
+                    style={css("flex:1;border:1px solid var(--gray-300);border-radius:8px;padding:15px 18px;font:400 14px/1.8 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:#fff;overflow:auto;outline:none;transition:opacity .25s;opacity:" + (vm.regenerating ? ".4" : "1"))}
                   >
                     {vm.wrapSummaryDefault}
                   </div>
@@ -163,18 +163,18 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 {/* 후속 조치 */}
                 <div style={css("flex:none")}>
                   <div style={css("display:flex;align-items:center;gap:7px;flex-wrap:wrap")}>
-                    <span style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-right:2px")}>후속 조치</span>
+                    <span style={css("font:700 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-right:2px")}>후속 조치</span>
                     {vm.followups.map((f, i) => (
                       <span key={i} style={css("display:inline-flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:9999px;padding:6px 8px 6px 12px")}>
                         <span className="mi" style={css("font-size:14px;color:var(--gray-700)")}>{f.icon}</span>
-                        <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{f.label}</span>
+                        <span style={css("font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{f.label}</span>
                         <span onClick={f.remove} style={css("cursor:pointer;display:flex")} title="삭제">
                           <span className="mi" style={css("font-size:15px;color:var(--gray-500)")}>close</span>
                         </span>
                       </span>
                     ))}
                     {vm.recoFollowups.map((f, i) => (
-                      <span key={i} onClick={f.add} style={css("display:inline-flex;align-items:center;gap:3px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px dashed var(--blue-400);border-radius:9999px;padding:5px 10px;cursor:pointer")}>
+                      <span key={i} onClick={f.add} style={css("display:inline-flex;align-items:center;gap:3px;font:600 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px dashed var(--blue-400);border-radius:9999px;padding:5px 10px;cursor:pointer")}>
                         <span className="mi" style={css("font-size:14px")}>add</span>{f.label}
                       </span>
                     ))}
@@ -184,9 +184,9 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             </div>
 
             <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--gray-200)")}>
-              <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>시트를 접으면 방금 통화 화면을 다시 볼 수 있습니다</span>
+              <span style={css("font:400 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>시트를 접으면 방금 통화 화면을 다시 볼 수 있습니다</span>
               <div style={css("flex:1")} />
-              <span style={css("font:500 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>저장하지 않음</span>
+              <span style={css("font:500 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>저장하지 않음</span>
               <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-500);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-1000);cursor:pointer;background:var(--onair-surface)")}>
                 <span className="mi" style={css("font-size:18px")}>coffee</span> 초안 폐기·휴식
               </span>
@@ -214,7 +214,7 @@ function EditRow({ label, value, small }: { label: string; value: string; small?
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLElement).blur();
         }}
-        style={css("flex:1;font:600 " + (small ? "12px" : "12.5px") + " 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);outline:none;cursor:" + (editing ? "text" : "default"))}
+        style={css("flex:1;font:600 " + (small ? "12px" : "12.5px") + " 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);outline:none;cursor:" + (editing ? "text" : "default"))}
       >
         {value}
       </span>
@@ -252,7 +252,7 @@ function SelectField({
   return (
     <div style={css("position:relative")}>
       <div className="lbl" style={css("margin-bottom:5px")}>{label}</div>
-      <div onClick={onToggle} style={css("display:flex;align-items:center;justify-content:space-between;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;cursor:pointer;font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:var(--onair-surface)")}>
+      <div onClick={onToggle} style={css("display:flex;align-items:center;justify-content:space-between;border:1px solid var(--gray-400);border-radius:9999px;padding:9px 14px;cursor:pointer;font:600 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:var(--onair-surface)")}>
         {value}
         <span className="mi" style={css("font-size:17px;color:var(--gray-600);transition:transform .2s;transform:rotate(" + (open ? 180 : 0) + "deg)")}>expand_more</span>
       </div>
@@ -268,7 +268,7 @@ function SelectField({
                 style={css(
                   "display:flex;align-items:center;justify-content:space-between;padding:9px 13px;font:" +
                     (o.label === value ? "700" : "400") +
-                    " 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer" +
+                    " 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);cursor:pointer" +
                     (o.label === value ? ";background:var(--gray-100)" : "")
                 )}
               >

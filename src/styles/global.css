@@ -227,7 +227,7 @@ a:hover {
 
 /* ONAIR 대형 숫자(카운터·스탯) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
 .bignum {
-  font-family: "Geist Sans", "Pretendard", sans-serif;
+  font-family: "Avenir Next", "Geist Sans", "Pretendard", sans-serif;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
