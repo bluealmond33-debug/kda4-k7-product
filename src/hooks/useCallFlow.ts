@@ -926,6 +926,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             seq: transcript.current.length + 1,
           };
           transcript.current.push(chunk);
+          // 로컬(서버 없음) 데모 — 전사 패널이 liveTranscriptLines를 직접 읽으므로
+          // demoBus뿐 아니라 여기도 채워 고객 화면 전사가 스크립트로 흐르게 한다.
+          setLiveTranscriptLines((lines) =>
+            [...lines, { seq: chunk.seq, text: c.text, at: c.at, speaker: "customer" as const, generation: 0, audioSeq: chunk.seq }].slice(-30)
+          );
+          setLiveCaption(c.text);
+          setLiveCaptionSpeaker("customer");
           demoBus.emit("stt.utterance", {
             callId: respRef.current.call_id,
             text: c.text,
