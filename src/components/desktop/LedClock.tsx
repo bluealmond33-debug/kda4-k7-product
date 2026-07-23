@@ -101,6 +101,11 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
   } | null>(null);
   const [detailOpen, setDetailOpen] = useState(false); // 날씨 상세 팝오버
   useEffect(() => {
+    // 날씨는 유일한 외부 인터넷 호출이라 기본으로 끈다(2026-07-23). 이 제품은 망분리
+    // 온프레미스 전제 — STT·LLM·임베딩·규정검색이 전부 사내에서 도는데 시계 위젯 하나가
+    // 밖으로 나가면 그 전제가 깨진다. 인터넷이 있는 환경에서 보고 싶으면 빌드 시
+    // VITE_ENABLE_WEATHER=1. 꺼져 있으면 시계는 그대로 돌고 날씨 칸만 비운다.
+    if (import.meta.env.VITE_ENABLE_WEATHER !== "1") return;
     let alive = true;
     const load = () => {
       fetch(
