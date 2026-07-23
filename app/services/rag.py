@@ -382,12 +382,84 @@ def _load_regulation_chunks() -> list[dict]:
             "subcategory": c.get("business_code"),
             "title": c.get("title") or c.get("doc_id") or "규정",
             "text": text,
+            # ── 원본 메타 보존 (2026-07-23) ──
+            # 규정 API(/api/v1/regulations/*)가 프론트 계약(chunk_id·page·kind·section·
+            # categories·version)을 그대로 채우려면 이 필드들이 필요하다. 위 5개는 FAISS
+            # 인덱스 매핑용으로 그대로 두고(하위 호환), 메타만 덧붙인다.
+            "chunk_id": c.get("chunk_id"),
+            "source_doc_id": c.get("doc_id"),      # 문서 단위 ID(청크 여럿이 공유)
+            "filename": c.get("filename"),
+            "doc_type": c.get("doc_type"),
+            "categories": c.get("categories") or [],
+            "version": c.get("version") or "v1",
+            "effective_date": c.get("effective_date"),
+            "status": c.get("status") or "active",
+            "page": c.get("page") or 1,
+            "kind": c.get("kind") or "text",
+            "section": c.get("section"),
         })
     logger.info("규정 RAG 청크 %d개 로드(김동희)", len(docs))
     return docs
 
 
 _DOCS.extend(_load_regulation_chunks())
+
+
+# ── 코퍼스 조회 헬퍼 (규정 API 전용) ────────────────────────────────────────
+# _DOCS는 "청크 리스트"다. 김동희 청크는 source_doc_id로 문서 단위가 묶이고,
+# 상단의 시드 더미(sg-001 등)는 문서=청크 1:1이라 doc_id를 그대로 문서 ID로 쓴다.
+
+def document_id_of(chunk: dict) -> str:
+    """청크가 속한 문서 ID. 실규정은 source_doc_id, 시드 더미는 자기 doc_id."""
+    return chunk.get("source_doc_id") or chunk["doc_id"]
+
+
+def get_chunk(doc_id: str) -> dict | None:
+    """검색 결과(RagDocument.doc_id)에 원본 메타를 다시 붙이기 위한 역조회."""
+    return _CHUNK_BY_ID.get(doc_id)
+
+
+def get_document(doc_id: str) -> dict | None:
+    """문서 메타 + 페이지순 청크 전체. 없으면 None.
+
+    프론트 '원문 열람 시트'(RegulationDoc)가 기대하는 형태로 조립한다.
+    """
+    chunks = [c for c in _DOCS if document_id_of(c) == doc_id]
+    if not chunks:
+        return None
+    head = chunks[0]
+    ordered = sorted(chunks, key=lambda c: (c.get("page") or 1, c.get("chunk_id") or ""))
+    return {
+        "doc_id": doc_id,
+        "title": head.get("title") or doc_id,
+        "doc_type": head.get("doc_type") or "규정",
+        "categories": head.get("categories") or ([head["category"]] if head.get("category") else []),
+        "version": head.get("version") or "v1",
+        "effective_date": head.get("effective_date"),
+        "source_file": head.get("filename") or f"{doc_id}.pdf",
+        "chunks": [
+            {
+                "chunk_id": c.get("chunk_id") or c["doc_id"],
+                "page": c.get("page") or 1,
+                "kind": c.get("kind") or "text",
+                "section": c.get("section") or c.get("subcategory"),
+                "text": c["text"],
+            }
+            for c in ordered
+        ],
+    }
+
+
+def corpus_stats() -> dict[str, int]:
+    """활성 문서·청크 실측 수 — 관리자 콘솔 'DB·지식베이스' 패널용."""
+    return {
+        "documents": len({document_id_of(c) for c in _DOCS}),
+        "chunks": len(_DOCS),
+    }
+
+
+_CHUNK_BY_ID: dict[str, dict] = {c["doc_id"]: c for c in _DOCS}
+
 
 # doc 순서 == 인덱스 벡터 순서. 이 리스트로 검색결과 idx를 원문에 매핑한다.
 _index_cache: dict[str, faiss.IndexFlatIP] = {}
@@ -458,6 +530,50 @@ def _ensure_index(settings: Settings) -> faiss.IndexFlatIP:
     return index
 
 
+def register_chunks(settings: Settings, chunks: list[dict]) -> int:
+    """새로 적재된 규정 청크를 코퍼스·FAISS 인덱스에 즉시 반영한다.
+
+    업로드 직후 바로 검색되게 하려고 전체 재빌드(1,187청크 재임베딩) 대신 새 벡터만
+    `index.add()` 한다 — _DOCS 순서와 인덱스 순서가 일치해야 하므로 append 순서를 지킨다.
+    현재 임베딩 모드(local/cloud)의 인덱스만 갱신하고, 반대편은 캐시·영속파일을 버려
+    다음 사용 시 재빌드되게 한다(모델이 다르면 벡터를 섞을 수 없다).
+    """
+    if not chunks:
+        return 0
+
+    _DOCS.extend(chunks)
+    _CHUNK_BY_ID.update({c["doc_id"]: c for c in chunks})
+
+    cache_key = "local" if settings.use_local_models else "cloud"
+    for other in [k for k in list(_index_cache) if k != cache_key]:
+        _index_cache.pop(other, None)
+        (_INDEX_DIR / f"faiss_{other}.index").unlink(missing_ok=True)
+
+    index = _index_cache.get(cache_key)
+    if index is None:
+        # 아직 인덱스가 없으면 다음 검색 때 새 코퍼스 전체로 자연히 빌드된다.
+        (_INDEX_DIR / f"faiss_{cache_key}.index").unlink(missing_ok=True)
+        return len(chunks)
+
+    vectors = np.vstack(
+        [_embed(settings, [c["text"] for c in chunks[i:i + 64]])
+         for i in range(0, len(chunks), 64)]
+    ).astype("float32")
+    index.add(vectors)
+
+    # 영속 인덱스도 갱신 — 안 하면 ntotal != len(_DOCS)라 다음 기동 시 전체 재빌드된다.
+    # (FAISS Windows 비ASCII 경로 회피는 _ensure_index와 동일한 임시경로 경유 방식)
+    try:
+        tmp = pathlib.Path(tempfile.gettempdir()) / f"_karina_faiss_{cache_key}.index"
+        faiss.write_index(index, str(tmp))
+        shutil.move(str(tmp), str(_INDEX_DIR / f"faiss_{cache_key}.index"))
+    except Exception:
+        logger.warning("FAISS 인덱스 영속 실패(무해 — 다음 기동 시 재빌드)", exc_info=True)
+
+    logger.info("규정 청크 %d개 인덱스 반영 (총 %d)", len(chunks), len(_DOCS))
+    return len(chunks)
+
+
 # 질의 키워드 → 부서 대분류 추론(김동희 taxonomy). 관련성 향상용 소프트 필터.
 _DEPT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "INV": ("연금", "irp", "퇴직연금", "isa", "노후", "개인형퇴직"),
@@ -465,6 +581,11 @@ _DEPT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "FX": ("외환", "환전", "외화", "달러", "해외송금", "환율"),
     "DEP": ("예금", "적금", "청약", "통장", "입출금", "발행어음", "만기", "수신"),
 }
+
+
+# 추론 부서 가점. 코사인 점수(대략 0.5~0.8) 대비 작게 잡아 "동점이면 해당 부서 우선"
+# 정도로만 작동하게 한다. 크면 배제와 다를 바 없어져 관련성 높은 타 부서를 밀어낸다.
+_INFERRED_BOOST = 0.05
 
 
 def _infer_categories(query: str) -> list[str] | None:
@@ -488,18 +609,25 @@ def search_procedures(
 
     categories 필터는 김민기 설계 4절의 핵심 — 통화 용건 대분류에 맞는 규정만 추천.
     예: 긴급(EMERGENCY) 통화면 categories=["SG"]로 사고·신고 규정만. None이면 전체 검색.
+
+    호출자가 지정한 categories는 **하드 필터**지만, 질의에서 추론한 부서는 **소프트 가점**만
+    준다(2026-07-23). 하드로 쓰면 "카드가 해외에서 250달러 결제" 같은 문장에서 '달러' 한
+    단어가 FX를 고정시켜, 관련성이 훨씬 높은 카드(CRD) 규정이 후보에서 통째로 배제된다.
     """
+    boost_categories = None
     if categories is None:
-        categories = _infer_categories(query)  # 질의에서 부서 추론(연금→INV 등) — 관련성↑
+        # 추론은 가점용으로만 쓴다(연금→INV 등 관련성↑). 배제하지 않는다.
+        boost_categories = _infer_categories(query)
 
     from app.services import rag_store  # 지연 import — 순환참조 회피
 
     if rag_store.pgvector_ready(settings):
         try:
+            # pgvector 경로는 추론 가점을 적용하지 않는다 — 하드 필터만 넘겨 배제를 피한다.
             return rag_store.search_regulations(settings, query, top_k, categories)
         except Exception:  # pgvector 경로 실패 시 데모가 끊기지 않게 FAISS로 폴백
             logger.warning("pgvector 검색 실패 — FAISS로 폴백", exc_info=True)
-    return _search_faiss(settings, query, top_k, categories)
+    return _search_faiss(settings, query, top_k, categories, boost_categories)
 
 
 def _search_faiss(
@@ -507,38 +635,54 @@ def _search_faiss(
     query: str,
     top_k: int = 3,
     categories: list[str] | None = None,
+    boost_categories: list[str] | None = None,
 ) -> list[RagDocument]:
     """FAISS(인메모리) 폴백 검색. pgvector 미준비 시 사용. 코퍼스가 작아 전체를
-    점수순으로 받아 파이썬에서 필터 후 top_k를 취한다(필터 정확)."""
+    점수순으로 받아 파이썬에서 필터 후 top_k를 취한다(필터 정확).
+
+    categories = 호출자가 지정한 **하드 필터**(그 부서만).
+    boost_categories = 질의에서 추론한 부서의 **소프트 가점**(배제하지 않는다).
+    """
     index = _ensure_index(settings)
 
     allowed = {c.upper() for c in categories} if categories else None
+    boosted = {c.upper() for c in boost_categories} if boost_categories else set()
 
     query_vector = _embed(settings, [query])
     # 필터가 있으면 후보가 걸러지므로 전체를 훑어 점수순으로 확보한다.
     search_k = len(_DOCS)
     scores, indices = index.search(query_vector, search_k)
 
-    matched: list[RagDocument] = []
-    others: list[RagDocument] = []
+    # (정렬점수, 원점수, 코퍼스 인덱스) — RagDocument는 최종 top_k만 만든다.
+    ranked: list[tuple[float, float, int]] = []
+    spare: list[tuple[float, float, int]] = []   # 하드 필터에 걸러진 것(빈손 방지용)
     for score, idx in zip(scores[0], indices[0]):
         if idx < 0:
             continue
-        doc = _DOCS[idx]
-        rd = RagDocument(
-            doc_id=doc["doc_id"],
-            title=doc["title"],
-            excerpt=doc["text"],
-            score=round(float(score), 3),
-            category=doc.get("category"),
-            subcategory=doc.get("subcategory"),
-        )
-        if allowed is None or doc.get("category") in allowed:
-            matched.append(rd)
-        else:
-            others.append(rd)
-        if len(matched) >= top_k:
-            break
+        category = _DOCS[idx].get("category")
+        raw = float(score)
+        if allowed is not None and category not in allowed:
+            spare.append((raw, raw, idx))
+            continue
+        ranked.append((raw + (_INFERRED_BOOST if category in boosted else 0.0), raw, idx))
 
-    # 추론/지정 부서 매칭이 부족하면 관련성 순으로 나머지를 채운다(빈손 방지, 소프트 필터).
-    return (matched + others)[:top_k]
+    ranked.sort(key=lambda row: row[0], reverse=True)
+    picked = ranked[:top_k]
+    if len(picked) < top_k:   # 지정 부서 후보가 모자라면 관련성 순으로 채운다(빈손 방지)
+        picked = picked + spare[: top_k - len(picked)]
+
+    # 가점은 "무엇을 고를지"에만 쓰고, 내보내는 순서는 원점수 기준으로 되돌린다.
+    # 그래야 화면에 표시되는 score가 정렬과 어긋나 보이지 않는다.
+    picked.sort(key=lambda row: row[1], reverse=True)
+
+    return [
+        RagDocument(
+            doc_id=_DOCS[idx]["doc_id"],
+            title=_DOCS[idx]["title"],
+            excerpt=_DOCS[idx]["text"],
+            score=round(raw, 3),
+            category=_DOCS[idx].get("category"),
+            subcategory=_DOCS[idx].get("subcategory"),
+        )
+        for _rank, raw, idx in picked
+    ]
