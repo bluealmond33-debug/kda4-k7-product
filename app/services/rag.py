@@ -25,7 +25,11 @@
 두 임베딩은 차원이 다르므로 인덱스 캐시도 모드별로 분리한다.
 """
 
+import json
 import logging
+import pathlib
+import shutil
+import tempfile
 
 import httpx
 import numpy as np
@@ -354,8 +358,40 @@ _DOCS: list[dict] = [
     },
 ]
 
+# ── 김동희 규정 RAG 통합 (하나은행 예금·대출·외환·연금 규정 1,153청크) ──
+# 팀 표준은 pgvector이나, 미준비 시 이 FAISS 폴백 코퍼스에 실제 규정 청크를 합쳐
+# 데모에서 진짜 규정 검색이 되게 한다. chunks 파일 없으면 위 시드만 쓴다(무해).
+def _load_regulation_chunks() -> list[dict]:
+    path = pathlib.Path(__file__).resolve().parent / "rag_data" / "regulation_chunks.jsonl"
+    if not path.is_file():
+        return []
+    docs: list[dict] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            c = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        text = (c.get("text") or "").strip()
+        if not text:
+            continue
+        docs.append({
+            "doc_id": c.get("chunk_id") or c.get("doc_id"),
+            "category": c.get("department"),       # DEP(수신)/LON(여신)/FX(외환)/INV(연금)
+            "subcategory": c.get("business_code"),
+            "title": c.get("title") or c.get("doc_id") or "규정",
+            "text": text,
+        })
+    logger.info("규정 RAG 청크 %d개 로드(김동희)", len(docs))
+    return docs
+
+
+_DOCS.extend(_load_regulation_chunks())
+
 # doc 순서 == 인덱스 벡터 순서. 이 리스트로 검색결과 idx를 원문에 매핑한다.
 _index_cache: dict[str, faiss.IndexFlatIP] = {}
+_INDEX_DIR = pathlib.Path(__file__).resolve().parent / "rag_data"
 
 
 def _embed_openai(settings: Settings, texts: list[str]) -> np.ndarray:
@@ -389,13 +425,53 @@ def _ensure_index(settings: Settings) -> faiss.IndexFlatIP:
     if cache_key in _index_cache:
         return _index_cache[cache_key]
 
-    vectors = _embed(settings, [doc["text"] for doc in _DOCS])
-    dimension = vectors.shape[1]
+    # 디스크 영속 인덱스가 코퍼스 크기와 일치하면 로드(1,153청크 재임베딩 회피 — 재시작 빠름).
+    # FAISS(Windows)는 비ASCII 경로 IO에 실패("Illegal byte sequence")하므로 ASCII 임시경로를 경유한다.
+    persist = _INDEX_DIR / f"faiss_{cache_key}.index"
+    tmp = pathlib.Path(tempfile.gettempdir()) / f"_karina_faiss_{cache_key}.index"
+    if persist.is_file():
+        try:
+            shutil.copy(str(persist), str(tmp))
+            index = faiss.read_index(str(tmp))
+            tmp.unlink(missing_ok=True)
+            if index.ntotal == len(_DOCS):
+                _index_cache[cache_key] = index
+                return index
+        except Exception:
+            logger.warning("FAISS 인덱스 로드 실패 — 재빌드", exc_info=True)
 
-    index = faiss.IndexFlatIP(dimension)
+    # 배치 임베딩 — 큰 코퍼스를 Ollama에 한 번에 넣지 않는다(64개씩).
+    texts = [doc["text"] for doc in _DOCS]
+    vectors = np.vstack(
+        [_embed(settings, texts[i:i + 64]) for i in range(0, len(texts), 64)]
+    ).astype("float32")
+
+    index = faiss.IndexFlatIP(vectors.shape[1])
     index.add(vectors)
+    try:
+        _INDEX_DIR.mkdir(parents=True, exist_ok=True)
+        faiss.write_index(index, str(tmp))      # ASCII 임시경로에 쓰고
+        shutil.move(str(tmp), str(persist))     # 유니코드 이동은 파이썬이 처리
+    except Exception:
+        logger.warning("FAISS 인덱스 영속 실패(무해 — 다음 기동 시 재빌드)", exc_info=True)
     _index_cache[cache_key] = index
     return index
+
+
+# 질의 키워드 → 부서 대분류 추론(김동희 taxonomy). 관련성 향상용 소프트 필터.
+_DEPT_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "INV": ("연금", "irp", "퇴직연금", "isa", "노후", "개인형퇴직"),
+    "LON": ("대출", "여신", "상환", "이자", "신용대출", "담보", "중도상환"),
+    "FX": ("외환", "환전", "외화", "달러", "해외송금", "환율"),
+    "DEP": ("예금", "적금", "청약", "통장", "입출금", "발행어음", "만기", "수신"),
+}
+
+
+def _infer_categories(query: str) -> list[str] | None:
+    """질의에서 부서 대분류를 추론한다. 매칭 없으면 None(전체 검색)."""
+    low = query.lower()
+    hits = [code for code, kws in _DEPT_KEYWORDS.items() if any(k in low for k in kws)]
+    return hits or None
 
 
 def search_procedures(
@@ -413,6 +489,9 @@ def search_procedures(
     categories 필터는 김민기 설계 4절의 핵심 — 통화 용건 대분류에 맞는 규정만 추천.
     예: 긴급(EMERGENCY) 통화면 categories=["SG"]로 사고·신고 규정만. None이면 전체 검색.
     """
+    if categories is None:
+        categories = _infer_categories(query)  # 질의에서 부서 추론(연금→INV 등) — 관련성↑
+
     from app.services import rag_store  # 지연 import — 순환참조 회피
 
     if rag_store.pgvector_ready(settings):
@@ -440,24 +519,26 @@ def _search_faiss(
     search_k = len(_DOCS)
     scores, indices = index.search(query_vector, search_k)
 
-    documents: list[RagDocument] = []
+    matched: list[RagDocument] = []
+    others: list[RagDocument] = []
     for score, idx in zip(scores[0], indices[0]):
         if idx < 0:
             continue
         doc = _DOCS[idx]
-        if allowed is not None and doc.get("category") not in allowed:
-            continue
-        documents.append(
-            RagDocument(
-                doc_id=doc["doc_id"],
-                title=doc["title"],
-                excerpt=doc["text"],
-                score=round(float(score), 3),
-                category=doc.get("category"),
-                subcategory=doc.get("subcategory"),
-            )
+        rd = RagDocument(
+            doc_id=doc["doc_id"],
+            title=doc["title"],
+            excerpt=doc["text"],
+            score=round(float(score), 3),
+            category=doc.get("category"),
+            subcategory=doc.get("subcategory"),
         )
-        if len(documents) >= top_k:
+        if allowed is None or doc.get("category") in allowed:
+            matched.append(rd)
+        else:
+            others.append(rd)
+        if len(matched) >= top_k:
             break
 
-    return documents
+    # 추론/지정 부서 매칭이 부족하면 관련성 순으로 나머지를 채운다(빈손 방지, 소프트 필터).
+    return (matched + others)[:top_k]

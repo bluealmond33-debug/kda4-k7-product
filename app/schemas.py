@@ -72,6 +72,28 @@ class EmotionResult(BaseModel):
     fallback_reason: str | None = None
 
 
+# ---------- 음성 분노 탐지 (WavLM, 격양도와 별개 축) ----------
+
+class VoiceAngerResult(BaseModel):
+    """WavLM 음성 분노 탐지 — eGeMAPS 격양도(EmotionResult)와 '별개 축'이다.
+
+    격양도가 '얼마나 격했나(arousal)'를 본다면 이 신호는 '분노인가(specific)'를 본다.
+    fusion에서 격양도 값을 절대 덮어쓰지 않고, 주의등급만 올리는 에스컬레이션 부스터
+    입력으로만 쓴다. probability는 아직 calibration되지 않은 모델 점수라 '분노일 확률'로
+    해석하지 않는다(threshold와 함께 쓰는 점수). 감정 신호는 S/G/E 업무 라우팅·상담사
+    자동배정을 직접 결정하지 않는다(보조 신호 전용)."""
+
+    model_config = ConfigDict(protected_namespaces=())  # model_version 예약 접두사 회피
+
+    detected: bool
+    probability: float = Field(ge=0, le=1)
+    confidence: float | None = Field(default=None, ge=0, le=1)  # 런타임이 아직 안 냄 → None 허용
+    threshold: float = 0.43
+    probability_calibrated: bool = False
+    analysis_source: AnalysisSource = AnalysisSource.STUB
+    model_version: str | None = None
+
+
 # ---------- 텍스트 감정분류 (EXAONE, 음향 모델과 별도 채널) ----------
 
 class TextEmotionResult(BaseModel):
@@ -123,6 +145,9 @@ class AttentionReasonCode(str, Enum):
     PRIOR_RESOLUTION_FAILED = "PRIOR_RESOLUTION_FAILED"
     HIGH_EMOTIONAL_DISTRESS = "HIGH_EMOTIONAL_DISTRESS"
     TEXT_HIGH_RISK_SIGNAL = "TEXT_HIGH_RISK_SIGNAL"
+    # WavLM 음성 분노 부스터 — 격양도(arousal)와의 조합으로 4셀을 구분한다.
+    VOICE_ANGER_WITH_AROUSAL = "VOICE_ANGER_WITH_AROUSAL"  # 격양 high + 분노 yes: 분노 격앙
+    VOICE_ANGER_CALM = "VOICE_ANGER_CALM"  # 격양 low + 분노 yes: 냉정한 분노(격양도만으론 놓침)
 
 
 class AttentionLevel(str, Enum):
@@ -201,6 +226,7 @@ class LegacyAnalyzeResponse(BaseModel):
     urgency_score: int
     routing: LegacyRouting
     keywords: list[str]
+    references: list[RagDocument] = []  # 관련 규정(RAG) — 상담 유의사항/응대 가이드용
 
 
 # ---------- kda4-k7-product(팀 React 데모) 연동 ----------

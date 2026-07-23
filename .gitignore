@@ -3,9 +3,17 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .env
+.env.docker
 data/
 
 # 박정운 emotion_temperature 모델 바이너리 — 라이선스상 git에 올리지 않음(README.md 참고)
 app/services/k7modeling/models/*.joblib
 # 전형진 은행 주제 분류 모델 — 용량·재학습 이유로 git 제외(README.md 참고)
 app/services/routing/models/*.joblib
+
+# WavLM 음성분노 — 체크포인트/백본 캐시는 git 제외 (hippo handoff·HF에서 별도 수급)
+app/services/k7modeling/models/hf_cache/
+app/services/k7modeling/models/*.pt
+
+# RAG FAISS 인덱스(청크에서 재생성 가능) — git 제외
+app/services/rag_data/*.index
