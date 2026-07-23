@@ -200,6 +200,11 @@ const followupIcon = (label: string): string =>
 // 조용히 말해 레벨이 낮은 경우에도 STT 전사가 확정되면 onTranscript가 리셋하므로 안전하다.
 const SPEECH_LEVEL_THRESHOLD = 0.06; // 잡음(≈0.005~0.03) 위, 발화(≈0.05~0.3) 하단
 const SPEECH_SUSTAIN_TICKS = 2; // 연속 2회(≈0.5초) 이상 지속돼야 발화로 인정
+// 말소리 지속 중에는 카운트다운을 5초로 '리셋'하지 않고 잔여시간 하한만 지킨다(보류).
+// 리셋 방식은 숫자가 4→5→2처럼 널뛰어 사용자를 헷갈리게 했다. 보류 방식은 숫자가
+// 내려가다 ~2초에서 멈춰 기다리고, **확정 전사(onTranscript)가 도착했을 때만** 처음부터
+// 다시 센다 — 진짜 발화는 곧 전사가 확정되므로 잘못 만료될 틈이 없다.
+const SPEECH_HOLD_MS = 2000;
 
 export function useCallFlow(config: CallFlowConfig = {}) {
   const s1 = config.silenceSec1 ?? 5;
@@ -254,6 +259,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
   // 상담 가이드(EXAONE) — 단계별 스크립트. 비어 있으면 콜 유형 픽스처(SCRIPTS)로 폴백.
   const [guideSteps, setGuideSteps] = useState<{ title: string; text: string }[]>([]);
+  // 실제 발화 분석이 진행 중 — true면 준비 카드가 데모 픽스처(주담대) 대신 "분석 중"을
+  // 보여준다. 실통화에서 픽스처 브리핑이 먼저 떴다가 실분석으로 바뀌는 혼란 방지.
+  const [summaryPending, setSummaryPending] = useState(false);
   // 실제 규정 원문 열람 — 검색 히트를 클릭하면 그 문서의 청크 전체가 시트로 열린다
   const [regDoc, setRegDoc] = useState<RegulationDoc | null>(null);
   const [regDocChunk, setRegDocChunk] = useState<string | null>(null);
@@ -444,6 +452,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         summarize({ chunks: transcript.current, text }),
       ]);
       if (r.status === "fulfilled") setSummary(r.value);
+      setSummaryPending(false);
       return;
     }
     try {
@@ -487,8 +496,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       });
 
       // 2) 상담카드 오버레이 — 라우팅(부서)·위험·감정이 실제 대화를 반영하게
+      // 근거 발화도 실제 마지막 확정 발화로 교체(픽스처 주담대 인용이 남지 않게)
+      const lastUtterance =
+        transcript.current.filter((c) => c.isFinal && c.text.trim()).slice(-1)[0]?.text ?? text;
       setConsultationResponse((prev) => ({
         ...prev,
+        transcript: { ...prev.transcript, text: lastUtterance },
         consultation_card: {
           ...prev.consultation_card,
           summary: d?.summary || prev.consultation_card.summary,
@@ -511,11 +524,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
       // 3) 후처리 업무유형 — 실제 반영
       if (d?.category) setWrapType(d.category);
+      setSummaryPending(false);
     } catch {
       const [r] = await Promise.allSettled([
         summarize({ chunks: transcript.current, text }),
       ]);
       if (r.status === "fulfilled") setSummary(r.value);
+      setSummaryPending(false);
     }
   }, []);
 
@@ -530,6 +545,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }
     setPhase("prep");
     setPrepChecks(Array(PREP_LEN).fill(true));
+    // 실제 발화가 있으면 분석이 끝날 때까지 준비 카드에 픽스처(주담대) 대신 "분석 중" 표시.
+    // 시뮬 모드(마이크 폴백)는 픽스처가 곧 무대이므로 pending을 켜지 않는다.
+    if (useReal.data && transcript.current.some((c) => c.isFinal && c.text.trim())) {
+      setSummaryPending(true);
+    }
     void runSummary();
     emitCardPipeline("demo");
   }, [emitCardPipeline, runSummary]);
@@ -584,11 +604,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       },
       onLevel: (l) => {
         setMicLevel(l);
-        // 전사가 확정되기 전이라도 "지속되는" 입력이 있으면 침묵 판정을 미룬다.
-        // 순간적으로 튄 잡음 한 번으로는 리셋하지 않는다(위 상수 주석 참고).
+        // 지속되는 입력이 있으면 침묵 카운트다운을 '보류'한다 — 5초 리셋이 아니라
+        // 잔여시간 하한(SPEECH_HOLD_MS)만 지킨다. 숫자 널뛰기(4→5→2…) 방지.
+        // 처음(s1)부터 다시 세는 건 확정 전사(onTranscript)가 도착했을 때뿐이다.
         if (l > SPEECH_LEVEL_THRESHOLD) {
           loudRun.current += 1;
-          if (loudRun.current >= SPEECH_SUSTAIN_TICKS && silStage.current) armFirst();
+          if (loudRun.current >= SPEECH_SUSTAIN_TICKS && silStage.current) {
+            silEnd.current = Math.max(silEnd.current, Date.now() + SPEECH_HOLD_MS);
+          }
         } else {
           loudRun.current = 0;
         }
@@ -718,6 +741,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setSilenceLeft(0);
     setMicErr("");
     setSummary(null);
+    setSummaryPending(false);
     setConsultationResponse(getDemoConsultationCard());
     setVerified(false);
     setAuthInput("");
@@ -876,6 +900,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           atMs: 0,
         });
         setSummary(null);
+        setSummaryPending(false);
         setPrepChecks(Array(PREP_LEN).fill(true));
         setPhase("prep");
         emitCardPipeline("backend", 250);
@@ -1173,7 +1198,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   ).slice(0, 4);
   // 유의사항 = 실제 규정(RAG) 우선, 모자란 만큼 일반 원칙으로 채움. 규정이 하나도 없으면
   // (실데이터 미사용이거나 백엔드가 하한 미달로 비워 보낸 경우) 기존 데모 픽스처로 강등한다.
-  const prepDefinitions = ragRefs.length
+  const prepDefinitions = summaryPending
+    ? GENERIC_CHECKS.slice(0, PREP_LEN)
+    : ragRefs.length
     ? [
         ...ragRefs.map((r) => ({
           title: r.title,
@@ -1332,11 +1359,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }),
     prepDone: prepChecks.filter(Boolean).length,
     prepTotal: prepDefinitions.length,
-    prepHeadline: card.summary || summary?.headline || "상담카드 생성 중",
+    // 분석 대기 중에는 픽스처 카드(주담대)를 숨긴다 — 실통화에서 엉뚱한 브리핑 선노출 방지
+    summaryPending,
+    prepHeadline: summaryPending
+      ? "실시간 발화를 분석해 브리핑을 만들고 있습니다…"
+      : card.summary || summary?.headline || "상담카드 생성 중",
     // 문의유형은 배정권고 타일이 담당 — 여기 반복하지 않는다
     prepCustomerLine: `발신 ${CUSTOMER.phoneMasked} · 음성 접수`,
-    prepRoutingTitle: card.department || "담당 부서 분석 중",
-    prepRoutingReason: card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
+    prepRoutingTitle: summaryPending ? "담당 부서 분석 중" : card.department || "담당 부서 분석 중",
+    prepRoutingReason: summaryPending
+      ? "문의 유형과 담당 업무를 대조하고 있습니다"
+      : card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
     prepEmotionLabel:
       temperature.status === "unavailable"
         ? "모델 미연동"
@@ -1354,18 +1387,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepRiskFg: RISK_COLORS[card.incident_risk],
     prepRiskSignal: riskSignals.join(" · ") || "특이 사고 징후 없음",
     prepConfidence:
-      card.routing_confidence != null
+      !summaryPending && card.routing_confidence != null
         ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
         : "확신도 산출 전 · 상담사 확인 필요",
     // 배정 확신도 % 숫자만 (상단 배지용)
     prepConfidencePct:
-      card.routing_confidence != null ? Math.round(card.routing_confidence * 100) : null,
+      !summaryPending && card.routing_confidence != null
+        ? Math.round(card.routing_confidence * 100)
+        : null,
     // 감정온도 숫자(당근 매너온도 스타일) — 신호등 대신 큰 숫자로
     prepEmotionScore: temperature.score ?? null,
-    transcriptQuote: consultationResponse.transcript.text,
+    // 근거 발화 — 분석 대기 중엔 실제 마지막 확정 발화를(픽스처 인용 노출 방지),
+    // 분석 후엔 runSummary가 실발화로 교체해 둔 카드 값을 쓴다.
+    transcriptQuote: summaryPending
+      ? transcript.current.filter((c) => c.isFinal && c.text.trim()).slice(-1)[0]?.text ?? "…"
+      : consultationResponse.transcript.text,
     // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문.
     // 실제 통화면 백엔드 요약의 불릿(키워드)을, 없으면 데모 픽스처를 쓴다.
-    summaryPoints: summary?.bullets?.length ? summary.bullets : SUMMARY_POINTS[incoming],
+    summaryPoints: summaryPending
+      ? ["음성 인식 완료 · AI 요약 생성 중…"]
+      : summary?.bullets?.length ? summary.bullets : SUMMARY_POINTS[incoming],
     prepSummaryBullets,
     externalSessionKey: consultationResponse.call_id,
     // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다
@@ -1429,8 +1470,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       authMethod === "birth" ? "생년월일 6자리 (YYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
     // script + memo — 실제 통화 분석(EXAONE)이 있으면 그걸, 없으면 콜 유형 픽스처.
     // 스크립트·규정·후속조치가 전부 같은 실분석에서 나와 한 사건을 말하게 된다.
-    steps: (guideSteps.length === 4 ? guideSteps : SCRIPTS[incoming]).map((st) => ({ title: st.title, text: st.text })),
-    firstLine: (guideSteps.length === 4 ? guideSteps : SCRIPTS[incoming])[0].text,
+    steps: summaryPending
+      ? [{ title: "AI 분석 중", text: "통화 내용 분석이 끝나면 이 통화에 맞춘 단계별 스크립트가 표시됩니다." }]
+      : (guideSteps.length === 4 ? guideSteps : SCRIPTS[incoming]).map((st) => ({ title: st.title, text: st.text })),
+    firstLine: summaryPending
+      ? "안녕하세요, 키움은행 고객센터입니다. 문의하신 내용 확인해 바로 도와드리겠습니다."
+      : (guideSteps.length === 4 ? guideSteps : SCRIPTS[incoming])[0].text,
     // 관련 규정 AI 추천 — 실제 RAG 근거(백엔드가 점수 하한 통과분만 보냄) 우선.
     // 실데이터는 시트 행(row)이 없어 row:null — '열기'는 규정집 의미검색(query)으로 연결.
     regRecos: ragRefs.length
