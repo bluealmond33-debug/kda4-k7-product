@@ -575,7 +575,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
                 <div style={css("padding:13px 15px;display:flex;flex-direction:column;gap:14px")}>
                   <div>
-                    <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:8px")}>
+                    <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);margin-bottom:8px")}>
                       <span className="mi" style={css("font-size:14px")}>auto_awesome</span> 이번 상담 예상 규정 · AI 추천
                     </div>
                     <div style={css("display:flex;flex-direction:column;gap:9px")}>

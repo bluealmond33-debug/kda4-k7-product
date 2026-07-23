@@ -512,10 +512,10 @@ export default function Standby() {
                 <span
                   onClick={() => setOnBreak(false)}
                   style={css(
-                    "margin-top:22px;display:inline-flex;align-items:center;gap:7px;padding:12px 26px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 14px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus);pointer-events:auto"
+                    "margin-top:16px;display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus);pointer-events:auto"
                   )}
                 >
-                  <span className="mi" style={css("font-size:19px")}>play_arrow</span>복귀하기
+                  <span className="mi" style={css("font-size:15px")}>play_arrow</span>복귀하기
                 </span>
               </>
             )}

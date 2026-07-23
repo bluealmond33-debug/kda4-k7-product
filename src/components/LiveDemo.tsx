@@ -25,13 +25,20 @@ export default function LiveDemo({
   view = "full",
   ...config
 }: CallFlowConfig & { view?: LiveDemoView } = {}) {
+  // 직원 콘솔 통화 연결 시 좌측에 실시간 발화(STT) 패널을 붙이는 분할 뷰.
+  // 켜지면 데스크톱 본체(1100)가 오른쪽으로 축소되고 왼쪽에 고객 발화 패널이 들어온다.
+  // 통화 연결(answerCall) 시 자동 on, 상단 알약 토글로 끌 수 있다(발표자가 화면을 다시 키우고 싶을 때).
+  const [deskSplit, setDeskSplit] = useState(false);
+
   // 고객 화면은 콘텐츠 폭이 좁다(폰 260 + 패널 470) — 스테이지를 콘텐츠에 맞추고
   // 확대를 허용해 큰 모니터에서 양옆 여백 없이 화면을 채운다
   const vm = useCallFlow({
     ...config,
     ...(view === "phone" ? { stageW: 600, maxScale: 1.9 } : null),
-    // 직원 단독 화면 — 데스크톱 폭(1100)을 브라우저 가로에 100% 맞춘다(양옆 여백 없음)
-    ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 24 } : null),
+    // 직원 단독 화면 — 가로·세로 모두 뷰포트에 맞춘다(fitHeight 기본 true).
+    // 가로만 맞추면(구 fitHeight:false) 낮은 창에서 하단이 잘렸다 — 넓은 화면에선 양옆 레터박스.
+    // 분할 뷰에선 좌측 STT 패널(260) + 간격(40)만큼 넓어져 본체가 상대적으로 작아진다.
+    ...(view === "desktop" ? { stageW: deskSplit ? 1400 : 1100, maxScale: 3, fitPad: 24 } : null),
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
   // 고객 화면 실시간 상태 — demoBus 단일 소스 (알약 상태문구 + 패널 자막이 함께 쓴다)
@@ -73,6 +80,17 @@ export default function LiveDemo({
     }
   }, [vm.phIdle]);
 
+  // 직원 분할 뷰 — 통화 연결(active 진입)의 상승엣지에 자동 on. 리셋(idle)이면 off.
+  // 상승엣지로만 켜므로, 통화 중 알약 토글로 끈 뒤 다시 켜지지 않는다(발표자 제어 유지).
+  const wasActive = useRef(false);
+  useEffect(() => {
+    if (view === "desktop" && vm.showActive && !wasActive.current) setDeskSplit(true);
+    wasActive.current = vm.showActive;
+  }, [view, vm.showActive]);
+  useEffect(() => {
+    if (vm.phIdle) setDeskSplit(false);
+  }, [vm.phIdle]);
+
   // 데모 안내 팝업 등장/퇴장 모션 — 중앙에서 슉 뜨고 다시 접힌다. 등장 지연은 useCallFlow(700ms)가 담당.
   // 열려 있는 동안 단계가 바뀌면 딤 유지·내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝.
   const [guideRender, setGuideRender] = useState(vm.guideOpen);
@@ -106,7 +124,14 @@ export default function LiveDemo({
       ref={vm.rootRef}
       style={css("min-height:100vh;padding:" + (view === "desktop" ? "12px" : "20px") + ";display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box")}
     >
-      <div style={{ width: vm.scaledW, height: vm.scaledH }}>
+      <div
+        style={{
+          width: vm.scaledW,
+          height: vm.scaledH,
+          // 분할 전환 시 바깥 사이징 박스도 같은 커브로 — 리센터가 점프 없이 미끄러진다
+          transition: view === "desktop" ? "width .45s cubic-bezier(.2,.8,.2,1), height .45s cubic-bezier(.2,.8,.2,1)" : undefined,
+        }}
+      >
         <div
           ref={vm.stageRef}
           style={{
@@ -117,6 +142,12 @@ export default function LiveDemo({
             flexDirection: "column",
             gap: "18px",
             alignItems: "center",
+            // 직원 분할 뷰 진입/해제 — 스케일·폭이 한 커브로 움직여
+            // "오른쪽으로 가며 작아지고, 왼쪽으로 오며 커지는" 연속 모션이 된다
+            transition:
+              view === "desktop"
+                ? "transform .45s cubic-bezier(.2,.8,.2,1), width .45s cubic-bezier(.2,.8,.2,1)"
+                : undefined,
           }}
         >
           {/* 상단 제어 바 — 4단계 스테퍼 알약(시연용 리모컨). 번호를 누르면 그 단계 안내가 팝업으로 뜬다.
@@ -218,6 +249,21 @@ export default function LiveDemo({
                 <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약
               </span>
             )}
+            {/* 직원 분할 뷰 토글 — 통화 연결 시 자동 켜지지만, 발표자가 화면을 다시 키우고 싶으면 여기서 끈다.
+                켜짐=본체 축소+좌측 고객 발화(STT) / 꺼짐=본체 전체 화면 */}
+            {view === "desktop" && (
+              <span
+                onClick={() => setDeskSplit((v) => !v)}
+                title={deskSplit ? "화면을 다시 키우고 고객 발화 패널을 숨깁니다" : "본체를 줄이고 왼쪽에 고객 발화(STT)를 표시합니다"}
+                style={css(
+                  "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;background:" +
+                    (deskSplit ? "var(--blue-700);color:#fff" : "var(--gray-100);color:var(--gray-1000)")
+                )}
+              >
+                <span className="mi" style={css("font-size:17px")}>{deskSplit ? "close_fullscreen" : "call_split"}</span>
+                {deskSplit ? "화면 키우기" : "고객 발화 보기"}
+              </span>
+            )}
             <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>
@@ -227,17 +273,18 @@ export default function LiveDemo({
           {/* 고객 화면 상황 알약 — 발표용 화면: on/off(● 대기·통화)만. 상태 문구·초기화 없음.
               (리셋은 새로고침 또는 폰의 통화 버튼 — 새 콜 시작이 곧 리셋) */}
           {view === "phone" && (
-            <div style={css("display:flex;align-items:center;background:var(--onair-surface);border-radius:9999px;padding:7px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+            <div style={css("display:flex;align-items:center")}>
+              {/* 발표용: 테두리·배경 없이 점 + 상태 텍스트만. 검은 스테이지 위라 텍스트는 밝게 */}
               <span
                 style={css(
                   "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:" +
-                    (live.active ? "var(--green-900)" : "var(--gray-700)")
+                    (live.active ? "var(--green-400)" : "var(--gray-400)")
                 )}
               >
                 <span
                   style={css(
                     "width:7px;height:7px;border-radius:9999px;background:" +
-                      (live.active ? "var(--green-700);animation:recBlink 1.1s infinite" : "var(--gray-400)")
+                      (live.active ? "var(--green-500);animation:recBlink 1.1s infinite" : "var(--gray-500)")
                   )}
                 />
                 {live.active ? "통화 중" : "대기 중"}
@@ -258,6 +305,25 @@ export default function LiveDemo({
             {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}
             {/* 고객 화면 — 폰은 살짝 왼쪽, 오른쪽에 실시간 현황·발화 스트림(타이핑 애니메이션) */}
             {view === "phone" && <LiveTranscriptPanel stream={stream} active={live.active} />}
+            {/* 직원 분할 뷰 — 통화 연결 시 본체 왼쪽에 고객 발화(STT) 패널.
+                항상 마운트해 두고 max-width·이동·투명도를 본체와 같은 커브로 접었다 편다 —
+                패널이 왼쪽에서 미끄러져 들어오는 동안 본체는 오른쪽으로 밀리며 줄어든다(한 호흡).
+                접힘 시 margin-right:-40이 flex gap을 상쇄해 본체가 정확히 제자리로 복원된다 */}
+            {view === "desktop" && (
+              <div
+                style={{
+                  overflow: "hidden",
+                  maxWidth: deskSplit ? 300 : 0,
+                  opacity: deskSplit ? 1 : 0,
+                  marginRight: deskSplit ? 0 : -40,
+                  transform: deskSplit ? "translateX(0)" : "translateX(-28px)",
+                  transition:
+                    "max-width .45s cubic-bezier(.2,.8,.2,1), opacity .3s ease-out, margin-right .45s cubic-bezier(.2,.8,.2,1), transform .45s cubic-bezier(.2,.8,.2,1)",
+                }}
+              >
+                <LiveTranscriptPanel stream={stream} active={live.active} />
+              </div>
+            )}
             {view !== "phone" && (
               <div style={css("flex:none;width:1100px;height:688px;position:relative")}>
                 {vm.showWaiting && <Waiting vm={vm} />}

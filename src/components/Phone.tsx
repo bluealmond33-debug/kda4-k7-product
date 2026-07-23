@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { css } from "../lib/css";
 import type { CallFlowVM } from "../hooks/useCallFlow";
 import AppleIcon from "./AppleIcon";
@@ -28,6 +29,61 @@ const KEYS: { d: string; sub: string }[] = [
   { d: "0", sub: "+" },
   { d: "#", sub: "" },
 ];
+
+/** 키패드 원형 버튼 — 포인터 다운 시 밝아지는 눌림 피드백 + 클릭 시 숫자 입력.
+ *  variant: dark=다이얼 화면(어두운 원) · glass=통화 중 인콜 키패드(반투명 흰 원). */
+function KeyButton({
+  k,
+  onPress,
+  variant = "dark",
+}: {
+  k: { d: string; sub: string };
+  onPress: (d: string) => void;
+  variant?: "dark" | "glass";
+}) {
+  const [pressed, setPressed] = useState(false);
+  const symbol = k.d === "*" || k.d === "#";
+  const glass = variant === "glass";
+  const bg = glass
+    ? pressed
+      ? "rgba(255,255,255,.42)"
+      : "rgba(255,255,255,.17)"
+    : pressed
+    ? "#5a5a5e"
+    : "#2c2c2e";
+  return (
+    <div
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+      onClick={() => onPress(k.d)}
+      style={{
+        ...css("position:relative;width:88px;height:88px;border-radius:9999px;cursor:pointer;user-select:none;transition:background .09s"),
+        background: bg,
+        ...(glass ? { backdropFilter: "blur(4px)" } : null),
+      }}
+    >
+      <span
+        style={css(
+          "position:absolute;left:0;right:0;text-align:center;font-size:42px;font-weight:400;color:#fff;line-height:1;transform:translateY(-50%);top:" +
+            (k.d === "*" ? "66%" : symbol ? "55%" : "42%")
+        )}
+      >
+        {k.d}
+      </span>
+      {!symbol && (
+        <span
+          style={{
+            ...css("position:absolute;left:0;right:0;bottom:14px;text-align:center;font-size:10.5px;font-weight:700;letter-spacing:2px;text-indent:2px"),
+            color: glass ? "rgba(255,255,255,.7)" : "#9a9aa0",
+          }}
+        >
+          {k.sub.trim()}
+        </span>
+      )}
+    </div>
+  );
+}
 
 /** clean — 고객 화면(?role=customer)용: 실제 휴대폰에 없는 시연 표기(상태·안내 유리판·파형)를
  *  숨긴다. 그 정보는 상단 상황 알약과 실시간 통화 패널이 대신 보여준다. */
@@ -92,48 +148,31 @@ function HomeIndicator() {
   );
 }
 
-/** 다이얼 화면 — IMG_7572: 검은 배경, 큼직한 키패드 원, 초록 발신 (애플 글리프) */
+/** 다이얼 화면 — IMG_7572: 검은 배경, 큼직한 키패드 원, 초록 발신 (애플 글리프).
+ *  키패드는 클릭 가능 — 누르면 밝아지고(KeyButton) 입력한 번호가 위에 표시된다. */
 function IdleScreen({ vm }: { vm: CallFlowVM }) {
+  // 입력한 번호 — 비어 있으면 기본 대상(키움은행)을 보여주고, 누르기 시작하면 입력값으로 바뀐다
+  const [dialed, setDialed] = useState("");
+  const hasInput = dialed.length > 0;
   return (
     <div style={css("position:absolute;inset:0;background:#000;color:#fff;display:flex;flex-direction:column")}>
       <StatusBar />
       <div style={css("flex:1;display:flex;flex-direction:column;padding:0 0 30px")}>
         {/* 다이얼 대상 — 실기기처럼 번호가 크게 위, 이름은 작게 아래 (다이내믹 아일랜드와 간격 확보) */}
         <div style={css("text-align:center;margin-top:60px")}>
-          <div style={css("font-size:40px;font-weight:500;letter-spacing:.5px;color:#fff;line-height:1.1")}>1588-0000</div>
+          <div style={css("font-size:40px;font-weight:500;letter-spacing:.5px;color:#fff;line-height:1.1;min-height:44px")}>{hasInput ? dialed : "1588-0000"}</div>
           <div style={css("font-size:15px;color:#fff;margin-top:10px;font-weight:400")}>
             키움은행 고객센터 <span style={css("font-weight:700")}>mobile</span>
           </div>
         </div>
         <div style={css("flex:1")} />
-        {/* 키패드 — 어두운 원(#2c2c2e), 흰 숫자. 실기기 비율(IMG_7572): 큼직한 원 88px.
-            정렬: 숫자는 중심보다 살짝 위(서브레터 자리 확보), *·#은 완전 중앙(iOS 동일) */}
+        {/* 키패드 — 클릭 시 입력·눌림 피드백(KeyButton). 실기기 비율(IMG_7572): 큼직한 원 88px */}
         <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:16px")}>
-          {KEYS.map((k) => {
-            const symbol = k.d === "*" || k.d === "#";
-            return (
-              <div
-                key={k.d}
-                style={css("position:relative;width:88px;height:88px;border-radius:9999px;background:#2c2c2e")}
-              >
-                <span
-                  style={css(
-                    "position:absolute;left:0;right:0;text-align:center;font-size:42px;font-weight:400;color:#fff;line-height:1;transform:translateY(-50%);top:" +
-                      (k.d === "*" ? "66%" : symbol ? "55%" : "42%")
-                  )}
-                >
-                  {k.d}
-                </span>
-                {!symbol && (
-                  <span style={css("position:absolute;left:0;right:0;bottom:14px;text-align:center;font-size:10.5px;font-weight:700;letter-spacing:2px;text-indent:2px;color:#9a9aa0")}>
-                    {k.sub.trim()}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          {KEYS.map((k) => (
+            <KeyButton key={k.d} k={k} onPress={(d) => setDialed((s) => s + d)} />
+          ))}
         </div>
-        {/* 발신 — 키패드 아래 중앙 초록 원 (애플 핸드셋 글리프). 하단 메뉴는 시연 화면에선 뺐다.
+        {/* 발신 — 키패드 아래 중앙 초록 원 (애플 핸드셋 글리프). 우측 백스페이스는 입력이 있을 때만 지운다.
             margin-bottom 29 = 통화 화면 빨간 종료 버튼과 화면상 같은 위치(중심 y 정렬) */}
         <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center;margin-top:16px;margin-bottom:29px")}>
           <span />
@@ -143,7 +182,10 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
           >
             <AppleIcon name="call" size={42} />
           </div>
-          <span style={css("justify-self:center;opacity:.6")}>
+          <span
+            onClick={hasInput ? () => setDialed((s) => s.slice(0, -1)) : undefined}
+            style={css("justify-self:center;transition:opacity .12s;opacity:" + (hasInput ? "1;cursor:pointer" : ".35"))}
+          >
             <AppleIcon name="backspace" size={34} />
           </span>
         </div>
@@ -202,6 +244,9 @@ function FaceTimeGlyph({ size = 38 }: { size?: number }) {
 
 /** 통화 화면 — IMG_7570/7571: 웜 그라데이션, 상단 타이머→이름, 하단 컨트롤 */
 function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
+  // 통화 중 키패드(ARS 코드 입력) — '키패드' 버튼을 누르면 열리고, 숫자를 누르면 코드가 쌓인다.
+  const [keypadOpen, setKeypadOpen] = useState(false);
+  const [code, setCode] = useState("");
   return (
     <div
       style={css(
@@ -262,17 +307,18 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
           </div>
         )}
 
-        {vm.showControls && (
+        {/* 통화 컨트롤 2×3 — '키패드'를 누르면 인콜 키패드로 전환된다 */}
+        {vm.showControls && !keypadOpen && (
           <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:22px;margin-bottom:5px")}>
             {CALL_CONTROLS.map((c) => (
               <div key={c.label} style={css("display:flex;flex-direction:column;align-items:center;gap:8px")}>
                 <span
-                  onClick={c.end ? vm.endCall : undefined}
+                  onClick={c.end ? vm.endCall : c.icon === "keypad" ? () => setKeypadOpen(true) : undefined}
                   style={css(
                     "width:88px;height:88px;border-radius:9999px;display:flex;align-items:center;justify-content:center;" +
                       (c.end
                         ? "background:#eb332a;cursor:pointer;box-shadow:0 0 26px rgba(235,51,42,.45)"
-                        : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px)")
+                        : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px)" + (c.icon === "keypad" ? ";cursor:pointer" : ""))
                   )}
                 >
                   {c.icon === "facetime" ? (
@@ -288,6 +334,41 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
                 <span style={css("font-size:13px;color:rgba(255,255,255,.92)")}>{c.label}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* 인콜 키패드 — ARS 코드 입력. 누른 숫자가 위에 쌓이고, 키는 눌릴 때 밝아진다(KeyButton).
+            아래 줄: 왼쪽 지우기 · 가운데 빨간 종료 · 오른쪽 '숨기기'(컨트롤로 복귀) */}
+        {vm.showControls && keypadOpen && (
+          <div style={css("display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:5px")}>
+            <div style={css("min-height:40px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:400;letter-spacing:6px;color:#fff")}>
+              {code || " "}
+            </div>
+            <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:14px")}>
+              {KEYS.map((k) => (
+                <KeyButton key={k.d} k={k} variant="glass" onPress={(d) => setCode((s) => s + d)} />
+              ))}
+            </div>
+            <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center")}>
+              <span
+                onClick={code ? () => setCode((s) => s.slice(0, -1)) : undefined}
+                style={css("justify-self:center;transition:opacity .12s;opacity:" + (code ? "1;cursor:pointer" : ".35"))}
+              >
+                <AppleIcon name="backspace" size={34} />
+              </span>
+              <span
+                onClick={vm.endCall}
+                style={css("width:88px;height:88px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:#eb332a;cursor:pointer;box-shadow:0 0 26px rgba(235,51,42,.45)")}
+              >
+                <AppleIcon name="callEnd" size={36} />
+              </span>
+              <span
+                onClick={() => setKeypadOpen(false)}
+                style={css("justify-self:center;font-size:15px;font-weight:500;color:#fff;cursor:pointer")}
+              >
+                숨기기
+              </span>
+            </div>
           </div>
         )}
       </div>
