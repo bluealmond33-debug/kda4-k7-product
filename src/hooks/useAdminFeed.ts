@@ -50,6 +50,8 @@ export interface AdminCallRecord {
   routingApplied: boolean;
   /** 이관 예약·완료 표시 (부서 보드 밖 내부 팀 대상도 배지로는 보인다) */
   transferTo: string | null;
+  /** 본인인증 완료 여부 — 이관 카드에서 받는 부서의 재확인 필요 판단. null=분류 전(미상) */
+  verified: boolean | null;
 }
 
 export interface FeedState {
@@ -102,6 +104,7 @@ const initialState = (): FeedState => {
       risk: s.sge === "E" ? "high" : "low",
       routingApplied: true,
       transferTo: null,
+      verified: s.verified,
     };
     order.push(callId);
   });
@@ -147,6 +150,7 @@ function newRecord(
     risk: null,
     routingApplied: false,
     transferTo: null,
+    verified: null,
   };
 }
 
@@ -273,6 +277,9 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
         confidence: p.confidence,
         risk: p.risk,
         routingApplied: true,
+        // 긴급(E)은 사고 접수 우선이라 본인인증 전 연결될 수 있음 → 받는 부서가 재확인.
+        // 단순(S)·일반(G)은 접수 단계 본인확인 완료로 간주.
+        verified: p.sge === "E" ? false : true,
       }));
       if (!applyRouting) return next;
       // 단순(S)은 상담사 대기열로 가지 않는다 — ARS·AI가 즉시 받아 자동 응대 카운터로

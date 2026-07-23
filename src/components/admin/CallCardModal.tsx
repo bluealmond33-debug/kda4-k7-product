@@ -153,6 +153,18 @@ export default function CallCardModal({
             {card?.routingReason && (
               <div style={css("font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-top:6px")}>{card.routingReason}</div>
             )}
+            {/* 본인인증 상태 — 이관 시 받는 부서가 재확인 필요한지 신호(완료=차분, 미완료=주의) */}
+            {record.verified != null && (
+              <div style={css("display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:var(--onair-surface);border:1px solid " + (record.verified ? "var(--gray-300)" : "var(--amber-700)") + ";border-radius:9999px;padding:4px 11px 4px 8px")}>
+                <span className="mi" style={css("font-size:15px;color:" + (record.verified ? "var(--green-900)" : "var(--amber-900)"))}>{record.verified ? "verified_user" : "gpp_maybe"}</span>
+                <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:" + (record.verified ? "var(--gray-900)" : "var(--amber-900)"))}>
+                  본인인증 {record.verified ? "완료" : "미완료"}
+                </span>
+                <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                  {record.verified ? "· 연결 즉시 상담 가능" : "· 연결 후 본인확인 필요"}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 이 콜의 파이프라인 진행 */}

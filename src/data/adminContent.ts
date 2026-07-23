@@ -236,6 +236,8 @@ export interface SeedFeedItem {
   department: string;
   sge: Sge;
   minutesAgo: number;
+  /** 본인인증 완료 여부 — 이관 카드에서 받는 부서가 재확인 필요 여부를 판단 */
+  verified: boolean;
 }
 
 export const SEED_FEED: SeedFeedItem[] = [
@@ -245,6 +247,7 @@ export const SEED_FEED: SeedFeedItem[] = [
     department: "전자금융·디지털",
     sge: "S",
     minutesAgo: 4,
+    verified: true,
   },
   {
     businessType: "전세자금대출 조건변경",
@@ -252,6 +255,7 @@ export const SEED_FEED: SeedFeedItem[] = [
     department: "여신·대출",
     sge: "G",
     minutesAgo: 11,
+    verified: true,
   },
   {
     businessType: "명의도용 지급정지",
@@ -259,6 +263,7 @@ export const SEED_FEED: SeedFeedItem[] = [
     department: "사고·신고",
     sge: "E",
     minutesAgo: 19,
+    verified: false,
   },
   {
     businessType: "해외송금 취소·반환",
@@ -266,6 +271,7 @@ export const SEED_FEED: SeedFeedItem[] = [
     department: "외환·수출입",
     sge: "G",
     minutesAgo: 27,
+    verified: true,
   },
 ];
 

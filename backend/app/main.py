@@ -141,6 +141,9 @@ def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
 def search_regulations_endpoint(
     q: str,
     category: str | None = None,
+    doc_type: str | None = None,
+    kind: str | None = None,
+    effective_from: str | None = None,
     k: int = 5,
 ) -> dict:
     """Hybrid regulation search for the "관련 규정 및 매뉴얼" panel.
@@ -148,14 +151,25 @@ def search_regulations_endpoint(
     Returns {available, documents}. `available` is False (not an error) when the
     RAG index or embedding model is not provisioned, so the panel can fall back
     to its manual file list instead of showing a failure.
+
+    Filters (all optional): category(부서 8-대분류) · doc_type(문서유형) ·
+    kind('text'|'table', 표만) · effective_from(YYYY-MM-DD, 시행일 이후).
     """
     if not q.strip():
         raise HTTPException(status_code=400, detail="q is required")
     if not is_valid_category(category):
         raise HTTPException(status_code=400, detail=f"unknown category: {category}")
+    if kind not in (None, "", "text", "table"):
+        raise HTTPException(status_code=400, detail=f"unknown kind: {kind}")
     try:
         documents = search_regulations(
-            settings, q, category=category, limit=max(1, min(k, 20))
+            settings,
+            q,
+            category=category,
+            doc_type=doc_type,
+            kind=kind,
+            effective_from=effective_from,
+            limit=max(1, min(k, 20)),
         )
     except RegulationSearchUnavailable:
         return {"query": q, "category": category, "available": False, "documents": []}
