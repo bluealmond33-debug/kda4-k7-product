@@ -199,6 +199,13 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
     reason_labels = [_REASON_LABELS[code] for code in judgement.reason_codes]
     emotion_label, emotion_score = emotion_label_and_score(emotion_result)
 
+    # 관련 규정(김동희 RAG) — 상담 유의사항/응대 가이드로 프론트에 넘긴다. 실패해도 분석은 유지.
+    try:
+        references = search_procedures(settings, body.text, top_k=3)
+    except Exception:
+        logger.warning("규정 RAG 검색 실패 — references 없이 진행", exc_info=True)
+        references = []
+
     return LegacyAnalyzeResponse(
         call_id=str(uuid.uuid4()),
         summary=gpt_result.summary,
@@ -210,6 +217,7 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
             reason=routing_reason(reason_labels, gpt_result.department),
         ),
         keywords=gpt_result.keywords,
+        references=references,
     )
 
 

@@ -226,6 +226,7 @@ class LegacyAnalyzeResponse(BaseModel):
     urgency_score: int
     routing: LegacyRouting
     keywords: list[str]
+    references: list[RagDocument] = []  # 관련 규정(RAG) — 상담 유의사항/응대 가이드용
 
 
 # ---------- kda4-k7-product(팀 React 데모) 연동 ----------
