@@ -2,6 +2,7 @@ import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
+import { Thermometer, ConfidenceRing } from "./CardSignals";
 
 /** 1c — 상담 준비 카드 (dim 배경 + 모달). 유의사항 확인 시 통화 연결 활성화.
  *  인입 유형별 변주: urgent = 긴급 배지·빨간 램프·우선 배정 / transfer = 이관 배지 + AI 인수인계 블록.
@@ -129,7 +130,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
 
             {/* 우: 전화 요약 — 대기 중 고객 발화 STT를 요약한 내용 */}
-            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--gray-100);border-radius:8px;padding:14px 16px")}>
+            <div style={css("flex:1;min-width:0;align-self:stretch;background:var(--onair-surface);border:1.5px solid var(--gray-300);border-radius:8px;padding:14px 16px")}>
             <div style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:10px")}>
               <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>summarize</span>전화 요약 <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· 고객 발화 STT 요약</span>
             </div>
@@ -161,8 +162,8 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               ))}
             </div>
             {/* 첫 응대 문장 — 준비의 결론. 잠금 없이 바로 보여준다 */}
-            <div style={css("display:flex;align-items:baseline;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
-              <span style={css("display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:var(--gray-1000);color:#fff;flex:none;transform:translateY(2px)")}><span className="mi" style={css("font-size:14px")}>record_voice_over</span></span>
+            <div style={css("display:flex;align-items:center;gap:10px;background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
+              <span style={css("display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:var(--gray-1000);color:#fff;flex:none")}><span className="mi" style={css("font-size:14px")}>record_voice_over</span></span>
               <div>
                 <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:3px")}>이 문장으로 통화를 여세요</div>
                 <div style={css("font:500 15px/1.55 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{vm.firstLine}</div>
@@ -201,40 +202,4 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
   );
 }
 
-/** 확신도 링 게이지 — 잉크 아크가 %만큼 채워진다(색 없이 강조). */
-function ConfidenceRing({ pct }: { pct: number }) {
-  const r = 8, C = 2 * Math.PI * r;
-  const off = C * (1 - Math.max(0, Math.min(100, pct)) / 100);
-  return (
-    <svg width={22} height={22} viewBox="0 0 22 22" style={{ flex: "none", display: "block" }}>
-      <circle cx="11" cy="11" r={r} fill="none" stroke="var(--gray-300)" strokeWidth="3" />
-      <circle cx="11" cy="11" r={r} fill="none" stroke="var(--gray-1000)" strokeWidth="3" strokeDasharray={C} strokeDashoffset={off} strokeLinecap="round" transform="rotate(-90 11 11)" />
-    </svg>
-  );
-}
 
-/** 세로 온도계 — 흰 유리관 + 회색 외곽 + 눈금 + 하이라이트, 수은 높이=감정 점수(0~100), 색은 레벨 색. */
-function Thermometer({ score, color }: { score: number | null; color: string }) {
-  const W = 24, H = 72, cx = 12;
-  const tubeW = 9, tubeX = cx - tubeW / 2, top = 5, bulbCy = 58, bulbR = 10, tubeBot = bulbCy;
-  const innerW = 4, innerX = cx - innerW / 2, innerTop = top + 3, innerBot = bulbCy - 4;
-  const pct = Math.max(0, Math.min(100, score ?? 0)) / 100;
-  const fillTop = innerBot - (innerBot - innerTop) * pct;
-  const ticks = [0.75, 0.5, 0.25].map((t) => innerBot - (innerBot - innerTop) * t);
-  return (
-    <svg width={W} height={H} viewBox={"0 0 " + W + " " + H} style={{ flex: "none", display: "block" }}>
-      {/* 유리관 + 구 (흰 유리, 회색 외곽) */}
-      <rect x={tubeX} y={top} width={tubeW} height={tubeBot - top} rx={tubeW / 2} fill="#fff" stroke="var(--gray-300)" strokeWidth="1.5" />
-      <circle cx={cx} cy={bulbCy} r={bulbR} fill="#fff" stroke="var(--gray-300)" strokeWidth="1.5" />
-      {/* 눈금 */}
-      {ticks.map((y, i) => (
-        <line key={i} x1={tubeX + tubeW} y1={y} x2={tubeX + tubeW + 3} y2={y} stroke="var(--gray-300)" strokeWidth="1.2" strokeLinecap="round" />
-      ))}
-      {/* 수은 — 구는 항상, 관은 점수만큼 */}
-      <circle cx={cx} cy={bulbCy} r={bulbR - 3.5} fill={color} />
-      <rect x={innerX} y={fillTop} width={innerW} height={bulbCy - fillTop} rx={innerW / 2} fill={color} />
-      {/* 유리 하이라이트 */}
-      <rect x={tubeX + 1.5} y={top + 3} width="1.5" height={tubeBot - top - 14} rx="0.75" fill="rgba(255,255,255,.75)" />
-    </svg>
-  );
-}
