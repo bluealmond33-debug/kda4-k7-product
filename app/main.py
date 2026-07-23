@@ -14,6 +14,7 @@ from app.config import settings
 from app.database import initialize_database, ping_database
 from app.routers.mvp import router as mvp_router
 from app.routers.pipeline import router as pipeline_router
+from app.routers.regulations import router as regulations_router
 from app.ws.call import router as ws_router
 
 
@@ -35,6 +36,7 @@ app.add_middleware(
 
 app.include_router(pipeline_router)
 app.include_router(mvp_router)
+app.include_router(regulations_router)  # 규정 지식베이스 /api/v1/regulations/*
 app.include_router(ws_router)  # 실시간 통화 WebSocket /ws/call/{call_id}
 
 
