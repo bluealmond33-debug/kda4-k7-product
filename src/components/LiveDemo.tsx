@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
-import { useLiveCallBus } from "../hooks/useLiveCallBus";
 import Phone from "./Phone";
 import LiveTranscriptPanel, { type StreamItem } from "./LiveTranscriptPanel";
 import Waiting from "./desktop/Waiting";
@@ -20,7 +19,8 @@ import { SCREEN_ORDER } from "../tour/steps";
  *   "full"    시연화면(기본): 폰 + 데스크톱 합본. 라이브 시연은 이 화면에서.
  *   "phone"   고객 핸드폰 단독 (?role=customer)
  *   "desktop" 직원 데스크톱 단독 (?role=employee)
- * phone/desktop은 탭별 독립 인스턴스다(탭 간 통화 상태 동기화는 후속 — demoBus 확장).
+ * phone/desktop은 등록된 call_id를 공유하면 ARS·STT와 DemoEnvelope WS 릴레이로 동기화된다.
+ * call_id가 없는 full 화면은 기존 단일 브라우저 스크립트 데모를 유지한다.
  */
 export type LiveDemoView = "full" | "phone" | "desktop";
 
@@ -33,55 +33,39 @@ export default function LiveDemo({
   // 통화 연결(answerCall) 시 자동 on, 상단 알약 토글로 끌 수 있다(발표자가 화면을 다시 키우고 싶을 때).
   const [deskSplit, setDeskSplit] = useState(false);
 
+  // 실제 Galaxy(좁은 화면)로 열었는지 — 무대의 큰 모니터 고객 화면과 레이아웃을 가른다
+  const compactCustomer =
+    view === "phone" && window.matchMedia("(max-width: 760px)").matches;
   // 고객 화면은 콘텐츠 폭이 좁다(폰 260 + 패널 470) — 스테이지를 콘텐츠에 맞추고
   // 확대를 허용해 큰 모니터에서 양옆 여백 없이 화면을 채운다
   const vm = useCallFlow({
     ...config,
-    ...(view === "phone" ? { stageW: 600, maxScale: 1.9 } : null),
+    // phone owns the mobile ARS socket, desktop/full own the counselor socket.
+    // The combined full view keeps its green handset button as the scripted
+    // demo. With an explicit registered call_id, an external customer page can
+    // drive the combined view's counselor side through the same server state.
+    surface: view,
+    // 실제 Galaxy에서는 터치 크기를 유지하며 세로로 쌓고, 발표용 데스크톱에서는
+    // 전화기와 전사 패널을 나란히 배치한다.
+    ...(view === "phone"
+      ? compactCustomer
+        ? { stageW: 432, maxScale: 1, fitPad: 16, fitHeight: false }
+        : { stageW: 760, maxScale: 1.9 }
+      : null),
     // 직원 단독 화면 — 가로·세로 모두 뷰포트에 맞춘다(fitHeight 기본 true).
-    // 가로만 맞추면(구 fitHeight:false) 낮은 창에서 하단이 잘렸다 — 넓은 화면에선 양옆 레터박스.
+    // 가로만 맞추면(fitHeight:false) 낮은 창에서 하단이 잘린다 — 33115b3에서 고친 부분이라 유지.
     // 분할 뷰에선 좌측 STT 패널(260) + 간격(40)만큼 넓어져 본체가 상대적으로 작아진다.
     ...(view === "desktop" ? { stageW: deskSplit ? 1400 : 1100, maxScale: 3, fitPad: 24 } : null),
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
-  // 고객 화면 실시간 상태 — demoBus 단일 소스 (알약 상태문구 + 패널 자막이 함께 쓴다)
-  const live = useLiveCallBus();
-
-  // 고객 화면 전사 스트림 — 고객 발화(demoBus)와 AI 안내 멘트(vm.glassText)를
-  // 도착 순서대로 합친다. AI 멘트는 폰의 유리판에서 걷어내 패널로 옮긴 것.
-  const [stream, setStream] = useState<StreamItem[]>([]);
-  const custCount = useRef(0);
-  const lastGlass = useRef("");
-  useEffect(() => {
-    if (live.lines.length < custCount.current) {
-      // 새 콜/리셋 — 스트림도 함께 비운다
-      custCount.current = 0;
-      lastGlass.current = "";
-      setStream([]);
-    }
-    if (live.lines.length > custCount.current) {
-      const fresh = live.lines
-        .slice(custCount.current)
-        .map((l) => ({ ...l, who: "cust" as const }));
-      custCount.current = live.lines.length;
-      setStream((s) => [...s, ...fresh]);
-    }
-  }, [live.lines]);
-  useEffect(() => {
-    if (view !== "phone") return;
-    const g = vm.showGlass ? vm.glassText : "";
-    if (g && g !== lastGlass.current) {
-      lastGlass.current = g;
-      setStream((s) => [...s, { id: "ai-" + Date.now(), text: g, who: "ai" }]);
-    }
-  }, [view, vm.showGlass, vm.glassText]);
-  useEffect(() => {
-    if (vm.phIdle) {
-      custCount.current = 0;
-      lastGlass.current = "";
-      setStream([]);
-    }
-  }, [vm.phIdle]);
+  // Galaxy는 자신의 /ws/call 스트림을 직접 그린다. 상담사 화면이 늦게
+  // 열리거나 잠시 끊겨도 고객 자막이 중앙 demo relay에 의존하지 않는다.
+  const phoneActive = vm.phInCall && !vm.phEnded;
+  const phoneLines: StreamItem[] = vm.liveTranscriptLines.map((line) => ({
+    id: `${line.generation ?? 0}-${line.audioSeq ?? line.seq}-${line.speaker}-${line.at}`,
+    text: line.text,
+    who: line.speaker,
+  }));
 
   // 직원 분할 뷰 — 통화 연결(active 진입)의 상승엣지에 자동 on. 리셋(idle)이면 off.
   // 상승엣지로만 켜므로, 통화 중 알약 토글로 끈 뒤 다시 켜지지 않는다(발표자 제어 유지).
@@ -119,7 +103,13 @@ export default function LiveDemo({
   return (
     <div
       ref={vm.rootRef}
-      style={css("min-height:100vh;padding:" + (view === "desktop" ? "12px" : "20px") + ";display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box")}
+      style={css(
+        "min-height:100vh;padding:" +
+          (view === "phone" ? "8px" : view === "desktop" ? "12px" : "20px") +
+          ";display:flex;justify-content:center;align-items:" +
+          (view === "phone" ? "flex-start" : "center") +
+          ";background:#060607;box-sizing:border-box"
+      )}
     >
       <div
         style={{
@@ -137,7 +127,7 @@ export default function LiveDemo({
             transform: vm.scaleT,
             display: "flex",
             flexDirection: "column",
-            gap: "18px",
+            gap: view === "phone" ? "10px" : "18px",
             alignItems: "center",
             // 직원 분할 뷰 진입/해제 — 스케일·폭이 한 커브로 움직여
             // "오른쪽으로 가며 작아지고, 왼쪽으로 오며 커지는" 연속 모션이 된다
@@ -238,20 +228,24 @@ export default function LiveDemo({
                 event.target.value = "";
               }}
             />
-            <span
+            <button
+              type="button"
+              data-testid="audio-file-button"
+              aria-label={vm.audioBusy ? "음성 처리 중" : "음성 파일 선택"}
+              disabled={vm.audioBusy}
               onClick={() => !vm.audioBusy && audioInputRef.current?.click()}
               style={css(
                 "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:" +
                   (vm.audioBusy ? "var(--gray-200)" : "var(--green-700)") +
                   ";color:" +
                   (vm.audioBusy ? "var(--gray-600)" : "#fff") +
-                  ";border-radius:9999px;font-size:13px;font-weight:600;cursor:" +
+                  ";border:0;border-radius:9999px;font-size:13px;font-weight:600;cursor:" +
                   (vm.audioBusy ? "wait" : "pointer")
               )}
             >
               <span className="mi" style={css("font-size:17px")}>audio_file</span>
               {vm.audioBusy ? "음성 처리 중" : "음성 파일 선택"}
-            </span>
+            </button>
             {/* '5초 건너뛰고 요약' — 실제 직원 화면에는 없는 데모 제어라 리모컨(여기)에 둔다 */}
             {vm.showSkip && (
               <span data-tour="skip" onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
@@ -288,17 +282,27 @@ export default function LiveDemo({
               {/* 발표용: 테두리·배경 없이 점 + 상태 텍스트만. 검은 스테이지 위라 텍스트는 밝게 */}
               <span
                 style={css(
-                  "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:" +
-                    (live.active ? "var(--gray-200)" : "var(--gray-400)")
+                  // 검은 스테이지 위라 밝은 계열로. 통화·대기는 무채색(25cad1d '통화중 무채색화'),
+                  // 서버 미연결만 붉게 — 연출 상태가 아니라 고쳐야 할 오류라서 눈에 띄어야 한다.
+                  "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 4px;color:" +
+                    (!vm.mobileServerConnected
+                      ? "var(--red-400)"
+                      : phoneActive
+                      ? "var(--gray-200)"
+                      : "var(--gray-400)")
                 )}
               >
                 <span
                   style={css(
                     "width:7px;height:7px;border-radius:9999px;background:" +
-                      (live.active ? "var(--gray-200);animation:recBlink 1.1s infinite" : "var(--gray-500)")
+                      (!vm.mobileServerConnected
+                        ? "var(--red-400)"
+                        : phoneActive
+                        ? "var(--gray-200);animation:recBlink 1.1s infinite"
+                        : "var(--gray-500)")
                   )}
                 />
-                {live.active ? "통화 중" : "대기 중"}
+                {!vm.mobileServerConnected ? "서버 연결 중" : phoneActive ? "통화 중" : "대기 중"}
               </span>
             </div>
           )}
@@ -312,11 +316,18 @@ export default function LiveDemo({
 
           {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율. 안내 팝업은 이 영역 위 중앙 딤 모달로 뜬다.
               view에 따라 한쪽만 남긴다: customer=폰, employee=데스크톱 (스테이지·스케일은 공유) */}
-          <div style={css("position:relative;display:flex;gap:40px;align-items:center;justify-content:center")}>
+          <div
+            style={css(
+              "position:relative;display:flex;gap:" +
+                (view === "phone" && compactCustomer ? "16px" : "40px") +
+                ";align-items:center;justify-content:center;flex-direction:" +
+                (view === "phone" && compactCustomer ? "column" : "row")
+            )}
+          >
             {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}
             {/* 고객 화면 — 폰은 살짝 왼쪽, 오른쪽에 실시간 현황·발화 스트림(타이핑 애니메이션) */}
-            {view === "phone" && <LiveTranscriptPanel stream={stream} active={live.active} />}
-            {/* 직원 분할 뷰 — 통화 연결 시 본체 왼쪽에 고객 발화(STT) 패널.
+            {view === "phone" && <LiveTranscriptPanel stream={phoneLines} active={phoneActive} />}
+            {/* 직원 분할 뷰 — 통화 연결 시 본체 왼쪽에 실시간 전사 패널.
                 항상 마운트해 두고 max-width·이동·투명도를 본체와 같은 커브로 접었다 편다 —
                 패널이 왼쪽에서 미끄러져 들어오는 동안 본체는 오른쪽으로 밀리며 줄어든다(한 호흡).
                 접힘 시 margin-right:-40이 flex gap을 상쇄해 본체가 정확히 제자리로 복원된다 */}
@@ -332,7 +343,7 @@ export default function LiveDemo({
                     "max-width .45s cubic-bezier(.2,.8,.2,1), opacity .3s ease-out, margin-right .45s cubic-bezier(.2,.8,.2,1), transform .45s cubic-bezier(.2,.8,.2,1)",
                 }}
               >
-                <LiveTranscriptPanel stream={stream} active={live.active} />
+                <LiveTranscriptPanel stream={phoneLines} active={phoneActive} />
               </div>
             )}
             {view !== "phone" && (

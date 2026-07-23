@@ -21,11 +21,14 @@ from app.database import (
     ping_database,
 )
 from app.integration_service import persist_pipeline_result
-from app.card_routing_pipeline import (
+from app.live_stt import router as live_stt_router
+from app.knowledge_base import apply_safety_policy, retrieve_knowledge
+from app.pipeline import (
     PipelineConfigurationError,
     request_analysis_result,
     transcribe_audio,
 )
+from app.services.routing import apply_general_topic_routing, classify_general_topic
 from app.rag import (
     RegulationSearchUnavailable,
     get_regulation_stats,
@@ -57,7 +60,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="K7 상담카드 통합 API",
-    version="mvp-1.0",
+    version="mvp-1.1",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -65,12 +68,19 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     # Vercel 프리뷰 배포(k7product-git-<branch>-….vercel.app)도 허용 —
     # 프로덕션 외 프리뷰 URL에서도 규정검색 등 API 호출이 가능해야 리뷰가 된다.
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=(
+        r"^(?:https://.*\.vercel\.app|"
+        r"https?://(?:(?:localhost|127\.0\.0\.1|\[::1\])|"
+        r"10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|"
+        r"172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})(?::\d+)?"
+        r")$"
+    ),
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 app.include_router(build_compat_router(settings))
+app.include_router(live_stt_router)
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -78,6 +88,9 @@ def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
         database="connected" if ping_database(settings) else "not_connected",
+        pipeline_mode=settings.pipeline_mode,
+        stt_provider="faster_whisper" if settings.is_local_pipeline else "openai",
+        analysis_provider="ollama" if settings.is_local_pipeline else "openai",
     )
 
 
@@ -95,13 +108,26 @@ def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
             raise HTTPException(status_code=400, detail="audio file is empty")
         call_id = uuid4()
         transcript = transcribe_audio(settings, audio.filename or "customer-audio.wav", audio_bytes)
-        raw_model_result = request_analysis_result(settings, transcript.text)
+        knowledge_references = retrieve_knowledge(transcript.text)
+        raw_model_result = request_analysis_result(
+            settings,
+            transcript.text,
+            knowledge_references,
+        )
+        raw_model_result = apply_safety_policy(transcript.text, raw_model_result)
+        topic_routing = classify_general_topic(settings, transcript.text)
+        raw_model_result, topic_routing = apply_general_topic_routing(
+            raw_model_result,
+            topic_routing,
+        )
         return persist_pipeline_result(
             settings,
             call_id=call_id,
             audio_filename=audio.filename or "customer-audio.wav",
             transcript=transcript,
             raw_model_result=raw_model_result,
+            knowledge_references=knowledge_references,
+            routing_evidence=topic_routing.as_dict(),
         )
     except HTTPException:
         raise

@@ -65,7 +65,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:5px 11px")}>통화 {vm.clockStr}</span>
             <span style={css("display:inline-flex;align-items:baseline;gap:5px;background:var(--gray-100);border-radius:9999px;padding:5px 11px")}>
               <span className="lbl">오늘 후처리</span>
-              <span style={css("font:700 12.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-700)")}>12→13</span>
+              <span style={css("font:700 12.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-700)")}>{vm.isExplicitLiveCall ? "로컬 초안 · 미저장" : "12→13"}</span>
             </span>
             <span className="mi" style={css("font-size:22px;color:var(--gray-500);transition:transform .3s var(--ease-drawer);transform:rotate(" + (open ? 0 : 180) + "deg)")}>expand_more</span>
           </div>
@@ -87,13 +87,13 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 <div style={css("display:flex;flex-direction:column;gap:7px")}>
                   <EditRow label="고객" value={`${vm.customerName} · ${vm.customerPhone}`} />
                   <EditRow label="상담사" value={`${AGENT.name} · ${AGENT.id}`} />
-                  <EditRow label="일시" value="2026.07.15 14:32" small />
+                  <EditRow label="일시" value={vm.callStartedAt} small />
                 </div>
                 <SelectField label="상담 유형" value={vm.wrapType} open={vm.typeMenu} onToggle={vm.toggleTypeMenu} opts={vm.typeOpts} />
                 <SelectField label="상담 결과" value={vm.wrapResult} open={vm.resultMenu} onToggle={vm.toggleResultMenu} opts={vm.resultOpts} />
                 <div style={css("flex:1")} />
                 <div style={css("font:400 11px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-                  저장 시 상담 이력에 기록됩니다
+                  저장 API 미연동 · 화면 전환 시 이 초안은 폐기됩니다
                 </div>
               </div>
 
@@ -144,12 +144,8 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                       <span className="mi" style={css("font-size:15px;color:var(--blue-700);vertical-align:-2px;margin-right:4px")}>auto_awesome</span>
                       후처리 초안 <span style={css("font-weight:400;font-size:12px;color:var(--gray-600)")}>· 클릭해 편집</span>
                     </span>
-                    <span
-                      onClick={vm.regenerating ? undefined : vm.regenerateSummary}
-                      style={css("display:inline-flex;align-items:center;gap:4px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);cursor:" + (vm.regenerating ? "default;opacity:.6" : "pointer"))}
-                    >
-                      <span className="mi" style={css("font-size:15px" + (vm.regenerating ? ";animation:spin .8s linear infinite" : ""))}>refresh</span>
-                      {vm.regenerating ? "생성 중…" : "다시 생성"}
+                    <span style={css("font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                      자동 저장·재생성 미연동
                     </span>
                   </div>
                   {/* key=summaryVersion — 다시 생성하면 초안이 새 문형으로 갈아끼워진다 */}
@@ -190,9 +186,9 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--gray-200)")}>
               <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>시트를 접으면 방금 통화 화면을 다시 볼 수 있습니다</span>
               <div style={css("flex:1")} />
-              <span style={css("font:500 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);text-decoration:underline;text-underline-offset:2px;cursor:pointer")}>임시 저장</span>
+              <span style={css("font:500 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>저장하지 않음</span>
               <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-500);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-1000);cursor:pointer;background:var(--onair-surface)")}>
-                <span className="mi" style={css("font-size:18px")}>coffee</span> 저장 후 휴식
+                <span className="mi" style={css("font-size:18px")}>coffee</span> 초안 폐기·휴식
               </span>
               <span data-tour="wrap-save" onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
                 <span className="mi" style={css("font-size:18px")}>call</span> 저장 후 다음 콜

@@ -15,9 +15,29 @@ const fixture = JSON.parse(
 );
 
 const accepted = parseConsultationCardResponse(fixture);
-if (accepted.schema_version !== "mvp-1.0" || accepted.source_channel !== "voice") {
+if (accepted.schema_version !== "mvp-1.1" || accepted.source_channel !== "voice") {
   throw new Error("valid response did not survive frontend parsing");
 }
+
+const enriched = structuredClone(fixture);
+enriched.consultation_card.attention_level = "medium";
+enriched.consultation_card.reason_codes = ["TEXT_HIGH_RISK_SIGNAL"];
+enriched.consultation_card.routing = {
+  task_code: "G004",
+  task_name: "기타·복합 일반 상담",
+  classification: "GENERAL",
+  handler: "HUMAN",
+};
+enriched.consultation_card.text_emotion = {
+  content_emotion: "불안",
+  situation_severity: "high",
+  urgency_score: 95,
+};
+parseConsultationCardResponse(enriched);
+
+const nullableReasonCodes = structuredClone(fixture);
+nullableReasonCodes.consultation_card.reason_codes = null;
+parseConsultationCardResponse(nullableReasonCodes);
 
 const rejectedCases = [
   { ...fixture, schema_version: "mvp-2.0" },
@@ -65,6 +85,44 @@ const rejectedCases = [
     ...fixture,
     consultation_card: {
       ...fixture.consultation_card,
+      attention_level: "high",
+    },
+  },
+  {
+    ...fixture,
+    consultation_card: {
+      ...fixture.consultation_card,
+      routing: {
+        task_code: "G004",
+        task_name: "기타·복합 일반 상담",
+        classification: "GENERAL",
+        handler: "BOT",
+      },
+    },
+  },
+  {
+    ...fixture,
+    consultation_card: {
+      ...fixture.consultation_card,
+      text_emotion: {
+        content_emotion: "불안",
+        situation_severity: "high",
+        urgency_score: true,
+      },
+    },
+  },
+  {
+    ...fixture,
+    consultation_card: Object.fromEntries(
+      Object.entries(fixture.consultation_card).filter(
+        ([key]) => key !== "attention_level"
+      )
+    ),
+  },
+  {
+    ...fixture,
+    consultation_card: {
+      ...fixture.consultation_card,
       emotion: {
         status: "completed",
         score: 74,
@@ -90,5 +148,5 @@ for (const candidate of rejectedCases) {
 }
 
 console.log(
-  `FRONTEND_CONTRACT_OK valid=1 invalid_rejected=${rejectedCases.length}`
+  `FRONTEND_CONTRACT_OK valid=3 invalid_rejected=${rejectedCases.length}`
 );

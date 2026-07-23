@@ -49,6 +49,7 @@ def save_call(
     response: MvpCallResponse,
     raw_model_result: dict,
     raw_emotion_result: dict | None = None,
+    routing_evidence: dict | None = None,
 ) -> None:
     card = response.consultation_card
     transcript = response.transcript
@@ -86,11 +87,11 @@ def save_call(
                         call_id, schema_version, summary, business_type, department,
                         routing_reason, incident_risk, risk_reason, routing_confidence,
                         emotion_status, emotion_score, emotion_level, emotion_reason,
-                        raw_model_result, raw_emotion_result
+                        raw_model_result, raw_emotion_result, briefing_payload
                     )
                     VALUES (
                         %s, %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s
                     )
                     """,
                     (
@@ -109,6 +110,33 @@ def save_call(
                         card.emotion.reason,
                         Jsonb(raw_model_result),
                         Jsonb(raw_emotion_result or {}),
+                        Jsonb(
+                            {
+                                "customer_requests": card.customer_requests,
+                                "missing_information": card.missing_information,
+                                "required_actions": [
+                                    item.model_dump(mode="json")
+                                    for item in card.required_actions
+                                ],
+                                "knowledge_references": [
+                                    item.model_dump(mode="json")
+                                    for item in card.knowledge_references
+                                ],
+                                "attention_level": card.attention_level.value,
+                                "reason_codes": card.reason_codes,
+                                "routing": (
+                                    card.routing.model_dump(mode="json")
+                                    if card.routing
+                                    else None
+                                ),
+                                "text_emotion": (
+                                    card.text_emotion.model_dump(mode="json")
+                                    if card.text_emotion
+                                    else None
+                                ),
+                                "routing_evidence": routing_evidence or {},
+                            }
+                        ),
                     ),
                 )
     except psycopg.Error as exc:
@@ -127,7 +155,7 @@ def get_call(settings: Settings, call_id: UUID) -> MvpCallResponse | None:
                         card.schema_version, card.summary, card.business_type, card.department,
                         card.routing_reason, card.incident_risk, card.risk_reason,
                         card.routing_confidence, card.emotion_status, card.emotion_score,
-                        card.emotion_level, card.emotion_reason
+                        card.emotion_level, card.emotion_reason, card.briefing_payload
                     FROM calls AS c
                     JOIN transcripts AS t ON t.call_id = c.call_id
                     JOIN consultation_cards AS card ON card.call_id = c.call_id
@@ -140,6 +168,7 @@ def get_call(settings: Settings, call_id: UUID) -> MvpCallResponse | None:
         raise DatabaseUnavailable("PostgreSQL call lookup failed") from exc
     if row is None:
         return None
+    briefing = row["briefing_payload"] or {}
     return MvpCallResponse.model_validate(
         {
             "schema_version": row["schema_version"],
@@ -160,6 +189,22 @@ def get_call(settings: Settings, call_id: UUID) -> MvpCallResponse | None:
                 "incident_risk": row["incident_risk"],
                 "risk_reason": row["risk_reason"],
                 "routing_confidence": row["routing_confidence"],
+                "customer_requests": briefing.get("customer_requests", []),
+                "missing_information": briefing.get("missing_information", []),
+                "required_actions": briefing.get("required_actions", []),
+                "knowledge_references": briefing.get("knowledge_references", []),
+                "attention_level": briefing.get(
+                    "attention_level",
+                    "high" if row["incident_risk"] == "high" else "none",
+                ),
+                "reason_codes": briefing.get(
+                    "reason_codes",
+                    ["FINANCIAL_INCIDENT"]
+                    if row["incident_risk"] == "high"
+                    else [],
+                ),
+                "routing": briefing.get("routing"),
+                "text_emotion": briefing.get("text_emotion"),
                 "emotion": {
                     "status": row["emotion_status"],
                     "score": row["emotion_score"],

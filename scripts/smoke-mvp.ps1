@@ -38,7 +38,7 @@ if ($health.status -ne "ok") {
 if ($health.database -ne "connected") {
     throw "Database is not connected: $($health.database)"
 }
-if ($health.contract_version -ne "mvp-1.0") {
+if ($health.contract_version -ne "mvp-1.1") {
     throw "Unexpected contract version: $($health.contract_version)"
 }
 
@@ -70,8 +70,8 @@ try {
         throw "Call creation did not return a ready call_id"
     }
     $createdCallId = [string]$created.call_id
-    if ($created.schema_version -ne "mvp-1.0") {
-        throw "Create response contract version is not mvp-1.0"
+    if ($created.schema_version -ne "mvp-1.1") {
+        throw "Create response contract version is not mvp-1.1"
     }
     if ($created.source_channel -ne "voice") {
         throw "Create response source_channel is not voice"

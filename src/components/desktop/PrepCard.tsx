@@ -48,7 +48,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:7px")}>
                 <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
                 <span style={css("font:800 12px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
-                <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 전화 받기 전 미리 듣고 정리했어요</span>
+                <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· {vm.summarySourceLabel}</span>
                 <div style={css("flex:1")} />
                 {vm.prepConfidencePct != null && (
                   <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 6px 4px 13px;flex:none;box-shadow:var(--sh-near)")}>

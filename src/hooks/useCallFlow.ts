@@ -24,8 +24,6 @@ import {
   type Followup,
 } from "../data/demoContent";
 import { piiVerify, piiAccounts, piiHistory } from "../services/pii";
-import { startLiveCall } from "../services/liveCall";
-import { API_BASE_URL, useReal } from "../services/config";
 import { emotionLabel } from "../services/emotion";
 import type { EmotionTemperatureLevel, IncidentRisk } from "../services/types";
 import {
@@ -35,7 +33,7 @@ import {
   getDemoConsultationCard,
   parseEmotionSource,
   emotionSourceBadge,
-  demoBus,
+  demoBus as sharedDemoBus,
   deriveSge,
   type CallSummary,
   type ConsultationCardResponse,
@@ -50,6 +48,30 @@ import {
   semanticSearchEnabled,
   type RegulationHit,
 } from "../services/regulationSearch";
+import { API_BASE_URL, useReal } from "../services/config";
+import {
+  startLiveCall,
+  type LiveHandle,
+  type LiveSpeaker,
+  type LiveTranscript,
+} from "../services/liveCall";
+import { resolveCallId, resolveExplicitCallId } from "../services/callId";
+import {
+  startArsControl,
+  type ArsControlHandle,
+  type ArsDtmfEvent,
+  type ArsLifecycleEvent,
+  type ArsStateSnapshot,
+} from "../services/arsControl";
+import {
+  startMobileArsControl,
+  type MobileArsHandle,
+} from "../services/arsMobile";
+import {
+  reconcileArsInactiveSnapshot,
+  shouldIgnoreArsCallEnd,
+  shouldStartFreshArsCall,
+} from "../services/arsLifecycle";
 
 export type Phase =
   | "idle"
@@ -80,6 +102,8 @@ export interface CallFlowConfig {
   fitPad?: number;
   /** false면 세로 캡 없이 가로 기준으로만 스케일(세로는 스크롤). */
   fitHeight?: boolean;
+  /** Which independently opened LAN surface owns ARS control. */
+  surface?: "full" | "phone" | "desktop";
 }
 
 const STAGE_W = 1420;
@@ -148,6 +172,61 @@ const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
   ],
 };
 
+/** 데모 안내(가이드 모드) — 화면별로 "이 화면이 무엇이고 왜 이렇게 생겼는지"를 설명한다.
+ *  멘토·처음 보는 사람에게 시연할 때 켠다. phase → guideKey 로 매핑. */
+type GuideKey = "idle" | "intake" | "prep" | "active" | "wrap";
+const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; next: string }> = {
+  idle: {
+    step: "대기",
+    title: "시계가 화면의 주인공인 이유",
+    points: [
+      "직원 화면의 언어는 '설명'이 아니라 '상태'입니다. 대기 중 능동적으로 볼 정보는 시각 하나뿐이라, 시계를 주인공으로 뒀습니다.",
+      "전화는 자동으로 도착하므로 '전화 받기' 같은 입구 버튼은 존재감을 낮췄고, 하단 회색 항목(처리 내역·매뉴얼·코칭)은 짬에 하는 부차 활동이라 배경으로 물러나 있습니다.",
+      "상태(수신 가능·대기열·다음 콜백)는 우상단 한 곳에만 모읍니다 — 같은 정보를 두 번 표시하지 않습니다.",
+    ],
+    next: "왼쪽 전화기의 초록 통화 버튼을 눌러 전화를 걸어보세요.",
+  },
+  intake: {
+    step: "접수",
+    title: "AI가 용건을 먼저 정리합니다",
+    points: [
+      "고객이 대기 중 말한 용건을 AI가 실시간으로 접수·요약합니다. 상담사는 통화를 받기 전부터 '무슨 일인지'를 압니다.",
+      "이때 필요한 신호는 감정온도·접수 경과뿐 — 나머지는 요약이 끝나면 준비 카드로 옵니다.",
+    ],
+    next: "상단 '5초 건너뛰고 요약'으로 바로 넘어갈 수 있어요.",
+  },
+  prep: {
+    step: "준비",
+    title: "준비 카드 — 이 데모의 핵심",
+    points: [
+      "가장 큰 글씨(AI 사전 녹음 요약)가 '무슨 일'입니다. 아래 근거 발화·상담사가 할 일·배정 확신도가 그 요약을 뒷받침합니다.",
+      "오른쪽 감정온도·사고징후는 '어떻게 응대할지'의 신호입니다.",
+      "유의사항을 하나씩 확인하면 게이지가 차고, 4개를 모두 확인하면 그 자리가 '첫 응대 문장'으로 바뀌며 통화 연결이 열립니다 — 준비의 마지막 단계가 곧 오프닝 멘트입니다.",
+    ],
+    next: "유의사항의 '확인'을 네 번 눌러 통화를 열어보세요.",
+  },
+  active: {
+    step: "통화",
+    title: "통화 콘솔 — 3열 작업대",
+    points: [
+      "왼쪽=고객 정보와 본인확인(인증 전엔 상세 조회가 잠깁니다) · 가운데=AI 요약과 단계별 스크립트·메모 · 오른쪽=이 상담에 필요한 규정·매뉴얼.",
+      "빛·글로우·깜빡임 대신 그림자 깊이만으로 초점을 줍니다 — 8시간 응시해도 눈이 덜 피로하도록.",
+      "감정온도는 고정값이 아니라 통화 중 실시간으로 갱신됩니다(잠시 후 주의→안정).",
+    ],
+    next: "오른쪽 위 빨간 '통화 종료'를 누르면 후처리로 이어집니다.",
+  },
+  wrap: {
+    step: "후처리",
+    title: "상담사의 유일한 산출물 = 초안 검증",
+    points: [
+      "통화 종료와 동시에 시트가 자동으로 올라옵니다. 통화 화면은 배경에 남아 방금 내용을 다시 볼 수 있습니다.",
+      "왼쪽 상담 정보는 녹취·메모에서 자동으로 채워지고, 상담사는 필요한 것만 고칩니다(연필 아이콘). 오른쪽 초안도 클릭해 편집합니다.",
+      "상담 유형·결과·후속조치는 이번 콜 유형에 맞춰 미리 채워집니다.",
+    ],
+    next: "'초안 폐기·다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
+  },
+};
+
 
 // 화면별 데모 안내(투어링)는 src/tour 로 분리 — 시연 전용 레이어라 훅에 두지 않는다.
 
@@ -167,13 +246,35 @@ const fmt = (s: number) => {
   return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r;
 };
 
-// 실시간 통화 데모용 고정 통화 ID (고객 마이크 송신 소켓 ↔ 상담사 전사 수신 소켓 매칭용)
-const LIVE_CALL_ID = "demo1";
+const fmtCallTimestamp = (date: Date) => {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const LIVE_CALL_SEARCH = typeof location === "undefined" ? "" : location.search;
+const EXPLICIT_LIVE_CALL_ID = resolveExplicitCallId(LIVE_CALL_SEARCH);
+const LIVE_CALL_ID = resolveCallId(LIVE_CALL_SEARCH);
+const SILENT_DEMO_PUBLISHER: Pick<typeof sharedDemoBus, "emit"> = {
+  emit: () => undefined,
+};
+
+type SpeakerTranscriptChunk = TranscriptChunk & {
+  speaker: LiveSpeaker;
+  seq: number;
+};
+
+type SummaryScope = "intake" | "full";
 
 export function useCallFlow(config: CallFlowConfig = {}) {
   const s1 = config.silenceSec1 ?? 5;
   const s2 = config.silenceSec2 ?? 5;
   const lineGap = config.lineGapMs ?? 2400;
+  const surface = config.surface ?? "full";
+  const isCustomerSurface = surface === "phone";
+  // The counselor surface is the sole publisher of server-derived call events.
+  // The customer still renders its direct STT stream, but does not create a
+  // second envelope with a different ts/seq for the same transcript.
+  const demoBus = isCustomerSurface ? SILENT_DEMO_PUBLISHER : sharedDemoBus;
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [mode, setMode] = useState<Mode>("sim");
@@ -186,10 +287,33 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 감정온도는 고정값이 아니라 실시간 신호 — 데모에선 통화 20초 후 안정으로 하강(상담 효과 연출)
   const [emoDrift, setEmoDrift] = useState<{ score: number; level: "stable" | "caution" | "elevated"; reason: string } | null>(null);
   const [clock, setClock] = useState(0);
+  const [callStartedAt, setCallStartedAt] = useState("");
   const [emo, setEmo] = useState(0);
   const [silenceLeft, setSilenceLeft] = useState(0);
   const [micErr, setMicErr] = useState("");
   const [audioBusy, setAudioBusy] = useState(false);
+  const [liveCaption, setLiveCaption] = useState("");
+  const [liveCaptionSpeaker, setLiveCaptionSpeaker] =
+    useState<LiveSpeaker>("customer");
+  const [liveTranscriptLines, setLiveTranscriptLines] = useState<LiveTranscript[]>([]);
+  const [captureBySpeaker, setCaptureBySpeaker] = useState<Record<LiveSpeaker, boolean>>({
+    customer: false,
+    agent: false,
+  });
+  const [levelBySpeaker, setLevelBySpeaker] = useState<Record<LiveSpeaker, number>>({
+    customer: 0,
+    agent: 0,
+  });
+  const [analysisSource, setAnalysisSource] = useState("demo");
+  const [liveActionItems, setLiveActionItems] = useState<string[]>([]);
+  const [summaryPending, setSummaryPending] = useState(false);
+  const [arsDigits, setArsDigits] = useState("");
+  const [dtmfEvents, setDtmfEvents] = useState<ArsDtmfEvent[]>([]);
+  const [arsMobileConnected, setArsMobileConnected] = useState(false);
+  const [mobileServerConnected, setMobileServerConnected] = useState(false);
+  const [mobileIntakeComplete, setMobileIntakeComplete] = useState(false);
+  const [mobileIntakePending, setMobileIntakePending] = useState(false);
+  const [mobileAgentConnected, setMobileAgentConnected] = useState(false);
 
   const [prepChecks, setPrepChecks] = useState<boolean[]>(Array(PREP_LEN).fill(true));
   const [verified, setVerified] = useState(false);
@@ -202,11 +326,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 개인정보 격리 서버(pii-service)에서 인증 성공 후 로드하는 계좌/이력
   const [piiAcc, setPiiAcc] = useState<SheetData | null>(null);
   const [piiHist, setPiiHist] = useState<SheetData | null>(null);
-  // 실시간 통화 자막 — 고객 마이크가 실시간 전사된 최신 문장(전화 화면에 표시)
-  const [liveCaption, setLiveCaption] = useState("");
-  // 실시간 마이크 레벨/활성 — 녹음 중 시각 피드백(말하면 반응하는 바)
-  const [micLevel, setMicLevel] = useState(0);
-  const [micActive, setMicActive] = useState(false);
 
   const [memoItems, setMemoItems] = useState<string[]>([]);
   const [memoDraft, setMemoDraft] = useState("");
@@ -278,9 +397,25 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const silStage = useRef<null | "first" | "confirmPause" | "second">(null);
   const silEnd = useRef(0);
   const stt = useRef<SttSession | null>(null);
-  const live = useRef<{ stop: () => void } | null>(null);
-  const transcript = useRef<TranscriptChunk[]>([]);
+  const live = useRef<LiveHandle | null>(null);
+  const arsControlRef = useRef<ArsControlHandle | null>(null);
+  const mobileArsRef = useRef<MobileArsHandle | null>(null);
+  const transcript = useRef<SpeakerTranscriptChunk[]>([]);
+  const realCallActiveRef = useRef(false);
+  const lifecycleEpoch = useRef(0);
+  const intakeTransitionPending = useRef(false);
+  const endTransitionPending = useRef(false);
+  const endRequested = useRef(false);
+  const resetRequested = useRef(false);
+  const inactiveStatePolls = useRef(0);
+  const callGenerationRef = useRef(0);
+  const analysisRequestSeq = useRef(0);
+  const analysisAbortRef = useRef<AbortController | null>(null);
   const phaseRef = useRef<Phase>("idle");
+  const transitionPhase = useCallback((next: Phase) => {
+    phaseRef.current = next;
+    setPhase(next);
+  }, []);
   phaseRef.current = phase;
   // 데모 이벤트 버스용 참조 — 타이머(비동기) 콜백이 최신 카드·콜 유형·이관 상태를 읽는다
   const respRef = useRef<ConsultationCardResponse>(consultationResponse);
@@ -292,6 +427,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     target: null,
   });
   transferRef.current = { reserved: transferReserved, target: transferTarget };
+  const wrapRef = useRef({ type: wrapType, result: wrapResult });
+  wrapRef.current = { type: wrapType, result: wrapResult };
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -322,8 +459,28 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       live.current.stop();
       live.current = null;
     }
-    setMicActive(false);
-    setMicLevel(0);
+    analysisAbortRef.current?.abort();
+    analysisAbortRef.current = null;
+    setCaptureBySpeaker({ customer: false, agent: false });
+    setLevelBySpeaker({ customer: 0, agent: 0 });
+  }, []);
+
+  const waitForFinalTranscript = useCallback(async (finalSeq: number, expectedEpoch: number) => {
+    if (finalSeq <= 0) return true;
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      if (lifecycleEpoch.current !== expectedEpoch) return false;
+      const handle = live.current;
+      if (handle) {
+        const received = await handle.waitForSeq(
+          finalSeq,
+          Math.max(1, deadline - Date.now())
+        );
+        return lifecycleEpoch.current === expectedEpoch && received;
+      }
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 25));
+    }
+    return false;
   }, []);
 
   const startClock = useCallback(() => {
@@ -335,7 +492,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 실제 처리(픽스처)는 즉시 끝나므로 스테이지 진행을 step 간격으로 흘린다.
   // 여기서는 emit만 한다 — 통화 상태 로직에는 일절 관여하지 않는다.
   const emitCardPipeline = useCallback(
-    (source: "demo" | "backend", step = 700) => {
+    (
+      source: "demo" | "backend",
+      step = 700,
+      options: { persist?: boolean } = {}
+    ) => {
+      const persist = options.persist !== false;
       const callId = respRef.current.call_id;
       demoBus.emit("pipeline.stage", { callId, stage: "stt", status: "done" });
       demoBus.emit("pipeline.stage", { callId, stage: "classify", status: "start" });
@@ -345,16 +507,23 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       });
       after(step * 2, () => {
         demoBus.emit("pipeline.stage", { callId, stage: "risk", status: "done" });
-        demoBus.emit("pipeline.stage", { callId, stage: "persist", status: "start" });
-      });
-      after(step * 3, () => {
-        const { consultation_card: card } = respRef.current;
         demoBus.emit("pipeline.stage", {
           callId,
           stage: "persist",
-          status: "done",
-          detail: "mvp-1.0 카드 저장",
+          status: persist ? "start" : "skip",
+          ...(!persist ? { detail: "실시간 시연 경로 · 아직 저장하지 않음" } : {}),
         });
+      });
+      after(step * 3, () => {
+        const { consultation_card: card } = respRef.current;
+        if (persist) {
+          demoBus.emit("pipeline.stage", {
+            callId,
+            stage: "persist",
+            status: "done",
+            detail: "mvp-1.0 카드 저장",
+          });
+        }
         demoBus.emit("card.created", {
           callId,
           summary: card.summary,
@@ -389,80 +558,223 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     [after]
   );
 
-  // ── silence detection (drives confirm → summary) ──
-  const runSummary = useCallback(async () => {
-    const text = transcript.current
-      .filter((c) => c.isFinal)
-      .map((c) => c.text)
-      .join(" ")
-      .trim();
-    // 실데이터 비활성/전사 없음 → 기존 mock 요약(픽스처 유지, 무대 폴백)
-    if (!useReal.data || !text) {
-      const [r] = await Promise.allSettled([
-        summarize({ chunks: transcript.current, text }),
-      ]);
-      if (r.status === "fulfilled") setSummary(r.value);
-      return;
-    }
-    try {
-      const res = await fetch(`${API_BASE_URL}/analyze-text`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, average_volume: 0 }),
-      });
-      if (!res.ok) throw new Error(`analyze-text ${res.status}`);
-      const d = await res.json();
-      const score: number = typeof d?.emotion?.score === "number" ? d.emotion.score : 40;
-      const level: EmotionTemperatureLevel =
-        score >= 70 ? "elevated" : score >= 40 ? "caution" : "stable";
-      const highRisk = (d?.urgency_score ?? 0) >= 60;
-      const dept: string = d?.routing?.department || d?.category || "일반상담팀";
-      const kw: string[] = Array.isArray(d?.keywords) ? d.keywords : [];
+  // ── silence detection (scripted demo) / explicit # completion (real call) ──
+  const runSummary = useCallback(async (
+    options: { forceLive?: boolean; scope?: SummaryScope } = {}
+  ): Promise<boolean> => {
+    const { forceLive = false, scope = "intake" } = options;
+    analysisAbortRef.current?.abort();
+    analysisAbortRef.current = null;
+    const requestSeq = ++analysisRequestSeq.current;
+    const epoch = lifecycleEpoch.current;
+    const chunks = transcript.current.filter(
+      (chunk) => scope === "full" || chunk.speaker === "customer"
+    );
+    const turns = chunks
+      .filter((chunk) => chunk.isFinal && chunk.text.trim())
+      .slice(0, 1_000)
+      .map((chunk, index) => ({
+        speaker: chunk.speaker,
+        text: chunk.text.trim().slice(0, 4_000),
+        seq: chunk.seq || index + 1,
+        at: chunk.at,
+      }));
+    const text = (scope === "full"
+      ? turns
+          .map((turn) => `[${turn.speaker === "agent" ? "상담원" : "고객"}] ${turn.text}`)
+          .join("\n")
+      : turns.map((turn) => turn.text).join(" ")
+    ).slice(0, 12_000);
+    const isCurrent = () =>
+      lifecycleEpoch.current === epoch && analysisRequestSeq.current === requestSeq;
+    const useLocalLiveAnalysis = forceLive || realCallActiveRef.current;
 
-      // 1) AI 사전요약(CallSummary) — 실제 전사 기반
+    if (!text && useLocalLiveAnalysis) {
+      if (!isCurrent()) return false;
+      const headline = "수신된 고객 발화가 없어 자동 요약을 생성하지 않았습니다.";
+      setAnalysisSource("no-transcript");
+      setLiveActionItems(["고객 문의 내용을 다시 확인해 주세요."]);
       setSummary({
-        type: d?.category || "일반 상담",
-        headline: d?.summary || "상담 내용을 요약했습니다.",
-        bullets: kw.length ? kw.slice(0, 4) : [d?.summary || ""].filter(Boolean),
-        emotion: { score, level, label_ko: emotionLabel(level), signals: [] },
-        incidentRisk: (highRisk ? "high" : "watch") as IncidentRisk,
+        type: "미분류",
+        headline,
+        bullets: ["수신된 음성 발화 없음"],
+        emotion: { score: 0, level: "stable", label_ko: "안정", signals: [] },
+        incidentRisk: "watch",
+        recommendedAgent: "상담사 확인 필요",
+      });
+      setConsultationResponse((prev) => {
+        const next: ConsultationCardResponse = {
+          ...prev,
+          transcript: { ...prev.transcript, text: "" },
+          consultation_card: {
+            ...prev.consultation_card,
+            summary: headline,
+            business_type: "미분류",
+            department: "일반상담팀",
+            routing_reason: "고객 발화가 없어 자동 라우팅하지 않음",
+            incident_risk: "low",
+            risk_reason: null,
+            routing_confidence: null,
+            emotion: {
+              status: "unavailable",
+              score: null,
+              level: null,
+              reason: "분석할 음성 발화가 없습니다.",
+            },
+          },
+        };
+        respRef.current = next;
+        return next;
+      });
+      setSummaryPending(false);
+      setWrapType("미분류");
+      setWrapResult("상담 종료 · 내용 확인 필요");
+      setFollowups([]);
+      return true;
+    }
+
+    if (!text || (!useLocalLiveAnalysis && !useReal.data)) {
+      const [result] = await Promise.allSettled([
+        summarize({ chunks, text }),
+      ]);
+      if (!isCurrent()) return false;
+      if (result.status === "fulfilled") setSummary(result.value);
+      return true;
+    }
+
+    if (isCurrent()) setSummaryPending(true);
+    const controller = new AbortController();
+    analysisAbortRef.current = controller;
+    try {
+      const localApiBase =
+        API_BASE_URL || `${location.protocol}//${location.hostname}:8000`;
+      const response = await fetch(
+        useLocalLiveAnalysis
+          ? `${localApiBase}/api/live-stt/analyze`
+          : `${API_BASE_URL}/analyze-text`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, turns, scope, average_volume: 0 }),
+          signal: controller.signal,
+        }
+      );
+      if (!response.ok) throw new Error(`analyze-text ${response.status}`);
+      const data = await response.json();
+      if (!isCurrent()) return false;
+      const emotionAvailable =
+        data?.emotion?.status === "completed" &&
+        typeof data?.emotion?.score === "number";
+      const emotionScore = emotionAvailable ? Number(data.emotion.score) : 0;
+      const emotionLevel =
+        emotionScore >= 70 ? "elevated" : emotionScore >= 40 ? "caution" : "stable";
+      const highRisk = Number(data?.urgency_score ?? 0) >= 60;
+      const department = String(
+        data?.routing?.department || data?.category || "일반상담팀"
+      );
+      const keywords: string[] = Array.isArray(data?.keywords)
+        ? data.keywords.filter((item: unknown): item is string => typeof item === "string")
+        : [];
+      const actionItems: string[] = Array.isArray(data?.action_items)
+        ? data.action_items.filter(
+            (item: unknown): item is string => typeof item === "string" && !!item.trim()
+          )
+        : [];
+      const headline = String(data?.summary ?? "요약 결과가 없습니다.");
+      setAnalysisSource(String(data?.source ?? "unknown"));
+      setLiveActionItems(actionItems);
+      if (EXPLICIT_LIVE_CALL_ID) {
+        setWrapResult("상담 종료 · 결과 확인 필요");
+        setFollowups(
+          actionItems.map((label) => ({ icon: "task_alt", label }))
+        );
+      }
+      setSummary({
+        type: String(data?.category || "일반 상담"),
+        headline,
+        bullets: actionItems.length
+          ? actionItems
+          : [data?.routing?.reason].filter((item): item is string => typeof item === "string"),
+        emotion: {
+          score: emotionScore,
+          level: emotionLevel,
+          label_ko: EMOTION_LABELS[emotionLevel],
+          signals: [],
+        },
+        incidentRisk: highRisk ? "high" : "watch",
         recommendedAgent: highRisk ? "숙련 상담사 우선" : "일반 상담 가능",
       });
-
-      // 2) 상담카드 오버레이 — 라우팅(부서)·위험·감정이 실제 대화를 반영하게
-      setConsultationResponse((prev) => ({
-        ...prev,
-        consultation_card: {
-          ...prev.consultation_card,
-          summary: d?.summary || prev.consultation_card.summary,
-          business_type: d?.category || prev.consultation_card.business_type,
-          department: dept,
-          routing_reason: d?.routing?.reason || prev.consultation_card.routing_reason,
-          incident_risk: highRisk ? "high" : "low",
-          risk_reason: kw.length
-            ? `위험 신호: ${kw.join(", ")}`
-            : prev.consultation_card.risk_reason,
-          routing_confidence: 0.9,
-          emotion: {
-            status: "completed",
-            score,
-            level,
-            reason: "[SOURCE=REAL_MODEL] 실시간 통화 분석",
+      setConsultationResponse((prev) => {
+        const next: ConsultationCardResponse = {
+          ...prev,
+          transcript: { ...prev.transcript, text },
+          consultation_card: {
+            ...prev.consultation_card,
+            summary: headline,
+            business_type: String(data?.category || prev.consultation_card.business_type),
+            department,
+            routing_reason: String(
+              data?.routing?.reason || prev.consultation_card.routing_reason
+            ),
+            incident_risk: highRisk ? "high" : "low",
+            risk_reason: highRisk
+              ? String(data?.risk_reason || `위험 신호: ${keywords.join(", ")}`)
+              : null,
+            routing_confidence:
+              typeof data?.routing_confidence === "number"
+                ? data.routing_confidence
+                : 0.9,
+            emotion: emotionAvailable
+              ? {
+                  status: "completed",
+                  score: emotionScore,
+                  level: emotionLevel,
+                  reason: String(data?.emotion?.reason || "실제 음성 감정 모델 분석"),
+                }
+              : {
+                  status: "unavailable",
+                  score: null,
+                  level: null,
+                  reason: String(
+                    data?.emotion?.reason || "실제 음성 감정 모델이 연결되지 않았습니다."
+                  ),
+                },
           },
-        },
-      }));
-
-      // 3) 후처리 업무유형 — 실제 반영
-      if (d?.category) setWrapType(d.category);
+        };
+        respRef.current = next;
+        return next;
+      });
+      if (data?.category) setWrapType(String(data.category));
+      setRegSearch(
+        [data?.category, headline, ...actionItems].filter(Boolean).join(" ").slice(0, 500)
+      );
+      return true;
     } catch {
-      const [r] = await Promise.allSettled([
-        summarize({ chunks: transcript.current, text }),
-      ]);
-      if (r.status === "fulfilled") setSummary(r.value);
+      if (!isCurrent()) return false;
+      if (useLocalLiveAnalysis) {
+        setAnalysisSource("unavailable");
+        setLiveActionItems(["STT 원문을 확인하고 문의사항을 직접 분류해 주세요."]);
+        setConsultationResponse((prev) => {
+          const next: ConsultationCardResponse = {
+            ...prev,
+            transcript: { ...prev.transcript, text },
+            consultation_card: {
+              ...prev.consultation_card,
+              summary: "요약 모델에 연결할 수 없습니다. 근거 발화를 직접 확인해 주세요.",
+            },
+          };
+          respRef.current = next;
+          return next;
+        });
+      }
+      return true;
+    } finally {
+      if (analysisAbortRef.current === controller) analysisAbortRef.current = null;
+      if (isCurrent()) setSummaryPending(false);
     }
   }, []);
 
-  const toPrep = useCallback(() => {
+  const toPrep = useCallback((forceLive = false) => {
     if (silT.current) {
       clearInterval(silT.current);
       silT.current = null;
@@ -471,11 +783,24 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       stt.current.stop();
       stt.current = null;
     }
-    setPhase("prep");
+    if (forceLive) {
+      // Gate agent_connected until this request reaches success or an explicit
+      // fallback card. The PrepCard may render immediately, but it is not ready.
+      setAnalysisSource("pending");
+      setSummaryPending(true);
+    }
+    transitionPhase("prep");
+    // 최신 준비 카드는 체크박스 없이 유의사항을 한 번에 제시한다.
+    // 연결 게이트는 체크 동작 대신 실제 요약 완료 여부로만 제어한다.
     setPrepChecks(Array(PREP_LEN).fill(true));
-    void runSummary();
-    emitCardPipeline("demo");
-  }, [emitCardPipeline, runSummary]);
+    void runSummary({ forceLive, scope: "intake" }).then((completed) => {
+      if (completed) {
+        emitCardPipeline(forceLive ? "backend" : "demo", forceLive ? 250 : 700, {
+          persist: !forceLive,
+        });
+      }
+    });
+  }, [emitCardPipeline, runSummary, transitionPhase]);
 
   const armFirst = useCallback(() => {
     silStage.current = "first";
@@ -491,7 +816,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     if (silStage.current === "first") {
       silStage.current = "confirmPause";
       silEnd.current = now + 1600;
-      setPhase("confirm");
+      transitionPhase("confirm");
     } else if (silStage.current === "confirmPause") {
       silStage.current = "second";
       silEnd.current = now + s2 * 1000;
@@ -499,57 +824,118 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       silStage.current = null;
       toPrep();
     }
-  }, [s2, toPrep]);
+  }, [s2, toPrep, transitionPhase]);
 
   const runScript = useCallback(() => {
-    // Deterministic emotion escalation for the demo.
+    transcript.current = [];
+    setLiveCaption("");
+    setLiveCaptionSpeaker("customer");
+    setLiveTranscriptLines([]);
+    if (realCallActiveRef.current) {
+      const epoch = lifecycleEpoch.current;
+      void startLiveCall(LIVE_CALL_ID, {
+        onTranscript: (item) => {
+          if (lifecycleEpoch.current !== epoch) return;
+          transcript.current.push({
+            text: item.text,
+            at: item.at,
+            isFinal: true,
+            speaker: item.speaker,
+            seq: item.seq,
+            generation: item.generation,
+            audioSeq: item.audioSeq,
+          });
+          setLiveCaption(item.text);
+          setLiveCaptionSpeaker(item.speaker);
+          setLiveTranscriptLines((lines) => [...lines, item].slice(-30));
+          demoBus.emit("stt.utterance", {
+            callId: LIVE_CALL_ID,
+            text: item.text,
+            isFinal: true,
+            atMs: item.at,
+            speaker: item.speaker,
+            generation: item.generation,
+            audioSeq: item.audioSeq,
+          });
+        },
+        onLevel: (level, speaker) => {
+          if (lifecycleEpoch.current !== epoch) return;
+          setLevelBySpeaker((current) => ({ ...current, [speaker]: level }));
+        },
+        onCaptureStatus: (active, _device, speaker) => {
+          if (lifecycleEpoch.current !== epoch) return;
+          setCaptureBySpeaker((current) => ({ ...current, [speaker]: active }));
+        },
+        onWarning: (message, status) => {
+          if (lifecycleEpoch.current !== epoch) return;
+          setMicErr(message);
+          // 단순 backlog 알림은 작업이 따라잡은 뒤 화면에 영구히 남기지 않는다.
+          // 발화 누락(rejected/drained_incomplete)은 별도 error 이벤트가 유지한다.
+          if (status === "backlogged") {
+            window.setTimeout(() => {
+              if (lifecycleEpoch.current === epoch) {
+                setMicErr((current) => (current === message ? "" : current));
+              }
+            }, 6000);
+          }
+        },
+        onError: (message) => {
+          if (lifecycleEpoch.current === epoch) setMicErr(message);
+        },
+      })
+        .then((handle) => {
+          if (
+            lifecycleEpoch.current !== epoch ||
+            !realCallActiveRef.current ||
+            ["idle", "summarizing", "wrap"].includes(phaseRef.current)
+          ) {
+            handle.stop();
+            return;
+          }
+          live.current?.stop();
+          live.current = handle;
+        })
+        .catch(() => {
+          if (lifecycleEpoch.current === epoch) {
+            setMicErr("로컬 STT 수신 채널을 시작할 수 없습니다.");
+          }
+        });
+      return;
+    }
+
+    // Deterministic emotion escalation for the scripted, single-page demo.
     const emos = [1, 1, 2, 3];
     emos.forEach((e, i) => after(lineGap * (i + 1), () => setEmo(e)));
     after(lineGap * (emos.length + 1), () => armFirst());
-    // 전사 소스: 실제 고객 마이크 스트리밍(고객→WS→로컬 STT). 마이크 거부/불가 시
-    // 기존 대본 시뮬레이션으로 자동 폴백해 무대가 끊기지 않게 한다.
-    transcript.current = [];
-    setLiveCaption("");
-    startLiveCall(LIVE_CALL_ID, {
-      onTranscript: (t) => {
-        transcript.current.push({ text: t.text, at: t.at ?? 0, isFinal: true });
-        setLiveCaption(t.text);
-        demoBus.emit("stt.utterance", {
-          callId: respRef.current.call_id,
-          text: t.text,
-          isFinal: true,
-          atMs: t.at ?? 0,
-        });
+    // 대본 데모의 전사 소스 — 실통화는 위의 realCallActive 분기가 서버 STT를 구독한다.
+    stt.current = startSttSession(
+      {
+        onChunk: (c) => {
+          const chunk: SpeakerTranscriptChunk = {
+            ...c,
+            speaker: "customer",
+            seq: transcript.current.length + 1,
+          };
+          transcript.current.push(chunk);
+          demoBus.emit("stt.utterance", {
+            callId: respRef.current.call_id,
+            text: c.text,
+            isFinal: c.isFinal,
+            atMs: c.at,
+            speaker: "customer",
+          });
+        },
       },
-      onLevel: (l) => setMicLevel(l),
-    })
-      .then((h) => {
-        live.current = h;
-        setMicActive(true);
-      })
-      .catch(() => {
-        setMicActive(false);
-        stt.current = startSttSession(
-          {
-            onChunk: (c) => {
-              transcript.current.push(c);
-              demoBus.emit("stt.utterance", {
-                callId: respRef.current.call_id,
-                text: c.text,
-                isFinal: c.isFinal,
-                atMs: c.at,
-              });
-            },
-          },
-          lineGap
-        );
-      });
+      lineGap
+    );
   }, [after, armFirst, lineGap]);
 
   const beginRecording = useCallback(() => {
-    setPhase("recording");
+    transitionPhase("recording");
     silStage.current = null;
-    silT.current = window.setInterval(silTick, 200);
+    if (!realCallActiveRef.current) {
+      silT.current = window.setInterval(silTick, 200);
+    }
     demoBus.emit("pipeline.stage", {
       callId: respRef.current.call_id,
       stage: "utterance",
@@ -561,23 +947,39 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       status: "start",
     });
     runScript(); // mic is simulation-only for this demo
-  }, [runScript, silTick]);
+  }, [runScript, silTick, transitionPhase]);
 
   // ── public actions ──
   const startCall = useCallback(() => {
+    lifecycleEpoch.current += 1;
+    analysisRequestSeq.current += 1;
+    intakeTransitionPending.current = false;
+    endTransitionPending.current = false;
+    endRequested.current = false;
+    resetRequested.current = false;
+    inactiveStatePolls.current = 0;
     clearAll();
+    transcript.current = [];
+    summaryText.current = "";
     // 인입 유형에 맞는 상담카드 픽스처 선택 (데모)
     const kind = incomingRef.current;
-    const resp =
+    const resp: ConsultationCardResponse =
       kind === "urgent"
         ? (structuredClone(URGENT_RESPONSE) as unknown as ConsultationCardResponse)
         : kind === "transfer"
         ? (structuredClone(TRANSFER_RESPONSE) as unknown as ConsultationCardResponse)
         : getDemoConsultationCard();
+    resp.call_id = LIVE_CALL_ID;
     setConsultationResponse(resp);
     // 리렌더 전에 타이머 콜백이 읽을 수 있도록 ref는 즉시 동기화
     respRef.current = resp;
-    demoBus.emit("call.incoming", { callId: resp.call_id, kind });
+    demoBus.emit("call.incoming", {
+      callId: resp.call_id,
+      kind,
+      ...(callGenerationRef.current > 0
+        ? { generation: callGenerationRef.current }
+        : {}),
+    });
     demoBus.emit("pipeline.stage", {
       callId: resp.call_id,
       stage: "utterance",
@@ -585,19 +987,60 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     });
     // 후처리 프리셋도 콜 유형에 맞춰 채운다 — 상담 유형·결과·후속조치가 통화 내용과 어긋나지 않게
     const wrap = WRAP_DEFAULTS[kind];
-    setWrapType(wrap.type);
-    setWrapResult(wrap.result);
-    setFollowups(wrap.followups);
+    setWrapType(EXPLICIT_LIVE_CALL_ID ? "미분류" : wrap.type);
+    setWrapResult(EXPLICIT_LIVE_CALL_ID ? "상담 진행 중 · 결과 미입력" : wrap.result);
+    setFollowups(EXPLICIT_LIVE_CALL_ID ? [] : wrap.followups);
+    setPrepChecks(Array(PREP_LEN).fill(false));
+    setSummary(null);
+    setVerified(false);
+    setAuthMethod("phone");
+    setAuthInput("");
+    setAuthErr(false);
+    setAuthErrMsg("");
+    setAuthTime("");
+    setAuthMethodLabel("");
+    setMemoItems([]);
+    setMemoDraft("");
+    memoDraftRef.current = "";
+    setDockType(null);
+    setRegExpanded(false);
+    setRegSearch("");
+    setRegTargetRow(null);
+    setRegDoc(null);
+    setRegDocChunk(null);
+    setSemHits([]);
+    setWrapSheetOpen(false);
+    setTypeMenu(false);
+    setResultMenu(false);
     setTransferReserved(false);
+    setTransferTarget(null);
     setEmoDrift(null);
-    setPhase("connecting");
+    transitionPhase("connecting");
     setClock(0);
+    setCallStartedAt(fmtCallTimestamp(new Date()));
     setEmo(0);
     setSilenceLeft(0);
     setMicErr("");
+    setAudioBusy(false);
+    setLiveCaption("");
+    setLiveCaptionSpeaker("customer");
+    setLiveTranscriptLines([]);
+    setCaptureBySpeaker({ customer: false, agent: false });
+    setLevelBySpeaker({ customer: 0, agent: 0 });
+    setAnalysisSource("demo");
+    setLiveActionItems([]);
+    setSummaryPending(false);
+    setSummaryVersion(0);
+    setRegenerating(false);
+    setArsDigits("");
+    setDtmfEvents([]);
+    setMobileIntakeComplete(false);
+    setMobileIntakePending(false);
+    setMobileAgentConnected(false);
     startClock();
-    after(3000, () => beginRecording());
-  }, [after, beginRecording, clearAll, startClock]);
+    if (realCallActiveRef.current) beginRecording();
+    else after(3000, () => beginRecording());
+  }, [after, beginRecording, clearAll, startClock, transitionPhase]);
 
   const pickIncoming = useCallback((k: IncomingKind) => {
     if (phaseRef.current === "idle") setIncoming(k);
@@ -613,8 +1056,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   }, [toPrep]);
 
   const answerCall = useCallback(() => {
-    if (prepChecks.every(Boolean)) {
-      setPhase("active");
+    const summaryReady =
+      !realCallActiveRef.current || (!summaryPending && analysisSource !== "pending");
+    if (prepChecks.every(Boolean) && summaryReady) {
+      if (realCallActiveRef.current) {
+        // The server ACK is the single gate for both the active screen and the
+        // counselor edge microphone. Keep PrepCard visible until that ACK.
+        arsControlRef.current?.agentConnected();
+        return;
+      }
+      transitionPhase("active");
       // 통화 연결과 동시에 우측 규정 추천이 뜬다 — RAG 스테이지도 같은 시점에 점등
       demoBus.emit("pipeline.stage", {
         callId: respRef.current.call_id,
@@ -634,25 +1085,57 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setEmoDrift({ score: 22, level: "stable", reason: "상담 진행 후 안정 — 응대 톤 유지" })
       );
     }
-  }, [after, prepChecks]);
+  }, [after, analysisSource, prepChecks, summaryPending, transitionPhase]);
 
   const reset = useCallback(() => {
+    lifecycleEpoch.current += 1;
+    analysisRequestSeq.current += 1;
+    intakeTransitionPending.current = false;
+    endTransitionPending.current = false;
+    endRequested.current = false;
+    resetRequested.current = false;
+    inactiveStatePolls.current = 0;
     clearAll();
+    transcript.current = [];
+    summaryText.current = "";
     demoBus.emit("demo.reset", {});
-    setPhase("idle");
+    transitionPhase("idle");
     setClock(0);
+    setCallStartedAt("");
     setEmo(0);
     setSilenceLeft(0);
     setMicErr("");
+    setAudioBusy(false);
+    setLiveCaption("");
+    setLiveCaptionSpeaker("customer");
+    setLiveTranscriptLines([]);
+    setCaptureBySpeaker({ customer: false, agent: false });
+    setLevelBySpeaker({ customer: 0, agent: 0 });
+    setAnalysisSource("demo");
+    setLiveActionItems([]);
+    setSummaryPending(false);
     setSummary(null);
-    setConsultationResponse(getDemoConsultationCard());
+    const demo = getDemoConsultationCard();
+    demo.call_id = LIVE_CALL_ID;
+    setConsultationResponse(demo);
+    respRef.current = demo;
+    setPrepChecks(Array(PREP_LEN).fill(false));
     setVerified(false);
+    setAuthMethod("phone");
     setAuthInput("");
     setAuthErr(false);
+    setAuthErrMsg("");
+    setAuthTime("");
+    setAuthMethodLabel("");
     setMemoItems([]);
     setMemoDraft("");
     setDockType(null);
     setRegExpanded(false);
+    setRegSearch("");
+    setRegTargetRow(null);
+    setRegDoc(null);
+    setRegDocChunk(null);
+    setSemHits([]);
     setWrapSheetOpen(false);
     setWrapType(WRAP_DEFAULTS.normal.type);
     setWrapResult(WRAP_DEFAULTS.normal.result);
@@ -663,7 +1146,412 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setSummaryVersion(0);
     setRegenerating(false);
     setIncoming("normal");
-  }, [clearAll]);
+    setArsDigits("");
+    setDtmfEvents([]);
+    setMobileIntakeComplete(false);
+    setMobileIntakePending(false);
+    setMobileAgentConnected(false);
+    realCallActiveRef.current = false;
+    callGenerationRef.current = 0;
+  }, [clearAll, transitionPhase]);
+
+  const enterActiveFromAck = useCallback(() => {
+    if (!realCallActiveRef.current || phaseRef.current === "active") return;
+    if (phaseRef.current !== "prep") return;
+    transitionPhase("active");
+    setMicErr((current) =>
+      current === "마지막 STT 처리 제한시간을 초과했습니다. 끝 발화를 확인해 주세요."
+        ? ""
+        : current
+    );
+    setMobileAgentConnected(true);
+    setMobileIntakePending(false);
+    demoBus.emit("pipeline.stage", {
+      callId: LIVE_CALL_ID,
+      stage: "rag",
+      status: "start",
+    });
+    after(1200, () =>
+      demoBus.emit("pipeline.stage", {
+        callId: LIVE_CALL_ID,
+        stage: "rag",
+        status: "done",
+        detail: "상담원 채널 연결 · 규정 추천 활성화",
+      })
+    );
+  }, [after, transitionPhase]);
+
+  const finishIntakeAfterDrain = useCallback(
+    (event: ArsLifecycleEvent, resumeAgent = false) => {
+      if (intakeTransitionPending.current) return;
+      intakeTransitionPending.current = true;
+      const epoch = lifecycleEpoch.current;
+      void (async () => {
+        try {
+          const receivedFinalSeq = await waitForFinalTranscript(event.finalSeq, epoch);
+          if (lifecycleEpoch.current !== epoch) return;
+          if (!event.drained || !receivedFinalSeq) {
+            setMicErr("마지막 STT 처리 제한시간을 초과했습니다. 끝 발화를 확인해 주세요.");
+          } else {
+            setMicErr((current) =>
+              current === "마지막 STT 처리 제한시간을 초과했습니다. 끝 발화를 확인해 주세요."
+                ? ""
+                : current
+            );
+          }
+          setMobileIntakePending(false);
+          setMobileIntakeComplete(true);
+          if (["connecting", "recording", "confirm"].includes(phaseRef.current)) {
+            timers.current.forEach(clearTimeout);
+            timers.current = [];
+            if (isCustomerSurface) {
+              transitionPhase("prep");
+              demoBus.emit("pipeline.stage", {
+                callId: LIVE_CALL_ID,
+                stage: "classify",
+                status: "start",
+              });
+            } else {
+              toPrep(true);
+            }
+          }
+          if (resumeAgent && phaseRef.current === "prep") enterActiveFromAck();
+        } finally {
+          if (lifecycleEpoch.current === epoch) {
+            intakeTransitionPending.current = false;
+          }
+        }
+      })();
+    },
+    [enterActiveFromAck, isCustomerSurface, toPrep, transitionPhase, waitForFinalTranscript]
+  );
+
+  const finishCallAfterDrain = useCallback(
+    (event: ArsLifecycleEvent, wasLiveCall: boolean) => {
+      if (endTransitionPending.current) return;
+      endTransitionPending.current = true;
+      const epoch = lifecycleEpoch.current;
+      void (async () => {
+        try {
+          const receivedFinalSeq = await waitForFinalTranscript(event.finalSeq, epoch);
+          if (lifecycleEpoch.current !== epoch) return;
+          if (!event.drained || !receivedFinalSeq) {
+            setMicErr("마지막 STT 처리 제한시간을 초과했습니다. 끝 발화를 확인해 주세요.");
+          }
+          if (resetRequested.current) {
+            resetRequested.current = false;
+            realCallActiveRef.current = false;
+            reset();
+            return;
+          }
+
+          const currentPhase = phaseRef.current;
+          const generation = callGenerationRef.current || event.generation;
+          if (isCustomerSurface) {
+            clearAll();
+            realCallActiveRef.current = false;
+            // Keep an explicit ended screen until the customer starts another
+            // call or resets. There is no arbitrary auto-dismiss timer.
+            transitionPhase("wrap");
+            setClock(0);
+            setMobileIntakePending(false);
+            setMobileIntakeComplete(false);
+            setMobileAgentConnected(false);
+            demoBus.emit("call.ended", {
+              callId: LIVE_CALL_ID,
+              ...(generation ? { generation } : {}),
+              endReason: event.endReason,
+              endedBy: event.endedBy,
+            });
+            return;
+          }
+
+          const endedBeforeAgent = ["connecting", "recording", "confirm", "prep"].includes(
+            currentPhase
+          );
+          const hasTranscript = transcript.current.some(
+            (chunk) => chunk.isFinal && chunk.text.trim().length > 0
+          );
+          const customerEnded =
+            event.endedBy === "customer" ||
+            event.endReason === "customer_hangup" ||
+            event.endReason === "customer_disconnect" ||
+            (!event.endedBy && !event.endReason && !endRequested.current);
+          if (endedBeforeAgent && !hasTranscript) {
+            // A LAN counselor event must close the admin record explicitly;
+            // counselor demo.reset is intentionally not relay-authorized.
+            demoBus.emit("call.ended", {
+              callId: LIVE_CALL_ID,
+              ...(generation ? { generation } : {}),
+              endReason: event.endReason ?? "ended_before_transcript",
+              endedBy: event.endedBy,
+            });
+            realCallActiveRef.current = false;
+            reset();
+            return;
+          }
+          if (currentPhase === "active" || (endedBeforeAgent && hasTranscript)) {
+            clearAll();
+            if (endedBeforeAgent) {
+              setWrapResult(customerEnded ? "상담 중단 · 고객 종료" : "추가 확인 필요");
+              setFollowups([]);
+            }
+            realCallActiveRef.current = false;
+            transitionPhase("summarizing");
+            setWrapSheetOpen(true);
+            demoBus.emit("pipeline.stage", {
+              callId: LIVE_CALL_ID,
+              stage: "wrap",
+              status: "start",
+            });
+            const completed = await runSummary({ forceLive: wasLiveCall, scope: "full" });
+            if (
+              lifecycleEpoch.current === epoch &&
+              completed &&
+              phaseRef.current === "summarizing"
+            ) {
+              transitionPhase("wrap");
+              demoBus.emit("pipeline.stage", {
+                callId: LIVE_CALL_ID,
+                stage: "wrap",
+                status: "done",
+                detail: "고객·상담원 전체 대화 후처리 초안",
+              });
+              demoBus.emit("call.ended", {
+                callId: LIVE_CALL_ID,
+                wrapType: wrapRef.current.type,
+                wrapResult: wrapRef.current.result,
+                ...(generation ? { generation } : {}),
+                endReason: event.endReason,
+                endedBy: event.endedBy,
+              });
+              if (transferRef.current.reserved) {
+                demoBus.emit("transfer.completed", {
+                  callId: LIVE_CALL_ID,
+                  toDept:
+                    transferRef.current.target ?? SUGGESTED_DEPT[incomingRef.current],
+                });
+              }
+            }
+            return;
+          }
+          realCallActiveRef.current = false;
+          if (!shouldIgnoreArsCallEnd(currentPhase)) reset();
+        } finally {
+          if (lifecycleEpoch.current === epoch) {
+            endRequested.current = false;
+            endTransitionPending.current = false;
+          }
+        }
+      })();
+    },
+    [
+      clearAll,
+      isCustomerSurface,
+      reset,
+      runSummary,
+      transitionPhase,
+      waitForFinalTranscript,
+    ]
+  );
+
+  const beginRealCall = useCallback(
+    (generation?: number) => {
+      inactiveStatePolls.current = 0;
+      const startsFresh =
+        !realCallActiveRef.current || shouldStartFreshArsCall(phaseRef.current);
+      realCallActiveRef.current = true;
+      if (generation && generation > 0) callGenerationRef.current = generation;
+      if (startsFresh) startCall();
+    },
+    [startCall]
+  );
+
+  const requestReset = useCallback(() => {
+    if (realCallActiveRef.current) {
+      resetRequested.current = true;
+      if (!endRequested.current) {
+        endRequested.current = true;
+        if (isCustomerSurface) mobileArsRef.current?.endCall();
+        else arsControlRef.current?.endCall();
+      }
+      return;
+    }
+    reset();
+  }, [isCustomerSurface, reset]);
+
+  const requestCustomerStart = useCallback(() => {
+    if (!EXPLICIT_LIVE_CALL_ID) {
+      setMicErr("중앙 서버가 발급한 call_id가 필요합니다. 시작 스크립트에 표시된 고객 URL을 열어 주세요.");
+      return;
+    }
+    if (!mobileServerConnected) {
+      setMicErr("통화 서버 연결 중입니다. 연결 표시 후 다시 눌러 주세요.");
+      return;
+    }
+    setMicErr("");
+    mobileArsRef.current?.startCall();
+  }, [mobileServerConnected]);
+
+  const requestCustomerEnd = useCallback(() => {
+    if (!realCallActiveRef.current || endRequested.current) return;
+    endRequested.current = true;
+    mobileArsRef.current?.endCall();
+  }, []);
+
+  const pressCustomerDigit = useCallback(
+    (digit: string) => {
+      const sent = mobileArsRef.current?.pressDigit(digit) ?? false;
+      if (!sent) {
+        setMicErr("키패드 전송 채널이 준비되지 않았습니다. 연결 상태를 확인해 주세요.");
+        return false;
+      }
+      setMicErr("");
+      if (digit === "#" && !mobileIntakeComplete && !mobileAgentConnected) {
+        setMobileIntakePending(true);
+      }
+      return true;
+    },
+    [mobileAgentConnected, mobileIntakeComplete]
+  );
+
+  useEffect(() => {
+    if (isCustomerSurface) return;
+    if (!EXPLICIT_LIVE_CALL_ID) {
+      if (surface === "desktop") {
+        setMicErr("중앙 서버가 발급한 call_id가 필요합니다. 시작 스크립트에 표시된 상담사 URL을 열어 주세요.");
+      }
+      return;
+    }
+    const control = startArsControl(LIVE_CALL_ID, {
+      onCallStart: (event) => beginRealCall(event.generation),
+      onDigit: (event) => {
+        setArsDigits((value) => (value + event.digit).slice(-24));
+        setDtmfEvents((events) => [...events.slice(-63), event]);
+        if (!event.persisted) {
+          setMicErr("키패드 입력은 전달됐지만 서버 저장에 실패했습니다.");
+        }
+      },
+      onDigits: setArsDigits,
+      onIntakeComplete: (event) => finishIntakeAfterDrain(event),
+      onAgentConnected: enterActiveFromAck,
+      onCallEnd: (event) => {
+        inactiveStatePolls.current = 0;
+        if (shouldIgnoreArsCallEnd(phaseRef.current)) {
+          realCallActiveRef.current = false;
+          endRequested.current = false;
+          return;
+        }
+        finishCallAfterDrain(event, true);
+      },
+      onState: (state: ArsStateSnapshot) => {
+        setArsDigits(state.digits);
+        const reconciliation = reconcileArsInactiveSnapshot(state, {
+          localActive: realCallActiveRef.current,
+          inactivePolls: inactiveStatePolls.current,
+        });
+        inactiveStatePolls.current = reconciliation.inactivePolls;
+        if (!state.active) {
+          if (reconciliation.finalize) finishCallAfterDrain(state, true);
+          return;
+        }
+        beginRealCall(state.generation);
+        if (state.intakeComplete && state.drained) {
+          finishIntakeAfterDrain(state, state.agentConnected);
+        } else if (state.agentConnected) {
+          enterActiveFromAck();
+        }
+      },
+      onMobileStatus: setArsMobileConnected,
+      onError: (message) => {
+        if (realCallActiveRef.current) setMicErr(message);
+      },
+    });
+    arsControlRef.current = control;
+    return () => {
+      if (arsControlRef.current === control) arsControlRef.current = null;
+      control.stop();
+    };
+  }, [
+    beginRealCall,
+    enterActiveFromAck,
+    finishCallAfterDrain,
+    finishIntakeAfterDrain,
+    isCustomerSurface,
+    surface,
+  ]);
+
+  useEffect(() => {
+    if (!isCustomerSurface) return;
+    if (!EXPLICIT_LIVE_CALL_ID) {
+      setMicErr("중앙 서버가 발급한 call_id가 필요합니다. 시작 스크립트에 표시된 고객 URL을 열어 주세요.");
+      return;
+    }
+    const control = startMobileArsControl(LIVE_CALL_ID, {
+      onConnection: (connected) => {
+        setMobileServerConnected(connected);
+        setArsMobileConnected(connected);
+        if (connected) {
+          // A transient WebSocket error can fire immediately before the retry
+          // succeeds.  Do not leave a stale red warning beside the authoritative
+          // green "connected" indicator on the Galaxy surface.
+          setMicErr((message) =>
+            message === "통화 서버에 연결할 수 없습니다." ||
+            message === "통화 서버 연결 중입니다. 연결 표시 후 다시 눌러 주세요."
+              ? ""
+              : message
+          );
+        }
+      },
+      onCallStart: (event) => beginRealCall(event.generation),
+      onIntakeComplete: (event) => {
+        setMobileIntakePending(false);
+        setMobileIntakeComplete(true);
+        finishIntakeAfterDrain(event);
+      },
+      onAgentConnected: () => {
+        setMobileIntakePending(false);
+        setMobileIntakeComplete(true);
+        setMobileAgentConnected(true);
+        enterActiveFromAck();
+      },
+      onCallEnd: (event) => finishCallAfterDrain(event, true),
+      onState: (state) => {
+        setArsDigits(state.digits);
+        setMobileIntakeComplete(state.intakeComplete);
+        setMobileAgentConnected(state.agentConnected);
+        const reconciliation = reconcileArsInactiveSnapshot(state, {
+          localActive: realCallActiveRef.current,
+          inactivePolls: inactiveStatePolls.current,
+        });
+        inactiveStatePolls.current = reconciliation.inactivePolls;
+        if (!state.active) {
+          if (reconciliation.finalize) finishCallAfterDrain(state, true);
+          return;
+        }
+        beginRealCall(state.generation);
+        if (state.intakeComplete && state.drained) {
+          finishIntakeAfterDrain(state, state.agentConnected);
+        } else if (state.agentConnected) {
+          enterActiveFromAck();
+        }
+      },
+      onError: setMicErr,
+    });
+    mobileArsRef.current = control;
+    return () => {
+      if (mobileArsRef.current === control) mobileArsRef.current = null;
+      // Refresh/navigation is an unexpected disconnect, not an explicit hangup.
+      // The server keeps its recovery grace; only the red end/reset actions send call_end.
+      control.stop();
+    };
+  }, [
+    beginRealCall,
+    enterActiveFromAck,
+    finishCallAfterDrain,
+    finishIntakeAfterDrain,
+    isCustomerSurface,
+  ]);
 
   // 시연 내비게이션 — 상단 알약의 단계(접수·준비·통화·후처리)를 누르면 그 화면으로 바로 점프.
   // 접수는 실제 흐름(전화 연결)을 타고, 준비/통화/후처리는 콜 유형 픽스처로 상태를 정합하게 세팅한다.
@@ -718,42 +1606,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   );
 
   const endCall = useCallback(() => {
-    if (phaseRef.current === "active") {
-      clearAll();
-      setPhase("summarizing");
-      // 종료와 동시에 후처리 시트가 자동으로 올라온다 — 통화→후처리는 한 흐름
-      setWrapSheetOpen(true);
-      demoBus.emit("pipeline.stage", {
-        callId: respRef.current.call_id,
-        stage: "wrap",
-        status: "start",
-      });
-      after(3600, () => {
-        setPhase("wrap");
-        const callId = respRef.current.call_id;
-        const preset = WRAP_DEFAULTS[incomingRef.current];
-        demoBus.emit("pipeline.stage", {
-          callId,
-          stage: "wrap",
-          status: "done",
-          detail: "후처리 초안 자동 작성",
-        });
-        demoBus.emit("call.ended", {
-          callId,
-          wrapType: preset.type,
-          wrapResult: preset.result,
-        });
-        if (transferRef.current.reserved) {
-          demoBus.emit("transfer.completed", {
-            callId,
-            toDept: transferRef.current.target ?? SUGGESTED_DEPT[incomingRef.current],
-          });
-        }
-      });
-    } else {
-      reset();
+    if (realCallActiveRef.current) {
+      if (endRequested.current) return;
+      endRequested.current = true;
+      if (isCustomerSurface) mobileArsRef.current?.endCall();
+      else arsControlRef.current?.endCall();
+      return;
     }
-  }, [after, clearAll, reset]);
+    if (phaseRef.current !== "active") {
+      reset();
+      return;
+    }
+    finishCallAfterDrain({ finalSeq: 0, drained: true }, false);
+  }, [finishCallAfterDrain, isCustomerSurface, reset]);
 
   const setSim = useCallback(() => {
     if (phaseRef.current === "idle") {
@@ -770,9 +1635,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const submitAudio = useCallback(
     async (file: File) => {
+      const epoch = ++lifecycleEpoch.current;
+      analysisRequestSeq.current += 1;
       clearAll();
+      transcript.current = [];
+      setLiveCaption("");
+      setLiveCaptionSpeaker("customer");
+      setLiveTranscriptLines([]);
       setMode("mic");
-      setPhase("recording");
+      transitionPhase("recording");
       setClock(0);
       setEmo(0);
       setMicErr("");
@@ -780,10 +1651,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       startClock();
       try {
         const response = await createConsultationFromAudio(file);
+        if (lifecycleEpoch.current !== epoch) return;
         setConsultationResponse(response);
         respRef.current = response;
         transcript.current = [
-          { text: response.transcript.text, at: 0, isFinal: true },
+          {
+            text: response.transcript.text,
+            at: 0,
+            isFinal: true,
+            speaker: "customer",
+            seq: 1,
+          },
         ];
         // 실백엔드 경로 — 같은 이벤트 열을 압축 발행 (source: backend)
         demoBus.emit("call.incoming", { callId: response.call_id, kind: "normal" });
@@ -797,6 +1675,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           text: response.transcript.text,
           isFinal: true,
           atMs: 0,
+          speaker: "customer",
         });
         setSummary(null);
         setPrepChecks(Array(PREP_LEN).fill(true));
@@ -804,13 +1683,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         emitCardPipeline("backend", 250);
       } catch (error) {
         const message = error instanceof Error ? error.message : "음성 처리에 실패했습니다.";
+        if (lifecycleEpoch.current !== epoch) return;
         setMicErr(message);
-        setPhase("idle");
+        transitionPhase("idle");
       } finally {
-        setAudioBusy(false);
+        if (lifecycleEpoch.current === epoch) setAudioBusy(false);
       }
     },
-    [clearAll, emitCardPipeline, startClock]
+    [clearAll, emitCardPipeline, startClock, transitionPhase]
   );
 
   // ── auth ──
@@ -1078,23 +1958,60 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const mA = mColors(authMethod === "account");
 
   const allChecked = prepChecks.every(Boolean);
+  const liveSummaryReady =
+    !realCallActiveRef.current || (!summaryPending && analysisSource !== "pending");
+  const canConnect = allChecked && liveSummaryReady;
+  const micActive = captureBySpeaker.customer || captureBySpeaker.agent;
+  const micLevel = Math.max(levelBySpeaker.customer, levelBySpeaker.agent);
   const card = consultationResponse.consultation_card;
+  const explicitSummaryPending = Boolean(EXPLICIT_LIVE_CALL_ID && summaryPending);
+  const capturedTranscript = liveTranscriptLines
+    .filter((line) => line.speaker === "customer" && line.text.trim())
+    .map((line) => line.text.trim())
+    .join(" ")
+    .trim();
+  // 분석 요청이 진행 중이어도 이전 데모 fixture를 근거 발화로 잠깐 노출하지 않는다.
+  // 현재 콜에서 실제로 수신한 문장이 있으면 그것이 언제나 표시의 기준이다.
+  const groundedTranscript = capturedTranscript || consultationResponse.transcript.text.trim();
   // 통화 중 드리프트가 있으면 실시간 값이 카드 초기값을 덮는다
   // 통화 중 드리프트한 감정온도는 종료 후(후처리)에도 유지 — 마지막 실측이 초기 카드값으로 되돌아가지 않게
-  const temperature =
-    (p === "active" || ended) && emoDrift
+  const temperature = explicitSummaryPending
+    ? {
+        status: "unavailable" as const,
+        score: null,
+        level: null,
+        reason: "실제 음성 감정 모델 상태를 확인하고 있습니다.",
+      }
+    : (p === "active" || ended) && emoDrift
       ? { status: "completed" as const, score: emoDrift.score, level: emoDrift.level, reason: emoDrift.reason }
       : card.emotion;
-  const inquiryLabel = card.business_type || summary?.type || "상담 유형 분석 중";
+  const inquiryLabel = explicitSummaryPending
+    ? "상담 유형 분석 중"
+    : card.business_type || summary?.type || "상담 유형 분석 중";
   // 요약 문장은 헤드라인 한 곳에만 — 불릿에는 근거만 남겨 중복을 없앤다.
-  const contractBullets = [card.routing_reason, card.risk_reason].filter(
+  const contractBullets = [
+    ...card.customer_requests,
+    ...card.missing_information.map((item) => `추가 확인 필요: ${item}`),
+    card.routing_reason,
+    card.risk_reason,
+  ].filter(
     (value): value is string => !!value
   );
   const prepSummaryBullets = (contractBullets.length
     ? contractBullets
     : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
   ).slice(0, 4);
-  const prepDefinitions = PREP_ITEMS[incoming];
+  // 실통화(백엔드)면 카드가 만들어 준 유의사항을 그대로 쓰고, 대본 데모면
+  // 콜 유형별로 준비된 4개(PREP_ITEMS)를 쓴다 — 폴백이 '생성 실패' 문구가 아니라
+  // 콜 유형에 맞는 실제 문구여야 무대가 끊기지 않는다.
+  const prepDefinitions = card.required_actions.length
+    ? card.required_actions.map((item) => ({
+        title: item.title,
+        sub: `${item.detail} · 근거: ${
+          item.source === "policy" ? "안전 규칙" : item.source === "rag" ? "관련 자료" : "AI 분석"
+        }`,
+      }))
+    : PREP_ITEMS[incoming];
   const emotionBars = temperature.score == null
     ? 0
     : temperature.score > 66
@@ -1103,6 +2020,69 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? 2
         : 1;
   const riskSignals = [card.risk_reason].filter((value): value is string => !!value);
+  const firstLine = EXPLICIT_LIVE_CALL_ID
+    ? explicitSummaryPending || groundedTranscript.length === 0
+      ? "안녕하세요. 문의하실 내용을 다시 한 번 말씀해 주시겠어요?"
+      : card.business_type
+      ? `안녕하세요. ${card.business_type} 문의로 확인했습니다. 본인확인 후 자세히 도와드리겠습니다.`
+      : "안녕하세요. 말씀해 주신 문의 내용을 확인했습니다. 본인확인 후 자세히 도와드리겠습니다."
+    : SCRIPTS[incoming][0].text;
+  const liveSteps = [
+    { title: "1. 오프닝 · 문의 재확인", text: firstLine },
+    {
+      title: "2. 본인확인",
+      text: "고객 동의를 확인한 뒤 등록 정보와 고객이 말한 값을 대조합니다. 인증 전에는 상세 정보를 열람하지 않습니다.",
+    },
+    {
+      title: "3. 문의 내용 검증",
+      text: groundedTranscript
+        ? `다음 내용을 고객에게 다시 확인합니다: “${
+            explicitSummaryPending ? groundedTranscript : card.summary || groundedTranscript
+          }”`
+        : "사전 발화가 없어 문의 내용을 다시 듣고 업무 유형과 요청사항을 확인합니다.",
+    },
+    {
+      title: "4. 근거 확인 · 마무리",
+      text: "관련 규정과 처리 가능 여부를 확인한 뒤 안내하고, 필요한 추가 절차와 후속 연락 여부를 고객과 재확인합니다.",
+    },
+  ];
+  const ragSheet = card.knowledge_references.length
+    ? {
+        file: "K7_로컬_지식베이스",
+        sheet: "검색 근거",
+        cols: [
+          { l: "문서", w: 220 },
+          { l: "구간", w: 180 },
+          { l: "근거 내용", w: 430 },
+          { l: "관련도", w: 80 },
+        ],
+        rows: card.knowledge_references.map((reference, index) => ({
+          n: index + 1,
+          cells: [
+            { text: reference.title, w: 220 },
+            { text: reference.section, w: 180 },
+            { text: reference.excerpt, w: 430 },
+            { text: `${Math.round(reference.score * 100)}%`, w: 80 },
+          ],
+        })),
+      }
+    : rg;
+  const activeRegRows = card.knowledge_references.length
+    ? regNeedle
+      ? ragSheet.rows.filter((row) =>
+          row.cells.some((cell) => cell.text.toLowerCase().includes(regNeedle))
+        )
+      : ragSheet.rows
+    : rgRows;
+  const actualSummaryPoints = card.customer_requests.length
+    ? card.customer_requests
+    : SUMMARY_POINTS[incoming];
+  const actualCallSteps = card.required_actions.length
+    ? card.required_actions.map((action, index) => ({
+        title: `${index + 1}. ${action.title}`,
+        text: action.detail,
+      }))
+    : SCRIPTS[incoming].map((step) => ({ title: step.title, text: step.text }));
 
   return {
     // refs
@@ -1174,13 +2154,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setSim,
     setMic,
     submitAudio,
-    reset,
+    reset: requestReset,
     jumpToStep,
-    startCall,
+    startCall: isCustomerSurface ? requestCustomerStart : startCall,
     answerCall,
-    endCall,
+    endCall: isCustomerSurface ? requestCustomerEnd : endCall,
     skipWait,
-    showSkip: p === "recording" || p === "confirm",
+    showSkip:
+      (p === "recording" || p === "confirm") && !realCallActiveRef.current,
     emo,
     silenceLeft,
     // phone
@@ -1188,18 +2169,52 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     phInCall: inCall || ended,
     phEnded: ended,
     clockStr: fmt(clock),
-    showTimer: inCall,
+    callStartedAt: callStartedAt || "시작 시각 미기록",
+    showTimer: inCall && p !== "connecting",
     // 통화 누르자마자 00:01 — 실기기처럼 연결음 단계부터 타이머가 붙는다
     phoneClockStr: fmt(Math.max(clock, 1)),
     showRecDot: p === "recording" || p === "confirm",
-    phoneStatus: STATUS[p] || "",
+    phoneStatus:
+      p === "prep"
+        ? analysisSource === "no-transcript"
+          ? "상담사 연결 준비 중"
+          : "AI 요약 완료 · 상담사 연결 준비 중"
+        : STATUS[p] || "",
     showGlass: !!GLASS[p],
     glassText: GLASS[p] || "",
     showWave: p === "recording",
-    liveCaption,
-    micLevel,
-    micActive,
     showControls: inCall,
+    isCustomerSurface,
+    callId: LIVE_CALL_ID,
+    liveCaption,
+    liveCaptionSpeaker,
+    liveCaptionSpeakerLabel: liveCaptionSpeaker === "agent" ? "상담원" : "고객",
+    liveTranscriptLines,
+    captureBySpeaker,
+    levelBySpeaker,
+    micActive,
+    micLevel,
+    arsDigits,
+    dtmfEvents,
+    dtmfMasked:
+      arsDigits.length > 0
+        ? `${"•".repeat(Math.max(0, arsDigits.replace(/[^0-9]/g, "").length - 4))}${arsDigits
+            .replace(/[^0-9]/g, "")
+            .slice(-4)}${arsDigits.endsWith("#") ? " #" : ""}`
+        : "",
+    dtmfPersisted: dtmfEvents.length === 0 || dtmfEvents.every((event) => event.persisted),
+    arsMobileConnected,
+    mobileServerConnected,
+    mobileIntakeComplete,
+    mobileIntakePending,
+    mobileAgentConnected,
+    customerKeypadEnabled:
+      isCustomerSurface &&
+      realCallActiveRef.current &&
+      mobileServerConnected &&
+      !mobileIntakePending &&
+      (p === "recording" || p === "confirm" || p === "active"),
+    customerPressDigit: pressCustomerDigit,
     // desktop waiting
     showWaiting: ["idle", "connecting", "recording", "confirm"].includes(p),
     waitingText:
@@ -1241,11 +2256,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }),
     prepDone: prepChecks.filter(Boolean).length,
     prepTotal: prepDefinitions.length,
-    prepHeadline: card.summary || summary?.headline || "상담카드 생성 중",
+    prepHeadline: summaryPending
+      ? "AI가 실제 고객 발화를 요약하고 있습니다…"
+      : card.summary || summary?.headline || "상담카드 생성 중",
+    summarySourceLabel: summaryPending
+      ? "AI 요약 생성 중"
+      : analysisSource.startsWith("ollama:")
+      ? `AI 사전 녹음 요약 · ${analysisSource.slice("ollama:".length)}`
+      : analysisSource === "local-rule-v2"
+      ? "로컬 규칙 요약 · Ollama 미연결"
+      : analysisSource === "no-transcript"
+      ? "수신 발화 없음 · 자동 요약 생략"
+      : analysisSource === "unavailable"
+      ? "요약 모델 연결 실패 · 수동 확인"
+      : "AI 사전 녹음 요약",
     // 문의유형은 배정권고 타일이 담당 — 여기 반복하지 않는다
     prepCustomerLine: `발신 ${CUSTOMER.phoneMasked} · 음성 접수`,
-    prepRoutingTitle: card.department || "담당 부서 분석 중",
-    prepRoutingReason: card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
+    prepRoutingTitle: explicitSummaryPending ? "담당 부서 분석 중" : card.department || "담당 부서 분석 중",
+    prepRoutingReason: explicitSummaryPending
+      ? "실제 고객 발화를 기준으로 업무 유형과 담당 부서를 대조하고 있습니다"
+      : card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
     // 라우팅 메타 — 카드가 '자동 라우팅되어 온 것'임을 어필: 부서(2층)·SGE(1층)·업무유형(3층)
     prepSge: deriveSge(card.incident_risk, card.department, incoming),
     prepBusinessType: card.business_type || "업무 유형 분석 중",
@@ -1262,11 +2292,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepEmotionBars: emotionBars,
     prepEmotionFg: temperature.level ? EMOTION_COLORS[temperature.level].fg : "var(--gray-700)",
     prepEmotionBar: temperature.level ? EMOTION_COLORS[temperature.level].bar : "var(--gray-500)",
-    prepRiskLabel: RISK_LABELS[card.incident_risk],
+    prepRiskLabel: explicitSummaryPending ? "분석 중" : RISK_LABELS[card.incident_risk],
     prepRiskFg: RISK_COLORS[card.incident_risk],
     prepRiskSignal: riskSignals.join(" · ") || "특이 사고 징후 없음",
     prepConfidence:
-      card.routing_confidence != null
+      explicitSummaryPending
+        ? "실제 발화 분석 중 · 상담사 확인 전 후보"
+        : card.routing_confidence != null
         ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
         : "확신도 산출 전 · 상담사 확인 필요",
     // 배정 확신도 % 숫자만 (상단 배지용)
@@ -1274,10 +2306,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       card.routing_confidence != null ? Math.round(card.routing_confidence * 100) : null,
     // 감정온도 숫자(당근 매너온도 스타일) — 신호등 대신 큰 숫자로
     prepEmotionScore: temperature.score ?? null,
-    transcriptQuote: consultationResponse.transcript.text,
+    transcriptQuote: groundedTranscript,
     // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
-    summaryPoints: SUMMARY_POINTS[incoming],
+    summaryPoints: liveActionItems.length
+      ? liveActionItems
+      : EXPLICIT_LIVE_CALL_ID
+      ? ["고객 문의 내용을 다시 확인해 주세요."]
+      : actualSummaryPoints,
     prepSummaryBullets,
+    knowledgeQuery: card.business_type,
+    knowledgeReferences: card.knowledge_references,
     externalSessionKey: consultationResponse.call_id,
     // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다
     customerName: verified ? `${CUSTOMER.name} 고객` : `${CUSTOMER.masked} 고객`,
@@ -1305,11 +2343,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setRegenerating(false);
       });
     },
-    summaryProse: SUMMARY_PROSE[incoming],
-    connectBg: allChecked ? "var(--blue-700)" : "var(--gray-200)",
-    connectFg: allChecked ? "#fff" : "var(--gray-600)",
-    connectCursor: allChecked ? "pointer" : "not-allowed",
-    prepHint: "유의사항을 확인하고 통화를 연결하세요",
+    summaryProse: consultationResponse
+      ? [card.routing_reason, ...card.missing_information.map((item) => `추가 확인: ${item}`)]
+          .filter(Boolean)
+          .join(" · ") || card.summary || "고객 음성에서 확인된 상담 내용을 검토하고 있습니다."
+      : SUMMARY_PROSE[incoming],
+    connectBg: canConnect ? "var(--blue-700)" : "var(--gray-200)",
+    connectFg: canConnect ? "#fff" : "var(--gray-600)",
+    connectCursor: canConnect ? "pointer" : "not-allowed",
+    prepHint: summaryPending
+      ? "AI 사전 요약이 완료되면 통화 연결이 활성화됩니다"
+      : canConnect
+      ? "사전 요약 준비 완료 · 통화를 연결하세요"
+      : "상담 준비 정보를 확인하는 중입니다",
     // auth (1d)
     verified,
     notVerified: nv,
@@ -1333,16 +2379,33 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     authErrMsg,
     authTime,
     authMethodLabel,
+    applyDtmfToAuth: () => {
+      const received = arsDigits.replace(/\D/g, "");
+      const need = authMethod === "birth" ? 6 : 4;
+      setAuthInput(received.slice(-need));
+      setAuthErr(false);
+      setAuthErrMsg("");
+    },
+    canApplyDtmfToAuth: arsDigits.replace(/\D/g, "").length > 0,
     // 자릿수 = 입력 상자 개수 — 마스킹된 전체 번호는 보여주지 않는다(최소 표시 원칙, 필요한 칸만)
     authMaxLen: authMethod === "birth" ? 8 : 4,
     // 지금 물어야 할 값 — 안내 문구가 대조 방식을 따라간다
     authAskLabel:
       authMethod === "birth" ? "생년월일 8자리 (YYYYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
-    steps: SCRIPTS[incoming].map((st) => ({ title: st.title, text: st.text })),
-    firstLine: SCRIPTS[incoming][0].text,
-    regRecos: REG_RECOS[incoming],
-    regQuery: REG_QUERY[incoming],
+    steps: EXPLICIT_LIVE_CALL_ID
+      ? liveSteps
+      : actualCallSteps,
+    firstLine: EXPLICIT_LIVE_CALL_ID
+      ? firstLine
+      : actualCallSteps[0]?.text ?? firstLine,
+    isExplicitLiveCall: !!EXPLICIT_LIVE_CALL_ID,
+    regRecos: EXPLICIT_LIVE_CALL_ID ? [] : REG_RECOS[incoming],
+    regQuery: EXPLICIT_LIVE_CALL_ID
+      ? explicitSummaryPending
+        ? "본인확인"
+        : card.business_type || "본인확인"
+      : card.business_type || REG_QUERY[incoming],
     memoItems,
     memoEmpty: memoItems.length === 0,
     memoDraft,
@@ -1396,11 +2459,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     loadManualFile,
     // 확장 폭 640 — 시트가 3컬럼 리플로우라 640이면 잘림 없이 들어가고, 중앙 스크립트 압착도 덜하다
     regW: regExpanded ? 640 : 372,
-    regFile: rg.file,
-    regSheet: rg.sheet,
-    regCols: rg.cols,
-    regRows: rgRows,
-    regRowsTotal: rg.rows.length,
+    regFile: ragSheet.file,
+    regSheet: ragSheet.sheet,
+    regCols: ragSheet.cols,
+    regRows: activeRegRows,
+    regRowsTotal: ragSheet.rows.length,
     // wrap sheet
     wrapSheetOpen,
     notWrapSheetOpen: !wrapSheetOpen,
@@ -1438,13 +2501,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     })),
     noFollowups: followups.length === 0,
     // 이미 추가된 추천은 숨긴다 — x로 빼면 다시 나타난다
-    recoFollowups: WRAP_DEFAULTS[incoming].recommended.filter(
-      (f) => !followups.some((x) => x.label === f.label)
-    ).map((f) => ({
-      icon: f.icon,
-      label: f.label,
-      add: () => addFollowup(f),
-    })),
+    recoFollowups: EXPLICIT_LIVE_CALL_ID
+      ? []
+      : WRAP_DEFAULTS[incoming].recommended.filter(
+          (f) => !followups.some((x) => x.label === f.label)
+        ).map((f) => ({
+          icon: f.icon,
+          label: f.label,
+          add: () => addFollowup(f),
+        })),
     onSummary: (e: React.FormEvent<HTMLDivElement>) => {
       summaryText.current = (e.target as HTMLElement).innerText;
     },

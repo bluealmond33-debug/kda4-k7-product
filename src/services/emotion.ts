@@ -42,7 +42,7 @@ const AGITATED = /(당황|급해|돌려|어떡|화가|왜|빨리|큰일|불안|�
  * Score the customer's emotional temperature from a piece of transcript.
  *
  * mock: keyword heuristic (used in the demo).
- * This is demo-only. The active mvp-1.0 contract reports emotion as
+ * This is demo-only. The active mvp-1.1 contract reports emotion as
  * unavailable until the team model is actually integrated.
  */
 export async function scoreEmotion(text: string): Promise<EmotionScore> {

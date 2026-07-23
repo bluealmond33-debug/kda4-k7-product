@@ -23,20 +23,31 @@ import {
   normalizeDeptLabel,
   type QueueItem,
 } from "../data/adminContent";
+import {
+  adminTranscriptIdentity,
+  isMismatchedCallGeneration,
+  normalizeCallGeneration,
+  shouldApplyAdminRouting,
+  shouldCountAdminCard,
+  shouldReplaceAdminCall,
+} from "../services/adminCallLifecycle";
 
 export interface AdminCallRecord {
   callId: string;
+  generation: number;
   kind: DemoCallKind;
   source: DemoSource;
   startedAt: number;
   endedAt: number | null;
   utterances: string[];
+  utteranceKeys: string[];
   stages: Partial<Record<PipelineStageId, PipelineStageStatus>>;
   card: DemoEventMap["card.created"] | null;
   sge: Sge | null;
   department: string | null;
   confidence: number | null;
   risk: MvpIncidentRisk | null;
+  routingApplied: boolean;
   /** 이관 예약·완료 표시 (부서 보드 밖 내부 팀 대상도 배지로는 보인다) */
   transferTo: string | null;
 }
@@ -65,11 +76,13 @@ const initialState = (): FeedState => {
     const startedAt = now - s.minutesAgo * 60_000;
     calls[callId] = {
       callId,
+      generation: 1,
       kind: s.sge === "E" ? "urgent" : "normal",
       source: "server",
       startedAt,
       endedAt: startedAt + 3 * 60_000,
       utterances: [],
+      utteranceKeys: [],
       stages: {},
       card: {
         callId,
@@ -87,6 +100,7 @@ const initialState = (): FeedState => {
       department: s.department,
       confidence: null,
       risk: s.sge === "E" ? "high" : "low",
+      routingApplied: true,
       transferTo: null,
     };
     order.push(callId);
@@ -113,21 +127,25 @@ function newRecord(
   callId: string,
   kind: DemoCallKind,
   source: DemoSource,
-  ts: number
+  ts: number,
+  generation = 0
 ): AdminCallRecord {
   return {
     callId,
+    generation,
     kind,
     source,
     startedAt: ts,
     endedAt: null,
     utterances: [],
+    utteranceKeys: [],
     stages: {},
     card: null,
     sge: null,
     department: null,
     confidence: null,
     risk: null,
+    routingApplied: false,
     transferTo: null,
   };
 }
@@ -157,22 +175,70 @@ function takeItem(
   return [null, queues];
 }
 
+function withoutCallQueueItems(
+  queues: FeedState["queues"],
+  callId: string
+): FeedState["queues"] {
+  return Object.fromEntries(
+    Object.entries(queues).map(([department, items]) => [
+      department,
+      items.filter((item) => item.callId !== callId),
+    ])
+  );
+}
+
 function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
   switch (env.type) {
     case "call.incoming": {
       const p = env.payload as DemoEventMap["call.incoming"];
-      if (state.calls[p.callId]) return state;
+      const generation = normalizeCallGeneration(p.generation);
+      const existing = state.calls[p.callId];
+      if (existing) {
+        if (
+          !shouldReplaceAdminCall(
+            existing.generation,
+            existing.endedAt !== null,
+            generation
+          )
+        ) {
+          return state;
+        }
+        return {
+          ...state,
+          calls: {
+            ...state.calls,
+            [p.callId]: newRecord(p.callId, p.kind, env.source, env.ts, generation),
+          },
+          // Keep exactly one slot, moved to the newest position.
+          order: [...state.order.filter((id) => id !== p.callId), p.callId],
+          queues: withoutCallQueueItems(state.queues, p.callId),
+          ticker: null,
+        };
+      }
       return {
         ...state,
-        calls: { ...state.calls, [p.callId]: newRecord(p.callId, p.kind, env.source, env.ts) },
+        calls: {
+          ...state.calls,
+          [p.callId]: newRecord(p.callId, p.kind, env.source, env.ts, generation),
+        },
         order: [...state.order, p.callId],
       };
     }
     case "stt.utterance": {
       const p = env.payload as DemoEventMap["stt.utterance"];
+      const existing = state.calls[p.callId];
+      if (!existing) return state;
+      if (
+        isMismatchedCallGeneration(existing.generation, p.generation)
+      ) {
+        return state;
+      }
+      const utteranceKey = adminTranscriptIdentity(p);
+      if (existing.utteranceKeys.includes(utteranceKey)) return state;
       const next = patchCall(state, p.callId, (r) => ({
         ...r,
         utterances: [...r.utterances, p.text],
+        utteranceKeys: [...r.utteranceKeys, utteranceKey],
       }));
       return { ...next, ticker: { callId: p.callId, text: p.text } };
     }
@@ -185,11 +251,17 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
     }
     case "card.created": {
       const p = env.payload as DemoEventMap["card.created"];
+      const existing = state.calls[p.callId];
+      if (!existing) return state;
+      const countCard = shouldCountAdminCard(existing.card !== null);
       const next = patchCall(state, p.callId, (r) => ({ ...r, card: p }));
-      return { ...next, totalCards: next.totalCards + 1 };
+      return countCard ? { ...next, totalCards: next.totalCards + 1 } : next;
     }
     case "routing.assigned": {
       const p = env.payload as DemoEventMap["routing.assigned"];
+      const existing = state.calls[p.callId];
+      if (!existing) return state;
+      const applyRouting = shouldApplyAdminRouting(existing.routingApplied);
       // 구 부서 라벨(데모 픽스처)은 7부서 taxonomy로 정규화해 흡수.
       // 긴급(E)은 부서와 무관하게 사고·신고(SG) 강제 — taxonomy의 EMERGENCY_DEPARTMENT 규칙
       // (긴급 게이트: E이면 반드시 SG. 구 픽스처가 다른 부서를 달고 와도 여기서 교정)
@@ -200,7 +272,9 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
         department: dept,
         confidence: p.confidence,
         risk: p.risk,
+        routingApplied: true,
       }));
+      if (!applyRouting) return next;
       // 단순(S)은 상담사 대기열로 가지 않는다 — ARS·AI가 즉시 받아 자동 응대 카운터로
       if (p.sge === "S") return { ...next, aiHandled: next.aiHandled + 1 };
       const rec = next.calls[p.callId];
@@ -245,6 +319,13 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
     }
     case "call.ended": {
       const p = env.payload as DemoEventMap["call.ended"];
+      const existing = state.calls[p.callId];
+      if (
+        existing &&
+        isMismatchedCallGeneration(existing.generation, p.generation)
+      ) {
+        return state;
+      }
       const next = patchCall(state, p.callId, (r) => ({
         ...r,
         endedAt: env.ts,

@@ -1,7 +1,3 @@
-// 실시간 통화 — 고객 마이크를 캡처해 WebSocket으로 백엔드에 PCM 스트리밍하고(customer),
-// 동시에 상담사 소켓(agent)으로 전사를 받아 콜백한다. 전부 로컬(온프레미스): 마이크·WS·STT
-// 모두 이 랩탑/LAN 안에서 완결하며 외부 인터넷을 쓰지 않는다.
-
 import { API_BASE_URL } from "./config";
 
 const env = import.meta.env;
@@ -9,117 +5,162 @@ const env = import.meta.env;
 function wsBase(): string {
   const explicit = String(env.VITE_WS_BASE_URL ?? "").replace(/\/$/, "");
   if (explicit) return explicit;
-  if (API_BASE_URL) return API_BASE_URL.replace(/^http/, "ws"); // http→ws, https→wss
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  return `${proto}://${location.hostname}:8000`;
+  if (API_BASE_URL) return API_BASE_URL.replace(/^http/, "ws");
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  return `${protocol}://${location.hostname}:8000`;
 }
+
+export type LiveSpeaker = "customer" | "agent";
 
 export interface LiveTranscript {
   seq: number;
   text: string;
   at: number;
+  speaker: LiveSpeaker;
+  generation?: number;
+  audioSeq?: number;
 }
 
 export interface LiveHandle {
-  stop: () => void;
+  stop(): void;
+  waitForSeq(seq: number, timeoutMs?: number): Promise<boolean>;
 }
 
 export interface LiveHandlers {
-  onTranscript?: (t: LiveTranscript) => void;
-  onError?: (message: string) => void;
-  /** 마이크 입력 레벨(RMS, 대략 0~0.3). 녹음 중 UI 피드백용, 초당 ~4회 호출. */
-  onLevel?: (level: number) => void;
+  onTranscript?(transcript: LiveTranscript): void;
+  onError?(message: string): void;
+  onWarning?(message: string, status: string): void;
+  onLevel?(level: number, speaker: LiveSpeaker): void;
+  onCaptureStatus?(active: boolean, device: string | undefined, speaker: LiveSpeaker): void;
 }
 
-/** 통화 시작 — 마이크 권한을 얻고 PCM 스트리밍 + 전사 수신을 건다. 마이크 실패 시 reject. */
-export async function startLiveCall(callId: string, handlers: LiveHandlers = {}): Promise<LiveHandle> {
-  const base = wsBase();
+/**
+ * Observe the server-owned transcript stream. Audio itself is sent by the two
+ * Windows edge senders; the browser never asks for microphone permission.
+ */
+export async function startLiveCall(
+  callId: string,
+  handlers: LiveHandlers = {}
+): Promise<LiveHandle> {
   const id = encodeURIComponent(callId);
-
-  // 마이크 먼저 확보 — 거부/불가면 여기서 throw 되어 호출부가 폴백할 수 있다.
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: true, noiseSuppression: true },
-  });
-
-  // 상담사 수신 소켓
-  const agent = new WebSocket(`${base}/ws/call/${id}?role=agent`);
-  agent.onmessage = (ev) => {
-    let m: unknown;
-    try {
-      m = JSON.parse(ev.data as string);
-    } catch {
-      return;
-    }
-    const msg = m as { type?: string; seq?: number; text?: string; at?: number };
-    if (msg.type === "transcript" && handlers.onTranscript) {
-      handlers.onTranscript({ seq: msg.seq ?? 0, text: msg.text ?? "", at: msg.at ?? Date.now() });
-    }
-  };
-  agent.onerror = () => handlers.onError?.("전사 수신 소켓 오류");
-
-  // 고객 송신 소켓 + 오디오 파이프라인
-  const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-  const ctx = new AudioCtx({ sampleRate: 16000 });
-  if (ctx.state === "suspended") await ctx.resume();
-  const cust = new WebSocket(`${base}/ws/call/${id}?role=customer`);
-  cust.binaryType = "arraybuffer";
-
-  const source = ctx.createMediaStreamSource(stream);
-  const proc = ctx.createScriptProcessor(4096, 1, 1);
-  source.connect(proc);
-  proc.connect(ctx.destination); // 출력에 아무것도 안 써서 무음 — 에코 없음
-
-  proc.onaudioprocess = (e: AudioProcessingEvent) => {
-    const f32 = e.inputBuffer.getChannelData(0);
-    if (handlers.onLevel) {
-      let sum = 0;
-      for (let i = 0; i < f32.length; i++) sum += f32[i] * f32[i];
-      handlers.onLevel(Math.sqrt(sum / f32.length));
-    }
-    const i16 = new Int16Array(f32.length);
-    for (let i = 0; i < f32.length; i++) {
-      const s = Math.max(-1, Math.min(1, f32[i]));
-      i16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-    }
-    if (cust.readyState === 1) cust.send(i16.buffer);
-  };
-
+  let socket: WebSocket | null = null;
+  let retryTimer = 0;
   let stopped = false;
-  const stop = () => {
-    if (stopped) return;
-    stopped = true;
-    try {
-      proc.onaudioprocess = null;
-      proc.disconnect();
-    } catch {
-      /* noop */
-    }
-    try {
-      source.disconnect();
-    } catch {
-      /* noop */
-    }
-    try {
-      void ctx.close();
-    } catch {
-      /* noop */
-    }
-    try {
-      stream.getTracks().forEach((t) => t.stop());
-    } catch {
-      /* noop */
-    }
-    try {
-      cust.close();
-    } catch {
-      /* noop */
-    }
-    try {
-      agent.close();
-    } catch {
-      /* noop */
+  let lastSeq = 0;
+  let transcriptGeneration = 0;
+  const seqWaiters = new Set<{
+    target: number;
+    timer: number;
+    resolve(value: boolean): void;
+  }>();
+
+  const settleSeqWaiters = () => {
+    for (const waiter of seqWaiters) {
+      if (lastSeq < waiter.target) continue;
+      window.clearTimeout(waiter.timer);
+      seqWaiters.delete(waiter);
+      waiter.resolve(true);
     }
   };
 
-  return { stop };
+  const connect = () => {
+    if (stopped) return;
+    socket = new WebSocket(`${wsBase()}/ws/call/${id}?role=agent`);
+    socket.onmessage = (event) => {
+      let message: {
+        type?: string;
+        seq?: number;
+        audio_seq?: number;
+        generation?: number;
+        text?: string;
+        at?: number;
+        speaker?: unknown;
+        level?: number;
+        status?: string;
+        device?: string;
+        message?: string;
+      };
+      try {
+        message = JSON.parse(event.data as string);
+      } catch {
+        return;
+      }
+      const speaker: LiveSpeaker = message.speaker === "agent" ? "agent" : "customer";
+      if (message.type === "transcript") {
+        const generation = Math.max(0, Number(message.generation) || 0);
+        if (generation > 0 && transcriptGeneration > 0 && generation < transcriptGeneration) {
+          return;
+        }
+        if (generation > transcriptGeneration) {
+          transcriptGeneration = generation;
+          lastSeq = 0;
+          for (const waiter of seqWaiters) {
+            window.clearTimeout(waiter.timer);
+            waiter.resolve(false);
+          }
+          seqWaiters.clear();
+        }
+        const audioSeq = Math.max(0, Number(message.audio_seq) || 0);
+        const seq = Math.max(0, Number(message.seq ?? audioSeq) || 0);
+        if (seq > 0 && seq <= lastSeq) return;
+        lastSeq = Math.max(lastSeq, seq);
+        handlers.onTranscript?.({
+          seq,
+          text: message.text ?? "",
+          at: Number(message.at) || Date.now(),
+          speaker,
+          ...(generation > 0 ? { generation } : {}),
+          ...(audioSeq > 0 ? { audioSeq } : {}),
+        });
+        settleSeqWaiters();
+      }
+      if (message.type === "level") handlers.onLevel?.(message.level ?? 0, speaker);
+      if (message.type === "capture_status") {
+        handlers.onCaptureStatus?.(
+          message.status === "recording",
+          message.device,
+          speaker
+        );
+      }
+      if (message.type === "stt_overload") {
+        handlers.onWarning?.(
+          message.message ?? "STT 처리 지연이 발생했습니다. 마지막 녹취를 확인해 주세요.",
+          message.status ?? "backlogged"
+        );
+      }
+      if (message.type === "error") handlers.onError?.(message.message ?? "로컬 STT 오류");
+    };
+    socket.onerror = () => handlers.onError?.("로컬 STT 수신 채널에 연결할 수 없습니다.");
+    socket.onclose = () => {
+      if (!stopped) retryTimer = window.setTimeout(connect, 1200);
+    };
+  };
+
+  connect();
+
+  return {
+    waitForSeq(seq, timeoutMs = 30_000) {
+      const target = Math.max(0, seq);
+      if (target === 0 || lastSeq >= target) return Promise.resolve(true);
+      if (stopped) return Promise.resolve(false);
+      return new Promise<boolean>((resolve) => {
+        const waiter = { target, timer: 0, resolve };
+        waiter.timer = window.setTimeout(() => {
+          seqWaiters.delete(waiter);
+          resolve(false);
+        }, timeoutMs);
+        seqWaiters.add(waiter);
+      });
+    },
+    stop() {
+      stopped = true;
+      window.clearTimeout(retryTimer);
+      socket?.close();
+      for (const waiter of seqWaiters) {
+        window.clearTimeout(waiter.timer);
+        waiter.resolve(false);
+      }
+      seqWaiters.clear();
+    },
+  };
 }
