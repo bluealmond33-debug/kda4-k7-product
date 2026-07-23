@@ -293,7 +293,7 @@ export default function LiveDemo({
                   // 검은 스테이지 위라 밝은 계열로. 통화·대기는 무채색(25cad1d '통화중 무채색화'),
                   // 서버 미연결만 붉게 — 연출 상태가 아니라 고쳐야 할 오류라서 눈에 띄어야 한다.
                   "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 4px;color:" +
-                    (!vm.mobileServerConnected
+                    (vm.customerLiveMode && !vm.mobileServerConnected
                       ? "var(--red-400)"
                       : phoneActive
                       ? "var(--gray-200)"
@@ -303,14 +303,14 @@ export default function LiveDemo({
                 <span
                   style={css(
                     "width:7px;height:7px;border-radius:9999px;background:" +
-                      (!vm.mobileServerConnected
+                      (vm.customerLiveMode && !vm.mobileServerConnected
                         ? "var(--red-400)"
                         : phoneActive
                         ? "var(--gray-200);animation:recBlink 1.1s infinite"
                         : "var(--gray-500)")
                   )}
                 />
-                {!vm.mobileServerConnected ? "서버 연결 중" : phoneActive ? "통화 중" : "대기 중"}
+                {vm.customerLiveMode && !vm.mobileServerConnected ? "서버 연결 중" : phoneActive ? "통화 중" : "대기 중"}
               </span>
             </div>
           )}
@@ -342,6 +342,7 @@ export default function LiveDemo({
                 active={phoneActive}
                 self="customer"
                 height={compactCustomer ? 532 : 886}
+                width={432}
               />
             )}
             {/* 직원 분할 뷰 — 통화 연결 시 본체 왼쪽에 실시간 전사 패널.

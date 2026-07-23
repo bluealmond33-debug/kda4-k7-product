@@ -34,6 +34,7 @@ export default function LiveTranscriptPanel({
   active,
   self = "customer",
   height = 532,
+  width = 260,
 }: {
   stream: StreamItem[];
   active: boolean;
@@ -41,6 +42,8 @@ export default function LiveTranscriptPanel({
   self?: "customer" | "agent";
   /** 옆에 세우는 것(폰·콘솔)의 높이에 맞춘다 */
   height?: number;
+  /** 옆에 세우는 것(폰·콘솔)의 폭에 맞춘다 — 고객 클린 폰=432, 분할뷰=260 */
+  width?: number;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -115,7 +118,9 @@ export default function LiveTranscriptPanel({
   return (
     <div
       style={css(
-        "flex:none;width:260px;height:" +
+        "flex:none;width:" +
+          width +
+          "px;height:" +
           height +
           "px;display:flex;flex-direction:column;background:#0a0a0e;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden"
       )}

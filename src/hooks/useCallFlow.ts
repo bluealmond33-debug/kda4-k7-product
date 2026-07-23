@@ -271,6 +271,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const lineGap = config.lineGapMs ?? 2400;
   const surface = config.surface ?? "full";
   const isCustomerSurface = surface === "phone";
+  // 라이브 서버(실단말·중앙 call_id) 모드는 URL에 명시적 call_id가 있을 때만 켠다.
+  // call_id가 없으면 프런트 단독 로컬 데모로 폴백한다 — 서버·마이크 연결 없이 스크립트로.
+  const liveServerMode = EXPLICIT_LIVE_CALL_ID != null;
+  const customerLiveMode = isCustomerSurface && liveServerMode;
   // The counselor surface is the sole publisher of server-derived call events.
   // The customer still renders its direct STT stream, but does not create a
   // second envelope with a different ts/seq for the same transcript.
@@ -1406,6 +1410,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const pressCustomerDigit = useCallback(
     (digit: string) => {
+      // 로컬 데모(서버 없음)에선 키패드 입력을 조용히 무시 — 오류 배너 띄우지 않는다.
+      if (!customerLiveMode) return true;
       const sent = mobileArsRef.current?.pressDigit(digit) ?? false;
       if (!sent) {
         setMicErr("키패드 전송 채널이 준비되지 않았습니다. 연결 상태를 확인해 주세요.");
@@ -1417,17 +1423,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       }
       return true;
     },
-    [mobileAgentConnected, mobileIntakeComplete]
+    [customerLiveMode, mobileAgentConnected, mobileIntakeComplete]
   );
 
   useEffect(() => {
     if (isCustomerSurface) return;
-    if (!EXPLICIT_LIVE_CALL_ID) {
-      if (surface === "desktop") {
-        setMicErr("중앙 서버가 발급한 call_id가 필요합니다. 시작 스크립트에 표시된 상담사 URL을 열어 주세요.");
-      }
-      return;
-    }
+    // call_id 없음 = 프런트 단독 로컬 데모(서버 배너 없이). 실서버는 명시 call_id일 때만.
+    if (!EXPLICIT_LIVE_CALL_ID) return;
     const control = startArsControl(LIVE_CALL_ID, {
       onCallStart: (event) => beginRealCall(event.generation),
       onDigit: (event) => {
@@ -1488,10 +1490,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   useEffect(() => {
     if (!isCustomerSurface) return;
-    if (!EXPLICIT_LIVE_CALL_ID) {
-      setMicErr("중앙 서버가 발급한 call_id가 필요합니다. 시작 스크립트에 표시된 고객 URL을 열어 주세요.");
-      return;
-    }
+    // call_id 없음 = 프런트 단독 로컬 데모. 서버 연결·배너 없이 스크립트로 돈다.
+    if (!EXPLICIT_LIVE_CALL_ID) return;
     const control = startMobileArsControl(LIVE_CALL_ID, {
       onConnection: (connected) => {
         setMobileServerConnected(connected);
@@ -2165,9 +2165,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     submitAudio,
     reset: requestReset,
     jumpToStep,
-    startCall: isCustomerSurface ? requestCustomerStart : startCall,
+    startCall: customerLiveMode ? requestCustomerStart : startCall,
     answerCall,
-    endCall: isCustomerSurface ? requestCustomerEnd : endCall,
+    endCall: customerLiveMode ? requestCustomerEnd : endCall,
     skipWait,
     showSkip:
       (p === "recording" || p === "confirm") && !realCallActiveRef.current,
@@ -2214,6 +2214,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     dtmfPersisted: dtmfEvents.length === 0 || dtmfEvents.every((event) => event.persisted),
     arsMobileConnected,
     mobileServerConnected,
+    customerLiveMode,
     mobileIntakeComplete,
     mobileIntakePending,
     mobileAgentConnected,
