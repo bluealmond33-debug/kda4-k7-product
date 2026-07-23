@@ -153,9 +153,9 @@ SELECT
     c.chunk_id, c.doc_id, d.title, c.page, c.section, c.kind, c.raw,
     d.categories, d.version, d.effective_date,
     sem.dense,
-    ts_rank(c.tsv, plainto_tsquery('simple', %(q)s)) AS keyword,
+    ts_rank(c.tsv, websearch_to_tsquery('simple', %(q)s)) AS keyword,
     (%(wd)s * sem.dense
-     + %(wk)s * ts_rank(c.tsv, plainto_tsquery('simple', %(q)s))) AS score
+     + %(wk)s * ts_rank(c.tsv, websearch_to_tsquery('simple', %(q)s))) AS score
 FROM sem
 JOIN rag_chunks c USING (chunk_id)
 JOIN rag_documents d ON d.doc_id = c.doc_id

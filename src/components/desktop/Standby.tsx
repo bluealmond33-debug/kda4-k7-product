@@ -303,6 +303,7 @@ export default function Standby() {
                       return (
                         <div
                           key={i}
+                          className="hoverraise"
                           onClick={() => setReadSet((s) => new Set(s).add(i))}
                           style={css(
                             "display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-radius:8px;cursor:pointer;transition:opacity .25s,box-shadow .25s;" +
@@ -395,6 +396,7 @@ export default function Standby() {
                   return (
                     <div
                       key={i}
+                      className="hoverraise"
                       onClick={() =>
                         setWarmDone((s) => {
                           const next = new Set(s);
@@ -404,7 +406,7 @@ export default function Standby() {
                         })
                       }
                       style={css(
-                        "display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:8px;cursor:pointer;user-select:none;transition:background .2s;background:" +
+                        "display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:8px;cursor:pointer;user-select:none;transition:background .2s,box-shadow .28s;background:" +
                           (on ? "var(--gray-100)" : "var(--background-200)")
                       )}
                     >

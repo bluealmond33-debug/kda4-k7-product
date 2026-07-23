@@ -79,6 +79,16 @@ a:hover {
 .card:hover {
   box-shadow: var(--sh-hover, 0 2px 4px rgba(15, 18, 24, 0.12), 0 9px 20px -8px rgba(15, 18, 24, 0.22));
 }
+/* 호버 부상만 얹는 헬퍼 — .card 처럼 면·모서리·기본그림자를 관리하지 않고, 마우스가 올라간 카드형
+   요소에 '관심 신호' 그림자만 띄운다. 직원 콘솔(.card:hover)과 같은 감각을 다른 화면에도 준다. */
+.hoverraise {
+  transition: box-shadow 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hoverraise:hover {
+  /* !important — 이 요소들은 인라인으로 resting box-shadow(sh-near)를 갖는 경우가 있어
+     클래스 :hover 가 인라인에 밀리지 않도록 강제한다 */
+  box-shadow: var(--sh-hover, 0 2px 4px rgba(15, 18, 24, 0.12), 0 9px 20px -8px rgba(15, 18, 24, 0.22)) !important;
+}
 .sechd {
   /* 타입 래더 v2 Section — 실효 크기(×0.764) 기준으로 13px은 지각 하한 아래.
      700→600: 실효 10px대 한글에서 700은 뭉친다 */

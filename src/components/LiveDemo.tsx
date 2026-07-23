@@ -96,7 +96,11 @@ export default function LiveDemo({
 
   // 데모 투어링 — 시연·발표용 안내 레이어(src/tour, 분리 모듈).
   // pending = 시작 선택 전 · on = 투어 진행 · off = 자유 체험. 실제 제품에선 이 상태와 아래 마운트만 지우면 된다.
-  const [tourMode, setTourMode] = useState<"pending" | "on" | "off">("pending");
+  // 고객 폰 화면(phone)은 무대에서 키오스크처럼 혼자 돌아가야 하므로 안내 모달을 띄우지 않는다
+  // — 관제 화면과 같은 취급으로 바로 자유 체험(off)에서 시작한다.
+  const [tourMode, setTourMode] = useState<"pending" | "on" | "off">(
+    view === "phone" ? "off" : "pending"
+  );
   const [tourRun, setTourRun] = useState(0); // 재시작 키 — 알약 클릭 시 지금 화면 투어부터 다시
   const startTour = () => {
     setTourMode("on");
@@ -146,7 +150,15 @@ export default function LiveDemo({
           {/* 상단 제어 바 — 4단계 스테퍼 알약(시연용 리모컨). 번호를 누르면 그 단계 안내가 팝업으로 뜬다.
               고객 화면(phone)에선 데모 제어를 걷어내고 아래의 '상황 알약'으로 대체한다 */}
           {view !== "phone" && (
-          <div data-tour="topbar" style={css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)")}>
+          <div
+            data-tour="topbar"
+            style={{
+              ...css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)"),
+              // 분할 뷰 — 좌측 STT 패널(260)+간격(40)만큼 오른쪽으로 밀어 리모컨이 오른쪽 직원 화면 위에 정렬되게
+              marginLeft: view === "desktop" && deskSplit ? 300 : 0,
+              transition: view === "desktop" ? "margin-left .45s cubic-bezier(.2,.8,.2,1)" : undefined,
+            }}
+          >
             <div style={css("display:flex;align-items:center;gap:10px")}>
               {["대기", "접수", "준비", "통화", "후처리"].map((label, i) => {
                 const active = vm.stepIndex === i;
@@ -261,22 +273,11 @@ export default function LiveDemo({
                 {deskSplit ? "화면 키우기" : "고객 발화 보기"}
               </span>
             )}
-            <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
-              <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
+            {/* 초기화 — 아이콘만(바 혼잡 방지). 5초 건너뛰기 등과 겹칠 때 텍스트가 줄바꿈되던 문제 해소 */}
+            <span onClick={vm.reset} title="초기화" style={css("display:inline-flex;align-items:center;justify-content:center;width:33px;height:33px;background:var(--gray-100);border-radius:9999px;cursor:pointer;flex:none")}>
+              <span className="mi" style={css("font-size:18px;color:var(--gray-700)")}>restart_alt</span>
             </span>
-            {adminAvailable && (
-            <span
-              onClick={() => setAdminOpen((v) => !v)}
-              title="관리자 보기 — 부서별 실시간 대기열"
-              style={css(
-                "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;background:" +
-                  (adminOpen ? "var(--gray-1000)" : "var(--gray-100)") +
-                  ";color:" + (adminOpen ? "#fff" : "var(--gray-800)")
-              )}
-            >
-              <span className="mi" style={css("font-size:17px")}>monitoring</span>관리자
-            </span>
-            )}
+            {/* 관리자 버튼 제거 — 부서별 대기열은 관제 대시보드(?role=admin)에서 본다 */}
           </div>
           )}
 

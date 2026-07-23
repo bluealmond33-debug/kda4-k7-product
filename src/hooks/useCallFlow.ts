@@ -193,7 +193,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const [prepChecks, setPrepChecks] = useState<boolean[]>(Array(PREP_LEN).fill(true));
   const [verified, setVerified] = useState(false);
-  const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("birth");
   const [authInput, setAuthInput] = useState("");
   const [authErr, setAuthErr] = useState(false);
   const [authErrMsg, setAuthErrMsg] = useState("");
@@ -823,14 +823,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const onAuthInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       // 숫자만, 방식별 자릿수까지만 — 4자리 칸에는 4자리만 들어간다
-      const max = authMethod === "birth" ? 6 : 4;
+      const max = authMethod === "birth" ? 8 : 4;
       setAuthInput(e.target.value.replace(/\D/g, "").slice(0, max));
       setAuthErr(false);
     },
     [authMethod]
   );
   const runVerify = useCallback(async () => {
-    const need = authMethod === "birth" ? 6 : 4;
+    const need = authMethod === "birth" ? 8 : 4;
     const digits = (authInput || "").replace(/\D/g, "");
     if (digits.length < need) {
       setAuthErrMsg(`자릿수가 부족합니다 — ${need}자리를 입력하세요`);
@@ -1246,6 +1246,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepCustomerLine: `발신 ${CUSTOMER.phoneMasked} · 음성 접수`,
     prepRoutingTitle: card.department || "담당 부서 분석 중",
     prepRoutingReason: card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
+    // 라우팅 메타 — 카드가 '자동 라우팅되어 온 것'임을 어필: 부서(2층)·SGE(1층)·업무유형(3층)
+    prepSge: deriveSge(card.incident_risk, card.department, incoming),
+    prepBusinessType: card.business_type || "업무 유형 분석 중",
     prepEmotionLabel:
       temperature.status === "unavailable"
         ? "모델 미연동"
@@ -1331,10 +1334,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     authTime,
     authMethodLabel,
     // 자릿수 = 입력 상자 개수 — 마스킹된 전체 번호는 보여주지 않는다(최소 표시 원칙, 필요한 칸만)
-    authMaxLen: authMethod === "birth" ? 6 : 4,
+    authMaxLen: authMethod === "birth" ? 8 : 4,
     // 지금 물어야 할 값 — 안내 문구가 대조 방식을 따라간다
     authAskLabel:
-      authMethod === "birth" ? "생년월일 6자리 (YYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
+      authMethod === "birth" ? "생년월일 8자리 (YYYYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
     steps: SCRIPTS[incoming].map((st) => ({ title: st.title, text: st.text })),
     firstLine: SCRIPTS[incoming][0].text,
