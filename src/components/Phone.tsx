@@ -93,16 +93,16 @@ export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: b
       data-tour="phone"
       style={css(
         "flex:none;position:relative;width:" +
-          (clean ? "432px" : "260px") +
+          (clean ? "400px" : "260px") +
           ";height:" +
-          (clean ? "886px" : "532px")
+          (clean ? "820px" : "532px")
       )}
     >
       <div
         className="sf"
         style={css(
           "width:432px;height:886px;transform:scale(" +
-            (clean ? "1" : ".6") +
+            (clean ? "0.9259" : ".6") +
             ");transform-origin:top left;position:relative;filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))"
         )}
       >

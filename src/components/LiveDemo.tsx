@@ -51,12 +51,12 @@ export default function LiveDemo({
     ...(view === "phone"
       ? compactCustomer
         ? { stageW: 432, maxScale: 1, fitPad: 16, fitHeight: false }
-        : { stageW: 904, maxScale: 1.6 } // 폰 432 + 간격 40 + 패널 432 = 904 (가로 나란히)
+        : { stageW: 840, maxScale: 1.7 } // 폰 400 + 간격 40 + 패널 400 = 840 (가로 나란히)
       : null),
     // 직원 단독 화면 — 가로·세로 모두 뷰포트에 맞춘다(fitHeight 기본 true).
     // 가로만 맞추면(fitHeight:false) 낮은 창에서 하단이 잘린다 — 33115b3에서 고친 부분이라 유지.
     // 분할 뷰에선 좌측 STT 패널(260) + 간격(40)만큼 넓어져 본체가 상대적으로 작아진다.
-    ...(view === "desktop" ? { stageW: deskSplit ? 1400 : 1100, maxScale: 3, fitPad: 24 } : null),
+    ...(view === "desktop" ? { stageW: deskSplit ? 1540 : 1100, maxScale: 3, fitPad: 24 } : null),
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
   // Galaxy는 자신의 /ws/call 스트림을 직접 그린다. 상담사 화면이 늦게
@@ -153,7 +153,7 @@ export default function LiveDemo({
             style={{
               ...css("display:flex;align-items:center;gap:14px;background:var(--onair-surface);border-radius:9999px;padding:10px 12px 10px 24px;box-shadow:0 10px 34px rgba(0,0,0,.28)"),
               // 분할 뷰 — 좌측 STT 패널(260)+간격(40)만큼 오른쪽으로 밀어 리모컨이 오른쪽 직원 화면 위에 정렬되게
-              marginLeft: view === "desktop" && deskSplit ? 300 : 0,
+              marginLeft: view === "desktop" && deskSplit ? 440 : 0,
               transition: view === "desktop" ? "margin-left .45s cubic-bezier(.2,.8,.2,1)" : undefined,
             }}
           >
@@ -306,8 +306,8 @@ export default function LiveDemo({
                 stream={phoneLines}
                 active={phoneActive}
                 self="customer"
-                height={compactCustomer ? 532 : 886}
-                width={432}
+                height={compactCustomer ? 532 : 820}
+                width={400}
               />
             )}
             {/* 직원 분할 뷰 — 통화 연결 시 본체 왼쪽에 실시간 전사 패널.
@@ -318,7 +318,7 @@ export default function LiveDemo({
               <div
                 style={{
                   overflow: "hidden",
-                  maxWidth: deskSplit ? 300 : 0,
+                  maxWidth: deskSplit ? 400 : 0,
                   opacity: deskSplit ? 1 : 0,
                   marginRight: deskSplit ? 0 : -40,
                   transform: deskSplit ? "translateX(0)" : "translateX(-28px)",
@@ -333,6 +333,7 @@ export default function LiveDemo({
                   active={phoneActive}
                   self="agent"
                   height={688}
+                  width={400}
                 />
               </div>
             )}
