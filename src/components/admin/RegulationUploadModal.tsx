@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
+import Spinner from "../Spinner";
 import {
   uploadRegulationPdf,
   type RegulationUploadResult,
@@ -144,7 +145,7 @@ export default function RegulationUploadModal({
           {phase.kind === "busy" && (
             <div style={css("display:flex;flex-direction:column;gap:12px;padding:6px 2px")}>
               <div style={css("display:flex;align-items:center;gap:9px")}>
-                <span className="mi" style={css("font-size:18px;color:var(--blue-700);animation:spin 1.2s linear infinite")}>progress_activity</span>
+                <Spinner size={18} speedMs={800} />
                 <span style={css("font:700 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{phase.filename}</span>
                 <span style={css("font:400 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>처리 중 — 문서 크기에 따라 수십 초</span>
               </div>

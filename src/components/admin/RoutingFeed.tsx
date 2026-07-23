@@ -1,4 +1,5 @@
 import { css } from "../../lib/css";
+import Spinner from "../Spinner";
 import { SGE_META } from "../../services";
 import { playTestCall } from "../../services/adminScenario";
 import { PIPELINE_NODES } from "../../data/adminContent";
@@ -167,7 +168,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
     return (
       <div style={css("position:relative;border-radius:12px;background:var(--background-200);box-shadow:var(--sh-focus);padding:14px 16px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
         <div style={css("display:flex;align-items:center;gap:9px")}>
-          <span className="mi" style={css("font-size:16px;color:var(--blue-700);animation:spin 1.2s linear infinite")}>progress_activity</span>
+          <Spinner size={16} speedMs={800} />
           <span style={css("font:700 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>분류 중…</span>
           <div style={css("flex:1")} />
           <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>

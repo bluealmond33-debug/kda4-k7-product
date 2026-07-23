@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
+import Spinner from "../Spinner";
 import DesktopShell from "./DesktopShell";
 
 /** 1b — 통화 종료 · 후처리 바텀 시트.
@@ -74,7 +75,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
         {/* 본문 — summarizing 동안엔 스피너, 준비되면 콘텐츠 */}
         {vm.wrapLoading ? (
           <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px")}>
-            <span style={css("width:42px;height:42px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
+            <Spinner size={46} mark />
             <div style={css("font:600 18px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>통화 내용을 요약하고 있습니다…</div>
             <div style={css("font:400 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>녹취와 상담원 메모를 바탕으로 후처리 초안을 작성 중입니다</div>
           </div>

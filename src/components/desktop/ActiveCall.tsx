@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
 import { highlight } from "../../lib/highlight";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
+import Spinner from "../Spinner";
 import { AGENT } from "../../data/demoContent";
 import { SGE_META } from "../../services/sge";
 import DesktopShell from "./DesktopShell";
@@ -725,7 +726,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}
                 />
                 {vm.semLoading ? (
-                  <span style={css("width:14px;height:14px;flex:none;border:2px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .7s linear infinite")} />
+                  <Spinner size={15} speedMs={750} />
                 ) : vm.regSearch ? (
                   <span className="mi" onClick={vm.clearRegSearch} style={css("font-size:15px;color:var(--gray-500);cursor:pointer;flex:none")}>close</span>
                 ) : null}
@@ -962,7 +963,7 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
       <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
         {!doc ? (
           <div style={css("padding:40px 0;display:flex;justify-content:center")}>
-            <span style={css("width:26px;height:26px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
+            <Spinner size={26} />
           </div>
         ) : (
           <div style={css("display:flex;flex-direction:column")}>
@@ -1042,7 +1043,7 @@ function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
       <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
         {vm.semLoading && vm.semHits.length === 0 ? (
           <div style={css("padding:40px 0;display:flex;flex-direction:column;align-items:center;gap:12px")}>
-            <span style={css("width:26px;height:26px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
+            <Spinner size={26} />
             <span style={css("font:400 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>규정에서 검색 중…</span>
           </div>
         ) : vm.semHits.length === 0 ? (
