@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Bell, CalendarClock, GraduationCap, History, PhoneIncoming } from "lucide-react";
+import { Bell, CalendarClock, GraduationCap, History } from "lucide-react";
 import { css } from "../../lib/css";
+import LedClock from "./LedClock";
 import { highlight } from "../../lib/highlight";
 import { AGENT, SHEETS } from "../../data/demoContent";
 
@@ -196,11 +197,8 @@ export default function Standby() {
           </div>
           {!onBreak && !view && (
             <>
-              {/* 운영 정보 — 램프가 상태를 말하니 여기는 숫자만 작게 */}
+              {/* 개인 일정만 — 대기열(집계)은 관리자 콘솔 몫, 여기는 내 다음 콜백만 남긴다 */}
               <div style={css("display:flex;align-items:center;gap:6px;font:500 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-                <PhoneIncoming size={12} color="var(--gray-500)" strokeWidth={2} />
-                대기열 <span className="bignum" style={css("font-size:11.5px;color:var(--gray-800)")}>0</span>건
-                <span style={css("width:1px;height:10px;background:var(--gray-300)")} />
                 <CalendarClock size={12} color="var(--gray-500)" strokeWidth={2} />
                 다음 콜백 <span className="bignum" style={css("font-size:11.5px;color:var(--gray-800)")}>11:00</span>
               </div>
@@ -503,17 +501,8 @@ export default function Standby() {
         <div style={css("flex:1;min-height:0")}>
           {/* 시계 — 헤더 아래 영역이 아니라 화면(루트) 전체 기준 정중앙 (루트가 position:relative) */}
           <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none")}>
-            <div style={css("display:flex;align-items:center;transition:opacity .3s" + (onBreak ? ";opacity:.55" : ""))}>
-              <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{hh}</span>
-              <span style={css("display:flex;flex-direction:column;gap:30px;margin:0 26px")}>
-                <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
-                <span style={css("width:15px;height:15px;border-radius:9999px;background:var(--gray-500)")} />
-              </span>
-              <span className="clocknum" style={css("font-size:200px;color:var(--gray-1000)")}>{mm}</span>
-              <span style={css("margin-left:22px;background:var(--gray-100);border-radius:8px;padding:9px 13px")}>
-                <span className="clocknum" style={css("font-size:27px;color:var(--gray-800)")}>{ss}</span>
-              </span>
-            </div>
+            {/* 실물 LED 디지털 시계 — 요일·실시간 기온까지 (LedClock) */}
+            <LedClock dimmed={onBreak} />
             {onBreak && (
               <>
                 <div style={css("margin-top:18px;display:flex;align-items:center;gap:8px;font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
@@ -523,10 +512,10 @@ export default function Standby() {
                 <span
                   onClick={() => setOnBreak(false)}
                   style={css(
-                    "margin-top:22px;display:inline-flex;align-items:center;gap:7px;padding:12px 26px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 14px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus);pointer-events:auto"
+                    "margin-top:16px;display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus);pointer-events:auto"
                   )}
                 >
-                  <span className="mi" style={css("font-size:19px")}>play_arrow</span>복귀하기
+                  <span className="mi" style={css("font-size:15px")}>play_arrow</span>복귀하기
                 </span>
               </>
             )}

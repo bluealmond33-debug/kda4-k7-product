@@ -15,7 +15,6 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
   const PEEK = 56;
   // 마운트 직후 한 프레임은 내려간 상태 → 다음 프레임에 올라온다 (등장이 항상 아래에서 위로)
   const [entered, setEntered] = useState(false);
-  const [sourcesOpen, setSourcesOpen] = useState(false); // 출처(재료) 접이식 — 기본 접힘
   useEffect(() => {
     const raf = requestAnimationFrame(() => setEntered(true));
     return () => cancelAnimationFrame(raf);
@@ -98,54 +97,47 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
 
-              {/* 우 = 초안이 주인공. 재료는 위 접이식 '출처' 바에 숨어 있다 */}
+              {/* 우 = 녹취(재생)·메모가 재료, 아래에 초안. 녹취는 실제 녹음을 재생·표시하므로 상시 노출·크게 */}
               <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:10px")}>
-                {/* 출처 바 — 기본 접힘. 펼치면 음성·메모(편집 가능)가 드러난다 */}
-                <div style={css("flex:none;background:var(--gray-100);border-radius:8px")}>
-                  <div
-                    onClick={() => setSourcesOpen((v) => !v)}
-                    style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;user-select:none")}
-                  >
-                    <span className="mi" style={css("font-size:15px;color:var(--gray-600)")}>graphic_eq</span>
-                    <span className="mi" style={css("font-size:15px;color:var(--gray-600)")}>edit_note</span>
-                    <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
-                      출처 — 음성 녹취 + 메모 {vm.memoItems.length}건으로 작성됨
-                    </span>
-                    <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500);margin-left:auto")}>
-                      {sourcesOpen ? "접기" : "펼쳐 보기"}
-                    </span>
-                    <span className="mi" style={css("font-size:18px;color:var(--gray-500);transition:transform .25s var(--ease-drawer);transform:rotate(" + (sourcesOpen ? 180 : 0) + "deg)")}>expand_more</span>
+                {/* 재료 — 좌: 음성 녹취(재생바 + 전사, 크게) · 우: 상담원 메모. flex:none, 넉넉한 높이라 아래 초안이 짧아진다 */}
+                <div style={css("flex:none;display:flex;gap:10px")}>
+                  {/* 음성 녹취 — 실제 녹음 파일 재생 + 전사 텍스트 */}
+                  <div style={css("flex:1.4;background:var(--gray-100);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:8px")}>
+                    <div style={css("display:flex;align-items:center;gap:5px")}>
+                      <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
+                      <span style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>음성 녹취</span>
+                      <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 통화 {vm.clockStr}</span>
+                    </div>
+                    {/* 재생바 — 실제 녹음 파일을 public/demo/recording.mp3 에 넣으면 그대로 재생된다(발표 시 실녹취 교체) */}
+                    <audio
+                      controls
+                      preload="none"
+                      src="/demo/recording.mp3"
+                      style={{ width: "100%", height: 34 }}
+                    />
+                    {/* 전사(STT) — 넉넉한 높이로 통화 내용을 그대로 보여준다 */}
+                    <div style={css("flex:none;font:400 12.5px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);background:var(--onair-surface);border-radius:6px;padding:9px 11px;height:96px;overflow:auto")}>{vm.wrapSummaryDefault}</div>
                   </div>
-                  {/* max-height 애니메이션 — grid-fr은 중첩 flex에서 콘텐츠가 눌린다(알약과 같은 교훈) */}
-                  <div style={css("overflow:hidden;transition:max-height .3s var(--ease-drawer),opacity .25s;max-height:" + (sourcesOpen ? "140px" : "0px") + ";opacity:" + (sourcesOpen ? "1" : "0"))}>
-                    <div>
-                      <div style={css("display:flex;gap:10px;padding:0 14px 12px")}>
-                        <div style={css("flex:1.3;background:var(--onair-surface);border-radius:8px;padding:10px 12px")}>
-                          <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:5px")}>🎙 음성 녹취 · 통화 {vm.clockStr}</div>
-                          <div style={css("font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900);max-height:52px;overflow:auto")}>{vm.wrapSummaryDefault}</div>
+                  {/* 상담원 메모 */}
+                  <div style={css("flex:1;background:var(--gray-100);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column")}>
+                    <div style={css("font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:7px")}>✎ 상담원 메모 · {vm.memoItems.length}건</div>
+                    <div style={css("flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:3px")}>
+                      {vm.memoItems.map((m, i) => (
+                        <div key={i} style={css("display:flex;gap:5px;align-items:baseline")}>
+                          <span style={css("color:var(--blue-700);font-weight:700;flex:none;font-size:11px")}>•</span>
+                          <span style={css("font:400 12px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{m}</span>
                         </div>
-                        <div style={css("flex:1;background:var(--onair-surface);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column")}>
-                          <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:5px")}>✎ 상담원 메모 · {vm.memoItems.length}건</div>
-                          <div style={css("flex:1;max-height:34px;overflow:auto;display:flex;flex-direction:column;gap:2px")}>
-                            {vm.memoItems.map((m, i) => (
-                              <div key={i} style={css("display:flex;gap:5px;align-items:baseline")}>
-                                <span style={css("color:var(--blue-700);font-weight:700;flex:none;font-size:11px")}>•</span>
-                                <span style={css("font:400 12px/1.4 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{m}</span>
-                              </div>
-                            ))}
-                            {vm.memoEmpty && <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>작성한 메모가 없습니다</span>}
-                          </div>
-                          <div style={css("flex:none;display:flex;align-items:center;gap:6px;margin-top:5px;background:var(--gray-100);border-radius:9999px;padding:5px 10px")}>
-                            <span style={css("color:var(--blue-700);font-weight:700;font-size:12px")}>•</span>
-                            <input value={vm.memoDraft} onChange={vm.onMemoDraft} onKeyDown={vm.onMemoKey} placeholder="메모 추가 후 Enter" style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")} />
-                          </div>
-                        </div>
-                      </div>
+                      ))}
+                      {vm.memoEmpty && <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>작성한 메모가 없습니다</span>}
+                    </div>
+                    <div style={css("flex:none;display:flex;align-items:center;gap:6px;margin-top:7px;background:var(--onair-surface);border-radius:9999px;padding:6px 11px")}>
+                      <span style={css("color:var(--blue-700);font-weight:700;font-size:12px")}>•</span>
+                      <input value={vm.memoDraft} onChange={vm.onMemoDraft} onKeyDown={vm.onMemoKey} placeholder="메모 추가 후 Enter" style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")} />
                     </div>
                   </div>
                 </div>
 
-                {/* 최종 초안 = 히어로. 시트 높이 대부분을 차지한다 */}
+                {/* 최종 초안 — 재료 아래. 녹취 블록이 커진 만큼 높이는 짧아진다 */}
                 <div style={css("flex:1;display:flex;flex-direction:column;min-height:0")}>
                   <div style={css("display:flex;justify-content:space-between;align-items:center;margin-bottom:6px")}>
                     <span style={css("font:700 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>

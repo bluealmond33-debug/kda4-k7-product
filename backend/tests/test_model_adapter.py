@@ -57,7 +57,7 @@ def test_financial_model_loan_labels_map_to_canonical_contract() -> None:
         }
     )
     assert result.business_type == "주택담보대출 만기 연장"
-    assert result.department == "대출 및 금융상담"
+    assert result.department == "여신·대출"
     assert result.incident_risk.value == "low"
     assert result.risk_reason is None
     assert result.routing_confidence == 0.95
@@ -72,7 +72,7 @@ def test_financial_model_fraud_labels_create_evidence_based_high_risk() -> None:
             "qa_topic": "무단 계좌 개설",
         }
     )
-    assert result.department == "금융사기"
+    assert result.department == "사고·신고"
     assert result.incident_risk.value == "high"
     assert "명의도용" in (result.risk_reason or "")
     assert "지급정지" in (result.risk_reason or "")
@@ -94,4 +94,4 @@ def test_financial_model_unmapped_labels_are_not_guessed() -> None:
 def test_postprocessing_rules_are_versioned() -> None:
     rules = load_postprocessing_rules()
     assert rules["mapping_version"] == "mvp-1.0"
-    assert len(rules["department_rules"]) == 6
+    assert len(rules["department_rules"]) == 8

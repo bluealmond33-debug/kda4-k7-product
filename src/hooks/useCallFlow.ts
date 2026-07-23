@@ -35,11 +35,21 @@ import {
   getDemoConsultationCard,
   parseEmotionSource,
   emotionSourceBadge,
+  demoBus,
+  deriveSge,
   type CallSummary,
   type ConsultationCardResponse,
   type TranscriptChunk,
   type SttSession,
 } from "../services";
+import {
+  searchRegulations,
+  fetchRegulationDocument,
+  type RegulationDoc,
+  categoryForDepartment,
+  semanticSearchEnabled,
+  type RegulationHit,
+} from "../services/regulationSearch";
 
 export type Phase =
   | "idle"
@@ -62,6 +72,14 @@ export interface CallFlowConfig {
   silenceSec2?: number;
   /** Gap between scripted transcript lines (ms). */
   lineGapMs?: number;
+  /** 스테이지 기준 폭(px). 기본 1420(합본). 고객 화면처럼 콘텐츠가 좁은 뷰는 줄인다. */
+  stageW?: number;
+  /** 스케일 상한. 기본 1(축소만). 좁은 스테이지는 >1로 화면을 채워 여백을 없앤다. */
+  maxScale?: number;
+  /** 스테이지 좌우 여백(px). 0이면 가로를 꽉 채운다. */
+  fitPad?: number;
+  /** false면 세로 캡 없이 가로 기준으로만 스케일(세로는 스크롤). */
+  fitHeight?: boolean;
 }
 
 const STAGE_W = 1420;
@@ -90,9 +108,6 @@ const GLASS: Partial<Record<Phase, string>> = {
   confirm: "더 말씀하실 내용이 있으신가요?",
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
-/* 유의사항은 콜 유형별 — 카드·스크립트·규정과 같은 사건을 말해야 한다.
-   (구: 모든 콜에 동일한 고정 4개 → 주담대 콜에 '착오송금 반환 표현 금지'가 뜨는 자기모순)
-   실서비스에선 상담카드+관련 규정에서 AI가 콜마다 생성하는 자리다. */
 const PREP_LEN = 4;
 const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
   normal: [
@@ -132,6 +147,7 @@ const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
     },
   ],
 };
+
 
 // 화면별 데모 안내(투어링)는 src/tour 로 분리 — 시연 전용 레이어라 훅에 두지 않는다.
 
@@ -175,7 +191,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [micErr, setMicErr] = useState("");
   const [audioBusy, setAudioBusy] = useState(false);
 
-  const [prepChecks, setPrepChecks] = useState<boolean[]>(Array(PREP_LEN).fill(false));
+  const [prepChecks, setPrepChecks] = useState<boolean[]>(Array(PREP_LEN).fill(true));
   const [verified, setVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
@@ -205,6 +221,23 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [manualData, setManualData] = useState<SheetData | null>(null);
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
+  // 실제 규정 원문 열람 — 검색 히트를 클릭하면 그 문서의 청크 전체가 시트로 열린다
+  const [regDoc, setRegDoc] = useState<RegulationDoc | null>(null);
+  const [regDocChunk, setRegDocChunk] = useState<string | null>(null);
+  const [regDocLoading, setRegDocLoading] = useState(false);
+  const openRegDocReal = useCallback((docId: string, chunkId?: string) => {
+    setRegExpanded(true);
+    setRegTargetRow(null);
+    setRegDocChunk(chunkId ?? null);
+    setRegDocLoading(true);
+    void fetchRegulationDocument(docId)
+      .then((doc) => setRegDoc(doc))
+      .finally(() => setRegDocLoading(false));
+  }, []);
+  // 의미 검색(2단 검색의 2단째) — 로컬 시트 필터는 0ms 즉시, 시맨틱은 디바운스 후
+  // 백엔드 pgvector 하이브리드(/api/v1/regulations/search)가 규정 원문 청크를 더한다
+  const [semHits, setSemHits] = useState<RegulationHit[]>([]);
+  const [semLoading, setSemLoading] = useState(false);
 
 
   // 관리자 대기열에 데모로 추가된 인입 — 폰 '통화 추가' 버튼이 랜덤으로 밀어넣는다
@@ -249,6 +282,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const transcript = useRef<TranscriptChunk[]>([]);
   const phaseRef = useRef<Phase>("idle");
   phaseRef.current = phase;
+  // 데모 이벤트 버스용 참조 — 타이머(비동기) 콜백이 최신 카드·콜 유형·이관 상태를 읽는다
+  const respRef = useRef<ConsultationCardResponse>(consultationResponse);
+  respRef.current = consultationResponse;
+  const incomingRef = useRef<IncomingKind>("normal");
+  incomingRef.current = incoming;
+  const transferRef = useRef<{ reserved: boolean; target: string | null }>({
+    reserved: false,
+    target: null,
+  });
+  transferRef.current = { reserved: transferReserved, target: transferTarget };
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -287,6 +330,64 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     if (clockT.current) return;
     clockT.current = window.setInterval(() => setClock((c) => c + 1), 1000);
   }, []);
+
+  // 분류 파이프라인 이벤트 연출 — 관리자 대시보드(?role=admin)가 구독한다.
+  // 실제 처리(픽스처)는 즉시 끝나므로 스테이지 진행을 step 간격으로 흘린다.
+  // 여기서는 emit만 한다 — 통화 상태 로직에는 일절 관여하지 않는다.
+  const emitCardPipeline = useCallback(
+    (source: "demo" | "backend", step = 700) => {
+      const callId = respRef.current.call_id;
+      demoBus.emit("pipeline.stage", { callId, stage: "stt", status: "done" });
+      demoBus.emit("pipeline.stage", { callId, stage: "classify", status: "start" });
+      after(step, () => {
+        demoBus.emit("pipeline.stage", { callId, stage: "classify", status: "done" });
+        demoBus.emit("pipeline.stage", { callId, stage: "risk", status: "start" });
+      });
+      after(step * 2, () => {
+        demoBus.emit("pipeline.stage", { callId, stage: "risk", status: "done" });
+        demoBus.emit("pipeline.stage", { callId, stage: "persist", status: "start" });
+      });
+      after(step * 3, () => {
+        const { consultation_card: card } = respRef.current;
+        demoBus.emit("pipeline.stage", {
+          callId,
+          stage: "persist",
+          status: "done",
+          detail: "mvp-1.0 카드 저장",
+        });
+        demoBus.emit("card.created", {
+          callId,
+          summary: card.summary,
+          businessType: card.business_type,
+          department: card.department,
+          routingReason: card.routing_reason,
+          incidentRisk: card.incident_risk,
+          riskReason: card.risk_reason,
+          confidence: card.routing_confidence,
+          emotionLevel: card.emotion.level,
+          source,
+        });
+        demoBus.emit("pipeline.stage", { callId, stage: "route", status: "start" });
+      });
+      after(step * 4, () => {
+        const { consultation_card: card } = respRef.current;
+        demoBus.emit("pipeline.stage", {
+          callId,
+          stage: "route",
+          status: "done",
+          detail: card.department,
+        });
+        demoBus.emit("routing.assigned", {
+          callId,
+          department: card.department,
+          sge: deriveSge(card.incident_risk, card.department, incomingRef.current),
+          confidence: card.routing_confidence,
+          risk: card.incident_risk,
+        });
+      });
+    },
+    [after]
+  );
 
   // ── silence detection (drives confirm → summary) ──
   const runSummary = useCallback(async () => {
@@ -371,9 +472,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       stt.current = null;
     }
     setPhase("prep");
-    setPrepChecks(Array(PREP_LEN).fill(false));
+    setPrepChecks(Array(PREP_LEN).fill(true));
     void runSummary();
-  }, [runSummary]);
+    emitCardPipeline("demo");
+  }, [emitCardPipeline, runSummary]);
 
   const armFirst = useCallback(() => {
     silStage.current = "first";
@@ -412,6 +514,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       onTranscript: (t) => {
         transcript.current.push({ text: t.text, at: t.at ?? 0, isFinal: true });
         setLiveCaption(t.text);
+        demoBus.emit("stt.utterance", {
+          callId: respRef.current.call_id,
+          text: t.text,
+          isFinal: true,
+          atMs: t.at ?? 0,
+        });
       },
       onLevel: (l) => setMicLevel(l),
     })
@@ -422,7 +530,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       .catch(() => {
         setMicActive(false);
         stt.current = startSttSession(
-          { onChunk: (c) => transcript.current.push(c) },
+          {
+            onChunk: (c) => {
+              transcript.current.push(c);
+              demoBus.emit("stt.utterance", {
+                callId: respRef.current.call_id,
+                text: c.text,
+                isFinal: c.isFinal,
+                atMs: c.at,
+              });
+            },
+          },
           lineGap
         );
       });
@@ -432,24 +550,39 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setPhase("recording");
     silStage.current = null;
     silT.current = window.setInterval(silTick, 200);
+    demoBus.emit("pipeline.stage", {
+      callId: respRef.current.call_id,
+      stage: "utterance",
+      status: "done",
+    });
+    demoBus.emit("pipeline.stage", {
+      callId: respRef.current.call_id,
+      stage: "stt",
+      status: "start",
+    });
     runScript(); // mic is simulation-only for this demo
   }, [runScript, silTick]);
 
   // ── public actions ──
-  const incomingRef = useRef<IncomingKind>("normal");
-  incomingRef.current = incoming;
-
   const startCall = useCallback(() => {
     clearAll();
     // 인입 유형에 맞는 상담카드 픽스처 선택 (데모)
     const kind = incomingRef.current;
-    setConsultationResponse(
+    const resp =
       kind === "urgent"
         ? (structuredClone(URGENT_RESPONSE) as unknown as ConsultationCardResponse)
         : kind === "transfer"
         ? (structuredClone(TRANSFER_RESPONSE) as unknown as ConsultationCardResponse)
-        : getDemoConsultationCard()
-    );
+        : getDemoConsultationCard();
+    setConsultationResponse(resp);
+    // 리렌더 전에 타이머 콜백이 읽을 수 있도록 ref는 즉시 동기화
+    respRef.current = resp;
+    demoBus.emit("call.incoming", { callId: resp.call_id, kind });
+    demoBus.emit("pipeline.stage", {
+      callId: resp.call_id,
+      stage: "utterance",
+      status: "start",
+    });
     // 후처리 프리셋도 콜 유형에 맞춰 채운다 — 상담 유형·결과·후속조치가 통화 내용과 어긋나지 않게
     const wrap = WRAP_DEFAULTS[kind];
     setWrapType(wrap.type);
@@ -482,6 +615,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const answerCall = useCallback(() => {
     if (prepChecks.every(Boolean)) {
       setPhase("active");
+      // 통화 연결과 동시에 우측 규정 추천이 뜬다 — RAG 스테이지도 같은 시점에 점등
+      demoBus.emit("pipeline.stage", {
+        callId: respRef.current.call_id,
+        stage: "rag",
+        status: "start",
+      });
+      after(1200, () =>
+        demoBus.emit("pipeline.stage", {
+          callId: respRef.current.call_id,
+          stage: "rag",
+          status: "done",
+          detail: "규정 2건 추천",
+        })
+      );
       // 상담이 진행되며 고객이 진정되는 흐름 — 감정온도가 살아있는 신호임을 보여준다
       after(20000, () =>
         setEmoDrift({ score: 22, level: "stable", reason: "상담 진행 후 안정 — 응대 톤 유지" })
@@ -491,6 +638,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const reset = useCallback(() => {
     clearAll();
+    demoBus.emit("demo.reset", {});
     setPhase("idle");
     setClock(0);
     setEmo(0);
@@ -517,13 +665,91 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setIncoming("normal");
   }, [clearAll]);
 
+  // 시연 내비게이션 — 상단 알약의 단계(접수·준비·통화·후처리)를 누르면 그 화면으로 바로 점프.
+  // 접수는 실제 흐름(전화 연결)을 타고, 준비/통화/후처리는 콜 유형 픽스처로 상태를 정합하게 세팅한다.
+  const jumpToStep = useCallback(
+    (n: number) => {
+      if (n <= 0) {
+        reset();
+        return;
+      }
+      if (n === 1) {
+        reset();
+        startCall();
+        return;
+      }
+      clearAll();
+      const kind = incomingRef.current;
+      const resp =
+        kind === "urgent"
+          ? (structuredClone(URGENT_RESPONSE) as unknown as ConsultationCardResponse)
+          : kind === "transfer"
+          ? (structuredClone(TRANSFER_RESPONSE) as unknown as ConsultationCardResponse)
+          : getDemoConsultationCard();
+      setConsultationResponse(resp);
+      respRef.current = resp;
+      const wrap = WRAP_DEFAULTS[kind];
+      setWrapType(wrap.type);
+      setWrapResult(wrap.result);
+      setFollowups(wrap.followups);
+      setTransferReserved(false);
+      setEmoDrift(null);
+      setMicErr("");
+      setEmo(0);
+      setSilenceLeft(0);
+      setVerified(false);
+      setAuthInput("");
+      startClock();
+      if (n === 2) {
+        setPrepChecks(Array(PREP_LEN).fill(true));
+        setWrapSheetOpen(false);
+        setPhase("prep");
+      } else if (n === 3) {
+        setPrepChecks(Array(PREP_LEN).fill(true)); // 유의사항 확인을 거친 상태로 진입
+        setWrapSheetOpen(false);
+        setPhase("active");
+      } else {
+        setPrepChecks(Array(PREP_LEN).fill(true));
+        setWrapSheetOpen(true);
+        setPhase("wrap");
+      }
+    },
+    [clearAll, reset, startCall, startClock]
+  );
+
   const endCall = useCallback(() => {
     if (phaseRef.current === "active") {
       clearAll();
       setPhase("summarizing");
       // 종료와 동시에 후처리 시트가 자동으로 올라온다 — 통화→후처리는 한 흐름
       setWrapSheetOpen(true);
-      after(3600, () => setPhase("wrap"));
+      demoBus.emit("pipeline.stage", {
+        callId: respRef.current.call_id,
+        stage: "wrap",
+        status: "start",
+      });
+      after(3600, () => {
+        setPhase("wrap");
+        const callId = respRef.current.call_id;
+        const preset = WRAP_DEFAULTS[incomingRef.current];
+        demoBus.emit("pipeline.stage", {
+          callId,
+          stage: "wrap",
+          status: "done",
+          detail: "후처리 초안 자동 작성",
+        });
+        demoBus.emit("call.ended", {
+          callId,
+          wrapType: preset.type,
+          wrapResult: preset.result,
+        });
+        if (transferRef.current.reserved) {
+          demoBus.emit("transfer.completed", {
+            callId,
+            toDept: transferRef.current.target ?? SUGGESTED_DEPT[incomingRef.current],
+          });
+        }
+      });
     } else {
       reset();
     }
@@ -555,12 +781,27 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       try {
         const response = await createConsultationFromAudio(file);
         setConsultationResponse(response);
+        respRef.current = response;
         transcript.current = [
           { text: response.transcript.text, at: 0, isFinal: true },
         ];
+        // 실백엔드 경로 — 같은 이벤트 열을 압축 발행 (source: backend)
+        demoBus.emit("call.incoming", { callId: response.call_id, kind: "normal" });
+        demoBus.emit("pipeline.stage", {
+          callId: response.call_id,
+          stage: "utterance",
+          status: "done",
+        });
+        demoBus.emit("stt.utterance", {
+          callId: response.call_id,
+          text: response.transcript.text,
+          isFinal: true,
+          atMs: 0,
+        });
         setSummary(null);
-        setPrepChecks(Array(PREP_LEN).fill(false));
+        setPrepChecks(Array(PREP_LEN).fill(true));
         setPhase("prep");
+        emitCardPipeline("backend", 250);
       } catch (error) {
         const message = error instanceof Error ? error.message : "음성 처리에 실패했습니다.";
         setMicErr(message);
@@ -569,7 +810,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setAudioBusy(false);
       }
     },
-    [clearAll, startClock]
+    [clearAll, emitCardPipeline, startClock]
   );
 
   // ── auth ──
@@ -677,15 +918,23 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setFollowups((cur) => (cur.some((x) => x.label === f.label) ? cur : cur.concat(f)));
   }, []);
 
-  // ── viewport fit (scale the 1420px stage down to the container) ──
+  // ── viewport fit (스테이지를 컨테이너에 맞춰 스케일) ──
+  // 기본은 1420px 합본 스테이지의 축소 전용. stageW/maxScale을 주면(고객 화면 등)
+  // 좁은 스테이지를 확대해 화면을 채운다 — 세로는 뷰포트 높이로 캡(offsetHeight는 스케일 무관 원치수).
+  const stageW = config.stageW ?? STAGE_W;
+  const maxScale = config.maxScale ?? 1;
+  // fitPad = 좌우 여백(px), fitHeight=false 면 세로 캡 없이 가로를 100% 채운다(직원 단독 화면)
+  const fitPad = config.fitPad ?? 40;
+  const fitHeight = config.fitHeight ?? true;
   const fit = useCallback(() => {
     const w = rootRef.current ? rootRef.current.clientWidth : window.innerWidth;
-    const avail = Math.max(320, w - 40);
-    const sc = Math.min(1, avail / STAGE_W);
-    setScale((prev) => (prev !== sc ? sc : prev));
+    const avail = Math.max(320, w - fitPad);
     const h = stageRef.current ? stageRef.current.offsetHeight : 0;
+    const scH = fitHeight && h > 0 ? Math.max(0.4, (window.innerHeight - 40) / h) : maxScale;
+    const sc = Math.min(maxScale, avail / stageW, scH);
+    setScale((prev) => (prev !== sc ? sc : prev));
     setNatH((prev) => (prev !== h ? h : prev));
-  }, []);
+  }, [stageW, maxScale, fitPad, fitHeight]);
 
   useEffect(() => {
     const onResize = () => fit();
@@ -722,6 +971,42 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const rgRows = regNeedle
     ? rg.rows.filter((r) => r.cells.some((c) => c.text.toLowerCase().includes(regNeedle)))
     : rg.rows;
+
+  // 의미 검색(2단째) — 로컬 필터는 위에서 0ms 즉시, 시맨틱은 250ms 디바운스 후 백엔드
+  // pgvector 하이브리드 검색. "잘못 송금했어요"→"착오송금 반환" 같은 의미 매칭을 더한다.
+  // 카드의 전달부서가 있으면 그 부서(category)의 규정만 좁혀 검색 — 카드 라우터와 한 몸.
+  // 연타 시 이전 요청은 abort. 백엔드/인덱스가 없으면 조용히 빈 결과(로컬 필터는 계속).
+  useEffect(() => {
+    if (!semanticSearchEnabled || !regSearch.trim()) {
+      setSemHits([]);
+      setSemLoading(false);
+      return;
+    }
+    const ctrl = new AbortController();
+    setSemLoading(true);
+    const t = window.setTimeout(async () => {
+      try {
+        const res = await searchRegulations(regSearch, {
+          category: categoryForDepartment(
+            consultationResponse.consultation_card.department
+          ),
+          k: 10,
+          signal: ctrl.signal,
+        });
+        setSemHits(res.available ? res.documents : []);
+        setSemLoading(false);
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
+          setSemHits([]);
+          setSemLoading(false);
+        }
+      }
+    }, 250);
+    return () => {
+      ctrl.abort();
+      window.clearTimeout(t);
+    };
+  }, [regSearch, consultationResponse]);
 
   // CSV/XLSX 버퍼 → SheetData (첫 시트, 첫 행 = 헤더). 업로드·레포 파일 공용 파서
   const parseSheetBuffer = useCallback(async (buf: ArrayBuffer, filename: string): Promise<SheetData | null> => {
@@ -825,7 +1110,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     stageRef,
     // scaling
     scaleT: "scale(" + scale + ")",
-    scaledW: STAGE_W * scale + "px",
+    scaledW: stageW * scale + "px",
+    stageWpx: stageW + "px",
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,
@@ -859,10 +1145,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     reserveTransfer: (target?: string) => {
       setTransferReserved(true);
       setTransferTarget(target ?? null);
+      demoBus.emit("transfer.requested", {
+        callId: respRef.current.call_id,
+        toDept: target ?? SUGGESTED_DEPT[incomingRef.current],
+        mode: "reserve",
+      });
     },
     toggleTransferReserve: () =>
       setTransferReserved((v) => {
         if (v) setTransferTarget(null);
+        else
+          demoBus.emit("transfer.requested", {
+            callId: respRef.current.call_id,
+            toDept: SUGGESTED_DEPT[incomingRef.current],
+            mode: "reserve",
+          });
         return !v;
       }),
     micErr,
@@ -878,6 +1175,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setMic,
     submitAudio,
     reset,
+    jumpToStep,
     startCall,
     answerCall,
     endCall,
@@ -890,7 +1188,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     phInCall: inCall || ended,
     phEnded: ended,
     clockStr: fmt(clock),
-    showTimer: inCall && p !== "connecting",
+    showTimer: inCall,
+    // 통화 누르자마자 00:01 — 실기기처럼 연결음 단계부터 타이머가 붙는다
+    phoneClockStr: fmt(Math.max(clock, 1)),
     showRecDot: p === "recording" || p === "confirm",
     phoneStatus: STATUS[p] || "",
     showGlass: !!GLASS[p],
@@ -966,6 +1266,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       card.routing_confidence != null
         ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
         : "확신도 산출 전 · 상담사 확인 필요",
+    // 배정 확신도 % 숫자만 (상단 배지용)
+    prepConfidencePct:
+      card.routing_confidence != null ? Math.round(card.routing_confidence * 100) : null,
+    // 감정온도 숫자(당근 매너온도 스타일) — 신호등 대신 큰 숫자로
+    prepEmotionScore: temperature.score ?? null,
     transcriptQuote: consultationResponse.transcript.text,
     // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
     summaryPoints: SUMMARY_POINTS[incoming],
@@ -1001,9 +1306,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     connectBg: allChecked ? "var(--blue-700)" : "var(--gray-200)",
     connectFg: allChecked ? "#fff" : "var(--gray-600)",
     connectCursor: allChecked ? "pointer" : "not-allowed",
-    prepHint: allChecked
-      ? "유의사항 확인 완료 · 통화를 연결하세요"
-      : `유의사항 ${PREP_LEN}개를 모두 확인하면 통화 연결이 활성화됩니다`,
+    prepHint: "유의사항을 확인하고 통화를 연결하세요",
     // auth (1d)
     verified,
     notVerified: nv,
@@ -1064,6 +1367,18 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     closeReg: () => {
       setRegExpanded(false);
       setRegTargetRow(null);
+      setRegDoc(null);
+      setRegDocChunk(null);
+      setRegSearch(""); // 축소 = 검색어까지 비워 완전히 접힘(다시 클릭하면 줄어들게)
+    },
+    // 실제 규정 원문 열람
+    regDoc,
+    regDocChunk,
+    regDocLoading,
+    openRegDocReal,
+    closeRegDoc: () => {
+      setRegDoc(null);
+      setRegDocChunk(null);
     },
     regTargetRow,
     regExpanded,
@@ -1072,6 +1387,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     regSearch,
     onRegSearch: (e: React.ChangeEvent<HTMLInputElement>) => setRegSearch(e.target.value),
     clearRegSearch: () => setRegSearch(""),
+    // 의미 검색 — pgvector 하이브리드 결과 (규정 원문 청크)
+    semHits,
+    semLoading,
     loadManualFile,
     // 확장 폭 640 — 시트가 3컬럼 리플로우라 640이면 잘림 없이 들어가고, 중앙 스크립트 압착도 덜하다
     regW: regExpanded ? 640 : 372,

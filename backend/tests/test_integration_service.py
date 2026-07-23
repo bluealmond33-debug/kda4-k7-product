@@ -46,7 +46,7 @@ def test_existing_pipeline_can_inject_results_without_running_stt_or_model(
 
     assert response.transcript is transcript
     assert response.consultation_card.business_type == "주택담보대출 만기 연장"
-    assert response.consultation_card.department == "대출 및 금융상담"
+    assert response.consultation_card.department == "여신·대출"
     assert response.consultation_card.incident_risk.value == "low"
     assert response.consultation_card.emotion.status.value == "unavailable"
     assert response.created_at == created_at

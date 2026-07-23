@@ -302,6 +302,29 @@ a:hover {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+/* 관제 LIVE 심장박동 — 전 시스템 정상일 때 초록 점이 잔잔하게 숨쉰다 (안심 신호) */
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* 라우팅 피드 카드 덱 — 새 카드가 위에서 '딜'되듯 얹히고, 뒤 카드들은 스트립으로 쌓인다 */
+@keyframes cardDeal {
+  from {
+    transform: translateY(-20px) rotate(-1.2deg);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+}
+
 /* 가이드 투어 스테퍼 — 단계 콘텐츠가 방향성 슬라이드로 전환 (앞=오른쪽서, 뒤=왼쪽서) */
 @keyframes guideSlideFwd {
   from {
@@ -386,6 +409,25 @@ a:hover {
     to {
       opacity: 1;
       transform: none;
+    }
+  }
+  @keyframes cardDeal {
+    from {
+      opacity: 0;
+      transform: none;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes livePulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 1;
     }
   }
   @keyframes wave {

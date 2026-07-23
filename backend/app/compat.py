@@ -12,7 +12,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.config import Settings
 from app.contracts import IncidentRisk
-from app.pipeline import analyze_transcript, transcribe_audio
+from app.card_routing_pipeline import analyze_transcript, transcribe_audio
 from app.rag import RegulationSearchUnavailable, search_regulations
 
 

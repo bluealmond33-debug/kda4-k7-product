@@ -20,6 +20,20 @@ const ACCOUNTS = [
   { kind: "대출", name: "신용대출", no: "***-**-9902", opened: "2024.01.20" },
 ];
 
+/** 마크다운 표 문자열 → 행 배열(셀 배열). 구분선(---) 행 제외, 파이프 제거. */
+function parseMdTable(raw: string): string[][] {
+  return raw
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => l.replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim()))
+    .filter((cells) => !cells.every((c) => c === "" || /^-+$/.test(c)));
+}
+/** 미리보기용 — 파이프를 공백으로 바꾸고 연속 공백 축약(상담사가 읽기 편하게). */
+function stripPipes(s: string): string {
+  return s.replace(/\|/g, " ").replace(/\s+/g, " ").trim();
+}
+
 /** 1a — 통화 중. 좌: 상담사·고객(본인인증 1d)·이력 / 중: 요약·스크립트·메모 / 우: 규정. */
 export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [showHistory, setShowHistory] = useState(false);
@@ -27,9 +41,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [muted, setMuted] = useState(false);
   const [held, setHeld] = useState(false);
   const [endConfirm, setEndConfirm] = useState(false);
-  // 이관 패널 — 버튼을 눌렀을 때만 알약이 옆으로 늘어나며 선택지가 드러난다
-  const [transferOpen, setTransferOpen] = useState(false);
-  const [transferPick, setTransferPick] = useState(false);
   // 메모 인라인 수정 — editIdx 행이 input으로 바뀐다
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
@@ -53,6 +64,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [vm.memoItems.length]);
 
+  // 검색어가 있거나 문서를 열면 규정 패널을 넓은 엑셀 뷰로 자동 확장한다
+  const regWide = vm.regExpanded || !!vm.regDoc || vm.regDocLoading || vm.regSearch.trim().length > 0;
+
   // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
   const leftColRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -67,7 +81,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, [showHistory, showAccounts]);
 
-  // 키보드 단축키 — 입력 중에는 무시(Esc 제외). M 음소거 / H 보류 / T 이관 예약 / R 규정집 / N 메모
+  // 키보드 단축키 — 입력 중에는 무시(Esc 제외). M 음소거 / H 보류 / R 규정집 / N 메모
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -76,8 +90,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       if (e.key === "Escape") {
         setEndConfirm(false);
         setEditIdx(null);
-        setTransferOpen(false);
-        setTransferPick(false);
         if (typing) el.blur();
         return;
       }
@@ -86,7 +98,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       const k = e.key.toLowerCase();
       if (k === "m") setMuted((v) => !v);
       else if (k === "h") setHeld((v) => !v);
-      else if (k === "t") vm.toggleTransferReserve();
       else if (k === "r") (vm.regCollapsed ? vm.openManual : vm.closeReg)();
       else if (k === "n") {
         e.preventDefault();
@@ -141,34 +152,21 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </span>
           <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          {vm.transferReserved && (
+          {/* 이관 조작은 관리자 콘솔(?role=admin)로 이전 — 상담사에겐 상태만 보인다.
+              예약이 걸리면(관리자 조작·자동) 기존 문구 그대로, 아니면 자동 라우팅 안내 칩 */}
+          {vm.transferReserved ? (
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
               <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · 종료 시 {vm.transferTarget ?? vm.suggestedDept}로
             </span>
-          )}
-          {/* 이관 패널 — 기본(자동 배정)이 먼저, 지정은 한 단계 더.
-              max-width 0↔340px 전환으로 알약이 옆으로 부드럽게 늘어난다 */}
-          {!vm.showWrap && (
-            <span style={css("display:flex;align-items:center;overflow:hidden;transition:max-width .4s cubic-bezier(0.2,0.8,0.2,1),opacity .3s;max-width:" + (transferOpen && !vm.transferReserved ? "340px" : "0px") + ";opacity:" + (transferOpen && !vm.transferReserved ? "1" : "0"))}>
-              <span style={css("display:flex;align-items:center;gap:6px;white-space:nowrap")}>
-                <span
-                  onClick={() => {
-                    vm.reserveTransfer(vm.suggestedDept);
-                    setTransferOpen(false);
-                    setTransferPick(false);
-                  }}
-                  style={css("display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:9999px;background:var(--blue-700);color:#fff;font:700 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer")}
-                >
-                  <span className="mi" style={css("font-size:14px")}>auto_awesome</span>종료 시 {vm.suggestedDept}로
-                </span>
-                <span
-                  onClick={() => setTransferPick((v) => !v)}
-                  style={css("display:flex;align-items:center;gap:3px;padding:7px 12px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-800);font:600 12px 'Geist Sans','Pretendard',sans-serif;cursor:pointer;background:" + (transferPick ? "var(--gray-100)" : "var(--onair-surface)"))}
-                >
-                  다른 부서<span className="mi" style={css("font-size:15px")}>expand_more</span>
-                </span>
+          ) : (
+            !vm.showWrap && (
+              <span
+                title="부서 이관·대기열 배정은 관제 대시보드에서 실시간 처리됩니다"
+                style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}
+              >
+                <span className="mi" style={css("font-size:13px")}>sync_alt</span> 자동 라우팅 · 이관은 관제 대시보드
               </span>
-            </span>
+            )
           )}
           {held && (
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
@@ -198,47 +196,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               style={held ? { background: "var(--amber-700)", color: "#fff", borderColor: "var(--amber-700)" } : undefined}
             >
               <span className="mi" style={css("font-size:19px")}>{held ? "play_arrow" : "pause"}</span>
-            </span>
-            <span style={css("position:relative;display:flex")}>
-              <span
-                className="cbtn"
-                title={(vm.transferReserved ? "이관 예약 취소" : "이관 — 통화를 끊지 않고 종료 시 인계") + " · 단축키 T"}
-                onClick={() => {
-                  if (vm.transferReserved) {
-                    vm.toggleTransferReserve();
-                  } else {
-                    setTransferOpen((v) => !v);
-                    setTransferPick(false);
-                  }
-                }}
-                style={vm.transferReserved || transferOpen ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : undefined}
-              >
-                <span className="mi" style={css("font-size:19px")}>phone_forwarded</span>
-              </span>
-              {/* 다른 부서 팝오버 — grid 클리핑을 피해 버튼 기준으로 띄운다 */}
-              {transferPick && (
-                <div style={css("position:absolute;top:46px;right:0;width:290px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:11px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
-                  <div style={css("font:700 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-bottom:8px")}>종료 시 인계할 부서</div>
-                  <div style={css("display:flex;flex-direction:column;gap:5px")}>
-                    {vm.transferDepts.map((d) => (
-                      <span
-                        key={d.name}
-                        onClick={() => {
-                          vm.reserveTransfer(d.name);
-                          setTransferOpen(false);
-                          setTransferPick(false);
-                        }}
-                        style={css("display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--gray-100);cursor:pointer;white-space:nowrap")}
-                      >
-                        <span style={css("flex:1")}>
-                          <span style={css("display:block;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name} <span style={css("font:600 10.5px;color:var(--gray-600)")}>{d.state}</span></span>
-                          <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </span>
           </span>
           )}
@@ -290,7 +247,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           <div className="card" style={css("padding:16px" + (vm.verified ? "" : ";min-height:418px") + (focus === "customer" ? ";box-shadow:var(--sh-focus)" : ""))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;margin-bottom:12px")}>
               <span className="sechd">고객</span>
-              <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:4px 10px")}>고객 동의 시 열람</span>
+              {/* 개인정보 안내 배지 — 경고가 아니라 중립 정보라 회색 톤 + 자물쇠 아이콘으로 */}
+              <span style={css("display:inline-flex;align-items:center;gap:4px;font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);background:var(--gray-100);border:1px solid var(--gray-200);border-radius:9999px;padding:3px 10px")}>
+                <span className="mi" style={css("font-size:12px")}>lock</span>고객 동의 시 열람
+              </span>
             </div>
             <div style={css("display:flex;align-items:center;gap:12px")}>
               <span className="av" style={css("width:46px;height:46px")}><span className="mi" style={css("font-size:26px")}>person</span></span>
@@ -321,8 +281,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </div>
               </div>
             ) : (
-              <div style={css("margin-top:13px;background:var(--gray-100);border-radius:8px;padding:12px")}>
-                <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px")}>본인확인 · 미완료</div>
+              <div style={css("margin-top:13px;background:var(--gray-100);border:1px solid var(--gray-300);border-radius:8px;padding:12px")}>
+                {/* 대기 상태 — 틴트 없이 중립(잉크·그레이). 점으로 '진행 필요' 신호 */}
+                <div style={css("display:flex;align-items:center;gap:6px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:3px")}>
+                  <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--gray-500)")} />
+                  본인확인 · 미완료
+                </div>
                 <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>
                   고객이 말한 <span style={css("font-weight:700;color:var(--blue-900)")}>{vm.authAskLabel}</span>를 빈칸에 입력하면 자동 대조됩니다
                 </div>
@@ -464,16 +428,20 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
           <div className="card" style={css("flex:none;padding:15px 17px")}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
-              <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>auto_awesome</span>
-              <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 사전 요약</span>
-              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>대기 중 고객 진술 기반</span>
+              <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>graphic_eq</span>
+              <span style={css("font:800 12.5px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
+              <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 받기 전 미리 듣고 정리</span>
             </div>
             {/* 카드의 주인 문장 — Title 18px: 통화 시작 순간 첫 시선이 꽂히는 곳 */}
-            <div style={css("font:600 18px/1.4 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:10px")}>{vm.prepHeadline}</div>
+            <div style={css("font:600 18px/1.4 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:11px")}>{vm.prepHeadline}</div>
+            {/* 전화 요약 — 고객 발화 STT를 요약한 내용(대화 요약) */}
+            <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>
+              <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>summarize</span>전화 요약 <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· 고객 발화 STT 요약</span>
+            </div>
             <div style={css("display:flex;flex-direction:column;gap:8px")}>
-              {vm.prepSummaryBullets.map((t, i) => (
-                <div key={i} style={css("display:flex;gap:11px")}>
-                  <span style={css("width:3px;border-radius:2px;background:var(--blue-500);flex:none")} />
+              {vm.summaryPoints.map((t, i) => (
+                <div key={i} style={css("display:flex;gap:10px;align-items:baseline")}>
+                  <span style={css("flex:none;width:5px;height:5px;border-radius:9999px;background:var(--gray-500);transform:translateY(-2px)")} />
                   <span style={css("font:400 14px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
                 </div>
               ))}
@@ -579,13 +547,13 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
         {/* ── 우 컬럼 : 규정 ── */}
         {/* 오토레이아웃 모션 — 규정 패널 확장(372↔640)이 스냅 대신 부드럽게 밀린다 */}
-        <div data-tour="call-right" style={css("width:" + vm.regW + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1)")}>
-          <div className="card" style={css("flex:" + (vm.regCollapsed ? "none" : "1") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "reg" ? ";box-shadow:var(--sh-focus)" : ";opacity:" + (vm.verified ? ".95" : ".9")))}>
+        <div data-tour="call-right" style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1)")}>
+          <div className="card" style={css("flex:" + (regWide ? "1" : "none") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "reg" ? ";box-shadow:var(--sh-focus)" : ";opacity:" + (vm.verified ? ".95" : ".9")))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>gavel</span> 관련 규정 및 매뉴얼
               </span>
-              {vm.regCollapsed ? (
+              {!regWide ? (
                 <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border:1px solid var(--gray-200);border-radius:9999px;padding:2px 8px")}>규정집 · 매뉴얼</span>
               ) : (
                 <span onClick={vm.closeReg} title="규정집 축소 · 단축키 R" style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);border-radius:9999px;padding:5px 12px;cursor:pointer")}>
@@ -594,7 +562,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               )}
             </div>
 
-            {vm.regCollapsed ? (
+            {!regWide ? (
               /* 내부 폭 고정 — 패널 width가 애니메이션되는 동안 텍스트가 재줄바꿈되며 끊겨 보이는 것을 방지 */
               <div style={css("flex:1;min-height:0;overflow:auto;width:372px;animation:fadeIn .25s ease-out")}>
                 <div style={css("padding:12px 15px;border-bottom:1px solid var(--gray-200)")}>
@@ -604,23 +572,23 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                     <input
                       value={vm.regSearch}
                       onChange={vm.onRegSearch}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") vm.openManual();
-                      }}
                       placeholder={vm.regQuery}
                       style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}
                     />
-                    {vm.regSearch && (
+                    {vm.semLoading && (
+                      <span style={css("width:15px;height:15px;flex:none;border:2px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .7s linear infinite")} />
+                    )}
+                    {vm.regSearch && !vm.semLoading && (
                       <span className="mi" onClick={vm.clearRegSearch} style={css("font-size:16px;color:var(--gray-500);cursor:pointer")}>close</span>
                     )}
                   </div>
                   <div style={css("display:flex;align-items:center;gap:5px;margin-top:7px;font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-                    <span className="mi" style={css("font-size:14px")}>info</span> 열기를 누르면 오른쪽에서 규정집이 펼쳐집니다
+                    <span className="mi" style={css("font-size:14px")}>info</span> 검색하면 규정 원문이 엑셀처럼 펼쳐집니다
                   </div>
                 </div>
                 <div style={css("padding:13px 15px;display:flex;flex-direction:column;gap:14px")}>
                   <div>
-                    <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:8px")}>
+                    <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);margin-bottom:8px")}>
                       <span className="mi" style={css("font-size:14px")}>auto_awesome</span> 이번 상담 예상 규정 · AI 추천
                     </div>
                     <div style={css("display:flex;flex-direction:column;gap:9px")}>
@@ -638,27 +606,31 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   </div>
                 </div>
               </div>
+            ) : vm.regDoc || vm.regDocLoading ? (
+              <RegDocSheet vm={vm} />
+            ) : vm.regSearch.trim() ? (
+              <RegCorpusSearchSheet vm={vm} />
             ) : (
               <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
-                {/* 엑셀 크롬 — 실물 메타포는 실물의 색(엑셀 초록). 검색·파일 업로드가 여기 산다 */}
-                <div style={css("display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--excel-green);color:#fff")}>
+                {/* 시트 크롬 — 중립 그레이(틴트 금지). 검색·파일 업로드가 여기 산다 */}
+                <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
                   <span className="mi" style={css("font-size:18px")}>grid_on</span>
                   <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif")}>{vm.regFile}</span>
-                  <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;opacity:.85")}>· {vm.regSheet} 시트</span>
+                  <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>· {vm.regSheet} 시트</span>
                   <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
-                    <span style={css("display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.16);border-radius:9999px;padding:4px 10px")}>
+                    <span style={css("display:flex;align-items:center;gap:5px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 10px")}>
                       <span className="mi" style={css("font-size:14px")}>search</span>
                       <input
                         value={vm.regSearch}
                         onChange={vm.onRegSearch}
                         placeholder="시트 검색"
-                        style={css("width:110px;border:none;outline:none;background:transparent;color:#fff;font:400 11.5px 'Geist Sans','Pretendard',sans-serif")}
+                        style={css("width:110px;border:none;outline:none;background:transparent;color:var(--gray-1000);font:400 11.5px 'Geist Sans','Pretendard',sans-serif")}
                       />
                       {vm.regSearch && (
                         <span className="mi" onClick={vm.clearRegSearch} style={css("font-size:13px;cursor:pointer;opacity:.8")}>close</span>
                       )}
                     </span>
-                    <label title="실제 규정 파일 열기 (CSV·XLSX)" style={css("display:flex;align-items:center;gap:4px;cursor:pointer;background:rgba(255,255,255,.16);border-radius:9999px;padding:4px 10px;font:600 11px 'Geist Sans','Pretendard',sans-serif")}>
+                    <label title="실제 규정 파일 열기 (CSV·XLSX)" style={css("display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 10px;font:600 11px 'Geist Sans','Pretendard',sans-serif")}>
                       <span className="mi" style={css("font-size:14px")}>folder_open</span>파일 열기
                       <input
                         type="file"
@@ -688,12 +660,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       const hit = vm.regTargetRow != null && r.n === vm.regTargetRow + 1;
                       const ment = r.cells[3] && r.cells[3].text !== "—" ? r.cells[3].text : null;
                       return (
-                        <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--blue-700);position:relative;z-index:1" : ""))}>
-                          <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--blue-900)" : "var(--gray-600)") + ";background:" + (hit ? "var(--blue-100)" : "var(--gray-100)"))}>{r.n}</span>
+                        <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--gray-1000);position:relative;z-index:1" : ""))}>
+                          <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--gray-1000)" : "var(--gray-600)") + ";background:" + (hit ? "var(--gray-100)" : "var(--gray-100)"))}>{r.n}</span>
                           {r.cells.slice(0, 2).map((cell, ci) => (
-                            <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--blue-100)" : "transparent"))}>{highlight(cell.text, vm.regSearch)}</span>
+                            <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--gray-100)" : "transparent"))}>{highlight(cell.text, vm.regSearch)}</span>
                           ))}
-                          <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);background:" + (hit ? "var(--blue-100)" : "transparent"))}>
+                          <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);background:" + (hit ? "var(--gray-100)" : "transparent"))}>
                             <span style={css("display:block;font:" + (hit ? "600" : "400") + " 12px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(r.cells[2].text, vm.regSearch)}</span>
                             {ment && (
                               <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
@@ -727,6 +699,160 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         </div>
       )}
     </DesktopShell>
+  );
+}
+
+/** 실제 규정 원문 열람 시트 — 검색 히트를 클릭하면 그 문서의 청크 전체를 엑셀 룩으로.
+ *  강조 청크(검색에서 들어온 자리)로 자동 스크롤한다. */
+function RegDocSheet({ vm }: { vm: CallFlowVM }) {
+  const hitRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    hitRef.current?.scrollIntoView({ block: "center" });
+  }, [vm.regDoc, vm.regDocChunk]);
+  const doc = vm.regDoc;
+  return (
+    <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
+      <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
+        <span onClick={vm.closeRegDoc} title="검색 결과로 돌아가기" style={css("display:flex;align-items:center;gap:3px;cursor:pointer;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 10px;font:600 11px 'Geist Sans','Pretendard',sans-serif")}>
+          <span className="mi" style={css("font-size:14px")}>arrow_back</span>검색
+        </span>
+        <span className="mi" style={css("font-size:18px")}>grid_on</span>
+        <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>{doc ? doc.title : "원문 불러오는 중…"}</span>
+        {doc && (
+          <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600);flex:none")}>· {doc.version} · {doc.chunks.length}행</span>
+        )}
+        <span style={css("margin-left:auto;flex:none;font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px")}>{doc?.source_file ?? ""}</span>
+      </div>
+      <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
+        {!doc ? (
+          <div style={css("padding:40px 0;display:flex;justify-content:center")}>
+            <span style={css("width:26px;height:26px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
+          </div>
+        ) : (
+          <div style={css("display:flex;flex-direction:column")}>
+            <div style={css("display:flex;position:sticky;top:0;z-index:1")}>
+              {[["p", 40], ["구분", 48], ["섹션", 150], ["내용", 0]].map(([l, w], i) => (
+                <span key={i} style={css((w ? "width:" + w + "px;flex:none" : "flex:1;min-width:0") + ";padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{l}</span>
+              ))}
+            </div>
+            {doc.chunks.map((c) => {
+              const hit = c.chunk_id === vm.regDocChunk;
+              return (
+                <div key={c.chunk_id} ref={hit ? hitRef : undefined} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--gray-1000);position:relative;z-index:1" : ""))}>
+                  <span style={css("width:40px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--gray-1000)" : "var(--gray-600)") + ";background:" + (hit ? "var(--gray-100)" : "var(--gray-100)"))}>{c.page}</span>
+                  <span style={css("width:48px;flex:none;padding:8px 6px;text-align:center;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);background:" + (hit ? "var(--gray-100)" : "transparent"))}>{c.kind === "table" ? "표" : "본문"}</span>
+                  <span style={css("width:150px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 11.5px/1.5 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:" + (hit ? "var(--gray-100)" : "transparent") + ";overflow:hidden;text-overflow:ellipsis")}>{c.section ?? ""}</span>
+                  <div style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);background:" + (hit ? "var(--gray-100)" : "transparent"))}>
+                    {c.kind === "table" ? (
+                      <MiniTable raw={c.text} q={vm.regSearch} />
+                    ) : (
+                      <span style={css("font:" + (hit ? "600" : "400") + " 12px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);white-space:pre-wrap")}>{highlight(c.text, vm.regSearch)}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div style={css("display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--gray-100);border-top:1px solid var(--gray-300);font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+        <span className="mi" style={css("font-size:13px")}>database</span>
+        실제 규정 코퍼스(pgvector) 원문 · 강조 행 = 검색이 찾은 자리
+      </div>
+    </div>
+  );
+}
+
+/** 실제 코퍼스 검색 결과 시트 — 펼친 상태에서 검색어가 있으면 32개 문서 전체를 대상으로 한
+ *  하이브리드 검색 결과를 엑셀 룩으로. 행 클릭 = 그 문서 원문 열람. */
+function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
+  return (
+    <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
+      <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
+        <span className="mi" style={css("font-size:18px")}>manage_search</span>
+        <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif")}>규정 원문 검색</span>
+        <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>· 실제 코퍼스 {vm.semLoading ? "· 검색 중…" : "· " + vm.semHits.length + "건"}</span>
+        <span style={css("margin-left:auto;display:flex;align-items:center;gap:5px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 10px")}>
+          <span className="mi" style={css("font-size:14px")}>search</span>
+          <input
+            autoFocus
+            value={vm.regSearch}
+            onChange={vm.onRegSearch}
+            placeholder="의미 검색"
+            style={css("width:130px;border:none;outline:none;background:transparent;color:var(--gray-1000);font:400 11.5px 'Geist Sans','Pretendard',sans-serif")}
+          />
+          {vm.semLoading ? (
+            <span style={css("width:13px;height:13px;flex:none;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:9999px;animation:spin .7s linear infinite")} />
+          ) : vm.regSearch ? (
+            <span className="mi" onClick={vm.clearRegSearch} style={css("font-size:13px;cursor:pointer;opacity:.8")}>close</span>
+          ) : null}
+        </span>
+      </div>
+      <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
+        {vm.semLoading && vm.semHits.length === 0 ? (
+          <div style={css("padding:40px 0;display:flex;flex-direction:column;align-items:center;gap:12px")}>
+            <span style={css("width:26px;height:26px;border:3px solid var(--blue-400);border-top-color:var(--blue-700);border-radius:9999px;animation:spin .8s linear infinite")} />
+            <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>규정 원문에서 의미 검색 중…</span>
+          </div>
+        ) : vm.semHits.length === 0 ? (
+          <div style={css("padding:36px 0;text-align:center;font:400 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>“{vm.regSearch}” 검색 결과 없음</div>
+        ) : (
+        <div style={css("display:flex;flex-direction:column")}>
+          <div style={css("display:flex;position:sticky;top:0;z-index:1")}>
+            {[["문서", 150], ["p", 36], ["구분", 48], ["내용 (클릭 = 원문 열람)", 0]].map(([l, w], i) => (
+              <span key={i} style={css((w ? "width:" + w + "px;flex:none" : "flex:1;min-width:0") + ";padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{l}</span>
+            ))}
+          </div>
+          {vm.semHits.map((h) => (
+            <div key={h.chunk_id} onClick={() => vm.openRegDocReal(h.doc_id, h.chunk_id)} className="memorow" style={css("display:flex;cursor:pointer")}>
+              <span style={css("width:150px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:600 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis")}>{h.title}</span>
+              <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600);background:var(--gray-100)")}>{h.page}</span>
+              <span style={css("width:48px;flex:none;padding:8px 6px;text-align:center;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{h.kind === "table" ? "표" : "본문"}</span>
+              <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(stripPipes(h.excerpt), vm.regSearch)}</span>
+            </div>
+          ))}
+        </div>
+        )}
+      </div>
+      <div style={css("display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--gray-100);border-top:1px solid var(--gray-300);font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+        <span className="mi" style={css("font-size:13px")}>database</span>
+        pgvector 하이브리드(의미+키워드) 검색 · 규정 문서 32건 대상
+      </div>
+    </div>
+  );
+}
+
+/** 표(마크다운) 청크를 실제 격자로 — 파이프 제거, 상담사가 읽기 편한 표. 첫 행=머리글 */
+function MiniTable({ raw, q }: { raw: string; q: string }) {
+  const rows = parseMdTable(raw);
+  if (!rows.length) return <span style={css("font:400 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{stripPipes(raw)}</span>;
+  return (
+    <div style={css("border:1px solid var(--gray-300);border-radius:6px;overflow:hidden;max-width:100%")}>
+      <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
+        <tbody>
+          {rows.map((cells, ri) => (
+            <tr key={ri}>
+              {cells.map((cell, ci) => (
+                <td
+                  key={ci}
+                  style={{
+                    border: "1px solid var(--gray-200)",
+                    padding: "5px 8px",
+                    verticalAlign: "top",
+                    wordBreak: "break-word",
+                    background: ri === 0 ? "var(--gray-100)" : "transparent",
+                    font: (ri === 0 ? "700" : "400") + " 11.5px/1.5 'Geist Sans','Pretendard',sans-serif",
+                    color: "var(--gray-1000)",
+                  }}
+                >
+                  {cell ? highlight(cell, q) : ""}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
