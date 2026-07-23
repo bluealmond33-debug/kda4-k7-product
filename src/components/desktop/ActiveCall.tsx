@@ -63,6 +63,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [endConfirm, setEndConfirm] = useState(false);
   const [transferMenu, setTransferMenu] = useState(false); // 이관 부서 선택 드롭다운
+  const [scriptOpen, setScriptOpen] = useState(false); // 단계별 스크립트 아코디언 — 기본 접힘(초보 상담사용, 필요할 때만 펼침)
   // 메모 인라인 수정 — editIdx 행이 input으로 바뀐다
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
@@ -154,10 +155,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <span style={css("width:8px;height:8px;border-radius:50%;background:var(--green-700);animation:recBlink 1.1s infinite")} />
             실시간 STT
           </span>
-          <span style={css("display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:10.5px;color:var(--gray-600)")}>
-            <i style={css("width:6px;height:6px;border-radius:50%;background:" + (vm.captureBySpeaker.customer ? "var(--blue-700)" : "var(--gray-300)"))} />고객
-            <i style={css("width:6px;height:6px;border-radius:50%;background:" + (vm.captureBySpeaker.agent ? "var(--green-700)" : "var(--gray-300)"))} />상담원
-          </span>
           <span style={css("display:flex;flex:1;min-width:0;gap:12px;overflow:hidden")}>
             {vm.liveTranscriptLines.slice(-2).map((line, index) => {
               const isAgent = line.speaker === "agent";
@@ -184,7 +181,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         {/* 알약 폭 = 콘텐츠 폭(빈 공간 없음). 이관 패널은 grid 0fr→1fr 트릭으로 알약이 부드럽게 길어진다 */}
-        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)")}>
+        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);animation:fadeIn .5s ease-out .1s both")}>
           {vm.showWrap ? (
             /* 통화 종료 — 온에어 소등, 배경으로 남은 화면임을 알약이 말해준다 */
             <span style={css("display:flex;align-items:center;gap:7px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")} title="통화 종료 — 온에어 소등">
@@ -224,54 +221,14 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </span>
           <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          {/* 이관 — 카드에서 직접 부서 선택 → 종료 시 예약. 예약되면 관제 대시보드에도 실시간 반영(demoBus). */}
-          {vm.transferReserved ? (
+          {/* 이관 예약 상태 — 조작 버튼은 아래 통화 컨트롤(음소거 왼쪽 cbtn)로 옮겼고, 여기선 상태만 */}
+          {vm.transferReserved && (
             <span style={css("display:flex;align-items:center;gap:5px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);background:var(--gray-100);border-radius:9999px;padding:3px 5px 3px 9px;white-space:nowrap")}>
               <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관 예약 · 종료 시 {vm.transferTarget ?? vm.suggestedDept}로
               <span onClick={vm.toggleTransferReserve} title="이관 예약 취소" style={css("cursor:pointer;display:flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:9999px;background:var(--gray-200)")}>
                 <span className="mi" style={css("font-size:12px;color:var(--gray-600)")}>close</span>
               </span>
             </span>
-          ) : (
-            !vm.showWrap && (
-              <span style={css("position:relative;display:inline-flex")}>
-                <span
-                  onClick={() => setTransferMenu((v) => !v)}
-                  title="다른 부서로 이관 — 종료 시 예약"
-                  style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);border-radius:9999px;padding:3px 10px;cursor:pointer;white-space:nowrap;background:" + (transferMenu ? "var(--gray-100)" : "var(--onair-surface)"))}
-                >
-                  <span className="mi" style={css("font-size:13px")}>sync_alt</span> 이관
-                  <span className="mi" style={css("font-size:14px;transition:transform .2s;transform:rotate(" + (transferMenu ? 180 : 0) + "deg)")}>expand_more</span>
-                </span>
-                {transferMenu && (
-                  <>
-                    <span onClick={() => setTransferMenu(false)} style={css("position:fixed;inset:0;z-index:40")} />
-                    <div style={css("position:absolute;left:0;top:calc(100% + 6px);z-index:41;width:250px;background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);overflow:hidden")}>
-                      <div style={css("padding:9px 13px 7px;font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);border-bottom:1px solid var(--gray-200)")}>이관 부서 선택 · 종료 시 예약</div>
-                      <div
-                        onClick={() => { vm.reserveTransfer(); setTransferMenu(false); }}
-                        className="memorow"
-                        style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-100)")}
-                      >
-                        <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
-                        <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>AI 추천 — {vm.suggestedDept}</span>
-                      </div>
-                      {vm.transferDepts.map((d) => (
-                        <div
-                          key={d.name}
-                          onClick={() => { vm.reserveTransfer(d.name); setTransferMenu(false); }}
-                          className="memorow"
-                          style={css("display:flex;flex-direction:column;gap:1px;padding:8px 13px;cursor:pointer")}
-                        >
-                          <span style={css("display:flex;align-items:center;gap:6px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name}<span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>{d.state}</span></span>
-                          <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </span>
-            )
           )}
           {held && (
             <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:3px 9px;white-space:nowrap")}>
@@ -293,6 +250,41 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </span>
           ) : (
           <span style={css("display:flex;gap:5px")}>
+            {/* 이관 — 음소거 왼쪽. 예전처럼 통화 컨트롤과 같은 원형 버튼(cbtn). 클릭 시 부서 드롭다운 */}
+            <span style={css("position:relative;display:inline-flex")}>
+              <span
+                className="cbtn"
+                title="다른 부서로 이관 — 종료 시 예약"
+                onClick={() => setTransferMenu((v) => !v)}
+                style={vm.transferReserved ? { background: "var(--blue-700)", color: "#fff", borderColor: "var(--blue-700)" } : transferMenu ? { background: "var(--gray-100)" } : undefined}
+              >
+                <span className="mi" style={css("font-size:19px")}>sync_alt</span>
+              </span>
+              {transferMenu && (
+                <>
+                  <span onClick={() => setTransferMenu(false)} style={css("position:fixed;inset:0;z-index:40")} />
+                  <div style={css("position:absolute;left:0;top:calc(100% + 6px);z-index:41;width:252px;background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);overflow:hidden")}>
+                    <div style={css("padding:9px 13px 7px;font:700 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);border-bottom:1px solid var(--gray-200)")}>이관 부서 선택 · 종료 시 예약</div>
+                    {vm.transferReserved && (
+                      <div onClick={() => { vm.toggleTransferReserve(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-100);color:var(--red-800)")}>
+                        <span className="mi" style={css("font-size:15px")}>close</span>
+                        <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif")}>이관 예약 취소 · {vm.transferTarget ?? vm.suggestedDept}</span>
+                      </div>
+                    )}
+                    <div onClick={() => { vm.reserveTransfer(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-100)")}>
+                      <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
+                      <span style={css("font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>AI 추천 — {vm.suggestedDept}</span>
+                    </div>
+                    {vm.transferDepts.map((d) => (
+                      <div key={d.name} onClick={() => { vm.reserveTransfer(d.name); setTransferMenu(false); }} className="memorow" style={css("display:flex;flex-direction:column;gap:1px;padding:8px 13px;cursor:pointer")}>
+                        <span style={css("display:flex;align-items:center;gap:6px;font:600 12px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name}<span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>{d.state}</span></span>
+                        <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </span>
             <span
               className="cbtn"
               aria-disabled={vm.isExplicitLiveCall}
@@ -338,8 +330,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       </div>
 
       <div style={css("flex:1;display:flex;gap:16px;min-height:0;padding:16px 16px " + (vm.showWrap ? "16px" : "42px") + " 16px")}>
-        {/* ── 좌 컬럼 ── */}
-        <div ref={leftColRef} data-tour="call-left" style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden")}>
+        {/* ── 좌 컬럼 ── (안착 morph — 왼쪽 가장자리에서 스르륵 등장) */}
+        <div ref={leftColRef} data-tour="call-left" style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden;animation:consoleInL .5s cubic-bezier(.2,.8,.2,1) .07s both")}>
           <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px" + (vm.verified ? ";opacity:.93" : ""))}>
             <span className="av" style={css("width:42px;height:42px")}><span className="mi" style={css("font-size:22px")}>headset_mic</span></span>
             <div style={css("flex:1;min-width:0")}>
@@ -556,8 +548,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           )}
         </div>
 
-        {/* ── 중 컬럼 ── */}
-        <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
+        {/* ── 중 컬럼 ── (통화 연결 시 브리핑 카드가 제자리로 가라앉는 안착 morph) */}
+        <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;animation:consoleSettle .5s cubic-bezier(.2,.8,.2,1)")}>
           <div className="card" style={css("flex:none;padding:15px 17px")}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
               <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>graphic_eq</span>
@@ -607,22 +599,31 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
-            <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
+          {/* 단계별 스크립트 — 아코디언. 초보 상담사용 기초 안내라 기본 접힘, 헤더 클릭으로 펼침 */}
+          <div className="card" style={css("flex:" + (scriptOpen ? "1" : "none") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
+            <div
+              onClick={() => setScriptOpen((v) => !v)}
+              style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none" + (scriptOpen ? ";border-bottom:1px dashed var(--color-border)" : ""))}
+            >
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>menu_book</span> 단계별 상담 스크립트
+                <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>· {vm.steps.length}단계</span>
               </span>
-              <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>AI 추천 흐름 · 전체 표시</span>
+              <span style={css("display:flex;align-items:center;gap:4px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+                {scriptOpen ? "접기" : "펼쳐 보기"}
+                <span className="mi" style={css("font-size:18px;color:var(--gray-500);transition:transform .25s;transform:rotate(" + (scriptOpen ? 180 : 0) + "deg)")}>expand_more</span>
+              </span>
             </div>
-            <div style={css("flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px")}>
-              {vm.steps.map((st, i) => (
-                <div key={i} style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
-                  {/* 크기 역전 해소 — 제목이 본문보다 작았던 것을 바로잡음 (둘 다 14, weight·잉크로 분리) */}
-                  <div style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{st.title}</div>
-                  <div style={css("font:400 14px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{st.text}</div>
-                </div>
-              ))}
-            </div>
+            {scriptOpen && (
+              <div style={css("flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px")}>
+                {vm.steps.map((st, i) => (
+                  <div key={i} style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
+                    <div style={css("font:600 14px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{st.title}</div>
+                    <div style={css("font:400 14px/1.6 'Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{st.text}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="card" style={css("flex:none;height:196px;display:flex;flex-direction:column" + (focus === "memo" ? ";box-shadow:var(--sh-focus)" : vm.verified ? "" : ";opacity:.93"))}>
@@ -704,9 +705,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </div>
         </div>
 
-        {/* ── 우 컬럼 : 규정 ── */}
+        {/* ── 우 컬럼 : 규정 ── (안착 morph — 오른쪽 가장자리에서 스르륵 등장) */}
         {/* 오토레이아웃 모션 — 규정 패널 확장(372↔640)이 스냅 대신 부드럽게 밀린다 */}
-        <div data-tour="call-right" style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1)")}>
+        <div data-tour="call-right" style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1);animation:consoleInR .5s cubic-bezier(.2,.8,.2,1) .07s both")}>
           <div className="card" style={css("flex:" + (regWide ? "1" : "none") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "reg" ? ";box-shadow:var(--sh-focus)" : ";opacity:" + (vm.verified ? ".95" : ".9")))}>
             {/* 헤더 — 제목 + 상시 검색 input(한 element로 고정) + 확장 시 축소 버튼.
                 검색 input이 여기 상주하므로 접힘↔확장·검색 유무가 바뀌어도 remount되지 않는다(한글 안 깨짐). */}
@@ -898,7 +899,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
       {/* 접힌 후처리 시트의 가장자리 — 통화 중에도 "종료하면 여기서 이어진다"를 예고 */}
       {!vm.showWrap && (
-        <div style={css("position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:1240px;height:34px;background:var(--onair-surface);border-radius:12px 12px 0 0;box-shadow:var(--sh-modal);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px")}>
+        <div style={css("position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:1240px;height:34px;background:var(--onair-surface);border-radius:12px 12px 0 0;box-shadow:var(--sh-modal);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;animation:fadeIn .5s ease-out .16s both")}>
           <span style={css("width:40px;height:4px;border-radius:9999px;background:var(--color-border)")} />
           <span style={css("font:500 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>통화를 종료하면 여기서 후처리가 이어집니다</span>
         </div>

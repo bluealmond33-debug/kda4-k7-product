@@ -285,44 +285,9 @@ export default function LiveDemo({
           </div>
           )}
 
-          {/* 고객 화면 상황 알약 — 발표용 화면: on/off(● 대기·통화)만. 상태 문구·초기화 없음.
-              (리셋은 새로고침 또는 폰의 통화 버튼 — 새 콜 시작이 곧 리셋) */}
-          {view === "phone" && (
-            <div style={css("display:flex;align-items:center")}>
-              {/* 발표용: 테두리·배경 없이 점 + 상태 텍스트만. 검은 스테이지 위라 텍스트는 밝게 */}
-              <span
-                style={css(
-                  // 검은 스테이지 위라 밝은 계열로. 통화·대기는 무채색(25cad1d '통화중 무채색화'),
-                  // 서버 미연결만 붉게 — 연출 상태가 아니라 고쳐야 할 오류라서 눈에 띄어야 한다.
-                  "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 4px;color:" +
-                    (vm.customerLiveMode && !vm.mobileServerConnected
-                      ? "var(--red-400)"
-                      : phoneActive
-                      ? "var(--gray-200)"
-                      : "var(--gray-400)")
-                )}
-              >
-                <span
-                  style={css(
-                    "width:7px;height:7px;border-radius:9999px;background:" +
-                      (vm.customerLiveMode && !vm.mobileServerConnected
-                        ? "var(--red-400)"
-                        : phoneActive
-                        ? "var(--gray-200);animation:recBlink 1.1s infinite"
-                        : "var(--gray-500)")
-                  )}
-                />
-                {vm.customerLiveMode && !vm.mobileServerConnected ? "서버 연결 중" : phoneActive ? "통화 중" : "대기 중"}
-              </span>
-            </div>
-          )}
-
-          {vm.micErr && (
-            <div style={css("background:var(--onair-surface);border-radius:9999px;padding:8px 16px;font-size:12.5px;color:var(--amber-900);box-shadow:0 10px 34px rgba(0,0,0,.28);display:flex;align-items:center;gap:6px")}>
-              <span className="mi" style={css("font-size:16px")}>info</span>
-              {vm.micErr}
-            </div>
-          )}
+          {/* 연결 상태(서버 미연결·call_id 안내·STT 채널 오류)는 화면에 띄우지 않는다.
+              무대에 서는 건 상담 장면이지 배관이 아니고, 연결은 백엔드가 알아서 한다.
+              진단이 필요하면 vm.micErr을 콘솔·개발 도구에서 본다. */}
 
           {/* 폰 + 데스크톱 — 직원 화면은 16:10 노트북 비율. 안내 팝업은 이 영역 위 중앙 딤 모달로 뜬다.
               view에 따라 한쪽만 남긴다: customer=폰, employee=데스크톱 (스테이지·스케일은 공유) */}
