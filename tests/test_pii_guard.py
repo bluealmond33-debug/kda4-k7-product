@@ -5,6 +5,8 @@
 노출된 사고).
 """
 
+from app.routers import pipeline
+from app.schemas import TranscribeResult
 from app.services.pii_guard import detect_pii, mask_transcript
 
 
@@ -63,3 +65,25 @@ def test_금액은_개인정보로_보지_않는다():
     hits = detect_pii("이체한도는 1,000,000원 입니다")
 
     assert not any(h.type == "account" for h in hits)
+
+
+# ── 파이프라인 배선: 마스킹이 실제로 걸리는가 ─────────────────────────────
+# pii_guard 모듈 주석의 약속 = "AI가 보는·저장하는 건 마스킹본".
+# /api/v1/calls·실시간 WS는 마스킹하는데 /briefing 계열(_analyze_call)은 빠져 있었다.
+
+_PII_TRANSCRIPT = "계좌번호 불러드릴게요 111,222,334 예금주는 본인 확인됐고요"
+
+
+def test_briefing_경로도_전사문을_마스킹한다(monkeypatch):
+    monkeypatch.setattr(pipeline.settings, "stub_models", True)
+    monkeypatch.setattr(
+        pipeline,
+        "_transcribe",
+        lambda filename, audio: TranscribeResult(
+            call_id="test", text=_PII_TRANSCRIPT, duration_sec=1.0
+        ),
+    )
+
+    analysis = pipeline._analyze_call("a.wav", b"\x00\x01")
+
+    assert "111,222,334" not in analysis.transcribed.text

@@ -126,6 +126,9 @@ def _analyze_call(filename: str, audio_bytes: bytes) -> _CallAnalysis:
     voice_anger/text_emotion이 없으면 fusion은 무동작이라 기존 동작과 같다(하위호환).
     """
     transcribed = _transcribe(filename, audio_bytes)
+    # 개인정보 보호(주제 11·12): 전사 직후 마스킹 → 이후 분석(LLM)·응답은 마스킹본만.
+    # mvp.py의 /api/v1/calls와 동일한 규율. 원본 오디오는 이 요청 처리 중에만 쓰고 저장하지 않는다.
+    transcribed.text, _pii = mask_transcript(transcribed.text)
     gpt_result = _analyze(transcribed.text)
     emotion_result = analyze_emotion(audio_bytes)
     text_emotion_result = _classify_text_emotion_safe(transcribed.text)
