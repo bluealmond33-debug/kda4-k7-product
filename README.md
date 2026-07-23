@@ -10,8 +10,9 @@
 |---|---|---|
 | **STT** | faster-whisper `large-v3-turbo` (로컬 GPU) | OpenAI Whisper API |
 | **요약·분류·라우팅** | Ollama `exaone3.5:7.8b` (로컬) | OpenAI GPT |
-| **임베딩·RAG** | bge-m3 + pgvector (로컬) | — |
-| **배포** | 사내망 온프레미스 서버 | Railway / Vercel |
+| **임베딩** | bge-m3 (로컬) | — |
+| **RAG 벡터저장소** | 설계 표준 pgvector / 데모 실구동 FAISS (둘 다 로컬) | — |
+| **배포** | 호스트 직접 실행 (도커 미사용) | Railway / Vercel |
 
 **실행 엔진은 이 저장소가 아니라 [`HeeChang50/kda4-k7-backend`](https://github.com/HeeChang50/kda4-k7-backend)입니다** (`USE_LOCAL_MODELS=true`, 외부 호출 0).
 
