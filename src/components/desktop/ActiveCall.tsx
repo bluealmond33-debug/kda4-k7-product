@@ -231,8 +231,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div style={css("flex:1;min-width:0")}>
               <div style={css("display:flex;align-items:center;gap:6px")}>
                 <span style={css("font-weight:700;font-size:15px")}>{AGENT.role} {AGENT.name}</span>
-                <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--green-700)")} />
-                <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-700)")}>통화 중</span>
+                <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--gray-500);animation:recBlink 1.1s infinite")} />
+                <span style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>통화 중</span>
               </div>
               <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:1px")}>{AGENT.dept} · {AGENT.tenure} · {AGENT.id}</div>
             </div>

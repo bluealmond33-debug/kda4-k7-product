@@ -288,13 +288,13 @@ export default function LiveDemo({
               <span
                 style={css(
                   "display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:" +
-                    (live.active ? "var(--green-400)" : "var(--gray-400)")
+                    (live.active ? "var(--gray-200)" : "var(--gray-400)")
                 )}
               >
                 <span
                   style={css(
                     "width:7px;height:7px;border-radius:9999px;background:" +
-                      (live.active ? "var(--green-500);animation:recBlink 1.1s infinite" : "var(--gray-500)")
+                      (live.active ? "var(--gray-200);animation:recBlink 1.1s infinite" : "var(--gray-500)")
                   )}
                 />
                 {live.active ? "통화 중" : "대기 중"}
