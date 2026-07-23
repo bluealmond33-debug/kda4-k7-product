@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
+import { useLiveCallBus } from "../hooks/useLiveCallBus";
 import Phone from "./Phone";
 import LiveTranscriptPanel, { type StreamItem } from "./LiveTranscriptPanel";
 import Waiting from "./desktop/Waiting";
@@ -61,11 +62,18 @@ export default function LiveDemo({
   // Galaxy는 자신의 /ws/call 스트림을 직접 그린다. 상담사 화면이 늦게
   // 열리거나 잠시 끊겨도 고객 자막이 중앙 demo relay에 의존하지 않는다.
   const phoneActive = vm.phInCall && !vm.phEnded;
-  const phoneLines: StreamItem[] = vm.liveTranscriptLines.map((line) => ({
-    id: `${line.generation ?? 0}-${line.audioSeq ?? line.seq}-${line.speaker}-${line.at}`,
-    text: line.text,
-    who: line.speaker,
-  }));
+  // 전사 소스는 둘이다 — 실통화는 이 탭의 /ws/call 관측 스트림(vm.liveTranscriptLines),
+  // 대본 데모·다른 탭에서 건 콜은 demoBus(stt.utterance)로 온다. 실통화 스트림이
+  // 있으면 그쪽이 정본이다(실통화도 demoBus에 같은 발화를 흘리므로 합치면 중복된다).
+  // 이렇게 둬야 희창이형 서버 없이 리허설할 때도 패널이 살아 있다.
+  const bus = useLiveCallBus();
+  const phoneLines: StreamItem[] = vm.liveTranscriptLines.length
+    ? vm.liveTranscriptLines.map((line) => ({
+        id: `${line.generation ?? 0}-${line.audioSeq ?? line.seq}-${line.speaker}-${line.at}`,
+        text: line.text,
+        who: line.speaker,
+      }))
+    : bus.lines.map((line) => ({ id: line.id, text: line.text, who: line.speaker }));
 
   // 직원 분할 뷰 — 통화 연결(active 진입)의 상승엣지에 자동 on. 리셋(idle)이면 off.
   // 상승엣지로만 켜므로, 통화 중 알약 토글로 끈 뒤 다시 켜지지 않는다(발표자 제어 유지).
@@ -257,14 +265,14 @@ export default function LiveDemo({
             {view === "desktop" && (
               <span
                 onClick={() => setDeskSplit((v) => !v)}
-                title={deskSplit ? "화면을 다시 키우고 고객 발화 패널을 숨깁니다" : "본체를 줄이고 왼쪽에 고객 발화(STT)를 표시합니다"}
+                title={deskSplit ? "화면을 다시 키우고 대화 패널을 숨깁니다" : "본체를 줄이고 왼쪽에 고객·상담원 대화(STT)를 표시합니다"}
                 style={css(
                   "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;background:" +
                     (deskSplit ? "var(--blue-700);color:#fff" : "var(--gray-100);color:var(--gray-1000)")
                 )}
               >
                 <span className="mi" style={css("font-size:17px")}>{deskSplit ? "close_fullscreen" : "call_split"}</span>
-                {deskSplit ? "화면 키우기" : "고객 발화 보기"}
+                {deskSplit ? "화면 키우기" : "대화 보기"}
               </span>
             )}
             {/* 초기화 — 아이콘만(바 혼잡 방지). 5초 건너뛰기 등과 겹칠 때 텍스트가 줄바꿈되던 문제 해소 */}
@@ -325,8 +333,17 @@ export default function LiveDemo({
             )}
           >
             {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}
-            {/* 고객 화면 — 폰은 살짝 왼쪽, 오른쪽에 실시간 현황·발화 스트림(타이핑 애니메이션) */}
-            {view === "phone" && <LiveTranscriptPanel stream={phoneLines} active={phoneActive} />}
+            {/* 고객 화면 — 폰 오른쪽에 대화 스트림. 이 화면의 주인은 고객이라
+                고객 말이 오른쪽·선명하고 상담원 말은 왼쪽·흐리다(직원 화면과 정확히 거울).
+                높이는 옆의 폰(clean=886)에 맞춘다 */}
+            {view === "phone" && (
+              <LiveTranscriptPanel
+                stream={phoneLines}
+                active={phoneActive}
+                self="customer"
+                height={compactCustomer ? 532 : 886}
+              />
+            )}
             {/* 직원 분할 뷰 — 통화 연결 시 본체 왼쪽에 실시간 전사 패널.
                 항상 마운트해 두고 max-width·이동·투명도를 본체와 같은 커브로 접었다 편다 —
                 패널이 왼쪽에서 미끄러져 들어오는 동안 본체는 오른쪽으로 밀리며 줄어든다(한 호흡).
@@ -343,7 +360,14 @@ export default function LiveDemo({
                     "max-width .45s cubic-bezier(.2,.8,.2,1), opacity .3s ease-out, margin-right .45s cubic-bezier(.2,.8,.2,1), transform .45s cubic-bezier(.2,.8,.2,1)",
                 }}
               >
-                <LiveTranscriptPanel stream={phoneLines} active={phoneActive} />
+                {/* 이 화면의 주인은 상담원 — 고객 화면과 좌우가 뒤집힌다.
+                    높이는 옆의 콘솔 본체(688)에 맞춘다 */}
+                <LiveTranscriptPanel
+                  stream={phoneLines}
+                  active={phoneActive}
+                  self="agent"
+                  height={688}
+                />
               </div>
             )}
             {view !== "phone" && (
