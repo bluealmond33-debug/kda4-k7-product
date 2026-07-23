@@ -34,11 +34,9 @@ export default function LiveDemo({
   // 통화 연결(answerCall) 시 자동 on, 상단 알약 토글로 끌 수 있다(발표자가 화면을 다시 키우고 싶을 때).
   const [deskSplit, setDeskSplit] = useState(false);
 
-  // 실제 Galaxy(좁은 폰 폭)로 열었는지 — 무대의 큰 모니터·TV 고객 화면과 레이아웃을 가른다.
-  // 폰+패널 가로 배치는 ~904px가 필요하므로, 진짜 폰 폭(≤620)에서만 세로로 쌓는다.
-  // (노트북·모니터 창은 620 초과 → 폰 오른쪽에 패널이 나란히 선다)
-  const compactCustomer =
-    view === "phone" && window.matchMedia("(max-width: 620px)").matches;
+  // 고객 화면은 폰+전사 패널을 '항상 가로로 나란히' 둔다 — 화면 폭이 줄어도 세로로
+  // 쌓지 않고(패널이 폰 아래로 내려가지 않게) 스테이지를 통째로 축소해 맞춘다.
+  const compactCustomer = false;
   // 고객 화면은 콘텐츠 폭이 좁다(폰 260 + 패널 470) — 스테이지를 콘텐츠에 맞추고
   // 확대를 허용해 큰 모니터에서 양옆 여백 없이 화면을 채운다
   const vm = useCallFlow({
