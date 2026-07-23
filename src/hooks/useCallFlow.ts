@@ -94,6 +94,13 @@ const GLASS: Partial<Record<Phase, string>> = {
    (구: 모든 콜에 동일한 고정 4개 → 주담대 콜에 '착오송금 반환 표현 금지'가 뜨는 자기모순)
    실서비스에선 상담카드+관련 규정에서 AI가 콜마다 생성하는 자리다. */
 const PREP_LEN = 4;
+// 규정(RAG)이 부족할 때 채우는 유형 중립 유의사항 — 특정 시나리오에 안 묶여 항상 적절하다.
+const GENERIC_CHECKS: { title: string; sub: string }[] = [
+  { title: "본인확인 우선", sub: "연락처·생년월일 뒷자리 등으로 본인확인 후 상세 조회 — 완료 전 잠금" },
+  { title: "개인정보 보호", sub: "민감정보는 마스킹, 확정 표현 대신 확인 후 안내" },
+  { title: "사고 여부 확인", sub: "금전피해·무단거래 정황이면 즉시 사고/지급정지 절차" },
+  { title: "규정 근거 안내", sub: "관련 규정을 확인하고 근거에 따라 정확히 안내" },
+];
 const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
   normal: [
     {
@@ -176,6 +183,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [audioBusy, setAudioBusy] = useState(false);
 
   const [prepChecks, setPrepChecks] = useState<boolean[]>(Array(PREP_LEN).fill(false));
+  // 관련 규정(RAG) — /analyze-text가 실제 통화 주제로 찾아준 규정. 유의사항/응대 가이드에 표시.
+  const [ragRefs, setRagRefs] = useState<{ title: string; excerpt: string; category?: string }[]>([]);
   const [verified, setVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone");
   const [authInput, setAuthInput] = useState("");
@@ -353,6 +362,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
       // 3) 후처리 업무유형 — 실제 반영
       if (d?.category) setWrapType(d.category);
+
+      // 4) 관련 규정(RAG) — 유의사항/응대 가이드가 실제 통화 주제 규정을 쓰게 한다.
+      setRagRefs(Array.isArray(d?.references) ? d.references : []);
     } catch {
       const [r] = await Promise.allSettled([
         summarize({ chunks: transcript.current, text }),
@@ -408,12 +420,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 기존 대본 시뮬레이션으로 자동 폴백해 무대가 끊기지 않게 한다.
     transcript.current = [];
     setLiveCaption("");
+    setRagRefs([]);
     startLiveCall(LIVE_CALL_ID, {
       onTranscript: (t) => {
         transcript.current.push({ text: t.text, at: t.at ?? 0, isFinal: true });
         setLiveCaption(t.text);
+        // 새 전사가 오면(=고객이 말함) 침묵 카운트다운 리셋 — 말하는 중 넘어가지 않게.
+        if (silStage.current) {
+          silStage.current = "first";
+          silEnd.current = Date.now() + s1 * 1000;
+        }
       },
-      onLevel: (l) => setMicLevel(l),
+      onLevel: (l) => {
+        setMicLevel(l);
+        // 마이크 레벨이 발화 수준이면 침묵 카운트다운 리셋 — 사용자가 계속 말하는데
+        // "더 하실 말씀 없으신가요?"로 넘어가버리는 문제 수정(대본 타이머 → 실제 발화 반응).
+        if (l > 0.02 && silStage.current) {
+          silStage.current = "first";
+          silEnd.current = Date.now() + s1 * 1000;
+        }
+      },
     })
       .then((h) => {
         live.current = h;
@@ -809,7 +835,18 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     ? contractBullets
     : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
   ).slice(0, 4);
-  const prepDefinitions = PREP_ITEMS[incoming];
+  // 유의사항 = 실제 통화면 RAG 규정(제목+발췌) + 부족분은 유형중립 유의사항으로 4개 채움.
+  // 규정이 없으면(데모 폴백) 기존 콜유형별 픽스처. → 자유 발화 시 주택담보대출 등 엉뚱한 데모 제거.
+  const prepDefinitions = ragRefs.length
+    ? [
+        ...ragRefs.slice(0, PREP_LEN).map((r) => ({
+          title: r.title || "관련 규정",
+          sub: (r.excerpt || "").replace(/^\[[^\]]*\]\s*/, "").replace(/\s+/g, " ").trim().slice(0, 90)
+            || "상담 참고 규정",
+        })),
+        ...GENERIC_CHECKS,
+      ].slice(0, PREP_LEN)
+    : PREP_ITEMS[incoming];
   const emotionBars = temperature.score == null
     ? 0
     : temperature.score > 66
@@ -967,8 +1004,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? `확신 ${Math.round(card.routing_confidence * 100)}% · 상담사 확인 전 후보`
         : "확신도 산출 전 · 상담사 확인 필요",
     transcriptQuote: consultationResponse.transcript.text,
-    // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
-    summaryPoints: SUMMARY_POINTS[incoming],
+    // AI가 발화에서 분해한 요구사항 — 실제 통화면 요약 키워드(summary.bullets)를 쓰고,
+    // 없으면(데모 폴백) 콜 유형별 픽스처를 쓴다. → 자유 발화 시 주택담보대출 등 엉뚱한 데모 제거.
+    summaryPoints: summary?.bullets?.length ? summary.bullets : SUMMARY_POINTS[incoming],
     prepSummaryBullets,
     externalSessionKey: consultationResponse.call_id,
     // 본인인증 전에는 마스킹된 이름 — 인증이 열람의 열쇠라는 걸 화면이 그대로 보여준다
