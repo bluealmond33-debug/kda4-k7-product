@@ -31,7 +31,7 @@ export default function LiveDemo({
     ...config,
     ...(view === "phone" ? { stageW: 600, maxScale: 1.9 } : null),
     // 직원 단독 화면 — 데스크톱 폭(1100)을 브라우저 가로에 100% 맞춘다(양옆 여백 없음)
-    ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 24, fitHeight: false } : null),
+    ...(view === "desktop" ? { stageW: 1100, maxScale: 3, fitPad: 24 } : null),
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
   // 고객 화면 실시간 상태 — demoBus 단일 소스 (알약 상태문구 + 패널 자막이 함께 쓴다)
