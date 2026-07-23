@@ -44,25 +44,11 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               {vm.handover.fromDept} → {AGENT.dept}
             </span>
           ) : null}
-          {/* KARI-NA 브리핑 헤더 — 슬림 1행: 라벨·출처 | AI 확신도 | 라우팅 경로(부서 › 업무).
-              한줄 요약·근거 발화는 전화 요약 상자 상단으로 옮겼다(헤더 비대 해소). */}
+          {/* KARI-NA 브리핑 헤더 — 슬림 라벨·출처만. 확신도·배정·감정·사고는 아래 2×2 신호 그리드로 통합. */}
           <div style={css("display:flex;align-items:center;gap:9px")}>
             <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
             <span style={css("font:800 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
-            <span style={css("font:400 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· {vm.summarySourceLabel}</span>
-            <div style={css("flex:1")} />
-            {vm.prepConfidencePct != null && (
-              <span title={vm.prepConfidence} style={css("display:inline-flex;align-items:baseline;gap:5px;background:var(--gray-100);border-radius:9999px;padding:5px 12px;flex:none")}>
-                <span style={css("font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>AI 확신도</span>
-                <span style={css("font:800 13.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>{vm.prepConfidencePct}%</span>
-              </span>
-            )}
-            <span style={css("display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:9999px;background:var(--gray-100);font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;white-space:nowrap")}>
-              <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>alt_route</span>
-              <span style={css("font-weight:700;color:var(--blue-900)")}>{vm.prepRoutingTitle}</span>
-              <span className="mi" style={css("font-size:15px;color:var(--gray-400)")}>chevron_right</span>
-              <span style={css("color:var(--gray-700)")}>{vm.prepBusinessType}</span>
-            </span>
+            <span style={css("font:400 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· {vm.summarySourceLabel} · 전화 받기 전 미리 듣고 정리했어요</span>
           </div>
         </div>
 
@@ -94,35 +80,51 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             </div>
           )}
 
-          {/* 좌: 감정온도·사고징후 세로 스택 / 우: 해야 할 일(상담 중 가장 중요한 실행 항목) */}
+          {/* 좌: 2×2 신호 그리드(감정온도·사고징후·확신도·배정 — 헤더 배지 통합) / 우: 전화 요약 */}
           <div style={css("display:flex;gap:12px;align-items:stretch")}>
-            <div style={css("flex:none;width:238px;display:flex;flex-direction:column;gap:12px")}>
-            {/* 감정온도 — 흰 카드+보더, 큰 숫자 + 상태 + 0~100 가로 게이지(온도계 대체) */}
-            <div style={css("flex:1;min-height:98px;background:var(--onair-surface);border:1px solid var(--gray-200);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:9px")}>
-              <div style={css("display:flex;align-items:center;gap:6px")}>
-                <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-500)")}>고객 감정온도</span>
+            <div style={css("flex:none;width:346px;display:grid;grid-template-columns:1fr 1fr;gap:10px")}>
+            {/* 감정온도 */}
+            <div style={css("background:var(--onair-surface);border:1px solid var(--gray-200);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;justify-content:center;gap:8px")}>
+              <div style={css("display:flex;align-items:center;gap:5px")}>
+                <span style={css("font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-500)")}>고객 감정온도</span>
                 <div style={css("flex:1")} />
-                <span
-                  title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델이 판정한 값입니다" : "실제 모델 미연동 — 데모용 값입니다"}
-                  style={css("font:600 8.5px 'Geist Mono',monospace;letter-spacing:.3px;padding:2px 6px;border-radius:9999px;background:var(--gray-100);color:var(--gray-400)")}
-                >{vm.prepEmotionSourceBadge.label}</span>
+                <span title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델이 판정한 값입니다" : "실제 모델 미연동 — 데모용 값입니다"} style={css("font:600 8px 'Geist Mono',monospace;letter-spacing:.3px;padding:1.5px 5px;border-radius:9999px;background:var(--gray-100);color:var(--gray-400)")}>{vm.prepEmotionSourceBadge.label}</span>
               </div>
-              <div style={css("display:flex;align-items:baseline;gap:8px")}>
-                <span style={css("font:800 30px/1 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:-1.2px;color:" + vm.prepEmotionBar)}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
-                <span style={css("font:700 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
+              <div style={css("display:flex;align-items:baseline;gap:6px")}>
+                <span style={css("font:800 27px/1 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:-1.1px;color:" + vm.prepEmotionBar)}>{vm.prepEmotionScore != null ? vm.prepEmotionScore : "--"}°</span>
+                <span style={css("font:700 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
               </div>
               <div style={css("height:6px;border-radius:9999px;background:var(--gray-200);overflow:hidden")}>
                 <div style={css("height:100%;border-radius:9999px;transition:width .4s;width:" + (vm.prepEmotionScore != null ? Math.max(3, Math.min(100, vm.prepEmotionScore)) : 0) + "%;background:" + vm.prepEmotionBar)} />
               </div>
             </div>
-            {/* 사고 징후 — 흰 카드+보더(위험 시 붉게), 상태 점 + 큰 라벨 + 신호 한줄 */}
-            <div style={css("flex:1;min-height:98px;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:8px;" + (riskHigh ? "background:var(--red-800)" : "background:var(--onair-surface);border:1px solid var(--gray-200)"))}>
-              <div style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:" + (riskHigh ? "rgba(255,255,255,.8)" : "var(--gray-500)"))}>사고 징후 · 위험도</div>
-              <div style={css("display:flex;align-items:center;gap:9px")}>
-                <span style={css("width:10px;height:10px;border-radius:9999px;flex:none;background:" + (riskHigh ? "#fff" : "var(--green-700)"))} />
-                <span style={css("font:800 25px/1 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:-.6px;color:" + (riskHigh ? "#fff" : "var(--gray-1000)"))}>{vm.prepRiskLabel}</span>
+            {/* 사고 징후 */}
+            <div style={css("border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;justify-content:center;gap:7px;" + (riskHigh ? "background:var(--red-800)" : "background:var(--onair-surface);border:1px solid var(--gray-200)"))}>
+              <div style={css("font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:" + (riskHigh ? "rgba(255,255,255,.8)" : "var(--gray-500)"))}>사고 징후 · 위험도</div>
+              <div style={css("display:flex;align-items:center;gap:8px")}>
+                <span style={css("width:9px;height:9px;border-radius:9999px;flex:none;background:" + (riskHigh ? "#fff" : "var(--green-700)"))} />
+                <span style={css("font:800 22px/1 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:-.5px;color:" + (riskHigh ? "#fff" : "var(--gray-1000)"))}>{vm.prepRiskLabel}</span>
               </div>
-              <div style={css("font:400 11px/1.4 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + (riskHigh ? "rgba(255,255,255,.85)" : "var(--gray-500)"))}>{vm.prepRiskSignal}</div>
+              <div style={css("font:400 10px/1.35 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + (riskHigh ? "rgba(255,255,255,.85)" : "var(--gray-500)") + ";display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>{vm.prepRiskSignal}</div>
+            </div>
+            {/* AI 배정 확신도 */}
+            <div title={vm.prepConfidence} style={css("background:var(--onair-surface);border:1px solid var(--gray-200);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;justify-content:center;gap:8px")}>
+              <div style={css("font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-500)")}>AI 배정 확신도</div>
+              <div style={css("display:flex;align-items:baseline;gap:3px")}>
+                <span style={css("font:800 27px/1 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:-1px;color:var(--gray-1000)")}>{vm.prepConfidencePct != null ? vm.prepConfidencePct : "--"}</span>
+                <span style={css("font:700 14px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>%</span>
+              </div>
+              <div style={css("height:6px;border-radius:9999px;background:var(--gray-200);overflow:hidden")}>
+                <div style={css("height:100%;border-radius:9999px;background:var(--gray-1000);width:" + (vm.prepConfidencePct != null ? vm.prepConfidencePct : 0) + "%")} />
+              </div>
+            </div>
+            {/* AI 배정 부서 */}
+            <div style={css("background:var(--onair-surface);border:1px solid var(--gray-200);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;justify-content:center;gap:5px")}>
+              <div style={css("display:flex;align-items:center;gap:4px;font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-500)")}>
+                <span className="mi" style={css("font-size:13px;color:var(--blue-700)")}>alt_route</span>AI 배정 부서
+              </div>
+              <div style={css("font:800 14px/1.2 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>{vm.prepRoutingTitle}</div>
+              <div style={css("font:400 10.5px/1.35 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>{vm.prepBusinessType}</div>
             </div>
             </div>
 
