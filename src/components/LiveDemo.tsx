@@ -8,6 +8,9 @@ import Waiting from "./desktop/Waiting";
 import PrepCard from "./desktop/PrepCard";
 import ActiveCall from "./desktop/ActiveCall";
 import WrapSheet from "./desktop/WrapSheet";
+import AdminQueueSheet from "./desktop/AdminQueueSheet";
+import DemoTour, { TourChooser } from "../tour/DemoTour";
+import { SCREEN_ORDER } from "../tour/steps";
 
 /**
  * K7 라이브 상담 시연 — 왼쪽 아이폰(자연어 접수) + 오른쪽 상담사 데스크톱.
@@ -91,33 +94,23 @@ export default function LiveDemo({
     if (vm.phIdle) setDeskSplit(false);
   }, [vm.phIdle]);
 
-  // 데모 안내 팝업 등장/퇴장 모션 — 중앙에서 슉 뜨고 다시 접힌다. 등장 지연은 useCallFlow(700ms)가 담당.
-  // 열려 있는 동안 단계가 바뀌면 딤 유지·내용만 즉시 교체(깜빡임 없음), 닫혀 있다 새로 뜰 때만 팝.
-  const [guideRender, setGuideRender] = useState(vm.guideOpen);
-  const [guideIn, setGuideIn] = useState(false);
-  useEffect(() => {
-    if (vm.guideOpen) {
-      setGuideRender(true);
-      let raf = 0;
-      const t = window.setTimeout(() => {
-        raf = requestAnimationFrame(() => setGuideIn(true));
-      }, 0);
-      return () => {
-        window.clearTimeout(t);
-        if (raf) cancelAnimationFrame(raf);
-      };
-    }
-    setGuideIn(false); // 퇴장 애니메이션
-    const t = window.setTimeout(() => setGuideRender(false), 300); // 끝나면 언마운트
-    return () => window.clearTimeout(t);
-  }, [vm.guideOpen]);
+  // 데모 투어링 — 시연·발표용 안내 레이어(src/tour, 분리 모듈).
+  // pending = 시작 선택 전 · on = 투어 진행 · off = 자유 체험. 실제 제품에선 이 상태와 아래 마운트만 지우면 된다.
+  const [tourMode, setTourMode] = useState<"pending" | "on" | "off">("pending");
+  const [tourRun, setTourRun] = useState(0); // 재시작 키 — 알약 클릭 시 지금 화면 투어부터 다시
+  const startTour = () => {
+    setTourMode("on");
+    setTourRun((k) => k + 1);
+  };
+  const screenKey = SCREEN_ORDER[vm.stepIndex];
 
-  // 가이드 스텝 전환 방향(슬라이드) — 이전 인덱스 대비 앞(오른쪽서)/뒤(왼쪽서)
-  const prevIdxRef = useRef(vm.guideIndex);
-  const dir = vm.guideIndex >= prevIdxRef.current ? 1 : -1;
+  // 관리자 보기 — 통화 화면 전용. 토글을 켜면 왼쪽 아래에 시트 헤더만 고개를 내밀고(peek),
+  // 그 헤더를 클릭해야 전체가 올라온다. 평소(통화 밖·토글 꺼짐)에는 아예 안 보인다.
+  const [adminOpen, setAdminOpen] = useState(false);
+  const adminAvailable = vm.showActive && !vm.showWrap; // 통화 중 화면에서만
   useEffect(() => {
-    prevIdxRef.current = vm.guideIndex;
-  }, [vm.guideIndex]);
+    if (!adminAvailable) setAdminOpen(false);
+  }, [adminAvailable]);
 
   return (
     <div
@@ -180,6 +173,9 @@ export default function LiveDemo({
                         {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i}
                       </span>
                       <span style={css("font:600 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
+                      {label === "준비" && (
+                        <span className="mi" title="이 데모의 핵심 — 상담 준비 카드" style={css("font-size:13px;color:var(--amber-700);margin-left:-3px")}>star</span>
+                      )}
                     </span>
                   </span>
                 );
@@ -244,8 +240,9 @@ export default function LiveDemo({
               <span className="mi" style={css("font-size:17px")}>audio_file</span>
               {vm.audioBusy ? "음성 처리 중" : "음성 파일 선택"}
             </span>
+            {/* '5초 건너뛰고 요약' — 실제 직원 화면에는 없는 데모 제어라 리모컨(여기)에 둔다 */}
             {vm.showSkip && (
-              <span onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
+              <span data-tour="skip" onClick={vm.skipWait} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--blue-700);color:#fff;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
                 <span className="mi" style={css("font-size:17px")}>skip_next</span>5초 건너뛰고 요약
               </span>
             )}
@@ -267,6 +264,19 @@ export default function LiveDemo({
             <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:var(--gray-100);border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer")}>
               <span className="mi" style={css("font-size:17px")}>restart_alt</span>초기화
             </span>
+            {adminAvailable && (
+            <span
+              onClick={() => setAdminOpen((v) => !v)}
+              title="관리자 보기 — 부서별 실시간 대기열"
+              style={css(
+                "display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;background:" +
+                  (adminOpen ? "var(--gray-1000)" : "var(--gray-100)") +
+                  ";color:" + (adminOpen ? "#fff" : "var(--gray-800)")
+              )}
+            >
+              <span className="mi" style={css("font-size:17px")}>monitoring</span>관리자
+            </span>
+            )}
           </div>
           )}
 
@@ -424,6 +434,11 @@ export default function LiveDemo({
           </div>
         </div>
       </div>
+
+      {/* 데모 투어링 마운트 — 스테이지(transform: scale) 바깥이라 fixed 오버레이가 정확히 얹힌다.
+          실제 제품에선 이 두 줄과 src/tour 폴더만 지우면 투어가 완전히 사라진다. (src/tour/README.md) */}
+      {tourMode === "pending" && <TourChooser onPick={(t) => setTourMode(t ? "on" : "off")} />}
+      {tourMode === "on" && <DemoTour key={tourRun} vm={vm} screen={screenKey} onExit={() => setTourMode("off")} />}
     </div>
   );
 }

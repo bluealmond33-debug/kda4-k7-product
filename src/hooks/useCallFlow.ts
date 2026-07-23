@@ -14,6 +14,7 @@ import {
   TRANSFER_TARGETS,
   TRANSFER_DEPTS,
   SUGGESTED_DEPT,
+  ADMIN_QUEUE_POOL,
   type IncomingKind,
   type SheetData,
   renderSheet,
@@ -22,6 +23,11 @@ import {
   WRAP_DEFAULTS,
   type Followup,
 } from "../data/demoContent";
+import { piiVerify, piiAccounts, piiHistory } from "../services/pii";
+import { startLiveCall } from "../services/liveCall";
+import { API_BASE_URL, useReal } from "../services/config";
+import { emotionLabel } from "../services/emotion";
+import type { EmotionTemperatureLevel, IncidentRisk } from "../services/types";
 import {
   startSttSession,
   summarize,
@@ -165,8 +171,8 @@ const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; n
     next: "'저장 후 다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
   },
 };
-// 가이드 투어 순서 — 스테퍼 인디케이터·이전/다음 내비게이션 기준
-const GUIDE_ORDER: GuideKey[] = ["idle", "intake", "prep", "active", "wrap"];
+
+// 화면별 데모 안내(투어링)는 src/tour 로 분리 — 시연 전용 레이어라 훅에 두지 않는다.
 
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
 const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
@@ -183,6 +189,9 @@ const fmt = (s: number) => {
   const r = s % 60;
   return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r;
 };
+
+// 실시간 통화 데모용 고정 통화 ID (고객 마이크 송신 소켓 ↔ 상담사 전사 수신 소켓 매칭용)
+const LIVE_CALL_ID = "demo1";
 
 export function useCallFlow(config: CallFlowConfig = {}) {
   const s1 = config.silenceSec1 ?? 5;
@@ -213,6 +222,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [authErrMsg, setAuthErrMsg] = useState("");
   const [authTime, setAuthTime] = useState("");
   const [authMethodLabel, setAuthMethodLabel] = useState("");
+  // 개인정보 격리 서버(pii-service)에서 인증 성공 후 로드하는 계좌/이력
+  const [piiAcc, setPiiAcc] = useState<SheetData | null>(null);
+  const [piiHist, setPiiHist] = useState<SheetData | null>(null);
+  // 실시간 통화 자막 — 고객 마이크가 실시간 전사된 최신 문장(전화 화면에 표시)
+  const [liveCaption, setLiveCaption] = useState("");
+  // 실시간 마이크 레벨/활성 — 녹음 중 시각 피드백(말하면 반응하는 바)
+  const [micLevel, setMicLevel] = useState(0);
+  const [micActive, setMicActive] = useState(false);
 
   const [memoItems, setMemoItems] = useState<string[]>([]);
   const [memoDraft, setMemoDraft] = useState("");
@@ -245,10 +262,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [semHits, setSemHits] = useState<RegulationHit[]>([]);
   const [semLoading, setSemLoading] = useState(false);
 
-  // 데모 안내(가이드 모드) — 화면별 소개 팝업. 로드/단계도달 후 '잠시 뒤' 자동으로 뜬다(아래 효과).
-  const [guideOpen, setGuideOpen] = useState(false);
-  // 팝업이 보여줄 단계 — 도달 시 자동으로 현재 단계, 스테퍼 번호 클릭 시 그 단계
-  const [guideStep, setGuideStep] = useState<GuideKey>("idle");
+
+  // 관리자 대기열에 데모로 추가된 인입 — 폰 '통화 추가' 버튼이 랜덤으로 밀어넣는다
+  const [queueExtras, setQueueExtras] = useState<
+    { id: number; dept: string; masked: string; summary: string; at: number }[]
+  >([]);
+  const addQueueCall = useCallback(() => {
+    setQueueExtras((xs) => {
+      // 아직 안 들어온 사람 우선 — 풀이 다 소진되면 그때부터 중복 허용
+      const unused = ADMIN_QUEUE_POOL.filter((p) => !xs.some((x) => x.masked === p.masked));
+      const pool = unused.length ? unused : ADMIN_QUEUE_POOL;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      return xs.concat({ id: Date.now() + Math.random(), ...pick, at: Date.now() });
+    });
+  }, []);
 
   const [wrapSheetOpen, setWrapSheetOpen] = useState(false);
   const [summaryVersion, setSummaryVersion] = useState(0);
@@ -274,6 +301,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const silStage = useRef<null | "first" | "confirmPause" | "second">(null);
   const silEnd = useRef(0);
   const stt = useRef<SttSession | null>(null);
+  const live = useRef<{ stop: () => void } | null>(null);
   const transcript = useRef<TranscriptChunk[]>([]);
   const phaseRef = useRef<Phase>("idle");
   phaseRef.current = phase;
@@ -313,6 +341,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       stt.current.stop();
       stt.current = null;
     }
+    if (live.current) {
+      live.current.stop();
+      live.current = null;
+    }
+    setMicActive(false);
+    setMicLevel(0);
   }, []);
 
   const startClock = useCallback(() => {
@@ -383,12 +417,72 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     const text = transcript.current
       .filter((c) => c.isFinal)
       .map((c) => c.text)
-      .join(" ");
-    const [summaryResult] = await Promise.allSettled([
-      summarize({ chunks: transcript.current, text }),
-    ]);
-    if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
-    // The standard mvp-1.0 fixture remains visible for the scripted demo.
+      .join(" ")
+      .trim();
+    // 실데이터 비활성/전사 없음 → 기존 mock 요약(픽스처 유지, 무대 폴백)
+    if (!useReal.data || !text) {
+      const [r] = await Promise.allSettled([
+        summarize({ chunks: transcript.current, text }),
+      ]);
+      if (r.status === "fulfilled") setSummary(r.value);
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/analyze-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, average_volume: 0 }),
+      });
+      if (!res.ok) throw new Error(`analyze-text ${res.status}`);
+      const d = await res.json();
+      const score: number = typeof d?.emotion?.score === "number" ? d.emotion.score : 40;
+      const level: EmotionTemperatureLevel =
+        score >= 70 ? "elevated" : score >= 40 ? "caution" : "stable";
+      const highRisk = (d?.urgency_score ?? 0) >= 60;
+      const dept: string = d?.routing?.department || d?.category || "일반상담팀";
+      const kw: string[] = Array.isArray(d?.keywords) ? d.keywords : [];
+
+      // 1) AI 사전요약(CallSummary) — 실제 전사 기반
+      setSummary({
+        type: d?.category || "일반 상담",
+        headline: d?.summary || "상담 내용을 요약했습니다.",
+        bullets: kw.length ? kw.slice(0, 4) : [d?.summary || ""].filter(Boolean),
+        emotion: { score, level, label_ko: emotionLabel(level), signals: [] },
+        incidentRisk: (highRisk ? "high" : "watch") as IncidentRisk,
+        recommendedAgent: highRisk ? "숙련 상담사 우선" : "일반 상담 가능",
+      });
+
+      // 2) 상담카드 오버레이 — 라우팅(부서)·위험·감정이 실제 대화를 반영하게
+      setConsultationResponse((prev) => ({
+        ...prev,
+        consultation_card: {
+          ...prev.consultation_card,
+          summary: d?.summary || prev.consultation_card.summary,
+          business_type: d?.category || prev.consultation_card.business_type,
+          department: dept,
+          routing_reason: d?.routing?.reason || prev.consultation_card.routing_reason,
+          incident_risk: highRisk ? "high" : "low",
+          risk_reason: kw.length
+            ? `위험 신호: ${kw.join(", ")}`
+            : prev.consultation_card.risk_reason,
+          routing_confidence: 0.9,
+          emotion: {
+            status: "completed",
+            score,
+            level,
+            reason: "[SOURCE=REAL_MODEL] 실시간 통화 분석",
+          },
+        },
+      }));
+
+      // 3) 후처리 업무유형 — 실제 반영
+      if (d?.category) setWrapType(d.category);
+    } catch {
+      const [r] = await Promise.allSettled([
+        summarize({ chunks: transcript.current, text }),
+      ]);
+      if (r.status === "fulfilled") setSummary(r.value);
+    }
   }, []);
 
   const toPrep = useCallback(() => {
@@ -435,7 +529,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     const emos = [1, 1, 2, 3];
     emos.forEach((e, i) => after(lineGap * (i + 1), () => setEmo(e)));
     after(lineGap * (emos.length + 1), () => armFirst());
-    // Feed the (mock) transcript so the summariser has real input.
+    // 전사 소스: 실제 고객 마이크 스트리밍(고객→WS→로컬 STT). 마이크 거부/불가 시
+    // 기존 대본 시뮬레이션으로 자동 폴백해 무대가 끊기지 않게 한다.
     transcript.current = [];
     stt.current = startSttSession(
       {
@@ -449,8 +544,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           });
         },
       },
-      lineGap
-    );
+      onLevel: (l) => setMicLevel(l),
+    })
+      .then((h) => {
+        live.current = h;
+        setMicActive(true);
+      })
+      .catch(() => {
+        setMicActive(false);
+        stt.current = startSttSession(
+          { onChunk: (c) => transcript.current.push(c) },
+          lineGap
+        );
+      });
   }, [after, armFirst, lineGap]);
 
   const beginRecording = useCallback(() => {
@@ -736,7 +842,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     },
     [authMethod]
   );
-  const runVerify = useCallback(() => {
+  const runVerify = useCallback(async () => {
     const need = authMethod === "birth" ? 6 : 4;
     const digits = (authInput || "").replace(/\D/g, "");
     if (digits.length < need) {
@@ -744,32 +850,49 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAuthErr(true);
       return;
     }
-    // 고객 진술값과 대조 — 불일치는 인증 실패 (은행 툴의 핵심 경로)
-    if (digits.slice(-need) !== CUSTOMER.authAnswers[authMethod]) {
+    const val = digits.slice(-need);
+    // 본인인증은 개인정보 격리 서버(pii-service)로 보낸다 — AI 백엔드는 관여하지 않음.
+    // pii-service가 꺼져 있으면 로컬 대조로 폴백(무대 안전장치).
+    let ok = false;
+    let custId: string | null = null;
+    try {
+      const r = await piiVerify(authMethod, val);
+      ok = r.verified;
+      custId = r.customer_id;
+    } catch {
+      ok = val === CUSTOMER.authAnswers[authMethod];
+      custId = ok ? "c1" : null;
+    }
+    if (!ok) {
       setAuthErrMsg("고객 진술과 불일치 — 값을 다시 확인하거나 다른 대조 방식을 사용하세요");
       setAuthErr(true);
       return;
     }
-    {
-      const now = new Date();
-      const t =
-        ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2);
-      const lbl =
-        authMethod === "phone"
-          ? "연락처 뒷 4자리 대조"
-          : authMethod === "birth"
-          ? "생년월일 대조"
-          : "계좌 뒷 4자리 대조";
-      setVerified(true);
-      setAuthTime(t);
-      setAuthMethodLabel(lbl);
-      setAuthErr(false);
+    // 인증 성공 → 개인정보(계좌/이력)를 격리 서버에서 로드(실패 시 렌더 단계에서 정적 폴백).
+    if (custId) {
+      piiAccounts(custId).then(setPiiAcc).catch(() => {});
+      piiHistory(custId).then(setPiiHist).catch(() => {});
     }
+    const now = new Date();
+    const t =
+      ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2);
+    const lbl =
+      authMethod === "phone"
+        ? "연락처 뒷 4자리 대조"
+        : authMethod === "birth"
+        ? "생년월일 대조"
+        : "계좌 뒷 4자리 대조";
+    setVerified(true);
+    setAuthTime(t);
+    setAuthMethodLabel(lbl);
+    setAuthErr(false);
   }, [authInput, authMethod]);
   const resetAuth = useCallback(() => {
     setVerified(false);
     setAuthInput("");
     setAuthErr(false);
+    setPiiAcc(null);
+    setPiiHist(null);
   }, []);
 
   // ── memo ──
@@ -782,6 +905,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const onMemoKey = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
+        // 한글 IME 조합 중 Enter는 '조합 확정'일 뿐 — 이때 추가하면 메모가 "안녕하세"+"요"로 쪼개진다
+        if (e.nativeEvent.isComposing) return;
         e.preventDefault();
         addMemo();
       }
@@ -837,7 +962,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // re-measure after any layout-affecting change
   useLayoutEffect(() => {
     fit();
-  }, [fit, phase, verified, regExpanded, memoItems, followups, wrapSheetOpen, micErr, guideOpen]);
+  }, [fit, phase, verified, regExpanded, memoItems, followups, wrapSheetOpen, micErr]);
 
   useEffect(() => () => clearAll(), [clearAll]);
 
@@ -845,29 +970,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const p = phase;
   const inCall = ["connecting", "recording", "confirm", "prep", "active"].includes(p);
   const ended = p === "wrap" || p === "summarizing";
-  // 데모 안내: 현재 phase → 가이드 화면 키
-  const guideKey: GuideKey =
-    p === "idle"
-      ? "idle"
-      : ["connecting", "recording", "confirm"].includes(p)
-      ? "intake"
-      : p === "prep"
-      ? "prep"
-      : p === "active"
-      ? "active"
-      : "wrap";
-  // 새 단계에 도달하면 그 단계 안내를 자동 팝업으로 (화면별 소개 멘트).
-  // 화면을 잠깐 본 뒤(700ms) 뜬다 — "화면 먼저, 설명은 이어서". 대기(idle)는 로드 후 1회.
-  // (스테퍼 번호 클릭 = openGuideStep = 지연 없이 즉시)
-  useEffect(() => {
-    setGuideStep(guideKey);
-    const t = window.setTimeout(() => setGuideOpen(true), 700);
-    return () => window.clearTimeout(t);
-  }, [guideKey]);
   const sim = mode === "sim";
   const nv = !verified;
 
-  const dk = renderSheet(SHEETS[dockType ?? "history"]);
+  // 계좌/이력은 인증 후 pii-service에서 받은 데이터 우선, 없으면(미로드/서버다운) 정적 폴백
+  const dk = renderSheet(
+    (dockType === "accounts" ? piiAcc : dockType === "history" ? piiHist : null) ??
+      SHEETS[dockType ?? "history"]
+  );
   const rg = renderSheet(manualData ?? SHEETS.manual);
   // 검색 필터 — r.n(원본 행 번호)은 유지되므로 '열기' 강조(regTargetRow)와 충돌하지 않는다
   const regNeedle = regSearch.trim().toLowerCase();
@@ -997,7 +1107,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     ? contractBullets
     : summary?.bullets ?? ["고객 발화를 분석하고 있습니다."]
   ).slice(0, 4);
-  const prepDefinitions = PREP_ITEMS;
+  const prepDefinitions = PREP_ITEMS[incoming];
   const emotionBars = temperature.score == null
     ? 0
     : temperature.score > 66
@@ -1018,29 +1128,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
     phaseLabel: LABELS[p] || p,
-    // 데모 안내(가이드 모드)
-    guideOpen,
-    closeGuide: () => setGuideOpen(false),
-    guide: GUIDE[guideStep],
-    guideStep,
-    guideIndex: GUIDE_ORDER.indexOf(guideStep),
-    // 스테퍼 인디케이터용 — 순서대로 {key,label}
-    guideSteps: GUIDE_ORDER.map((k) => ({ key: k, label: GUIDE[k].step })),
-    // 스테퍼 번호/인디케이터 클릭 → 그 단계 안내로 전환하며 팝업 (도달 전 단계도 미리보기 가능)
-    openGuideStep: (k: string) => {
-      setGuideStep(k as GuideKey);
-      setGuideOpen(true);
-    },
-    // 가이드 투어 이전/다음 — 데모는 안 움직이고 안내만 앞뒤로 넘긴다. 마지막에서 '다음' = 닫기
-    guidePrev: () => {
-      const i = GUIDE_ORDER.indexOf(guideStep);
-      if (i > 0) setGuideStep(GUIDE_ORDER[i - 1]);
-    },
-    guideNext: () => {
-      const i = GUIDE_ORDER.indexOf(guideStep);
-      if (i < GUIDE_ORDER.length - 1) setGuideStep(GUIDE_ORDER[i + 1]);
-      else setGuideOpen(false);
-    },
     // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
     stepIndex:
       p === "idle"
@@ -1090,6 +1177,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       }),
     micErr,
     audioBusy,
+    // 관리자 대기열 데모 추가 인입
+    queueExtras,
+    addQueueCall,
     simBg: sim ? "var(--blue-700)" : "#fff",
     simFg: sim ? "#fff" : "var(--color-fg-secondary)",
     micBg: !sim ? "var(--blue-700)" : "#fff",
@@ -1119,6 +1209,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     showGlass: !!GLASS[p],
     glassText: GLASS[p] || "",
     showWave: p === "recording",
+    liveCaption,
+    micLevel,
+    micActive,
     showControls: inCall,
     // desktop waiting
     showWaiting: ["idle", "connecting", "recording", "confirm"].includes(p),
@@ -1280,6 +1373,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // regulations panel
     openManual: () => setRegExpanded(true),
     openManualAt: (row: number) => {
+      setRegSearch(""); // 검색 필터가 대상 행을 가리지 않게 — 열기는 항상 원본 시트에서 그 행을 보여준다
       setRegTargetRow(row);
       setRegExpanded(true);
     },

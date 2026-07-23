@@ -24,7 +24,7 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
 
       {/* 라이브 신호 — 접수 중에도 상담사 화면이 살아 있다: 감정온도 상승 + 무음 카운트다운 */}
       {vm.waitingSpin && (
-        <div style={css("display:flex;align-items:center;gap:22px;margin-top:10px;background:var(--onair-surface);border-radius:9999px;padding:10px 22px;box-shadow:var(--sh-far)")}>
+        <div data-tour="intake-live" style={css("display:flex;align-items:center;gap:22px;margin-top:10px;background:var(--onair-surface);border-radius:9999px;padding:10px 22px;box-shadow:var(--sh-far)")}>
           <span style={css("display:flex;align-items:center;gap:8px")} title="실시간 감정온도">
             <span style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
             <span className="lampdots">
@@ -51,6 +51,7 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
           </span>
         </div>
       )}
+
     </div>
   );
 }

@@ -5,11 +5,12 @@ import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
+/* 데모 기준일 2026.07.21 — ago(상대 시점)를 함께 표기해 최근 항목이 '오늘 상담'으로 오해되지 않게 한다 */
 const HISTORY = [
-  { date: "2026.07.02", label: "카드 › 분실신고" },
-  { date: "2026.05.18", label: "수신 › 이체한도 상향" },
-  { date: "2026.03.09", label: "전자금융 › OTP 재발급" },
-  { date: "2026.02.14", label: "대출 › 상환일정 문의" },
+  { date: "2026.07.02", ago: "3주 전", label: "카드 › 분실신고" },
+  { date: "2026.05.18", ago: "2개월 전", label: "수신 › 이체한도 상향" },
+  { date: "2026.03.09", ago: "4개월 전", label: "전자금융 › OTP 재발급" },
+  { date: "2026.02.14", ago: "5개월 전", label: "대출 › 상환일정 문의" },
 ];
 
 const ACCOUNTS = [
@@ -44,19 +45,24 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const memoInputRef = useRef<HTMLInputElement | null>(null);
+  // 메모 목록 — 새 메모가 입력창 바로 위(맨 아래)에 붙도록 추가 시 바닥으로 자동 스크롤
+  const memoListRef = useRef<HTMLDivElement | null>(null);
   const [memoFocused, setMemoFocused] = useState(false);
   const [authFocused, setAuthFocused] = useState(false);
 
-  // 광원 상태머신 v2 — 통화 중 '상담사가 계속 보는 작업면' = 단계별 스크립트가 기본 초점.
-  // 오버라이드(잠깐 손대는 순간에만) = 메모 입력 > 규정집 확장 > 본인확인 입력 포커스.
-  // (구 v1: 미인증이면 고객카드가 떠서 통화 내내 그림자가 본인확인에 가 있던 문제 교정 —
-  //  본인확인은 계속 보는 면이 아니라 초반에 잠깐 처리하는 작업이므로 입력에 들어갔을 때만 뜬다.)
-  // 마우스 추적 없음 — 전환은 .card의 0.45s 이산 트랜지션.
-  const focus: "customer" | "script" | "memo" | "reg" =
+  // 광원 상태머신 v3 — 기본은 아무 카드도 들리지 않는다(진입 직후 스크립트에 그림자가 떠 있던 v2 교정).
+  // 초점은 '작업 중'일 때만: 메모 입력 > 규정집 확장 > 본인확인 입력 포커스.
+  // 마우스 관심은 .card:hover(--sh-hover)가 맡는다 — 호버 = 관심 후보, focus = 작업 중.
+  const focus: "customer" | "memo" | "reg" | "none" =
     memoFocused || editIdx !== null ? "memo"
     : vm.regExpanded ? "reg"
     : authFocused ? "customer"
-    : "script";
+    : "none";
+
+  useEffect(() => {
+    const el = memoListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [vm.memoItems.length]);
 
   // 검색어가 있거나 문서를 열면 규정 패널을 넓은 엑셀 뷰로 자동 확장한다
   const regWide = vm.regExpanded || !!vm.regDoc || vm.regDocLoading || vm.regSearch.trim().length > 0;
@@ -194,7 +200,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </span>
           )}
           {!vm.showWrap && (
-          <span style={css("position:relative")}>
+          <span data-tour="call-end" style={css("position:relative")}>
             <span
               title="통화 종료"
               onClick={() => setEndConfirm((v) => !v)}
@@ -219,7 +225,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
       <div style={css("flex:1;display:flex;gap:16px;min-height:0;padding:16px 16px " + (vm.showWrap ? "16px" : "42px") + " 16px")}>
         {/* ── 좌 컬럼 ── */}
-        <div ref={leftColRef} style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden")}>
+        <div ref={leftColRef} data-tour="call-left" style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden")}>
           <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px" + (vm.verified ? ";opacity:.93" : ""))}>
             <span className="av" style={css("width:42px;height:42px")}><span className="mi" style={css("font-size:22px")}>headset_mic</span></span>
             <div style={css("flex:1;min-width:0")}>
@@ -372,11 +378,15 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   <div key={i} style={css("display:flex;gap:11px")}>
                     <div style={css("display:flex;flex-direction:column;align-items:center;width:9px;flex:none")}>
                       <span style={css("width:9px;height:9px;border-radius:9999px;flex:none;margin-top:13px;box-sizing:border-box;" + (i === 0 ? "background:var(--blue-700)" : "border:1.5px solid var(--gray-500);background:var(--onair-surface)"))} />
-                      {i < HISTORY.length - 1 && <span style={css("width:1.5px;flex:1;background:var(--gray-300)")} />}
+                      {i < HISTORY.length - 1 && <span style={css("width:1.5px;flex:1;background:var(--gray-300);margin-bottom:-13px")} />}
                     </div>
                     <div style={css("flex:1;padding:8px 0 14px")}>
-                      <div style={css("display:flex;align-items:center;gap:8px")}>
+                      <div style={css("display:flex;align-items:center;gap:6px")}>
                         <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{h.date}</span>
+                        <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· {h.ago}</span>
+                        {i === 0 && (
+                          <span style={css("font:600 10px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>가장 최근</span>
+                        )}
                         <span style={css("font:400 10px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);margin-left:auto;background:var(--gray-100);border-radius:9999px;padding:2px 8px")}>완결</span>
                       </div>
                       <div style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);margin-top:3px")}>{h.label}</div>
@@ -415,7 +425,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         </div>
 
         {/* ── 중 컬럼 ── */}
-        <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
+        <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
           <div className="card" style={css("flex:none;padding:15px 17px")}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
               <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>graphic_eq</span>
@@ -438,7 +448,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
           </div>
 
-          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "script" ? ";box-shadow:var(--sh-focus)" : ""))}>
+          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>menu_book</span> 단계별 상담 스크립트
@@ -465,11 +475,14 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             </div>
             {/* 빈 영역을 클릭해도 바로 입력 — placeholder 영역이 입력처럼 안 보이던 문제 해소 */}
             <div
+              ref={memoListRef}
               onClick={(e) => {
                 if (e.target === e.currentTarget || vm.memoEmpty) memoInputRef.current?.focus();
               }}
               style={css("flex:1;overflow:auto;padding:10px 16px;display:flex;flex-direction:column;gap:6px;cursor:text")}
             >
+              {/* 스페이서 — 메모가 적을 땐 목록을 입력창 쪽(아래)으로 민다. 새 메모 = 항상 입력창 바로 위 */}
+              <div style={css("flex:1")} />
               {vm.memoItems.map((m, i) => (
                 <div key={i} className="memorow" style={css("display:flex;gap:8px;align-items:baseline")}>
                   <span style={css("color:var(--blue-700);font-weight:700;flex:none")}>•</span>
@@ -479,7 +492,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                           vm.updateMemo(i, editText);
                           setEditIdx(null);
                         }

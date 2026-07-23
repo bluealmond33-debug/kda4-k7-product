@@ -131,6 +131,46 @@ export const SUGGESTED_DEPT: Record<IncomingKind, string> = {
   transfer: "여신심사팀",
 };
 
+/** 관리자 화면 — 부서별 실시간 대기열 픽스처. 이름은 마스킹(최소 표시 원칙),
+ *  용건은 AI 사전 접수 요약 한 줄. baseSec + 열람 중 경과로 대기 시간이 실제로 흐른다.
+ *  대기 건수는 TRANSFER_DEPTS의 state(대기 2·1·0건)와 같은 사건을 말한다. */
+export const ADMIN_QUEUE = [
+  {
+    dept: "사고대응팀",
+    desc: "명의도용·보이스피싱·이상거래",
+    available: 1,
+    busy: 2,
+    waiting: [
+      { masked: "박*영", summary: "카드 도난 의심 — 해외 승인 문자 확인 요청", baseSec: 252 },
+      { masked: "최*호", summary: "보이스피싱 의심 이체 차단 요청", baseSec: 158 },
+    ],
+  },
+  {
+    dept: "여신심사팀",
+    desc: "대출 심사·재약정·한도 변경",
+    available: 2,
+    busy: 1,
+    waiting: [{ masked: "김*진", summary: "주택담보대출 금리 재약정 상담", baseSec: 65 }],
+  },
+  {
+    dept: "전자금융팀",
+    desc: "OTP·공동인증서·이체 오류",
+    available: 3,
+    busy: 0,
+    waiting: [],
+  },
+] as const;
+
+/** '통화 추가' 데모 — 관리자 대기열에 랜덤으로 들어올 더미 인입 풀 (긴급 없음, 일반 카드만) */
+export const ADMIN_QUEUE_POOL = [
+  { dept: "여신심사팀", masked: "정*아", summary: "신용대출 한도 증액 가능 여부 문의" },
+  { dept: "여신심사팀", masked: "이*준", summary: "전세자금대출 서류 재제출 절차 문의" },
+  { dept: "사고대응팀", masked: "한*솔", summary: "해외 결제 승인 취소 요청" },
+  { dept: "사고대응팀", masked: "오*택", summary: "스미싱 문자 클릭 후 계좌 점검 요청" },
+  { dept: "전자금융팀", masked: "유*나", summary: "OTP 재발급 및 이체한도 문의" },
+  { dept: "전자금융팀", masked: "강*민", summary: "공동인증서 갱신 오류 해결 요청" },
+] as const;
+
 export interface ScriptStep {
   title: string;
   text: string;
@@ -300,6 +340,24 @@ export const SHEETS: Record<"history" | "accounts" | "manual", SheetData> = {
         "FDS 연계",
         "이상거래 징후 시 사고대응팀 연계 후 처리.",
         "“안전을 위해 사고대응팀으로 연결해 드리겠습니다.”",
+      ],
+      [
+        "§14-1",
+        "본인확인 방법",
+        "연락처·생년월일·계좌 뒷자리 중 고객 진술값을 원문과 대조. 원문은 화면에 표시하지 않는다.",
+        "“확인을 위해 연락처 뒤 4자리를 말씀해 주시겠어요?”",
+      ],
+      [
+        "§14-2",
+        "본인확인 불일치",
+        "불일치 시 다른 방식으로 1회 재시도. 재차 불일치면 열람 불가·지점 내방 안내.",
+        "“말씀해주신 정보가 일치하지 않아 다른 방법으로 한 번 더 확인하겠습니다.”",
+      ],
+      [
+        "§14-3",
+        "대리인 상담 시 본인확인",
+        "위임장·본인 동의 확인 전에는 대리인에게 계좌·상담 정보를 열람·안내할 수 없다.",
+        "“본인 동의 확인 전에는 상세 내용을 안내드리기 어렵습니다.”",
       ],
     ],
   },

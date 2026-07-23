@@ -89,7 +89,7 @@ function KeyButton({
  *  숨긴다. 그 정보는 상단 상황 알약과 실시간 통화 패널이 대신 보여준다. */
 export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
   return (
-    <div style={css("flex:none;width:260px;height:532px")}>
+    <div data-tour="phone" style={css("flex:none;width:260px;height:532px;position:relative")}>
       <div
         className="sf"
         style={css(
@@ -295,6 +295,28 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
             <span style={css("width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.55);animation:wave 1.1s infinite .2s")} />
             <span style={css("width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.9);animation:wave .8s infinite .15s")} />
             <span style={css("width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.55);animation:wave 1s infinite .25s")} />
+          </div>
+        )}
+
+        {vm.showWave && vm.micActive && (
+          <div style={css("margin-top:14px;width:100%;display:flex;flex-direction:column;gap:8px;align-items:center")}>
+            <div style={css("display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#ff3b30")}>
+              <span style={css("width:9px;height:9px;border-radius:50%;background:#ff3b30;animation:recBlink 1.1s infinite")} />
+              마이크 녹음 중 — 말해보세요
+            </div>
+            <div style={css("width:80%;height:8px;background:rgba(0,0,0,.08);border-radius:4px;overflow:hidden")}>
+              <div style={css("height:100%;background:#22c55e;border-radius:4px;transition:width .08s;width:" + Math.min(100, vm.micLevel * 500) + "%")} />
+            </div>
+          </div>
+        )}
+
+        {vm.showWave && vm.liveCaption && (
+          <div
+            style={css(
+              "margin-top:16px;width:100%;background:rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.07);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.55;color:#1c1c1e;text-align:center"
+            )}
+          >
+            {vm.liveCaption}
           </div>
         )}
 

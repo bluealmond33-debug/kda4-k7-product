@@ -27,7 +27,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
       <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5);animation:fadeIn .18s ease-out")} />
 
       {/* 모달 */}
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
+      <div data-tour="prep-card" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:800px;max-height:840px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
         <div style={css("padding:22px 28px 20px;border-bottom:1px solid var(--gray-200)")}>
           {/* 배지 = 콜 유형 신호. 떴다는 것 자체가 의미이므로 긴급·이관일 때만 표시(일반=배지 없음) */}
           {vm.isUrgent ? (
@@ -66,6 +66,14 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <div style={css("font:400 12.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:7px")}>
                 근거 발화 · <span style={css("font-style:italic;color:var(--gray-800)")}>“{vm.transcriptQuote}”</span>
               </div>
+            </div>
+            {/* 라우팅 배지 — AI가 배정한 담당 부서(우측 상단) */}
+            <div style={css("flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:4px")}>
+              <span style={css("display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9999px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.28);font:700 12px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900);white-space:nowrap")}>
+                <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>alt_route</span>
+                {vm.prepRoutingTitle} 라우팅
+              </span>
+              <span style={css("font:600 10px 'Geist Mono','Geist Sans',monospace;color:var(--blue-900);opacity:.7")}>{vm.prepConfidence}</span>
             </div>
           </div>
         </div>
@@ -182,6 +190,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <span className="mi" style={css("font-size:14px")}>sync_alt</span> 부서 이관은 관제 대시보드에서 실시간 처리됩니다
           </span>
           <span
+            data-tour="prep-connect"
             onClick={vm.answerCall}
             style={css(
               "padding:10px 26px;background:" +
