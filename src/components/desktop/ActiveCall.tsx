@@ -147,39 +147,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   };
   return (
     <DesktopShell flex>
-      {vm.liveTranscriptLines.length > 0 && !vm.showWrap && (
-        <div
-          style={css(
-            "position:absolute;left:120px;right:120px;bottom:42px;z-index:20;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.96);border:1px solid var(--blue-400);border-radius:9999px;padding:9px 15px;box-shadow:var(--sh-modal);pointer-events:none"
-          )}
-        >
-          <span style={css("display:flex;align-items:center;gap:6px;color:var(--blue-900);font-size:11.5px;font-weight:700;white-space:nowrap")}>
-            <span style={css("width:8px;height:8px;border-radius:50%;background:var(--green-700);animation:recBlink 1.1s infinite")} />
-            실시간 STT
-          </span>
-          <span style={css("display:flex;flex:1;min-width:0;gap:12px;overflow:hidden")}>
-            {vm.liveTranscriptLines.slice(-2).map((line, index) => {
-              const isAgent = line.speaker === "agent";
-              return (
-                <span
-                  key={`${line.generation ?? 0}-${line.seq}-${line.speaker}-${line.at}`}
-                  style={css(
-                    "display:flex;gap:6px;min-width:0;flex:1;" +
-                      (index > 0 ? "border-left:1px solid var(--gray-300);padding-left:12px" : "")
-                  )}
-                >
-                  <b style={css("flex:none;font-size:11.5px;color:" + (isAgent ? "var(--green-900)" : "var(--blue-700)"))}>
-                    {isAgent ? "상담원" : "고객"}
-                  </b>
-                  <span style={css("min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--gray-1000)")}>
-                    {line.text}
-                  </span>
-                </span>
-              );
-            })}
-          </span>
-        </div>
-      )}
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         {/* 알약 폭 = 콘텐츠 폭(빈 공간 없음). 이관 패널은 grid 0fr→1fr 트릭으로 알약이 부드럽게 길어진다 */}
