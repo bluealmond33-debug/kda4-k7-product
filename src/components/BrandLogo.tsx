@@ -1,22 +1,59 @@
 import { css } from "../lib/css";
+import { BRAND_MARK_PNG } from "../assets/brandMark";
+
+const MARK_W = 186, MARK_H = 173; // 공식 아트워크 원본 비율
 
 /**
- * KARI-NA 브랜드 심볼 — 마주 보는 두 로브(공식 로고 PNG에서 실루엣 추출, viewBox 164×147).
- * 원본 브랜드 블루가 #2F5FC4 로 제품 토큰 --blue-700 과 정확히 같아 currentColor로 물려 쓴다.
- * 검은 무대/역상에서는 color만 흰색으로 주면 된다.
+ * KARI-NA 브랜드 심볼 — 공식 아트워크(브랜드 시스템 아티팩트 원본 PNG)를 CSS mask로 렌더.
+ * 손으로 딴 SVG가 엉성해 실제 아트워크로 교체했다. PNG의 알파(=심볼 실루엣)를 마스크로 쓰고
+ * background 색을 채우므로, 네이티브 색과 무관하게 blue/흰/검정 어떤 색이든 또렷하게 나온다.
  */
 export function BrandSymbol({ size = 22, color }: { size?: number; color?: string }) {
+  const w = Math.round(size * (MARK_W / MARK_H));
   return (
-    <svg
-      viewBox="0 0 164 147"
-      width={Math.round(size * (164 / 147))}
-      height={size}
-      fill={color ?? "currentColor"}
+    <span
       aria-hidden="true"
-      style={{ display: "block", flex: "none" }}
-    >
-      <path d="M61 0 L55 0 L37 3 L29 6 L22 9 L17 12 L13 15 L10 18 L7 21 L5 24 L3 27 L2 30 L1 33 L0 36 L0 39 L0 42 L0 45 L1 48 L2 51 L4 54 L6 57 L9 60 L12 63 L15 66 L20 69 L26 72 L24 75 L18 78 L14 81 L11 84 L8 87 L5 90 L4 93 L2 96 L1 99 L0 102 L0 105 L0 108 L0 111 L1 114 L2 117 L4 120 L5 123 L8 126 L11 129 L14 132 L19 135 L24 138 L31 141 L41 144 L53 146 L61 146 Z" />
-      <path d="M103 0 L109 0 L127 3 L135 6 L142 9 L147 12 L151 15 L154 18 L157 21 L159 24 L161 27 L162 30 L163 33 L164 36 L164 39 L164 42 L164 45 L163 48 L162 51 L160 54 L158 57 L155 60 L152 63 L149 66 L144 69 L138 72 L140 75 L146 78 L150 81 L153 84 L156 87 L159 90 L160 93 L162 96 L163 99 L164 102 L164 105 L164 108 L164 111 L163 114 L162 117 L160 120 L159 123 L156 126 L153 129 L150 132 L145 135 L140 138 L133 141 L123 144 L111 146 L103 146 Z" />
+      style={{
+        display: "block",
+        flex: "none",
+        width: w + "px",
+        height: size + "px",
+        background: color ?? "var(--blue-700)",
+        WebkitMaskImage: `url("${BRAND_MARK_PNG}")`,
+        maskImage: `url("${BRAND_MARK_PNG}")`,
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+      }}
+    />
+  );
+}
+
+/**
+ * KARI-NA 마스코트 얼굴 — 로딩/접수 연출용 친근한 표정. 브랜드 색 라운드 블롭 + 흰 눈·미소.
+ * (브랜드 심볼과 별개: 로고 대신 '얼굴'을 넣어 달라는 요청.)
+ */
+export function BrandFace({
+  size = 40,
+  color = "var(--blue-700)",
+  ink = "#fff",
+}: {
+  size?: number;
+  color?: string;
+  ink?: string;
+}) {
+  return (
+    <svg viewBox="0 0 100 100" width={size} height={size} style={{ display: "block", flex: "none" }} aria-hidden="true">
+      {/* 라운드 블롭 얼굴 바탕 */}
+      <rect x="7" y="7" width="86" height="86" rx="31" fill={color} />
+      {/* 눈 */}
+      <circle cx="37" cy="43" r="6.2" fill={ink} />
+      <circle cx="63" cy="43" r="6.2" fill={ink} />
+      {/* 미소 */}
+      <path d="M34 59 Q50 74 66 59" fill="none" stroke={ink} strokeWidth="6.4" strokeLinecap="round" />
     </svg>
   );
 }
