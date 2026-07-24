@@ -54,6 +54,7 @@ import {
   type RegulationHit,
 } from "../services/regulationSearch";
 import { API_BASE_URL, useReal } from "../services/config";
+import { postStageScale, subscribeStageScale } from "../services/stageScaleBus";
 import {
   startLiveCall,
   type LiveHandle,
@@ -461,6 +462,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
+  // 창간 스케일 동기화: 폰이 직원 창에서 받은 배율(있으면 그대로 채택) · 직원이 마지막 방송한 배율
+  const syncedScaleRef = useRef<number | null>(null);
+  const lastPubScaleRef = useRef<number | null>(null);
 
   const after = useCallback((ms: number, fn: () => void) => {
     const id = window.setTimeout(fn, ms);
@@ -1860,10 +1864,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     const avail = Math.max(320, w - fitPad);
     const h = stageRef.current ? stageRef.current.offsetHeight : 0;
     const scH = fitHeight && h > 0 ? Math.max(0.4, (window.innerHeight - 40) / h) : maxScale;
-    const sc = Math.min(maxScale, avail / stageW, scH);
+    const own = Math.min(maxScale, avail / stageW, scH);
+    // 직원 창은 자기 배율을 방송(바뀔 때만) — 폰 창이 같은 물리 크기로 맞추도록.
+    if (surface === "desktop" && own !== lastPubScaleRef.current) {
+      lastPubScaleRef.current = own;
+      postStageScale({ t: "scale", scale: own });
+    }
+    // 폰 창은 직원 배율이 오면 그걸 그대로 써서 정확히 일치시킨다(없으면 자기 fit).
+    const sc = surface === "phone" && syncedScaleRef.current != null ? syncedScaleRef.current : own;
     setScale((prev) => (prev !== sc ? sc : prev));
     setNatH((prev) => (prev !== h ? h : prev));
-  }, [stageW, maxScale, fitPad, fitHeight]);
+  }, [stageW, maxScale, fitPad, fitHeight, surface]);
 
   useEffect(() => {
     const onResize = () => fit();
@@ -1874,6 +1885,27 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       cancelAnimationFrame(raf);
     };
   }, [fit]);
+
+  // 창간 스케일 동기화 — 폰: 직원 배율 수신 시 그대로 채택 + 초기 요청 / 직원: 요청 오면 현재 배율 재방송.
+  useEffect(() => {
+    if (surface === "phone") {
+      const unsub = subscribeStageScale((m) => {
+        if (m.t === "scale") {
+          syncedScaleRef.current = m.scale;
+          fit();
+        }
+      });
+      postStageScale({ t: "req" }); // 직원 창이 이미 떠 있으면 현재 배율을 즉시 받기
+      return unsub;
+    }
+    if (surface === "desktop") {
+      return subscribeStageScale((m) => {
+        if (m.t === "req" && lastPubScaleRef.current != null) {
+          postStageScale({ t: "scale", scale: lastPubScaleRef.current });
+        }
+      });
+    }
+  }, [surface, fit]);
 
   // re-measure after any layout-affecting change
   useLayoutEffect(() => {
