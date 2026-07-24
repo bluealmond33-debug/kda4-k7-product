@@ -7,3 +7,36 @@ openai==2.45.0
 psycopg[binary]==3.3.4
 pytest==9.1.1
 httpx==0.28.1
+
+# ── 실행 엔진(온프레미스) ────────────────────────────────
+faiss-cpu==1.9.0
+numpy==2.1.2
+python-dotenv==1.0.1
+faster-whisper==1.0.3
+
+# emotion_temperature (박정운 v4 모델) 추론용 — app/services/k7modeling
+scipy>=1.12
+opensmile>=2.5
+pandas>=2.1
+lightgbm==4.6.0
+scikit-learn>=1.4
+joblib>=1.3
+# pyarrow는 opensmile→audformat→pandas가 끌고 오는데, 최신(25.x)은 이 Windows의 VC++ 런타임과
+# side-by-side 충돌(DLL load failed 14001)이 나서 18.1.0으로 고정한다.
+pyarrow==18.1.0
+
+# 규정 PDF 적재(POST /api/v1/regulations/upload)에만 필요. 없어도 API는 뜨고,
+# 업로드 요청 시에만 안내 문구와 함께 실패한다(지연 import).
+pdfplumber>=0.11
+
+# ── 선택 설치: WavLM 음성분노 모델 (전형진) ──────────────
+# app/services/voice_anger.py가 torch/transformers를 _load_runtime 안에서만
+# import하므로 미설치여도 앱은 뜬다 — 대신 WavLM 신호가 조용히 폴백된다.
+# GPU 빌드(~2.5GB)라 CUDA 인덱스가 필요해 기본 설치에서 뺀다. 실행 엔진
+# 저장소도 requirements에 넣지 않고 별도로 설치해 쓰던 것을 명시만 옮긴다.
+# 감정온도 REAL_MODEL 시연이 필요하면:
+#
+#   pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+#   pip install transformers==5.14.1
+#
+# (박정운 eGeMAPS+LightGBM 경로는 위 opensmile/lightgbm으로 이미 동작한다.)

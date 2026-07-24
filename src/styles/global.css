@@ -337,25 +337,26 @@ a:hover {
 
 /* 통화 연결 안착 morph — 준비 카드가 직원 콘솔로 '스르륵 안착'하는 느낌.
    중앙(브리핑)은 살짝 컸다가 제자리로 가라앉고, 좌/우/상/하 콘솔 상자가 가장자리에서 등장한다. */
+/* FadeContent 풍(reactbits) — 흐릿+투명에서 또렷+불투명으로 스르륵 스며들 듯 등장.
+   filter는 from에만 둔다(to에 남기면 filter가 계속 걸려 position:fixed 자식의 기준이 카드로 바뀐다). */
 @keyframes consoleSettle {
-  from { opacity: 0; transform: scale(1.06) translateY(-10px); }
-  55% { opacity: 1; }
+  from { opacity: 0; transform: scale(1.04) translateY(-6px); filter: blur(4px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 @keyframes consoleInL {
-  from { opacity: 0; transform: translateX(-28px); }
+  from { opacity: 0; transform: translateX(-16px); filter: blur(8px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes consoleInR {
-  from { opacity: 0; transform: translateX(28px); }
+  from { opacity: 0; transform: translateX(16px); filter: blur(8px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes consoleInDown {
-  from { opacity: 0; transform: translateY(-14px); }
+  from { opacity: 0; transform: translateY(-12px); filter: blur(8px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes consoleInUp {
-  from { opacity: 0; transform: translateY(24px); }
+  from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
   to { opacity: 1; transform: none; }
 }
 

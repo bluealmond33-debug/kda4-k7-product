@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -6,7 +7,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from app.config import Settings
-from app.contracts import MvpCallResponse
+from app.contracts import ConsultationCard, MvpCallResponse
 
 
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "database" / "mvp" / "schema.sql"
@@ -141,6 +142,126 @@ def save_call(
                 )
     except psycopg.Error as exc:
         raise DatabaseUnavailable("PostgreSQL call save failed") from exc
+
+
+# ── 실시간 통화 저장 (WS /ws/call) — 단계별 저장 ────────────────────────────
+# 배치(save_call)는 통화 완료본을 한 트랜잭션에 넣지만, 실시간은 "시작 → 발화 누적
+# → 종료 확정"으로 상태가 진행된다. calls.status(processing→ready)와
+# transcripts.call_id UNIQUE(통화당 1행 누적 upsert)가 이 수명주기를 지원한다.
+# 호출부(app/ws/call.py)는 이 함수들을 best-effort로 부른다 — DB가 없거나 실패해도
+# 라이브 통화 자체는 끊기지 않아야 하므로 예외는 호출부에서 잡는다.
+
+def create_live_call(
+    settings: Settings,
+    call_id: UUID,
+    created_at: datetime,
+    audio_filename: str = "실시간 통화",
+) -> None:
+    """통화 시작 — calls 행을 processing으로 생성(멱등: 재연결 시 중복 무시)."""
+    with psycopg.connect(_database_url(settings)) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO calls (call_id, status, source_channel, audio_filename, created_at)
+                VALUES (%s, 'processing', 'voice', %s, %s)
+                ON CONFLICT (call_id) DO NOTHING
+                """,
+                (call_id, audio_filename, created_at),
+            )
+
+
+def append_live_transcript(
+    settings: Settings,
+    call_id: UUID,
+    masked_text: str,
+    stt_model: str,
+    duration_sec: float = 0.0,
+) -> None:
+    """발화 하나(마스킹본)를 통화 전사에 누적 — 상담 중 실시간 저장.
+
+    transcripts.call_id가 UNIQUE라 통화당 한 행에 append한다. 첫 발화는 INSERT,
+    이후는 기존 텍스트 뒤에 이어 붙인다. 마스킹본만 저장한다(원본 전사 저장 안 함).
+    """
+    text = (masked_text or "").strip()
+    if not text:
+        return
+    with psycopg.connect(_database_url(settings)) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO transcripts (call_id, transcript_text, stt_model, duration_sec)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (call_id) DO UPDATE SET
+                    transcript_text = transcripts.transcript_text || ' ' || EXCLUDED.transcript_text,
+                    duration_sec = transcripts.duration_sec + EXCLUDED.duration_sec
+                """,
+                (call_id, text, stt_model, duration_sec),
+            )
+
+
+def finalize_live_call(
+    settings: Settings,
+    call_id: UUID,
+    card: ConsultationCard,
+    raw_model_result: dict,
+) -> None:
+    """통화 종료 — 상담카드 저장 + calls를 ready로. 카드는 멱등 upsert."""
+    with psycopg.connect(_database_url(settings)) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO consultation_cards (
+                    call_id, schema_version, summary, business_type, department,
+                    routing_reason, incident_risk, risk_reason, routing_confidence,
+                    emotion_status, emotion_score, emotion_level, emotion_reason,
+                    raw_model_result
+                )
+                VALUES (%s, 'mvp-1.0', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (call_id) DO UPDATE SET
+                    summary = EXCLUDED.summary,
+                    business_type = EXCLUDED.business_type,
+                    department = EXCLUDED.department,
+                    routing_reason = EXCLUDED.routing_reason,
+                    incident_risk = EXCLUDED.incident_risk,
+                    risk_reason = EXCLUDED.risk_reason,
+                    routing_confidence = EXCLUDED.routing_confidence,
+                    emotion_status = EXCLUDED.emotion_status,
+                    emotion_score = EXCLUDED.emotion_score,
+                    emotion_level = EXCLUDED.emotion_level,
+                    emotion_reason = EXCLUDED.emotion_reason,
+                    raw_model_result = EXCLUDED.raw_model_result,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    call_id,
+                    card.summary,
+                    card.business_type,
+                    card.department,
+                    card.routing_reason,
+                    card.incident_risk.value,
+                    card.risk_reason,
+                    card.routing_confidence,
+                    card.emotion.status.value,
+                    card.emotion.score,
+                    card.emotion.level,
+                    card.emotion.reason,
+                    Jsonb(raw_model_result),
+                ),
+            )
+            cursor.execute(
+                "UPDATE calls SET status = 'ready' WHERE call_id = %s",
+                (call_id,),
+            )
+
+
+def mark_live_call_failed(settings: Settings, call_id: UUID) -> None:
+    """발화 없이 끝났거나 카드 확정 실패 — 아직 processing이면 failed로."""
+    with psycopg.connect(_database_url(settings)) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE calls SET status = 'failed' WHERE call_id = %s AND status = 'processing'",
+                (call_id,),
+            )
 
 
 def get_call(settings: Settings, call_id: UUID) -> MvpCallResponse | None:

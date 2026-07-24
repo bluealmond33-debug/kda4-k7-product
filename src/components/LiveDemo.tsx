@@ -50,8 +50,8 @@ export default function LiveDemo({
     // 전화기와 전사 패널을 나란히 배치한다.
     ...(view === "phone"
       ? compactCustomer
-        ? { stageW: 432, maxScale: 1, fitPad: 16, fitHeight: false }
-        : { stageW: 840, maxScale: 1.7 } // 폰 400 + 간격 40 + 패널 400 = 840 (가로 나란히)
+        ? { stageW: 432, maxScale: 3, fitPad: 16 } // 반응형: 창 높이에 맞춰 확대(직원과 동일 — fitHeight 기본 true)
+        : { stageW: 840, maxScale: 3 } // 폰 400 + 간격 40 + 패널 400 = 840. 넓은 창에서 확대해 채움(직원과 동일 상한)
       : null),
     // 직원 단독 화면 — 가로·세로 모두 뷰포트에 맞춘다(fitHeight 기본 true).
     // 가로만 맞추면(fitHeight:false) 낮은 창에서 하단이 잘린다 — 33115b3에서 고친 부분이라 유지.
@@ -180,7 +180,7 @@ export default function LiveDemo({
                         {/* 대기 = 0(아직 콜 시작 전). 접수부터 1 */}
                         {done ? <span className="mi" style={css("font-size:13px")}>check</span> : i}
                       </span>
-                      <span style={css("font:600 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
+                      <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif;color:" + (active ? "var(--gray-1000)" : "var(--gray-600)"))}>{label}</span>
                       {label === "준비" && (
                         <span className="mi" title="이 데모의 핵심 — 상담 준비 카드" style={css("font-size:13px;color:var(--amber-700);margin-left:-3px")}>star</span>
                       )}
@@ -296,8 +296,8 @@ export default function LiveDemo({
             )}
           >
             {view !== "desktop" && <Phone vm={vm} clean={view === "phone"} />}
-            {/* 고객 화면 — 폰 오른쪽에 대화 스트림. 이 화면의 주인은 고객이라
-                고객 말이 오른쪽·선명하고 상담원 말은 왼쪽·흐리다(직원 화면과 정확히 거울).
+            {/* 고객 화면 — 폰 오른쪽에 대화 스트림. 이 화면은 고객 발화만 그린다(오른쪽 정렬).
+                직원 콘솔은 상담원 발화만(왼쪽 정렬) — 나란히 두면 서로 마주 보는 거울.
                 높이는 옆의 폰(clean=886)에 맞춘다 */}
             {view === "phone" && (
               <LiveTranscriptPanel
