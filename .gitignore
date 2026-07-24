@@ -1,6 +1,8 @@
 node_modules
 .venv
 __pycache__/
+.pytest-live-state/
+backend/.pytest-live-state/
 .pytest_cache/
 *.py[cod]
 dist
@@ -25,3 +27,6 @@ backend/app/services/k7modeling/models/hf_cache/
 backend/app/services/routing/models/*.joblib
 backend/app/services/rag_data/*.index
 backend/app/services/rag_data/*.fingerprint
+models/
+artifacts/
+backend/data/classifier_feedback/sessions/

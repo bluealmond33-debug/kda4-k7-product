@@ -16,7 +16,7 @@ import { TOUR, TOUR_OFFSETS, TOUR_TOTAL, SCREEN_LABELS, type ScreenKey } from ".
  * 실제 제품에서 뺄 때: <DemoTour/>·<TourChooser/> 마운트와 src/tour 폴더만 지우면 끝. (README.md)
  */
 
-const FONT = "'Geist Sans','Pretendard',sans-serif";
+const FONT = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
 const BUBBLE_W = 340;
 const GAP = 14; // 스팟라이트 ↔ 말풍선 간격
 

@@ -10,6 +10,7 @@ import RoutingFeed from "./RoutingFeed";
 import DepartmentBoard from "./DepartmentBoard";
 import KnowledgeBasePanel from "./KnowledgeBasePanel";
 import ClassificationPolicyModal from "./ClassificationPolicyModal";
+import ArchiveModal from "./ArchiveModal";
 import RegulationUploadModal from "./RegulationUploadModal";
 import NodeDetailModal from "./NodeDetailModal";
 import CallCardModal from "./CallCardModal";
@@ -39,6 +40,7 @@ export default function AdminDashboard() {
   const { status, refresh: refreshStatus } = useAdminStatus();
   const [explain, setExplain] = useState(false);
   const [policyOpen, setPolicyOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [nodeDetail, setNodeDetail] = useState<PipelineNodeDef | null>(null);
   const [cardDetail, setCardDetail] = useState<AdminCallRecord | null>(null);
@@ -102,6 +104,7 @@ export default function AdminDashboard() {
             explain={explain}
             onToggleExplain={() => setExplain((v) => !v)}
             onOpenPolicy={() => setPolicyOpen(true)}
+            onOpenArchive={() => setArchiveOpen(true)}
             onResetAll={feed.resetAll}
           />
           {/* 직원 데스크톱과 동일한 캔버스 — 1100×688, 내부 1440×900 @0.76389 */}
@@ -140,6 +143,7 @@ export default function AdminDashboard() {
       </div>
       {/* 모달은 스테이지(transform) 밖 — position:fixed가 뷰포트 기준으로 정상 동작하도록 */}
       {policyOpen && <ClassificationPolicyModal onClose={() => setPolicyOpen(false)} />}
+      {archiveOpen && <ArchiveModal onClose={() => setArchiveOpen(false)} />}
       {uploadOpen && (
         <RegulationUploadModal onClose={() => setUploadOpen(false)} onLoaded={refreshStatus} />
       )}

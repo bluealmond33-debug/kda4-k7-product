@@ -19,7 +19,7 @@ flowchart LR
 
     F --> J["call_id 기준 결과 결합"]
     I --> J
-    J --> K["K7 어댑터·mvp-1.0 검증"]
+    J --> K["K7 어댑터·mvp-1.1 검증"]
     K --> L[("PostgreSQL 3테이블 저장")]
     L --> M["상담카드 API"]
     M --> N["Vercel 상담사 화면"]
@@ -109,7 +109,7 @@ audio: 고객의 동일 원본 음성 파일 또는 바이트
 5. 실패 응답에 가짜 점수가 없는지 확인
 6. 활성 `MvpEmotionResult`로 변환
 
-`backend/app/integration_service.py`는 OpenAI 결과와 음성 감정 결과를 합쳐 하나의 `mvp-1.0` 상담카드를 만들고 한 트랜잭션으로 저장합니다.
+`backend/app/integration_service.py`는 OpenAI 결과와 음성 감정 결과를 합쳐 하나의 `mvp-1.1` 상담카드를 만들고 한 트랜잭션으로 저장합니다.
 
 ## PostgreSQL 저장
 

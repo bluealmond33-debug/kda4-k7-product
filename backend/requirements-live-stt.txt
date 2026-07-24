@@ -1,0 +1,5 @@
+# Optional, local-only streaming STT dependencies.
+# Install after backend/requirements.txt when running native WO Mic or edge PCM STT.
+faster-whisper==1.2.1
+numpy>=1.26,<3
+sounddevice>=0.5,<1

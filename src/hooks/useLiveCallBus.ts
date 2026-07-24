@@ -13,6 +13,7 @@ import { demoBus } from "../services";
 export interface LiveLine {
   id: string;
   text: string;
+  speaker: "customer" | "agent";
 }
 
 export function useLiveCallBus() {
@@ -31,12 +32,13 @@ export function useLiveCallBus() {
       }),
       demoBus.on("stt.utterance", (p) => {
         if (!p.isFinal) return;
-        const key = `${p.callId}:${p.atMs}:${p.text}`;
+        const speaker = p.speaker === "agent" ? "agent" : "customer";
+        const key = `${p.callId}:${p.generation ?? 0}:${p.audioSeq ?? p.atMs}:${speaker}:${p.text}`;
         if (seen.current.has(key)) return;
         seen.current.add(key);
         setActive(true);
         setStatus("용건을 듣고 있어요");
-        setLines((prev) => [...prev, { id: key, text: p.text }]);
+        setLines((prev) => [...prev, { id: key, text: p.text, speaker }]);
       }),
       demoBus.on("pipeline.stage", (p) => {
         // 고객에게 의미 있는 전환만 — 내부 단계(위험분석·카드저장)는 말하지 않는다

@@ -13,6 +13,7 @@ const contracts = path.join(root, "database", "contracts");
 const candidates =
   process.platform === "win32"
     ? [
+        [path.join(root, ".venv", "Scripts", "python.exe"), []],
         ["py", ["-3.12"]],
         ["py", ["-3.13"]],
         ["py", ["-3.11"]],

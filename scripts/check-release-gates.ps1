@@ -45,7 +45,7 @@ try {
     $result.backend_ready = (
         $health.status -eq "ok" -and
         $health.database -eq "connected" -and
-        $health.contract_version -eq "mvp-1.0" -and
+        $health.contract_version -eq "mvp-1.1" -and
         $result.post_calls -and
         $result.get_consultation_card
     )
@@ -102,7 +102,7 @@ try {
 }
 
 if (-not $result.backend_ready) {
-    $result.remaining_actions += "Railway must report database=connected, contract_version=mvp-1.0, and both MVP POST/GET operations"
+    $result.remaining_actions += "Railway must report database=connected, contract_version=mvp-1.1, and both MVP POST/GET operations"
 }
 
 if (-not $result.cors_ready) {
