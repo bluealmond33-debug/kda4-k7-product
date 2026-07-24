@@ -1,0 +1,1023 @@
+<title>KARI-NA · Brand & Design System</title>
+<style>
+  :root{
+    /* ── Surfaces (ONAIR: 석고 화이트 패널 · 석고벽 그레이 바닥) ── */
+    --floor:#e9eaeb; --surface:#ffffff; --surface-2:#f8f9f9;
+    /* ── Cool neutral gray (웜 캐스트 없음) ── */
+    --gray-100:#eef0f1; --gray-200:#e4e6e8; --gray-300:#dcdee1; --gray-400:#d7d9dc;
+    --gray-500:#b9bcc0; --gray-600:#83878c; --gray-700:#6b6f74; --gray-800:#5c6065;
+    --gray-900:#4d5156; --gray-1000:#1b1d20;
+    /* ── Action blue (전경) · logo blue == blue-700 ── */
+    --blue-400:#b9cdf1; --blue-500:#8fb0e8; --blue-700:#2f5fc4; --blue-800:#284fa3; --blue-900:#234a9e;
+    /* ── Signals (점·램프) ── */
+    --amber-500:#e2ab52; --amber-700:#dfa348; --amber-900:#77571a;
+    --red-700:#bc3f2b; --red-900:#a33422;
+    --green-600:#6fa37c; --green-700:#3e7a4e; --green-900:#2f6b3f;
+    --excel-green:#107c41;
+    /* ── Ink / text ── */
+    --ink:#1b1d20; --ink-2:#4d5156; --muted:#6b6f74; --faint:#83878c;
+    --border:rgba(20,23,28,.12); --border-2:rgba(20,23,28,.20);
+    /* ── Elevation — 그림자가 위계를 그린다 (중성 잉크) ── */
+    --sh-near:0 3px 8px -3px rgba(15,18,24,.25), 0 1px 2px rgba(15,18,24,.10);
+    --sh-hover:0 3px 6px rgba(15,18,24,.14), 0 12px 26px -9px rgba(15,18,24,.28);
+    --sh-focus:0 2px 4px rgba(15,18,24,.16), 0 14px 30px -10px rgba(15,18,24,.32);
+    --sh-joint:0 -8px 14px -10px rgba(15,18,24,.30);
+    --sh-modal:0 2px 4px rgba(15,18,24,.14), 0 18px 40px -10px rgba(15,18,24,.35);
+    /* ── Shape ── */
+    --r-panel:12px; --r-inner:8px; --r-ctrl:9999px;
+    /* ── Motion ── */
+    --ease-out:cubic-bezier(.2,.8,.2,1);
+    --ease-drawer:cubic-bezier(.32,.72,0,1);
+    /* ── Type ── */
+    --font-display:"Avenir Next","Avenir","Pretendard",system-ui,-apple-system,sans-serif;
+    --font-sans:"Avenir Next","Avenir","Pretendard",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --font-mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--floor); color:var(--ink);
+    font-family:var(--font-sans); line-height:1.6; font-size:15px;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:clamp(18px,4vw,52px) clamp(16px,4vw,36px) 90px}
+
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; text-wrap:balance; margin:0; letter-spacing:-.01em}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--blue-700); font-weight:500; display:inline-flex; align-items:center; gap:8px}
+  .eyebrow::before{content:""; width:16px; height:1.5px; background:var(--blue-700)}
+
+  /* part divider */
+  .part{display:flex; align-items:baseline; gap:14px; margin:clamp(52px,8vw,92px) 0 8px}
+  .part .k{font-family:var(--font-mono); font-size:12px; font-weight:500; color:var(--blue-700);
+    border:1px solid var(--border); border-radius:var(--r-ctrl); padding:3px 12px}
+  .part h2{font-size:clamp(21px,3vw,28px)}
+  .part .line{flex:1; height:1px; background:var(--border)}
+
+  section{margin-top:clamp(30px,4vw,44px)}
+  .sec-head{margin-bottom:22px; padding-bottom:14px; border-bottom:1px solid var(--border)}
+  .sec-head .num{font-family:var(--font-mono); font-size:12px; color:var(--faint); font-weight:500}
+  .sec-head h3{font-size:clamp(17px,2.1vw,21px); margin-top:8px}
+  .sec-head p{margin:7px 0 0; color:var(--muted); font-size:14px; max-width:66ch}
+
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:var(--r-panel); box-shadow:var(--sh-near)}
+  .pad{padding:clamp(18px,2.6vw,28px)}
+  .grid{display:grid; gap:14px}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:760px){.g3,.g4{grid-template-columns:1fr 1fr}}
+  @media (max-width:480px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+  .spec{font-family:var(--font-mono); font-size:12px; color:var(--muted); background:var(--surface-2);
+    border:1px solid var(--border); padding:4px 9px; border-radius:var(--r-inner);
+    display:inline-flex; gap:7px; align-items:center; white-space:nowrap}
+  .spec b{color:var(--ink); font-weight:500}
+  .specs{display:flex; flex-wrap:wrap; gap:8px}
+  .cap{font-family:var(--font-mono); font-size:11px; letter-spacing:.03em; color:var(--faint); text-transform:uppercase}
+
+  /* ── the mark (real artwork via <img>, recolored by filter) ── */
+  .mark{display:block; height:64px; width:auto}
+  .mark--white{filter:brightness(0) invert(1)}
+  .mark--ink{filter:brightness(0)}
+
+  /* wordmark live specimen */
+  .wm{font-family:var(--font-display); font-weight:500; color:var(--ink); line-height:1; letter-spacing:.12em; font-size:32px}
+  .desc{font-family:var(--font-display); font-weight:500; color:var(--ink); letter-spacing:.18em; line-height:1}
+
+  /* ── masthead ── */
+  .mast{display:grid; grid-template-columns:auto 1fr; gap:clamp(18px,4vw,36px); align-items:center;
+    padding:clamp(22px,4vw,38px); background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r-panel); box-shadow:var(--sh-focus)}
+  .mast .badge{width:clamp(76px,11vw,108px); aspect-ratio:1; background:var(--blue-700);
+    border-radius:22px; display:grid; place-items:center; box-shadow:var(--sh-near)}
+  .mast .badge .mark{height:52%}
+  .mast h1{font-size:clamp(25px,4vw,40px); line-height:1.05}
+  .mast .sub{color:var(--muted); margin:11px 0 0; font-size:14.5px; max-width:54ch}
+  .mast .meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:15px}
+
+  /* ── element / display stages — always WHITE ground for the blue mark ── */
+  .stage{background:var(--surface); border:1px solid var(--border); border-radius:var(--r-inner);
+    display:grid; place-items:center; padding:26px; min-height:132px}
+  .elem h3{font-size:15px; margin:15px 0 4px} .elem p{margin:0 0 12px; color:var(--muted); font-size:13px}
+
+  .artwork{background:#fff; border:1px solid var(--border); border-radius:var(--r-inner);
+    padding:clamp(24px,5vw,52px); display:grid; place-items:center}
+  .artwork img{width:min(560px,86%); height:auto; display:block}
+
+  /* lockup used in variations & tiles */
+  .lock{display:flex; align-items:center; gap:14px}
+  .lock .mark{height:38px}
+  .lock .txt{display:grid; gap:4px}
+  .lock .wm{font-size:24px} .lock .desc{font-size:8.5px; color:var(--ink)}
+
+  /* clear space */
+  .clearbox{position:relative; background:
+     repeating-linear-gradient(0deg,transparent 0 23px,var(--gray-200) 23px 24px),
+     repeating-linear-gradient(90deg,transparent 0 23px,var(--gray-200) 23px 24px), #fff;
+     border:1px solid var(--border); border-radius:var(--r-inner); padding:46px; display:grid; place-items:center; min-height:220px}
+  .clearbox .inner{position:relative; padding:44px}
+  .clearbox .inner::before{content:""; position:absolute; inset:0; border:1.5px dashed var(--blue-700); border-radius:4px}
+  .clearbox .mark{height:88px; position:relative}
+  .u{position:absolute; width:20px; height:20px; background:var(--blue-700); border-radius:2px; display:grid; place-items:center}
+  .u span{font-family:var(--font-mono); font-size:10px; color:#fff; font-weight:700}
+  .u.t{top:12px; left:50%; transform:translateX(-50%)} .u.b{bottom:12px; left:50%; transform:translateX(-50%)}
+  .u.l{left:12px; top:50%; transform:translateY(-50%)} .u.r{right:12px; top:50%; transform:translateY(-50%)}
+
+  /* sizes */
+  .sizes{display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap}
+  .size{display:grid; justify-items:center; gap:10px}
+  .size .chip{background:var(--blue-700); display:grid; place-items:center}
+  .size .chip .mark{filter:brightness(0) invert(1)}
+  .size .lab{font-family:var(--font-mono); font-size:11px; color:var(--muted)}
+  .minline{margin-top:8px; font-family:var(--font-mono); font-size:12px; color:var(--red-900)}
+  .minline b{color:var(--ink); font-weight:600}
+
+  /* background tiles — SOLID only (no gradient) */
+  .tile{border-radius:var(--r-inner); padding:32px; display:grid; place-items:center; min-height:140px;
+    position:relative; overflow:hidden; border:1px solid transparent}
+  .tile .tag{position:absolute; top:10px; left:12px; font-family:var(--font-mono); font-size:10px;
+    letter-spacing:.03em; padding:3px 8px; border-radius:var(--r-inner); font-weight:500}
+  .t-white{background:#fff; border-color:var(--border)}
+  .t-white .wm,.t-white .desc{color:var(--ink)} .t-white .tag{background:var(--gray-100); color:var(--muted)}
+  .t-subtle{background:var(--surface-2); border-color:var(--border)}
+  .t-subtle .wm,.t-subtle .desc{color:var(--ink)} .t-subtle .tag{background:#fff; color:var(--muted); border:1px solid var(--border)}
+  .t-blue{background:var(--blue-700)} .t-blue .wm,.t-blue .desc{color:#fff} .t-blue .tag{background:rgba(255,255,255,.18); color:#fff}
+  .t-ink{background:var(--ink)} .t-ink .wm,.t-ink .desc{color:#f2f4f6} .t-ink .tag{background:rgba(255,255,255,.12); color:#eef0f1}
+
+  /* color variations of mark */
+  .var{border:1px solid var(--border); border-radius:var(--r-inner); overflow:hidden; background:var(--surface)}
+  .var .disp{display:grid; place-items:center; min-height:124px; padding:24px}
+  .var .disp .mark{height:70px}
+  .var .foot{padding:12px 15px; border-top:1px solid var(--border); background:var(--surface-2)}
+  .var .foot .name{font-weight:600; font-size:13.5px; font-family:var(--font-display)}
+  .var .foot .use{font-size:12px; color:var(--muted); margin-top:2px}
+  .v-full .disp{background:#fff} .v-rev .disp{background:var(--ink)} .v-mono .disp{background:#fff}
+
+  /* dont */
+  .dont-disp{position:relative; background:#fff; border:1px solid var(--border); border-radius:var(--r-inner);
+    min-height:110px; display:grid; place-items:center; padding:18px; overflow:hidden}
+  .dont-disp .lock .mark{height:36px} .dont-disp .lock .wm{font-size:21px}
+  .d-stretch .mark{transform:scaleX(2.1)}
+  .d-rotate .lock{transform:rotate(-12deg)}
+  .d-recolor .mark{filter:brightness(0) saturate(1)} .d-recolor .lock .mark{filter:invert(46%) sepia(84%) saturate(500%) hue-rotate(75deg)} .d-recolor .wm{color:#2f8f4a}
+  .d-shadow .mark{filter:drop-shadow(3px 4px 0 rgba(0,0,0,.32))}
+  .d-outline .lock .mark{opacity:.15}
+  .d-lowcon{background:#5c78bf} .d-lowcon .wm{color:#3f62b6}
+  .foot-note{display:flex; gap:9px; align-items:flex-start; margin-top:11px; font-size:13px}
+  .bx{flex:none; width:19px; height:19px; border-radius:50%; display:grid; place-items:center; color:#fff; font-size:11px; font-weight:700; margin-top:1px; background:var(--red-700)}
+  .foot-note b{color:var(--ink); font-weight:600} .foot-note span{color:var(--muted)}
+
+  /* usage table */
+  .use-wrap{overflow-x:auto}
+  .use-table{width:100%; border-collapse:collapse; font-size:13.5px; border:1px solid var(--border); border-radius:var(--r-inner); overflow:hidden}
+  .use-table th,.use-table td{text-align:left; padding:12px 15px; border-bottom:1px solid var(--border); vertical-align:top}
+  .use-table thead th{background:var(--surface-2); font-family:var(--font-mono); font-size:11px; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--faint); font-weight:500}
+  .use-table tbody tr:last-child td{border-bottom:none}
+  .use-table td:first-child{font-weight:600; white-space:nowrap}
+  .use-table .v{display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11.5px; color:var(--blue-700); font-weight:500}
+  .use-table .v i{width:8px; height:8px; border-radius:2px; background:var(--blue-700)}
+
+  /* ===== PART 2 : design language ===== */
+  .principle{display:grid; gap:8px}
+  .principle .mono{font-family:var(--font-mono); font-size:11px; color:var(--blue-700); letter-spacing:.04em}
+  .principle h3{font-size:16px} .principle p{margin:0; color:var(--muted); font-size:13.5px; line-height:1.65}
+
+  /* color scale rows */
+  .scale{display:grid; gap:14px}
+  .scale-row{display:grid; grid-template-columns:120px 1fr; gap:14px; align-items:center}
+  @media (max-width:600px){.scale-row{grid-template-columns:1fr}}
+  .scale-row .lead{font-size:13.5px} .scale-row .lead b{font-family:var(--font-display)}
+  .scale-row .lead .role{display:block; color:var(--muted); font-size:12px; margin-top:2px}
+  .chips{display:flex; gap:0; border-radius:var(--r-inner); overflow:hidden; border:1px solid var(--border); flex-wrap:wrap}
+  .chips .c{flex:1 1 0; min-width:56px; height:56px; display:flex; align-items:flex-end; padding:5px 6px}
+  .chips .c code{font-family:var(--font-mono); font-size:9.5px; font-weight:500}
+  .swatch-lg{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  .sw{border:1px solid var(--border); border-radius:var(--r-inner); overflow:hidden; background:var(--surface)}
+  .sw .top{height:78px} .sw .b{padding:11px 13px}
+  .sw .n{font-weight:600; font-size:13px; font-family:var(--font-display)}
+  .sw code{font-family:var(--font-mono); font-size:11px; color:var(--muted); display:block; margin-top:4px}
+  .sw .r{font-size:12px; color:var(--muted); margin-top:6px}
+
+  /* type ladder */
+  .ladder{display:grid; gap:0; border:1px solid var(--border); border-radius:var(--r-inner); overflow:hidden}
+  .lad-row{display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center; padding:16px 18px; border-bottom:1px solid var(--border)}
+  .lad-row:last-child{border-bottom:none} .lad-row:nth-child(odd){background:var(--surface-2)}
+  .lad-row .samp{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--font-display)}
+  .lad-row .meta{font-family:var(--font-mono); font-size:11px; color:var(--muted); text-align:right; white-space:nowrap}
+  .lad-row .meta b{color:var(--ink); font-weight:500}
+
+  /* spacing scale */
+  .space-scale{display:grid; gap:9px}
+  .space-row{display:grid; grid-template-columns:74px 1fr; gap:12px; align-items:center; font-family:var(--font-mono); font-size:12px}
+  .space-row .bar{height:14px; background:var(--blue-700); border-radius:2px}
+  .space-row .t{color:var(--muted)} .space-row .t b{color:var(--ink); font-weight:500}
+  .rhythm{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px}
+
+  /* radius demo */
+  .radii{display:flex; gap:18px; flex-wrap:wrap}
+  .radii .r{display:grid; justify-items:center; gap:9px}
+  .radii .box{width:78px; height:60px; background:var(--surface-2); border:1.5px solid var(--blue-700)}
+  .radii .lab{font-family:var(--font-mono); font-size:11.5px; color:var(--muted)}
+
+  /* shadow demo */
+  .shadows{display:grid; grid-template-columns:repeat(5,1fr); gap:26px}
+  @media (max-width:720px){.shadows{grid-template-columns:repeat(2,1fr); gap:22px}}
+  .shadow-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--r-inner);
+    min-height:128px; display:grid; align-content:end; padding:14px}
+  .shadow-card .n{font-weight:600; font-size:12.5px; font-family:var(--font-display)}
+  .shadow-card .u{position:static; width:auto; height:auto; background:none; display:block; font-family:var(--font-mono); font-size:10px; color:var(--muted)}
+
+  /* motion demo */
+  .motion-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px}
+  @media (max-width:560px){.motion-grid{grid-template-columns:1fr}}
+  .lift{background:var(--surface); border:1px solid var(--border); border-radius:var(--r-inner); padding:18px;
+    box-shadow:var(--sh-near); transition:transform var(--ease-out) 150ms, box-shadow var(--ease-out) 150ms; cursor:default}
+  .lift:hover{transform:translateY(-3px); box-shadow:var(--sh-hover)}
+  .lift .n{font-weight:600; font-size:14px; font-family:var(--font-display)}
+  .lift .d{font-size:12.5px; color:var(--muted); margin-top:4px}
+  @media (prefers-reduced-motion:reduce){.lift{transition:none} .lift:hover{transform:none}}
+
+  /* ===== PART 3 — apply ===== */
+  .reject{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px}
+  .reject .r{font-family:var(--font-mono); font-size:11.5px; color:var(--red-900); background:#fff;
+    border:1px solid var(--border); border-radius:var(--r-inner); padding:4px 10px}
+  .reject .r::before{content:"✕ "; opacity:.7}
+  .order{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:4px 0 2px}
+  .order .step{font-family:var(--font-display); font-weight:600; font-size:14px; color:var(--ink);
+    background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-ctrl); padding:5px 14px}
+  .order .step small{color:var(--muted); font-weight:400; font-size:11px}
+  .order .arw{color:var(--faint); font-family:var(--font-mono)}
+  .quote{margin:16px 0 0; padding:0; color:var(--ink); font-family:var(--font-display); font-size:16px; font-style:italic; line-height:1.5}
+  .quote cite{display:block; font-style:normal; font-family:var(--font-mono); font-size:11px; color:var(--faint); margin-top:7px}
+
+  .code-block{background:var(--gray-1000); color:#e9eaeb; border-radius:var(--r-inner); padding:16px 18px;
+    overflow-x:auto; font-family:var(--font-mono); font-size:11.5px; line-height:1.75; white-space:pre; tab-size:2}
+  .code-block .c{color:#83878c} .code-block .p{color:#8fb0e8}
+  .copy-hint{font-family:var(--font-mono); font-size:11px; color:var(--faint); margin-top:9px}
+
+  .recipe{border:1px solid var(--border); border-radius:var(--r-inner); overflow:hidden; background:var(--surface)}
+  .recipe .demo{padding:20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; min-height:78px}
+  .recipe .name{font-family:var(--font-display); font-weight:600; font-size:13px; color:var(--ink); width:100%; margin-bottom:2px}
+  .recipe .meta{padding:10px 14px; border-top:1px solid var(--border); background:var(--surface-2);
+    font-family:var(--font-mono); font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px}
+  .recipe .meta b{color:var(--ink); font-weight:500}
+
+  .btn{font-family:var(--font-sans); font-weight:500; font-size:14px; line-height:20px; border-radius:6px;
+    padding:8px 14px; border:1px solid transparent; cursor:default}
+  .btn-pri{background:var(--blue-700); color:#fff} .btn-sec{background:var(--surface); color:var(--ink); border-color:var(--border-2)}
+  .btn-ghost{background:transparent; color:var(--muted)}
+
+  .field{display:grid; gap:5px}
+  .field label{font-size:12px; font-weight:500; color:var(--muted)}
+  .field input{font:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--border-2); border-radius:6px;
+    background:var(--surface); color:var(--ink); width:150px}
+  .field input:focus{outline:none; border-color:var(--blue-700); box-shadow:0 0 0 3px rgba(47,95,196,.2)}
+
+  .chip2{display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:12px; color:var(--ink);
+    background:transparent; border:1px solid var(--border); border-radius:var(--r-ctrl); padding:4px 11px}
+  .lamp{display:inline-flex; align-items:center; gap:7px; font-size:13px; color:var(--ink)}
+  .lamp .dot{width:9px; height:9px; border-radius:50%}
+  .dot-a{background:var(--amber-700)} .dot-g{background:var(--green-700)} .dot-r{background:var(--red-700)}
+
+  .stat{display:grid; gap:2px}
+  .stat .l{font-size:12px; font-weight:500; color:var(--muted)}
+  .stat .v{font-family:var(--font-display); font-weight:600; font-size:24px; color:var(--ink); font-variant-numeric:tabular-nums}
+  .stat .v small{font-size:13px; color:var(--muted); font-weight:500}
+
+  .mtable{width:100%; border-collapse:collapse; font-size:12.5px}
+  .mtable th,.mtable td{padding:6px 8px; border-bottom:1px solid var(--border); text-align:left}
+  .mtable th{font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--faint); font-weight:500}
+  .mtable tr:last-child td{border-bottom:none}
+  .mtable .num{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums}
+
+  .check{display:grid; gap:11px}
+  .check .it{display:flex; gap:11px; align-items:flex-start; font-size:13.5px}
+  .check .bx{flex:none; width:19px; height:19px; border-radius:5px; border:1.5px solid var(--blue-700);
+    display:grid; place-items:center; color:var(--blue-700); font-size:11px; font-weight:700; margin-top:1px}
+  .check .it b{color:var(--ink); font-weight:600} .check .it span{color:var(--muted)}
+
+  .demo-card{max-width:400px; margin:0 auto; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r-panel); box-shadow:var(--sh-near); overflow:hidden}
+  .demo-card .sechd{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border)}
+  .demo-card .sechd .h{font-family:var(--font-display); font-weight:600; font-size:14px}
+  .demo-card .sechd .ts{font-family:var(--font-mono); font-size:11px; color:var(--muted)}
+  .demo-card .bd{padding:16px}
+  .demo-card .title{font-family:var(--font-display); font-weight:600; font-size:18px; line-height:1.4; letter-spacing:-.2px}
+  .demo-card .stats{display:flex; gap:26px; margin-top:16px}
+  .demo-card .act{display:flex; gap:8px; margin-top:16px; padding-top:14px; border-top:1px solid var(--border)}
+
+  /* ===== PART 0 — brand ===== */
+  .brand-lead{font-family:var(--font-display); font-weight:600; font-size:clamp(20px,3vw,27px); line-height:1.4;
+    letter-spacing:-.01em; margin:0; text-wrap:balance}
+  .brand-lead b{color:var(--blue-700)}
+  .brand-sub{color:var(--muted); font-size:14.5px; max-width:64ch; margin:12px 0 0}
+  .acro{display:flex; flex-wrap:wrap; gap:10px}
+  .acro .l{display:grid; gap:5px; padding:14px 15px; border:1px solid var(--border); border-radius:var(--r-inner);
+    background:var(--surface); flex:1 1 130px; min-width:120px}
+  .acro .l .k{font-family:var(--font-display); font-weight:600; font-size:24px; color:var(--gray-500); line-height:1}
+  .acro .l .en{font-size:13.5px; font-weight:600; color:var(--ink)}
+  .acro .l .ko{font-size:12px; color:var(--muted); font-family:var(--font-mono)}
+  .acro .l.na{border:1px solid var(--blue-700)}
+  .acro .l.na .k{color:var(--blue-700)}
+  .acro .l.na .en{color:var(--blue-700)}
+  .na-vs{display:grid; grid-template-columns:1fr auto 1fr; gap:14px; align-items:stretch}
+  @media (max-width:620px){.na-vs{grid-template-columns:1fr}}
+  .na-box{border:1px solid var(--border); border-radius:var(--r-inner); padding:16px; background:var(--surface)}
+  .na-box .h{font-family:var(--font-mono); font-size:11px; letter-spacing:.03em; margin-bottom:9px}
+  .na-box.old .h{color:var(--red-900)} .na-box.new .h{color:var(--green-900)}
+  .na-box .ln{font-size:13px; color:var(--muted); line-height:1.9}
+  .na-box.old .ln{text-decoration:line-through; text-decoration-color:var(--gray-500)}
+  .na-box.new .big{font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--ink); line-height:1.45}
+  .na-arw{display:grid; place-items:center; color:var(--faint); font-family:var(--font-mono); font-size:18px}
+  @media (max-width:620px){.na-arw{transform:rotate(90deg)}}
+  .map{border:1px solid var(--border); border-radius:var(--r-inner); overflow:hidden}
+  .map .row{display:grid; grid-template-columns:0.9fr 1.5fr; gap:14px; padding:13px 16px; border-bottom:1px solid var(--border); align-items:baseline}
+  .map .row:last-child{border-bottom:none} .map .row:nth-child(odd){background:var(--surface-2)}
+  .map .val{font-family:var(--font-display); font-weight:600; font-size:14px; color:var(--ink)}
+  .map .val small{display:block; color:var(--muted); font-weight:400; font-size:11.5px; font-family:var(--font-mono); margin-top:2px}
+  .map .dec{font-size:13px; color:var(--muted); line-height:1.6}
+  .map .dec b{color:var(--ink); font-weight:500}
+
+  /* ===== B6 — design keywords ===== */
+  .kw-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:16px}
+  @media (max-width:820px){.kw-grid{grid-template-columns:repeat(3,1fr)}}
+  @media (max-width:520px){.kw-grid{grid-template-columns:repeat(2,1fr)}}
+  .kw .vis{aspect-ratio:4/3; border:1px solid var(--border); border-radius:var(--r-inner);
+    overflow:hidden; display:grid; place-items:center; box-shadow:var(--sh-near); background:var(--surface)}
+  .kw .vis > .fill{width:100%; height:100%; display:flex}
+  .kw .en{font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--ink); margin-top:12px}
+  .kw .ko{font-size:12px; color:var(--muted); margin-top:2px}
+  .kw .d{font-size:11.5px; color:var(--faint); margin-top:6px; line-height:1.55}
+  .kw .dot{width:13px; height:13px; border-radius:50%}
+  .keydesign{display:grid; grid-template-columns:auto 1fr; gap:clamp(18px,4vw,34px); align-items:center;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--r-panel);
+    box-shadow:var(--sh-near); padding:clamp(20px,4vw,38px); margin-top:16px}
+  @media (max-width:560px){.keydesign{grid-template-columns:1fr}}
+  .keydesign .art{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-inner);
+    padding:clamp(28px,5vw,48px); display:grid; place-items:center; min-width:200px}
+  .keydesign .art .mark{height:clamp(72px,10vw,104px)}
+  .keydesign .kd-eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em; color:var(--blue-700); font-weight:500}
+  .keydesign .kd-label{font-family:var(--font-display); font-weight:600; font-size:clamp(22px,3.4vw,30px); letter-spacing:-.01em; margin:8px 0 0}
+  .keydesign .kd-desc{color:var(--muted); font-size:13.5px; margin:10px 0 0; max-width:46ch; line-height:1.65}
+
+  footer{margin-top:70px; padding-top:20px; border-top:1px solid var(--border); color:var(--faint);
+    font-size:12px; font-family:var(--font-mono); display:flex; flex-wrap:wrap; gap:6px 18px; justify-content:space-between}
+</style>
+
+<div class="wrap">
+
+  <!-- MASTHEAD -->
+  <header class="mast">
+    <div class="badge"><img class="mark mark--white" src="data:image/png;base64,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" alt="KARI-NA 심볼"></div>
+    <div>
+      <div class="eyebrow">Brand &amp; Design System · v1.0</div>
+      <h1>KARI-NA · 브랜드 &amp; 디자인 시스템</h1>
+      <p class="sub">브랜드 · 로고 · 디자인 언어를 하나로 묶은 기준 문서입니다. 무엇을 새로 더해도 자동으로 같은 톤이 나오도록, 모든 수치·색은 실제 아트워크와 tokens.css에서 그대로 가져왔습니다.</p>
+      <div class="meta">
+        <span class="spec">Blue-700 <b>#2F5FC4</b></span>
+        <span class="spec">Latin <b>Avenir Next</b></span>
+        <span class="spec">한글 <b>Pretendard</b></span>
+        <span class="spec">Data <b>Geist Mono</b></span>
+        <span class="spec">Theme <b>Light only</b></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════ PART 0 — BRAND ══════════ -->
+  <div class="part"><span class="k">PART 0</span><h2>브랜드</h2><span class="line"></span></div>
+
+  <!-- B1 name -->
+  <section>
+    <div class="sec-head"><span class="num">B1</span><h3>왜 KARI-NA인가 — 이름의 뜻</h3>
+      <p>키움 아카데미 교육 과정에서 태어난 이름입니다. 다섯 조각의 머리글자를 모았고, <b>마지막 두 글자가 곧 제품의 차별점</b>입니다.</p></div>
+    <div class="panel pad">
+      <div class="acro">
+        <div class="l"><span class="k">K</span><span class="en">Kiwoom</span><span class="ko">키움</span></div>
+        <div class="l"><span class="k">A</span><span class="en">Academy</span><span class="ko">아카데미</span></div>
+        <div class="l"><span class="k">R</span><span class="en">Response</span><span class="ko">응대</span></div>
+        <div class="l"><span class="k">I</span><span class="en">Innovation</span><span class="ko">혁신</span></div>
+        <div class="l na"><span class="k">NA</span><span class="en">No ARS</span><span class="ko">ARS 없음</span></div>
+      </div>
+      <p style="margin:16px 0 0;color:var(--muted);font-size:13.5px;line-height:1.7">
+        가운데 <b style="color:var(--ink)">Response · Innovation</b> 이 태그라인 “Response Innovation”이 되고, 끝의 <b style="color:var(--blue-700)">NA = No ARS</b>가 정체성의 핵심입니다.</p>
+    </div>
+  </section>
+
+  <!-- B2 identity -->
+  <section>
+    <div class="sec-head"><span class="num">B2</span><h3>정체성 — No ARS</h3>
+      <p>“1번을 누르세요” 식 버튼 트리를 없앴습니다. 고객이 자연어로 말한 한 문장이 전체 파이프라인의 <b>유일한 입력</b>이 됩니다.</p></div>
+    <div class="panel pad">
+      <div class="na-vs">
+        <div class="na-box old"><div class="h">✕ 기존 ARS</div>
+          <div class="ln">“상담원 연결은 0번…”<br>“대출은 1번, 카드는 2번…”<br>“다시 들으시려면 별표…”</div></div>
+        <div class="na-arw">→</div>
+        <div class="na-box new"><div class="h">✓ KARI-NA</div>
+          <div class="big">“대출 한도를 올리고 싶은데요.”</div>
+          <div class="ln" style="text-decoration:none;margin-top:8px">한 문장 → 부서·업무·확신도·근거까지 자동 라우팅.</div></div>
+      </div>
+      <p style="margin:16px 0 0;color:var(--muted);font-size:13.5px">태그라인 <b style="color:var(--ink)">Response Innovation</b> — 응대(Response)의 방식을 다시 짓는다(Innovation).</p>
+    </div>
+  </section>
+
+  <!-- B3 values -->
+  <section>
+    <div class="sec-head"><span class="num">B3</span><h3>성격 &amp; 가치</h3>
+      <p>정체성에서 도출한 네 가지 성격입니다. 아래 디자인 언어(PART 2)의 근거가 됩니다.</p></div>
+    <div class="grid g4">
+      <div class="panel pad principle"><div class="mono">즉시성</div><h3>Immediate</h3><p>버튼 트리·대기음 없이 첫 문장부터 처리. 기다림을 없앤다.</p></div>
+      <div class="panel pad principle"><div class="mono">신뢰</div><h3>Trust</h3><p>금융의 언어. 정확하고 일관되며 근거를 보여주는 응대.</p></div>
+      <div class="panel pad principle"><div class="mono">명확</div><h3>Clarity</h3><p>지금 무슨 일이 일어나는지 한눈에. 상태를 숨기지 않는다.</p></div>
+      <div class="panel pad principle"><div class="mono">차분</div><h3>Composed</h3><p>관제실의 침착함. 과장·소란 없이 통제감 있게.</p></div>
+    </div>
+    <p style="margin:12px 2px 0;color:var(--faint);font-size:12.5px;font-family:var(--font-mono)">※ 이름·No ARS·태그라인은 확정 사실. 위 성격·가치·보이스는 거기서 도출한 <b style="color:var(--ink)">제안</b>이니 검토 후 확정하세요.</p>
+  </section>
+
+  <!-- B4 brand->design -->
+  <section>
+    <div class="sec-head"><span class="num">B4</span><h3>브랜드 → 디자인 — 왜 이렇게 생겼나</h3>
+      <p>브랜드 가치가 각각 어떤 디자인 결정으로 이어지는지. 이 매핑이 “새로 더해도 같은 톤”의 실제 근거입니다.</p></div>
+    <div class="map">
+      <div class="row"><div class="val">신뢰 · 금융<small>Trust</small></div><div class="dec"><b>Blue-700 #2F5FC4</b> 주색(로고=시스템 동일) · 오차 없는 <b>4px 그리드</b></div></div>
+      <div class="row"><div class="val">전문 · 통제<small>Composed</small></div><div class="dec">관제실의 <b>쿨 뉴트럴 면</b> · 빛이 아니라 <b>그림자</b>가 위계를 그린다 · 그라데이션 없음</div></div>
+      <div class="row"><div class="val">명확<small>Clarity</small></div><div class="dec">상태는 <b>신호등 램프(점)</b>로 · 숫자는 <b>tabular</b> · 글자 좌/숫자 우</div></div>
+      <div class="row"><div class="val">차분<small>Composed</small></div><div class="dec"><b>바운스 없는</b> ease-out 모션 · 색은 점·글자·가는 선에만(monochrome-first)</div></div>
+      <div class="row"><div class="val">즉시 · 사람다움<small>No ARS</small></div><div class="dec">자연어 한 문장 입력 · 따뜻하되 <b>정확한 카피</b> · 불필요한 단계 제거</div></div>
+    </div>
+  </section>
+
+  <!-- B5 voice -->
+  <section>
+    <div class="sec-head"><span class="num">B5</span><h3>보이스 &amp; 톤 — 어떻게 말하나</h3>
+      <p>No ARS의 언어. 버튼 트리처럼 지시하지 않고, 사람처럼 차분하고 정확하게 말합니다.</p></div>
+    <div class="grid g4" style="margin-bottom:14px">
+      <div class="panel pad principle"><div class="mono">01</div><h3>사람처럼</h3><p>“1번을 누르세요”가 아니라 자연스러운 한국어로. 기계 안내 말투 금지.</p></div>
+      <div class="panel pad principle"><div class="mono">02</div><h3>군더더기 없이</h3><p>한 번에 핵심만. 반복 안내·대기 멘트·불필요한 사과 없음.</p></div>
+      <div class="panel pad principle"><div class="mono">03</div><h3>근거를 보이며</h3><p>부서·업무·확신도·근거를 함께. 왜 그렇게 판단했는지 드러낸다.</p></div>
+      <div class="panel pad principle"><div class="mono">04</div><h3>상태는 사실대로</h3><p>처리중·완료·실패를 숨기지 않는다. 사과 대신 다음 행동을 제시.</p></div>
+    </div>
+    <div class="panel pad">
+      <div class="na-vs">
+        <div class="na-box old"><div class="h">✕ 이렇게 말하지 않는다</div>
+          <div class="ln" style="text-decoration:none">“죄송합니다. 문의하신 내용은 상담원 연결이 필요합니다. 잠시만 기다려 주시면…”<br>“대출 관련은 1번, 카드는 2번을 눌러주세요.”</div></div>
+        <div class="na-arw">→</div>
+        <div class="na-box new"><div class="h">✓ 이렇게 말한다</div>
+          <div class="big">“대출 한도 상담이네요. 상담팀으로 바로 연결할게요.”</div>
+          <div class="ln" style="text-decoration:none;margin-top:8px">확신도 92% · 근거: 발화 “한도 상향” · 대출상담팀</div></div>
+      </div>
+      <p style="margin:14px 0 0;color:var(--faint);font-size:12.5px;font-family:var(--font-mono)">※ 보이스는 정체성(No ARS)에서 도출한 제안입니다 — 실제 카피 가이드로 확정 시 예시 문장을 늘려가세요.</p>
+    </div>
+  </section>
+
+  <!-- B6 design keywords -->
+  <section>
+    <div class="sec-head"><span class="num">B6</span><h3>디자인 키워드</h3>
+      <p>브랜드가 화면에서 느껴지는 방식. 아래 다섯 단어가 KARI-NA의 시각 성격이며, 각 비주얼은 실제 우리 디자인 언어로 만들었습니다.</p></div>
+    <div class="kw-grid">
+      <div class="kw">
+        <div class="vis" style="background:var(--surface-2)"><span class="dot" style="background:var(--blue-700)"></span></div>
+        <div class="en">Composed</div><div class="ko">침착</div><div class="d">관제실의 차분함. 소란·과장 없이 하나에 집중.</div>
+      </div>
+      <div class="kw">
+        <div class="vis"><div class="fill"><span style="flex:1;background:var(--gray-100)"></span><span style="flex:1;background:var(--gray-300)"></span><span style="flex:1;background:var(--gray-500)"></span><span style="flex:1;background:var(--gray-700)"></span></div></div>
+        <div class="en">Neutral</div><div class="ko">중성</div><div class="d">웜 캐스트 없는 쿨 뉴트럴 면. 석고 화이트·그레이.</div>
+      </div>
+      <div class="kw">
+        <div class="vis" style="background:var(--floor)"><span style="width:54%;height:52%;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--sh-focus)"></span></div>
+        <div class="en">Shadow-drawn</div><div class="ko">그림자로</div><div class="d">빛이 아니라 그림자가 깊이를 그린다. 그라데이션 없음.</div>
+      </div>
+      <div class="kw">
+        <div class="vis" style="background:var(--surface-2)"><span style="display:flex;gap:14px"><span class="dot" style="background:var(--amber-700)"></span><span class="dot" style="background:var(--green-700)"></span><span class="dot" style="background:var(--red-700)"></span></span></div>
+        <div class="en">Signal</div><div class="ko">신호</div><div class="d">색은 큰 면이 아니라 점(신호등)·글자·가는 선에만.</div>
+      </div>
+      <div class="kw">
+        <div class="vis" style="background:repeating-linear-gradient(0deg,transparent 0 11px,var(--gray-200) 11px 12px),repeating-linear-gradient(90deg,transparent 0 11px,var(--gray-200) 11px 12px),#fff"><span style="width:16px;height:16px;background:var(--blue-700);border-radius:2px"></span></div>
+        <div class="en">Precise</div><div class="ko">정밀</div><div class="d">4px 그리드에 정렬. 숫자는 tabular, 오차 없이.</div>
+      </div>
+    </div>
+
+    <div class="keydesign">
+      <div class="art"><img class="mark" src="data:image/png;base64,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" alt="KARI-NA 심볼"></div>
+      <div>
+        <div class="kd-eyebrow">KEY DESIGN</div>
+        <div class="kd-label">좌우 대칭 B 심볼 · Blue-700</div>
+        <p class="kd-desc">모든 화면이 공유하는 단 하나의 조형·색 기준. 이 마크와 파랑에서 나머지 디자인(면·그림자·타입·모션)이 파생됩니다.</p>
+      </div>
+    </div>
+    <p style="margin:12px 2px 0;color:var(--faint);font-size:12.5px;font-family:var(--font-mono)">※ 비주얼은 사진이 아니라 실제 토큰(면·그림자·신호 점·그리드)으로 렌더 — 별도 이미지 의존 없음.</p>
+  </section>
+
+  <!-- ══════════ PART 1 — LOGO ══════════ -->
+  <div class="part"><span class="k">PART 1</span><h2>로고</h2><span class="line"></span></div>
+
+  <!-- 01 elements -->
+  <section>
+    <div class="sec-head"><span class="num">01</span><h3>구성 요소</h3>
+      <p>로고는 세 요소로 이루어집니다. 각 요소는 아래 규칙 안에서 단독 또는 조합으로 사용합니다.</p></div>
+    <div class="grid g3">
+      <div class="panel pad elem">
+        <div class="stage"><img class="mark" src="data:image/png;base64,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" alt="KARI-NA 심볼" style="height:60px"></div>
+        <h3>심볼 (Symbol)</h3>
+        <p>좌우 대칭 “B” 마크. 정사각에 가까운 비율로 앱 아이콘·아바타·파비콘 등 좁은 공간의 단독 사용에 씁니다.</p>
+        <div class="specs"><span class="spec">비율 <b>186 : 173</b></span><span class="spec">색 <b>단색 1도</b></span></div>
+      </div>
+      <div class="panel pad elem">
+        <div class="stage"><span class="wm">KARI-NA</span></div>
+        <h3>워드마크 (Wordmark)</h3>
+        <p>대문자 “KARI-NA”. 하이픈 포함 정자 표기를 유지하고 임의로 대소문자를 바꾸지 않습니다.</p>
+        <div class="specs"><span class="spec">Avenir Next · <b>Medium</b></span><span class="spec">tracking <b>12%</b></span></div>
+      </div>
+      <div class="panel pad elem">
+        <div class="stage"><span class="desc" style="font-size:18px">Response Innovation</span></div>
+        <h3>디스크립터 (Descriptor)</h3>
+        <p>“Response Innovation” 태그라인. 워드마크 하단에 종속되며 단독으로는 쓰지 않습니다.</p>
+        <div class="specs"><span class="spec">Pretendard · <b>Medium</b></span><span class="spec">tracking <b>18%</b></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 master -->
+  <section>
+    <div class="sec-head"><span class="num">02</span><h3>기본 로고 — 가로 조합형</h3>
+      <p>대표 로고입니다. 심볼 + 워드마크 + 디스크립터가 고정 비율로 묶여 있으며, 이 조합의 간격·정렬은 바꾸지 않습니다. 대부분의 상황에서 기본값으로 사용하세요.</p></div>
+    <div class="panel pad">
+      <div class="artwork"><img src="data:image/png;base64,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" alt="KARI-NA 가로 조합형 기본 로고"></div>
+      <div class="specs" style="margin-top:16px">
+        <span class="spec">최소 노출폭 <b>≥ 160px</b></span>
+        <span class="spec">심볼·워드마크 간격 <b>고정</b></span>
+        <span class="spec">여백 <b>1x 이상</b> (§04)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 variations -->
+  <section>
+    <div class="sec-head"><span class="num">03</span><h3>로고 변형</h3>
+      <p>공간과 맥락에 따라 아래 넷 중 하나를 고릅니다. 폭이 넉넉하면 조합형, 좁거나 정사각이면 심볼 단독을 씁니다.</p></div>
+    <div class="grid g2">
+      <div class="panel pad">
+        <div class="stage" style="min-height:112px"><div class="lock"><img class="mark" src="data:image/png;base64,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" alt=""><span class="txt"><span class="wm">KARI-NA</span><span class="desc">RESPONSE&nbsp;INNOVATION</span></span></div></div>
+        <h3 style="font-size:15px;margin:13px 0 3px">가로 조합형 · 기본</h3>
+        <p style="margin:0;color:var(--muted);font-size:13px">웹/앱 헤더, 문서 표지, 슬라이드 등 대표 노출.</p>
+      </div>
+      <div class="panel pad">
+        <div class="stage" style="min-height:112px"><div class="lock"><img class="mark" src="data:image/png;base64,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" alt="" style="height:34px"><span class="wm">KARI-NA</span></div></div>
+        <h3 style="font-size:15px;margin:13px 0 3px">심볼 + 워드마크</h3>
+        <p style="margin:0;color:var(--muted);font-size:13px">디스크립터를 뺀 축약형. 높이가 낮은 바(bar)에 적합.</p>
+      </div>
+      <div class="panel pad">
+        <div class="stage" style="min-height:112px"><img class="mark" src="data:image/png;base64,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" alt="" style="height:56px"></div>
+        <h3 style="font-size:15px;margin:13px 0 3px">심볼 단독</h3>
+        <p style="margin:0;color:var(--muted);font-size:13px">앱 아이콘·파비콘·아바타 등 정사각/협소 공간.</p>
+      </div>
+      <div class="panel pad">
+        <div class="stage" style="min-height:112px"><div style="display:grid;justify-items:center;gap:8px"><img class="mark" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALoAAACtCAYAAAAH3WXSAAAH3UlEQVR4nO2d/W3bOhRHWSEDaIOqE8SdoMkETSeIM8FrJrAzQdMJnE5Qd4K4QP9vMkH1NvAIDxfvCjAMt6nEr0vxHMCwDVj+PP7pkqLIV+fXPxzA3GlyvwGAFCA6VAGiQxUgOlQBokMVIDpUAaJDFSA6VAGiQxUgOlQBokMVIDpUAaJDFZy5+uiccwvnXKu3X+vt4b47uH/nnFu7Mrhwzj3q7f7E9b/Oub3eHi5yvwrmLHqnP/75gdyDyHNn+Jwvfd69c+5JL88Ht2fHnES/UJnf6W1JZPgzrX5Xcjlkp8J/19vFJ/9Z4T/SErGjcKGXj3p/p9JvS0380kRv9csf5Ia04q+0thfxv+h1EZwVlNzvkdsEnf4eS5VeUv7zQcPXJJa7F0XqT865X3qN5Dal/6i/0aPKb5LGcDfZo36J1N5lcOGc26j05oRvjApOeped8htrwlsQHcHnSWdJ+CbzF/EVwasS/qo20aX2/pnzg0O2YNvkOEKdWvROE1x6UWhk1skyRw9NkyHFKVOg02TfpAq8FKK3+oFIcThmqeHXlS56px8ke6sbzNKlaK/FFH2htVgtQ2NhOq02VNeliT70jSM5jGEVS/YmYquaehzMyN5EKFek4QlgSvYmQh85gDnZm8CSU65AaNmvLIkuLWYanhCDIEMGQoi+1tocIGbXY1bRO929AMRk4Vuv+4pO4xNSsfIpYRrP/nLqckjJJofolCyQmlOTLUUVnTSHXKxSik6aQ1GpPkV0eRHSHHIik1lFF/16wjYAIVmmSnQAC7MARxO9pjnGYUbly1jRSXOwwiKm6DJdM8DsRWcYLljhcM2p4KJTn4Ml/jp4ER1KJproAJaIVroAWGIfS/Til+GDWYHoUAX7WKIXucYkzJY+luiml9iD6tJ8H0t0WS8ewAKjqouxohezUjDMnm9jHjyldKF8AQuMCt0p/eiyBjxATvrYpYtA+QK5GR22U0VHdsjJw9gNpg4BuJu4HUAIyftUopPqkItJIeszqItUhyLS3Fd0Uh1S0vuEq+8w3RsGekEi7nyO4fiKLi986/kcAH9TsozuaQl94oW8gfsAzwMQvGQJfYaRpDpDeCE0UhZfhhh2EvJUug+Mg4HA3IRyKqTofah/H4D7X/JtqCcLfXI0skOoUtir8ZliFgBkB98kD965EWu6C2SHqQ3PoEmeYl4XkfwtXY8wwpVoR9qbBP9SqbcYFwO/Y6uSR937p5qpS1b9fUMpAydC8EOKYSQpp6SjlIGBXWoXmkz/4ui7KjDJXn//5B0VuSYZfdJSRj40wtfBg/7mWfbouWfTvY/ZpQRmypTL3EO6c4vuNNFv9N+O8PMT/NLCCToWRD8lvCQ9JU2Z7CwJblH04/HHnzl7qTi2GlZmBLcqeqt97r+cc59YBa84rvS321hb76oxKPgKwYtnaU343KIj+LxZWhE+p+iy3PpPBK9K+HVNoss/+1EvJnZrkIyVCi8hN2vRP2qKJ/+gYIYh6KSzYXait1qn0ZMCh6H3K9VePYXonaa41GkAp9wQ6YsW/Uo/CLU4/I5W9/TrUkWXf+lXShUY0VDdxPIllujr1I0NmAVLbai2JYi+1n8nwBQWMWQPLTqSQ0jZTYouNTmSQ0jZpWY3Jbr0qlCTQ4yafW1F9OFIF0AMViGOpDeB3gj95BAT727HJsCuhSOeEJvOt15vPF+cxiek4sqnhPERXZKckgVS8im16KQ55OpyXKYUHckhF/+kFJ0TJyBnql+kEJ3aHHKzSiH6+wnbAIRO9Ta26NLNA5CTdmz5MlZ0anOwwrsxD0Z0KJWoiX4+8vEAsehiik5vC1iq07tYonOiM1gimugkOliiLWU2XQAfEB2qYB9LdJZaAUsgOlTBPpboshAugBX6WKKzJCJY4Slmoj+Pfz8AURgVus2EdSQBLPBtzIOnNEbNLZYKVbIb8+Ap/ejfJ2wDEFryqKWLcD9hG4CQfBm7wRTRKV8gJ/2UtuLUIQB3E7cDCJHm+1SiS6KT6pAjzR+mbOgzqOvGY1uAqWnepxZdXpASBlLR+ywK4DtMV3pgGBYAKbj02dhXdGkUfPB8DoCXuPMN1CbQ4JrbAM8DcIpdiHWMQp1hJCUMB5IgNH2oTo+Qp9JJqtPlCCElvwzVBgx9zqjU65ycAS5A2y+Y5DFEH94gsoMZyWPNAjC8Ucauw1hE7rcxgjLWdBdDtyMNVMhSk6ee10UaqBw9hZfYapJHO/iYYgKjdewPAUVzq3v/qFOppJqp60l3S5NGnsGs6/H7FC/WZOj8lwvpXjf3sRqdluZelFQn3etkp7/9bepZ33JNMjqk+xv63Ktgr3Jf5jp63hip0yhn5iv4nQZa1q7m3KIPPOiXgfDzE3xtYXJaK6IfC59tFwde9NYEtyr6caPljcpPyttmd/B7mRJ84MyVMx5ZVqy+ZuVqU3J/0yAyJ3Zpoh8fJt7qujVXunKwXLNSXnq5t6XtZUsSfWCvKfKgaS8rCL93zi1Y2TrarFjPem0+ueck+p8mU2pV+IUmvlyzZOTfsddjGk9zEHuOop+aF3J30G97KP9rvR5WHW4rTeleL896/VRaKVK76C/Jf8yh8McXV1gX5/GEUv3B9V4vs5b5T7w6v/6R+z0AVNuPDhAURIcqQHSoAkSHKkB0qAJEhypAdKgCRIcqQHSoAkSHKkB0cDXwHwhDjtNussjTAAAAAElFTkSuQmCC" alt="" style="height:44px"><span class="wm" style="font-size:19px">KARI-NA</span></div></div>
+        <h3 style="font-size:15px;margin:13px 0 3px">세로 조합형 · 제안</h3>
+        <p style="margin:0;color:var(--muted);font-size:13px">스플래시·굿즈 등 세로 비율. 심볼 아래 워드마크 중앙 정렬.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 clear space & size -->
+  <section>
+    <div class="sec-head"><span class="num">04</span><h3>여백 규정 &amp; 최소 크기</h3>
+      <p>기준 단위 <b>x</b> = 심볼 폭의 1/4. 사방으로 최소 <b>1x</b> 여백을 확보하고, 그 안에는 어떤 요소도 넣지 않습니다.</p></div>
+    <div class="grid g2">
+      <div class="panel pad">
+        <div class="cap" style="margin-bottom:12px">Clear space — 사방 1x 이상</div>
+        <div class="clearbox"><div class="inner"><img class="mark" src="data:image/png;base64,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" alt="">
+          <span class="u t"><span>x</span></span><span class="u l"><span>x</span></span><span class="u r"><span>x</span></span><span class="u b"><span>x</span></span>
+        </div></div>
+      </div>
+      <div class="panel pad">
+        <div class="cap" style="margin-bottom:18px">Minimum size — 이 이하 축소 금지</div>
+        <div class="sizes">
+          <div class="size"><div class="chip" style="width:16px;height:16px;border-radius:4px"><img class="mark" src="data:image/png;base64,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" alt="" style="height:11px"></div><span class="lab">16px · favicon</span></div>
+          <div class="size"><div class="chip" style="width:24px;height:24px;border-radius:5px"><img class="mark" src="data:image/png;base64,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" alt="" style="height:16px"></div><span class="lab">24px</span></div>
+          <div class="size"><div class="chip" style="width:32px;height:32px;border-radius:7px"><img class="mark" src="data:image/png;base64,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" alt="" style="height:21px"></div><span class="lab">32px · 권장 최소</span></div>
+          <div class="size"><div class="chip" style="width:56px;height:56px;border-radius:13px"><img class="mark" src="data:image/png;base64,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" alt="" style="height:36px"></div><span class="lab">56px · 앱 아이콘</span></div>
+        </div>
+        <div class="minline">◦ 심볼 단독 최소 <b>16px</b></div>
+        <div class="minline">◦ 조합형 최소 노출폭 <b>160px</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 backgrounds -->
+  <section>
+    <div class="sec-head"><span class="num">05</span><h3>배경 위 사용</h3>
+      <p>밝은 바탕에는 원색, 어둡거나 채도 높은 바탕에는 화이트 로고를 씁니다. ONAIR는 그라데이션을 쓰지 않으므로 배경은 항상 단색입니다.</p></div>
+    <div class="grid g4">
+      <div class="tile t-white"><span class="tag">화이트 · 원색</span><div class="lock"><img class="mark" src="data:image/png;base64,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" alt=""><span class="txt"><span class="wm">KARI-NA</span><span class="desc">RESPONSE&nbsp;INNOVATION</span></span></div></div>
+      <div class="tile t-subtle"><span class="tag">서브틀 · 원색</span><div class="lock"><img class="mark" src="data:image/png;base64,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" alt=""><span class="txt"><span class="wm">KARI-NA</span><span class="desc">RESPONSE&nbsp;INNOVATION</span></span></div></div>
+      <div class="tile t-blue"><span class="tag">블루 · 화이트</span><div class="lock"><img class="mark mark--white" src="data:image/png;base64,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" alt=""><span class="txt"><span class="wm">KARI-NA</span><span class="desc">RESPONSE&nbsp;INNOVATION</span></span></div></div>
+      <div class="tile t-ink"><span class="tag">잉크 · 화이트</span><div class="lock"><img class="mark mark--white" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALoAAACtCAYAAAAH3WXSAAAH3UlEQVR4nO2d/W3bOhRHWSEDaIOqE8SdoMkETSeIM8FrJrAzQdMJnE5Qd4K4QP9vMkH1NvAIDxfvCjAMt6nEr0vxHMCwDVj+PP7pkqLIV+fXPxzA3GlyvwGAFCA6VAGiQxUgOlQBokMVIDpUAaJDFSA6VAGiQxUgOlQBokMVIDpUAaJDFZy5+uiccwvnXKu3X+vt4b47uH/nnFu7Mrhwzj3q7f7E9b/Oub3eHi5yvwrmLHqnP/75gdyDyHNn+Jwvfd69c+5JL88Ht2fHnES/UJnf6W1JZPgzrX5Xcjlkp8J/19vFJ/9Z4T/SErGjcKGXj3p/p9JvS0380kRv9csf5Ia04q+0thfxv+h1EZwVlNzvkdsEnf4eS5VeUv7zQcPXJJa7F0XqT865X3qN5Dal/6i/0aPKb5LGcDfZo36J1N5lcOGc26j05oRvjApOeped8htrwlsQHcHnSWdJ+CbzF/EVwasS/qo20aX2/pnzg0O2YNvkOEKdWvROE1x6UWhk1skyRw9NkyHFKVOg02TfpAq8FKK3+oFIcThmqeHXlS56px8ke6sbzNKlaK/FFH2htVgtQ2NhOq02VNeliT70jSM5jGEVS/YmYquaehzMyN5EKFek4QlgSvYmQh85gDnZm8CSU65AaNmvLIkuLWYanhCDIEMGQoi+1tocIGbXY1bRO929AMRk4Vuv+4pO4xNSsfIpYRrP/nLqckjJJofolCyQmlOTLUUVnTSHXKxSik6aQ1GpPkV0eRHSHHIik1lFF/16wjYAIVmmSnQAC7MARxO9pjnGYUbly1jRSXOwwiKm6DJdM8DsRWcYLljhcM2p4KJTn4Ml/jp4ER1KJproAJaIVroAWGIfS/Til+GDWYHoUAX7WKIXucYkzJY+luiml9iD6tJ8H0t0WS8ewAKjqouxohezUjDMnm9jHjyldKF8AQuMCt0p/eiyBjxATvrYpYtA+QK5GR22U0VHdsjJw9gNpg4BuJu4HUAIyftUopPqkItJIeszqItUhyLS3Fd0Uh1S0vuEq+8w3RsGekEi7nyO4fiKLi986/kcAH9TsozuaQl94oW8gfsAzwMQvGQJfYaRpDpDeCE0UhZfhhh2EvJUug+Mg4HA3IRyKqTofah/H4D7X/JtqCcLfXI0skOoUtir8ZliFgBkB98kD965EWu6C2SHqQ3PoEmeYl4XkfwtXY8wwpVoR9qbBP9SqbcYFwO/Y6uSR937p5qpS1b9fUMpAydC8EOKYSQpp6SjlIGBXWoXmkz/4ui7KjDJXn//5B0VuSYZfdJSRj40wtfBg/7mWfbouWfTvY/ZpQRmypTL3EO6c4vuNNFv9N+O8PMT/NLCCToWRD8lvCQ9JU2Z7CwJblH04/HHnzl7qTi2GlZmBLcqeqt97r+cc59YBa84rvS321hb76oxKPgKwYtnaU343KIj+LxZWhE+p+iy3PpPBK9K+HVNoss/+1EvJnZrkIyVCi8hN2vRP2qKJ/+gYIYh6KSzYXait1qn0ZMCh6H3K9VePYXonaa41GkAp9wQ6YsW/Uo/CLU4/I5W9/TrUkWXf+lXShUY0VDdxPIllujr1I0NmAVLbai2JYi+1n8nwBQWMWQPLTqSQ0jZTYouNTmSQ0jZpWY3Jbr0qlCTQ4yafW1F9OFIF0AMViGOpDeB3gj95BAT727HJsCuhSOeEJvOt15vPF+cxiek4sqnhPERXZKckgVS8im16KQ55OpyXKYUHckhF/+kFJ0TJyBnql+kEJ3aHHKzSiH6+wnbAIRO9Ta26NLNA5CTdmz5MlZ0anOwwrsxD0Z0KJWoiX4+8vEAsehiik5vC1iq07tYonOiM1gimugkOliiLWU2XQAfEB2qYB9LdJZaAUsgOlTBPpboshAugBX6WKKzJCJY4Slmoj+Pfz8AURgVus2EdSQBLPBtzIOnNEbNLZYKVbIb8+Ap/ejfJ2wDEFryqKWLcD9hG4CQfBm7wRTRKV8gJ/2UtuLUIQB3E7cDCJHm+1SiS6KT6pAjzR+mbOgzqOvGY1uAqWnepxZdXpASBlLR+ywK4DtMV3pgGBYAKbj02dhXdGkUfPB8DoCXuPMN1CbQ4JrbAM8DcIpdiHWMQp1hJCUMB5IgNH2oTo+Qp9JJqtPlCCElvwzVBgx9zqjU65ycAS5A2y+Y5DFEH94gsoMZyWPNAjC8Ucauw1hE7rcxgjLWdBdDtyMNVMhSk6ee10UaqBw9hZfYapJHO/iYYgKjdewPAUVzq3v/qFOppJqp60l3S5NGnsGs6/H7FC/WZOj8lwvpXjf3sRqdluZelFQn3etkp7/9bepZ33JNMjqk+xv63Ktgr3Jf5jp63hip0yhn5iv4nQZa1q7m3KIPPOiXgfDzE3xtYXJaK6IfC59tFwde9NYEtyr6caPljcpPyttmd/B7mRJ84MyVMx5ZVqy+ZuVqU3J/0yAyJ3Zpoh8fJt7qujVXunKwXLNSXnq5t6XtZUsSfWCvKfKgaS8rCL93zi1Y2TrarFjPem0+ueck+p8mU2pV+IUmvlyzZOTfsddjGk9zEHuOop+aF3J30G97KP9rvR5WHW4rTeleL896/VRaKVK76C/Jf8yh8McXV1gX5/GEUv3B9V4vs5b5T7w6v/6R+z0AVNuPDhAURIcqQHSoAkSHKkB0qAJEhypAdKgCRIcqQHSoAkSHKkB0cDXwHwhDjtNussjTAAAAAElFTkSuQmCC" alt=""><span class="txt"><span class="wm">KARI-NA</span><span class="desc">RESPONSE&nbsp;INNOVATION</span></span></div></div>
+    </div>
+    <p style="margin:12px 2px 0;color:var(--faint);font-size:12.5px;font-family:var(--font-mono)">※ 배경 대비 4.5:1 이상 확보 · 블루/잉크 위 원색 로고 금지 · 그라데이션·사진 위 배치는 지양(단색 원칙)</p>
+  </section>
+
+  <!-- 06 color variations -->
+  <section>
+    <div class="sec-head"><span class="num">06</span><h3>컬러 변형 — 심볼</h3>
+      <p>세 가지 색 버전만 허용합니다. 그 외 색조·그라데이션은 만들지 않습니다.</p></div>
+    <div class="grid g3">
+      <div class="var v-full"><div class="disp"><img class="mark" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALoAAACtCAYAAAAH3WXSAAAH3UlEQVR4nO2d/W3bOhRHWSEDaIOqE8SdoMkETSeIM8FrJrAzQdMJnE5Qd4K4QP9vMkH1NvAIDxfvCjAMt6nEr0vxHMCwDVj+PP7pkqLIV+fXPxzA3GlyvwGAFCA6VAGiQxUgOlQBokMVIDpUAaJDFSA6VAGiQxUgOlQBokMVIDpUAaJDFZy5+uiccwvnXKu3X+vt4b47uH/nnFu7Mrhwzj3q7f7E9b/Oub3eHi5yvwrmLHqnP/75gdyDyHNn+Jwvfd69c+5JL88Ht2fHnES/UJnf6W1JZPgzrX5Xcjlkp8J/19vFJ/9Z4T/SErGjcKGXj3p/p9JvS0380kRv9csf5Ia04q+0thfxv+h1EZwVlNzvkdsEnf4eS5VeUv7zQcPXJJa7F0XqT865X3qN5Dal/6i/0aPKb5LGcDfZo36J1N5lcOGc26j05oRvjApOeped8htrwlsQHcHnSWdJ+CbzF/EVwasS/qo20aX2/pnzg0O2YNvkOEKdWvROE1x6UWhk1skyRw9NkyHFKVOg02TfpAq8FKK3+oFIcThmqeHXlS56px8ke6sbzNKlaK/FFH2htVgtQ2NhOq02VNeliT70jSM5jGEVS/YmYquaehzMyN5EKFek4QlgSvYmQh85gDnZm8CSU65AaNmvLIkuLWYanhCDIEMGQoi+1tocIGbXY1bRO929AMRk4Vuv+4pO4xNSsfIpYRrP/nLqckjJJofolCyQmlOTLUUVnTSHXKxSik6aQ1GpPkV0eRHSHHIik1lFF/16wjYAIVmmSnQAC7MARxO9pjnGYUbly1jRSXOwwiKm6DJdM8DsRWcYLljhcM2p4KJTn4Ml/jp4ER1KJproAJaIVroAWGIfS/Til+GDWYHoUAX7WKIXucYkzJY+luiml9iD6tJ8H0t0WS8ewAKjqouxohezUjDMnm9jHjyldKF8AQuMCt0p/eiyBjxATvrYpYtA+QK5GR22U0VHdsjJw9gNpg4BuJu4HUAIyftUopPqkItJIeszqItUhyLS3Fd0Uh1S0vuEq+8w3RsGekEi7nyO4fiKLi986/kcAH9TsozuaQl94oW8gfsAzwMQvGQJfYaRpDpDeCE0UhZfhhh2EvJUug+Mg4HA3IRyKqTofah/H4D7X/JtqCcLfXI0skOoUtir8ZliFgBkB98kD965EWu6C2SHqQ3PoEmeYl4XkfwtXY8wwpVoR9qbBP9SqbcYFwO/Y6uSR937p5qpS1b9fUMpAydC8EOKYSQpp6SjlIGBXWoXmkz/4ui7KjDJXn//5B0VuSYZfdJSRj40wtfBg/7mWfbouWfTvY/ZpQRmypTL3EO6c4vuNNFv9N+O8PMT/NLCCToWRD8lvCQ9JU2Z7CwJblH04/HHnzl7qTi2GlZmBLcqeqt97r+cc59YBa84rvS321hb76oxKPgKwYtnaU343KIj+LxZWhE+p+iy3PpPBK9K+HVNoss/+1EvJnZrkIyVCi8hN2vRP2qKJ/+gYIYh6KSzYXait1qn0ZMCh6H3K9VePYXonaa41GkAp9wQ6YsW/Uo/CLU4/I5W9/TrUkWXf+lXShUY0VDdxPIllujr1I0NmAVLbai2JYi+1n8nwBQWMWQPLTqSQ0jZTYouNTmSQ0jZpWY3Jbr0qlCTQ4yafW1F9OFIF0AMViGOpDeB3gj95BAT727HJsCuhSOeEJvOt15vPF+cxiek4sqnhPERXZKckgVS8im16KQ55OpyXKYUHckhF/+kFJ0TJyBnql+kEJ3aHHKzSiH6+wnbAIRO9Ta26NLNA5CTdmz5MlZ0anOwwrsxD0Z0KJWoiX4+8vEAsehiik5vC1iq07tYonOiM1gimugkOliiLWU2XQAfEB2qYB9LdJZaAUsgOlTBPpboshAugBX6WKKzJCJY4Slmoj+Pfz8AURgVus2EdSQBLPBtzIOnNEbNLZYKVbIb8+Ap/ejfJ2wDEFryqKWLcD9hG4CQfBm7wRTRKV8gJ/2UtuLUIQB3E7cDCJHm+1SiS6KT6pAjzR+mbOgzqOvGY1uAqWnepxZdXpASBlLR+ywK4DtMV3pgGBYAKbj02dhXdGkUfPB8DoCXuPMN1CbQ4JrbAM8DcIpdiHWMQp1hJCUMB5IgNH2oTo+Qp9JJqtPlCCElvwzVBgx9zqjU65ycAS5A2y+Y5DFEH94gsoMZyWPNAjC8Ucauw1hE7rcxgjLWdBdDtyMNVMhSk6ee10UaqBw9hZfYapJHO/iYYgKjdewPAUVzq3v/qFOppJqp60l3S5NGnsGs6/H7FC/WZOj8lwvpXjf3sRqdluZelFQn3etkp7/9bepZ33JNMjqk+xv63Ktgr3Jf5jp63hip0yhn5iv4nQZa1q7m3KIPPOiXgfDzE3xtYXJaK6IfC59tFwde9NYEtyr6caPljcpPyttmd/B7mRJ84MyVMx5ZVqy+ZuVqU3J/0yAyJ3Zpoh8fJt7qujVXunKwXLNSXnq5t6XtZUsSfWCvKfKgaS8rCL93zi1Y2TrarFjPem0+ueck+p8mU2pV+IUmvlyzZOTfsddjGk9zEHuOop+aF3J30G97KP9rvR5WHW4rTeleL896/VRaKVK76C/Jf8yh8McXV1gX5/GEUv3B9V4vs5b5T7w6v/6R+z0AVNuPDhAURIcqQHSoAkSHKkB0qAJEhypAdKgCRIcqQHSoAkSHKkB0cDXwHwhDjtNussjTAAAAAElFTkSuQmCC" alt=""></div><div class="foot"><div class="name">Full color · 원색</div><div class="use">기본. 밝은 배경 위 대표 사용.</div></div></div>
+      <div class="var v-rev"><div class="disp"><img class="mark mark--white" src="data:image/png;base64,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" alt=""></div><div class="foot"><div class="name">Reversed · 화이트</div><div class="use">어두운·채도 높은 배경 위.</div></div></div>
+      <div class="var v-mono"><div class="disp"><img class="mark mark--ink" src="data:image/png;base64,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" alt=""></div><div class="foot"><div class="name">Monochrome · 단색</div><div class="use">인쇄 1도·음각 등 단색 환경.</div></div></div>
+    </div>
+  </section>
+
+  <!-- 07 logo typography -->
+  <section>
+    <div class="sec-head"><span class="num">07</span><h3>로고 타이포그래피</h3>
+      <p>워드마크와 디스크립터는 서로 다른 서체·자간을 씁니다. 아래 수치는 원본 아트워크 기준이며, 재현 시 그대로 적용하세요.</p></div>
+    <div class="grid g2">
+      <div class="panel">
+        <div class="pad" style="border-bottom:1px solid var(--border);overflow-x:auto"><span class="wm" style="font-size:clamp(36px,7vw,60px);white-space:nowrap">KARI-NA</span></div>
+        <div class="pad specs"><span class="spec">워드마크</span><span class="spec"><b>Avenir</b></span><span class="spec"><b>Medium</b></span><span class="spec">size <b>122.72</b></span><span class="spec">tracking <b>12%</b></span><span class="spec">대문자·하이픈 유지</span></div>
+      </div>
+      <div class="panel">
+        <div class="pad" style="border-bottom:1px solid var(--border);overflow-x:auto"><span class="desc" style="font-size:clamp(15px,3vw,22px);white-space:nowrap">Response Innovation</span></div>
+        <div class="pad specs"><span class="spec">디스크립터</span><span class="spec"><b>Pretendard</b></span><span class="spec"><b>Medium</b></span><span class="spec">size <b>27.47</b></span><span class="spec">tracking <b>18%</b></span><span class="spec">비율 <b>≈1:4.47</b></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 don'ts -->
+  <section>
+    <div class="sec-head"><span class="num">08</span><h3>사용 금지</h3>
+      <p>로고의 형태·색·비율·구성은 정해진 아트워크를 그대로 씁니다. 아래는 대표적인 오용 사례입니다.</p></div>
+    <div class="grid g3">
+      <div class="panel pad"><div class="dont-disp d-stretch"><div class="lock"><img class="mark" src="data:image/png;base64,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" alt=""><span class="wm">KARI-NA</span></div></div><div class="foot-note"><span class="bx">✕</span><div><b>비율 왜곡</b> <span>늘이거나 찌그러뜨리지 않기</span></div></div></div>
+      <div class="panel pad"><div class="dont-disp d-rotate"><div class="lock"><img class="mark" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALoAAACtCAYAAAAH3WXSAAAH3UlEQVR4nO2d/W3bOhRHWSEDaIOqE8SdoMkETSeIM8FrJrAzQdMJnE5Qd4K4QP9vMkH1NvAIDxfvCjAMt6nEr0vxHMCwDVj+PP7pkqLIV+fXPxzA3GlyvwGAFCA6VAGiQxUgOlQBokMVIDpUAaJDFSA6VAGiQxUgOlQBokMVIDpUAaJDFZy5+uiccwvnXKu3X+vt4b47uH/nnFu7Mrhwzj3q7f7E9b/Oub3eHi5yvwrmLHqnP/75gdyDyHNn+Jwvfd69c+5JL88Ht2fHnES/UJnf6W1JZPgzrX5Xcjlkp8J/19vFJ/9Z4T/SErGjcKGXj3p/p9JvS0380kRv9csf5Ia04q+0thfxv+h1EZwVlNzvkdsEnf4eS5VeUv7zQcPXJJa7F0XqT865X3qN5Dal/6i/0aPKb5LGcDfZo36J1N5lcOGc26j05oRvjApOeped8htrwlsQHcHnSWdJ+CbzF/EVwasS/qo20aX2/pnzg0O2YNvkOEKdWvROE1x6UWhk1skyRw9NkyHFKVOg02TfpAq8FKK3+oFIcThmqeHXlS56px8ke6sbzNKlaK/FFH2htVgtQ2NhOq02VNeliT70jSM5jGEVS/YmYquaehzMyN5EKFek4QlgSvYmQh85gDnZm8CSU65AaNmvLIkuLWYanhCDIEMGQoi+1tocIGbXY1bRO929AMRk4Vuv+4pO4xNSsfIpYRrP/nLqckjJJofolCyQmlOTLUUVnTSHXKxSik6aQ1GpPkV0eRHSHHIik1lFF/16wjYAIVmmSnQAC7MARxO9pjnGYUbly1jRSXOwwiKm6DJdM8DsRWcYLljhcM2p4KJTn4Ml/jp4ER1KJproAJaIVroAWGIfS/Til+GDWYHoUAX7WKIXucYkzJY+luiml9iD6tJ8H0t0WS8ewAKjqouxohezUjDMnm9jHjyldKF8AQuMCt0p/eiyBjxATvrYpYtA+QK5GR22U0VHdsjJw9gNpg4BuJu4HUAIyftUopPqkItJIeszqItUhyLS3Fd0Uh1S0vuEq+8w3RsGekEi7nyO4fiKLi986/kcAH9TsozuaQl94oW8gfsAzwMQvGQJfYaRpDpDeCE0UhZfhhh2EvJUug+Mg4HA3IRyKqTofah/H4D7X/JtqCcLfXI0skOoUtir8ZliFgBkB98kD965EWu6C2SHqQ3PoEmeYl4XkfwtXY8wwpVoR9qbBP9SqbcYFwO/Y6uSR937p5qpS1b9fUMpAydC8EOKYSQpp6SjlIGBXWoXmkz/4ui7KjDJXn//5B0VuSYZfdJSRj40wtfBg/7mWfbouWfTvY/ZpQRmypTL3EO6c4vuNNFv9N+O8PMT/NLCCToWRD8lvCQ9JU2Z7CwJblH04/HHnzl7qTi2GlZmBLcqeqt97r+cc59YBa84rvS321hb76oxKPgKwYtnaU343KIj+LxZWhE+p+iy3PpPBK9K+HVNoss/+1EvJnZrkIyVCi8hN2vRP2qKJ/+gYIYh6KSzYXait1qn0ZMCh6H3K9VePYXonaa41GkAp9wQ6YsW/Uo/CLU4/I5W9/TrUkWXf+lXShUY0VDdxPIllujr1I0NmAVLbai2JYi+1n8nwBQWMWQPLTqSQ0jZTYouNTmSQ0jZpWY3Jbr0qlCTQ4yafW1F9OFIF0AMViGOpDeB3gj95BAT727HJsCuhSOeEJvOt15vPF+cxiek4sqnhPERXZKckgVS8im16KQ55OpyXKYUHckhF/+kFJ0TJyBnql+kEJ3aHHKzSiH6+wnbAIRO9Ta26NLNA5CTdmz5MlZ0anOwwrsxD0Z0KJWoiX4+8vEAsehiik5vC1iq07tYonOiM1gimugkOliiLWU2XQAfEB2qYB9LdJZaAUsgOlTBPpboshAugBX6WKKzJCJY4Slmoj+Pfz8AURgVus2EdSQBLPBtzIOnNEbNLZYKVbIb8+Ap/ejfJ2wDEFryqKWLcD9hG4CQfBm7wRTRKV8gJ/2UtuLUIQB3E7cDCJHm+1SiS6KT6pAjzR+mbOgzqOvGY1uAqWnepxZdXpASBlLR+ywK4DtMV3pgGBYAKbj02dhXdGkUfPB8DoCXuPMN1CbQ4JrbAM8DcIpdiHWMQp1hJCUMB5IgNH2oTo+Qp9JJqtPlCCElvwzVBgx9zqjU65ycAS5A2y+Y5DFEH94gsoMZyWPNAjC8Ucauw1hE7rcxgjLWdBdDtyMNVMhSk6ee10UaqBw9hZfYapJHO/iYYgKjdewPAUVzq3v/qFOppJqp60l3S5NGnsGs6/H7FC/WZOj8lwvpXjf3sRqdluZelFQn3etkp7/9bepZ33JNMjqk+xv63Ktgr3Jf5jp63hip0yhn5iv4nQZa1q7m3KIPPOiXgfDzE3xtYXJaK6IfC59tFwde9NYEtyr6caPljcpPyttmd/B7mRJ84MyVMx5ZVqy+ZuVqU3J/0yAyJ3Zpoh8fJt7qujVXunKwXLNSXnq5t6XtZUsSfWCvKfKgaS8rCL93zi1Y2TrarFjPem0+ueck+p8mU2pV+IUmvlyzZOTfsddjGk9zEHuOop+aF3J30G97KP9rvR5WHW4rTeleL896/VRaKVK76C/Jf8yh8McXV1gX5/GEUv3B9V4vs5b5T7w6v/6R+z0AVNuPDhAURIcqQHSoAkSHKkB0qAJEhypAdKgCRIcqQHSoAkSHKkB0cDXwHwhDjtNussjTAAAAAElFTkSuQmCC" alt=""><span class="wm">KARI-NA</span></div></div><div class="foot-note"><span class="bx">✕</span><div><b>회전·기울임</b> <span>임의 각도로 돌리지 않기</span></div></div></div>
+      <div class="panel pad"><div class="dont-disp d-recolor"><div class="lock"><img class="mark" src="data:image/png;base64,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" alt=""><span class="wm">KARI-NA</span></div></div><div class="foot-note"><span class="bx">✕</span><div><b>임의 색 변경</b> <span>팔레트 외 색 금지</span></div></div></div>
+      <div class="panel pad"><div class="dont-disp d-shadow"><div class="lock"><img class="mark" src="data:image/png;base64,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" alt=""><span class="wm">KARI-NA</span></div></div><div class="foot-note"><span class="bx">✕</span><div><b>그림자·효과</b> <span>드롭섀도·글로우·베벨 금지</span></div></div></div>
+      <div class="panel pad"><div class="dont-disp d-outline"><div class="lock"><img class="mark" src="data:image/png;base64,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" alt=""><span class="wm">KARI-NA</span></div></div><div class="foot-note"><span class="bx">✕</span><div><b>과한 투명·외곽선화</b> <span>속을 비우지 않기</span></div></div></div>
+      <div class="panel pad"><div class="dont-disp d-lowcon"><div class="lock"><img class="mark" src="data:image/png;base64,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" alt=""><span class="wm">KARI-NA</span></div></div><div class="foot-note"><span class="bx">✕</span><div><b>저대비 배치</b> <span>비슷한 색에 묻히게 두지 않기</span></div></div></div>
+    </div>
+  </section>
+
+  <!-- 09 usage matrix -->
+  <section>
+    <div class="sec-head"><span class="num">09</span><h3>상황별 적용</h3>
+      <p>어디에 어떤 버전을 어떤 색으로 쓸지 정리했습니다.</p></div>
+    <div class="panel pad"><div class="use-wrap"><table class="use-table">
+      <thead><tr><th>적용처</th><th>버전</th><th>색</th><th>메모</th></tr></thead>
+      <tbody>
+        <tr><td>웹/앱 헤더</td><td><span class="v"><i></i>가로 조합형</span></td><td>배경따라 원색/화이트</td><td>바 높이 낮으면 심볼+워드마크</td></tr>
+        <tr><td>파비콘</td><td><span class="v"><i></i>심볼 단독</span></td><td>블루 배경 + 화이트 마크</td><td>16 / 32px</td></tr>
+        <tr><td>앱 아이콘</td><td><span class="v"><i></i>심볼 단독</span></td><td>블루 라운드 스퀘어 + 화이트</td><td>여백 심볼 폭 ~18%</td></tr>
+        <tr><td>스플래시/로딩</td><td><span class="v"><i></i>세로 조합형</span></td><td>잉크 배경 + 화이트</td><td>중앙 정렬</td></tr>
+        <tr><td>문서/슬라이드</td><td><span class="v"><i></i>가로 조합형</span></td><td>화이트 + 원색</td><td>여백 1x 이상</td></tr>
+        <tr><td>SNS 프로필</td><td><span class="v"><i></i>심볼 단독</span></td><td>블루 배경 + 화이트</td><td>원형 크롭 안전영역 확인</td></tr>
+        <tr><td>워터마크</td><td><span class="v"><i></i>심볼 단독</span></td><td>단색 · 저투명도</td><td>본문 가독 방해 금지</td></tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <!-- ══════════ PART 2 — ONAIR DESIGN LANGUAGE ══════════ -->
+  <div class="part"><span class="k">PART 2</span><h2>ONAIR 디자인 언어</h2><span class="line"></span></div>
+
+  <!-- 10 principles -->
+  <section>
+    <div class="sec-head"><span class="num">10</span><h3>원칙</h3>
+      <p>K7 직원용 관제 화면의 디자인 언어입니다. 전문·중성 톤, 절제된 색, 그림자로 그리는 위계 — 다섯 원칙으로 요약됩니다.</p></div>
+    <div class="grid g2">
+      <div class="panel pad principle"><div class="mono">01 · ELEVATION</div><h3>빛은 그리지 않는다, 그림자가 그린다</h3><p>그라데이션·글로우를 쓰지 않습니다. 위계·경계·맞물림은 중성 잉크 그림자(near·hover·focus·joint·modal)가 만듭니다. 거리감은 그림자가 아니라 잉크 투명도가 맡습니다.</p></div>
+      <div class="panel pad principle"><div class="mono">02 · SURFACE</div><h3>면은 쿨 뉴트럴 한 색</h3><p>패널은 석고 화이트 한 색, 바닥은 석고벽 그레이. 웜 캐스트 없는 중성 회색으로 관제실의 전문적인 톤을 만듭니다.</p></div>
+      <div class="panel pad principle"><div class="mono">03 · COLOR</div><h3>색은 점·글자·가는 요소에만</h3><p>큰 면은 중성으로 두고, 색은 신호등 램프(점)·텍스트·가는 선에만 씁니다. 블루=행동, 앰버=켜진 램프, 빨강·초록=신호 점.</p></div>
+      <div class="panel pad principle"><div class="mono">04 · THEME</div><h3>라이트 온리</h3><p>회사 내부 관제용 프로그램으로 다크 모드는 지원하지 않습니다. 단일 밝은 환경에 최적화합니다.</p></div>
+      <div class="panel pad principle"><div class="mono">05 · GRID · MOTION</div><h3>4px 그리드 · 절제된 모션</h3><p>모든 간격은 4px 배수. 모션은 변화를 설명할 때만, 바운스(오버슈트) 없이 — 금융 콘솔의 성격에 맞춰 차분하게.</p></div>
+      <div class="panel pad principle" style="background:var(--blue-700);border-color:var(--blue-700)"><div class="mono" style="color:#cfe0ff">CONTINUITY</div><h3 style="color:#fff">로고 블루 = 시스템 블루</h3><p style="color:#dbe6fb">로고의 <b style="color:#fff">#2F5FC4</b> 는 디자인 시스템의 <b style="color:#fff">--blue-700</b>(행동색)과 완전히 동일합니다. 브랜드와 제품이 같은 파랑을 공유합니다.</p></div>
+    </div>
+  </section>
+
+  <!-- 11 color -->
+  <section>
+    <div class="sec-head"><span class="num">11</span><h3>컬러 시스템</h3>
+      <p>면(surface)과 중성 회색이 기본, 액센트는 역할별로 절제해 사용합니다. 컴포넌트는 semantic alias를 참조하고 raw hex를 직접 쓰지 않습니다.</p></div>
+
+    <div class="cap" style="margin:2px 0 12px">Surfaces</div>
+    <div class="swatch-lg" style="margin-bottom:22px">
+      <div class="sw"><div class="top" style="background:#e9eaeb"></div><div class="b"><div class="n">Floor</div><code>#E9EAEB</code><div class="r">바닥 — 석고벽 그레이</div></div></div>
+      <div class="sw"><div class="top" style="background:#ffffff;border-bottom:1px solid var(--border)"></div><div class="b"><div class="n">Surface</div><code>#FFFFFF</code><div class="r">패널 — 석고 화이트</div></div></div>
+      <div class="sw"><div class="top" style="background:#f8f9f9;border-bottom:1px solid var(--border)"></div><div class="b"><div class="n">Subtle</div><code>#F8F9F9</code><div class="r">서브 패널·시트 크롬</div></div></div>
+    </div>
+
+    <div class="panel pad scale">
+      <div class="scale-row"><div class="lead"><b>Gray</b><span class="role">쿨 뉴트럴 · 텍스트/면</span></div>
+        <div class="chips">
+          <div class="c" style="background:#eef0f1"><code style="color:#6b6f74">100</code></div>
+          <div class="c" style="background:#e4e6e8"><code style="color:#6b6f74">200</code></div>
+          <div class="c" style="background:#dcdee1"><code style="color:#6b6f74">300</code></div>
+          <div class="c" style="background:#d7d9dc"><code style="color:#6b6f74">400</code></div>
+          <div class="c" style="background:#b9bcc0"><code style="color:#3a3d40">500</code></div>
+          <div class="c" style="background:#83878c"><code style="color:#fff">600</code></div>
+          <div class="c" style="background:#6b6f74"><code style="color:#fff">700</code></div>
+          <div class="c" style="background:#5c6065"><code style="color:#fff">800</code></div>
+          <div class="c" style="background:#4d5156"><code style="color:#fff">900</code></div>
+          <div class="c" style="background:#1b1d20"><code style="color:#fff">1000</code></div>
+        </div>
+      </div>
+      <div class="scale-row"><div class="lead"><b>Blue</b><span class="role">행동 · 전경 · 링크/포커스</span></div>
+        <div class="chips">
+          <div class="c" style="background:#b9cdf1"><code style="color:#234a9e">400</code></div>
+          <div class="c" style="background:#8fb0e8"><code style="color:#234a9e">500</code></div>
+          <div class="c" style="background:#2f5fc4"><code style="color:#fff">700</code></div>
+          <div class="c" style="background:#284fa3"><code style="color:#fff">800</code></div>
+          <div class="c" style="background:#234a9e"><code style="color:#fff">900</code></div>
+        </div>
+      </div>
+      <div class="scale-row"><div class="lead"><b>Amber</b><span class="role">켜진 램프 · 경고</span></div>
+        <div class="chips">
+          <div class="c" style="background:#e9d2a2"><code style="color:#77571a">400</code></div>
+          <div class="c" style="background:#e2ab52"><code style="color:#4a3410">500</code></div>
+          <div class="c" style="background:#dfa348"><code style="color:#fff">700</code></div>
+          <div class="c" style="background:#77571a"><code style="color:#fff">900</code></div>
+        </div>
+      </div>
+      <div class="scale-row"><div class="lead"><b>Red</b><span class="role">신호 점 · 오류/파괴</span></div>
+        <div class="chips">
+          <div class="c" style="background:#e5b3a9"><code style="color:#a33422">400</code></div>
+          <div class="c" style="background:#bc3f2b"><code style="color:#fff">700</code></div>
+          <div class="c" style="background:#b03a27"><code style="color:#fff">800</code></div>
+          <div class="c" style="background:#a33422"><code style="color:#fff">900</code></div>
+        </div>
+      </div>
+      <div class="scale-row"><div class="lead"><b>Green</b><span class="role">신호 점 · 성공</span></div>
+        <div class="chips">
+          <div class="c" style="background:#b5d2bb"><code style="color:#2f6b3f">400</code></div>
+          <div class="c" style="background:#6fa37c"><code style="color:#183a24">600</code></div>
+          <div class="c" style="background:#3e7a4e"><code style="color:#fff">700</code></div>
+          <div class="c" style="background:#2f6b3f"><code style="color:#fff">900</code></div>
+        </div>
+      </div>
+    </div>
+    <p style="margin:12px 2px 0;color:var(--faint);font-size:12.5px;font-family:var(--font-mono)">semantic: fg=gray-1000 · fg-muted=gray-700 · border=rgba(20,23,28,.12) · link/focus=blue-700 · success=green-900 · danger=red-900 · warning=amber-900</p>
+  </section>
+
+  <!-- 12 type -->
+  <section>
+    <div class="sec-head"><span class="num">12</span><h3>타입 래더</h3>
+      <p>6단 사다리. 라틴=Avenir Next, 한글=Pretendard, 데이터·숫자=Geist Mono. 같은 크기에서는 weight로, 다른 역할에서는 크기로 구분 — 축은 하나씩만.</p></div>
+    <div class="ladder">
+      <div class="lad-row"><div class="samp" style="font-size:23px;font-weight:600;line-height:1.3">Display · 모달 헤드라인</div><div class="meta"><b>23</b> · 600 / 1.3</div></div>
+      <div class="lad-row"><div class="samp" style="font-size:18px;font-weight:600;line-height:1.4;letter-spacing:-.2px">Title · 카드 주인 문장</div><div class="meta"><b>18</b> · 600 / 1.4 · -0.2px</div></div>
+      <div class="lad-row"><div class="samp" style="font-size:14px;font-weight:600;line-height:1.2">Section · 카드 섹션 헤더</div><div class="meta"><b>14</b> · 600 / 1.2</div></div>
+      <div class="lad-row"><div class="samp" style="font-size:14px;font-weight:400;line-height:1.55">Body · 읽는 텍스트 전부 (Section과 weight·잉크로 구분)</div><div class="meta"><b>14</b> · 400 / 1.55</div></div>
+      <div class="lad-row"><div class="samp" style="font-size:12px;font-weight:500;line-height:1.4">Label · 라벨·필드명</div><div class="meta"><b>12</b> · 500–600</div></div>
+      <div class="lad-row"><div class="samp" style="font-size:11px;font-weight:400;line-height:1.4;color:var(--muted)">Caption · 메타·타임스탬프 (잉크 하한 gray-700)</div><div class="meta"><b>11</b> · 400–500</div></div>
+    </div>
+    <p style="margin:12px 2px 0;color:var(--faint);font-size:12.5px;font-family:var(--font-mono)">※ 직원 화면은 scale(0.76389)로 축소 렌더 — 명목 13px = 실효 9.9px. 이 문서는 등배율로 표기.</p>
+  </section>
+
+  <!-- 13 spacing -->
+  <section>
+    <div class="sec-head"><span class="num">13</span><h3>스페이싱 &amp; 레이아웃</h3>
+      <p>4px 베이스 그리드만 사용합니다. 오프-스케일 값 금지. 리듬 — 그룹 내부 8px · 그룹 사이 16px · 섹션 사이 32–40px.</p></div>
+    <div class="grid g2">
+      <div class="panel pad">
+        <div class="cap" style="margin-bottom:14px">4px scale</div>
+        <div class="space-scale">
+          <div class="space-row"><span class="t"><b>4</b> · space-1</span><div class="bar" style="width:4px"></div></div>
+          <div class="space-row"><span class="t"><b>8</b> · space-2</span><div class="bar" style="width:8px"></div></div>
+          <div class="space-row"><span class="t"><b>12</b> · space-3</span><div class="bar" style="width:12px"></div></div>
+          <div class="space-row"><span class="t"><b>16</b> · space-4</span><div class="bar" style="width:16px"></div></div>
+          <div class="space-row"><span class="t"><b>24</b> · space-6</span><div class="bar" style="width:24px"></div></div>
+          <div class="space-row"><span class="t"><b>32</b> · space-8</span><div class="bar" style="width:32px"></div></div>
+          <div class="space-row"><span class="t"><b>40</b> · space-10</span><div class="bar" style="width:40px"></div></div>
+          <div class="space-row"><span class="t"><b>64</b> · space-16</span><div class="bar" style="width:64px"></div></div>
+        </div>
+      </div>
+      <div class="panel pad">
+        <div class="cap" style="margin-bottom:14px">Layout frame · 리듬</div>
+        <div class="specs" style="gap:8px">
+          <span class="spec">content-max <b>1200</b></span>
+          <span class="spec">prose-max <b>720</b></span>
+          <span class="spec">gutter <b>24</b></span>
+          <span class="spec">header <b>64</b></span>
+        </div>
+        <div class="rhythm">
+          <span class="spec">그룹 내부 <b>8</b></span>
+          <span class="spec">그룹 사이 <b>16</b></span>
+          <span class="spec">섹션 사이 <b>32–40</b></span>
+        </div>
+        <div class="rhythm">
+          <span class="spec">섹션 헤더 패딩 <b>12·16</b></span>
+          <span class="spec">타일 <b>13·16</b></span>
+          <span class="spec">칩 <b>4–5·10–12</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 shape -->
+  <section>
+    <div class="sec-head"><span class="num">14</span><h3>반지름 &amp; 형태</h3>
+      <p>반지름은 한 화면에 한 가족만. 컨트롤은 알약, 패널·카드는 tight radius, 내부 타일은 한 단계 작게.</p></div>
+    <div class="panel pad">
+      <div class="radii">
+        <div class="r"><div class="box" style="border-radius:12px"></div><span class="lab">패널·카드 · 12</span></div>
+        <div class="r"><div class="box" style="border-radius:8px"></div><span class="lab">내부 타일 · 8</span></div>
+        <div class="r"><div class="box" style="border-radius:6px"></div><span class="lab">인풋·버튼 · 6</span></div>
+        <div class="r"><div class="box" style="border-radius:9999px"></div><span class="lab">컨트롤·칩 · pill</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 elevation -->
+  <section>
+    <div class="sec-head"><span class="num">15</span><h3>그림자 — 위계를 그리는 도구</h3>
+      <p>그림자는 <b>높이</b>만 인코딩합니다(2단). 초점 패널만 위로 들려 크게, 나머지는 똑같이 낮게. 거리는 잉크 투명도가 맡습니다.</p></div>
+    <div class="panel" style="background:var(--floor);padding:clamp(24px,4vw,40px)">
+      <div class="shadows">
+        <div class="shadow-card" style="box-shadow:var(--sh-near)"><div class="n">near</div><div class="u">쉬는 카드 (기본)</div></div>
+        <div class="shadow-card" style="box-shadow:var(--sh-hover)"><div class="n">hover</div><div class="u">마우스 부상</div></div>
+        <div class="shadow-card" style="box-shadow:var(--sh-focus)"><div class="n">focus</div><div class="u">초점 패널 상승</div></div>
+        <div class="shadow-card" style="box-shadow:var(--sh-joint)"><div class="n">joint</div><div class="u">바텀시트 맞물림(↑)</div></div>
+        <div class="shadow-card" style="box-shadow:var(--sh-modal)"><div class="n">modal</div><div class="u">모달·팝오버</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 motion -->
+  <section>
+    <div class="sec-head"><span class="num">16</span><h3>모션</h3>
+      <p>대부분의 상호작용은 즉각적으로. 모션은 변화를 명확히 할 때만, 오버슈트(바운스) 없이 사용합니다. (아래 카드에 마우스를 올려보세요 — ease-out 150ms)</p></div>
+    <div class="grid g2">
+      <div class="panel pad">
+        <div class="cap" style="margin-bottom:14px">Curves · Durations</div>
+        <div class="specs">
+          <span class="spec">ease-out <b>.2,.8,.2,1</b></span>
+          <span class="spec">drawer <b>.32,.72,0,1</b></span>
+        </div>
+        <div class="rhythm">
+          <span class="spec">state <b>150ms</b></span>
+          <span class="spec">popover <b>200ms</b></span>
+          <span class="spec">overlay <b>300ms</b></span>
+          <span class="spec">bounce <b style="color:var(--red-900)">없음</b></span>
+        </div>
+      </div>
+      <div class="motion-grid">
+        <div class="lift"><div class="n">near → hover</div><div class="d">translateY(-3px) · ease-out 150ms</div></div>
+        <div class="lift"><div class="n">near → hover</div><div class="d">그림자가 부상을 그린다</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ PART 3 — APPLY ══════════ -->
+  <div class="part"><span class="k">PART 3</span><h2>적용 — 새 디자인을 더할 때</h2><span class="line"></span></div>
+
+  <!-- 17 mindset -->
+  <section>
+    <div class="sec-head"><span class="num">17</span><h3>적용 순서 &amp; 참조 철학</h3>
+      <p>이 문서의 목적은 하나 — <b>무엇을 새로 추가해도 자동으로 같은 톤이 나오게</b> 하는 것. 아래 순서로 위계를 세우면, 색과 그림자를 거의 안 써도 화면이 ONAIR처럼 앉습니다.</p></div>
+    <div class="panel pad">
+      <div class="cap" style="margin-bottom:12px">위계는 이 순서로 — 색은 최후의 수단</div>
+      <div class="order">
+        <span class="step">1 · 타이포 <small>크기·weight</small></span><span class="arw">→</span>
+        <span class="step">2 · 스페이싱 <small>4px 그리드</small></span><span class="arw">→</span>
+        <span class="step">3 · 그림자 <small>높이</small></span><span class="arw">→</span>
+        <span class="step">4 · 색 <small>점·글자·가는 선</small></span>
+      </div>
+      <blockquote class="quote">“Design in monochrome. Use color only when it adds meaning.”<cite>— vercel.com/design.md · ONAIR의 뿌리</cite></blockquote>
+      <p style="margin:16px 0 0;color:var(--muted);font-size:13.5px;line-height:1.7">
+        면(surface)은 <b style="color:var(--ink)">벌어서</b> 씁니다 — 선택·상호작용·경고·실제 그룹을 표현할 때만 카드·경계를 두고, 스페이싱으로 될 일은 스페이싱으로. 모든 섹션을 카드로 감싸지 않습니다.
+        상태에는 항상 <b style="color:var(--ink)">색 + 비색 단서</b>를 함께(색맹 안전).</p>
+      <div class="cap" style="margin:18px 0 0">지양 — 이건 우리 언어가 아님</div>
+      <div class="reject">
+        <span class="r">그라데이션</span><span class="r">글로우·베벨</span><span class="r">가짜 깊이</span>
+        <span class="r">장식용 그림자</span><span class="r">사진 위 텍스트</span><span class="r">카드 속 카드</span>
+        <span class="r">한쪽만 색 테두리 (side rail)</span><span class="r">메타데이터용 알약 남발</span>
+        <span class="r">바운스·패럴랙스</span><span class="r">raw hex 직접값</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 tokens -->
+  <section>
+    <div class="sec-head"><span class="num">18</span><h3>토큰 — 그대로 복붙</h3>
+      <p>새 화면·컴포넌트는 아래 변수만 <code style="font-family:var(--font-mono);font-size:12px">var(--*)</code>로 참조합니다. raw hex를 직접 쓰지 않으면 색·간격·형태가 저절로 맞습니다. (전체 원본: <code style="font-family:var(--font-mono);font-size:12px">src/styles/tokens.css</code>)</p></div>
+    <div class="panel pad">
+      <div class="code-block"><span class="c">/* ── ONAIR tokens (요약) — 컴포넌트는 이 alias만 참조 ── */</span>
+:root{
+  <span class="c">/* Surfaces — 석고 화이트 패널 · 석고벽 그레이 바닥 */</span>
+  --floor:<span class="p">#e9eaeb</span>; --surface:<span class="p">#ffffff</span>; --surface-2:<span class="p">#f8f9f9</span>;
+
+  <span class="c">/* Gray — 쿨 뉴트럴 (텍스트·면) */</span>
+  --gray-100:<span class="p">#eef0f1</span>; --gray-400:<span class="p">#d7d9dc</span>; --gray-600:<span class="p">#83878c</span>;
+  --gray-700:<span class="p">#6b6f74</span>; --gray-900:<span class="p">#4d5156</span>; --gray-1000:<span class="p">#1b1d20</span>;
+
+  <span class="c">/* Accents — 점·글자·가는 선에만 */</span>
+  --blue-700:<span class="p">#2f5fc4</span>;  <span class="c">/* 행동/전경 · 로고 블루와 동일 */</span>
+  --amber-700:<span class="p">#dfa348</span>; <span class="c">/* 켜진 램프 */</span>
+  --red-700:<span class="p">#bc3f2b</span>;   --green-700:<span class="p">#3e7a4e</span>; <span class="c">/* 신호 점 */</span>
+
+  <span class="c">/* Semantic — 컴포넌트는 여기부터 참조 */</span>
+  --color-bg:var(--surface); --color-fg:var(--gray-1000); --color-fg-muted:var(--gray-700);
+  --color-border:rgba(20,23,28,.12); --color-link:var(--blue-700); --color-focus:var(--blue-700);
+  --color-success:var(--green-900); --color-danger:var(--red-900); --color-warning:var(--amber-900);
+
+  <span class="c">/* Type — 라틴=Avenir · 한글=Pretendard · 숫자/데이터=Geist Mono */</span>
+  --font-display:"Avenir Next","Pretendard",system-ui,sans-serif;
+  --font-mono:"Geist Mono",ui-monospace,Menlo,monospace;
+
+  <span class="c">/* Space (4px 그리드) · Radius · Elevation · Motion */</span>
+  --space-2:8px; --space-4:16px; --space-8:32px;
+  --radius-sm:6px; --radius-md:12px; --radius-inner:8px; --radius-full:9999px;
+  --sh-near:0 3px 8px -3px rgba(15,18,24,.25), 0 1px 2px rgba(15,18,24,.10);
+  --sh-modal:0 2px 4px rgba(15,18,24,.14), 0 18px 40px -10px rgba(15,18,24,.35);
+  --ease-out:cubic-bezier(.2,.8,.2,1); --duration-state:150ms;
+}</div>
+      <div class="copy-hint">※ 값은 tokens.css의 온에어 재정의 기준. 컴포넌트에서 <b style="color:var(--ink)">raw hex 대신 alias</b>만 쓰는 게 핵심 규칙입니다.</div>
+    </div>
+  </section>
+
+  <!-- 19 recipes -->
+  <section>
+    <div class="sec-head"><span class="num">19</span><h3>컴포넌트 레시피</h3>
+      <p>자주 쓰는 조각들. 각 샘플은 위 토큰만으로 조립돼 있습니다 — 그대로 따라 만들면 톤이 맞습니다.</p></div>
+    <div class="grid g2">
+      <div class="recipe"><div class="demo"><span class="name">버튼</span>
+        <button class="btn btn-pri">배정</button><button class="btn btn-sec">보류</button><button class="btn btn-ghost">취소</button></div>
+        <div class="meta"><span>primary <b>blue-700</b></span><span>radius <b>6</b></span><span>pad <b>8·14</b></span><span>button-14 <b>500</b></span></div></div>
+
+      <div class="recipe"><div class="demo"><span class="name">입력 필드</span>
+        <div class="field"><label>고객명</label><input type="text" value="김민기" readonly></div></div>
+        <div class="meta"><span>label 밖 · <b>12/500</b></span><span>radius <b>6</b></span><span>focus ring <b>blue-700</b></span></div></div>
+
+      <div class="recipe"><div class="demo"><span class="name">신호등 램프 — 색은 점에만</span>
+        <span class="lamp"><span class="dot dot-a"></span>처리중</span><span class="lamp"><span class="dot dot-g"></span>완료</span><span class="lamp"><span class="dot dot-r"></span>실패</span></div>
+        <div class="meta"><span>dot <b>9px</b></span><span>amber/green/red <b>-700</b></span><span>라벨은 잉크</span></div></div>
+
+      <div class="recipe"><div class="demo"><span class="name">칩 / 알약</span>
+        <span class="chip2">G002 · 대출상담</span><span class="chip2"><span class="dot dot-g" style="width:8px;height:8px;border-radius:50%"></span>온에어</span></div>
+        <div class="meta"><span>pill <b>9999</b></span><span>pad <b>4·11</b></span><span>mono <b>12</b></span></div></div>
+
+      <div class="recipe"><div class="demo"><span class="name">값 · 라벨 페어</span>
+        <div class="stat"><span class="l">대기</span><span class="v">12</span></div>
+        <div class="stat"><span class="l">평균 응대</span><span class="v">1:24<small></small></span></div></div>
+        <div class="meta"><span>라벨 <b>12/500</b></span><span>값 <b>24/600</b></span><span>tabular-nums</span></div></div>
+
+      <div class="recipe"><div class="demo" style="display:block"><span class="name" style="margin-bottom:8px">테이블 — 글자 좌·숫자 우</span>
+        <table class="mtable"><thead><tr><th>부서</th><th class="num">건수</th></tr></thead>
+        <tbody><tr><td>대출상담</td><td class="num">128</td></tr><tr><td>카드분실</td><td class="num">54</td></tr></tbody></table></div>
+        <div class="meta"><span>text <b>left</b></span><span>numerals <b>right · mono</b></span></div></div>
+    </div>
+  </section>
+
+  <!-- 20 checklist -->
+  <section>
+    <div class="sec-head"><span class="num">20</span><h3>새 UI 추가 체크리스트</h3>
+      <p>화면·컴포넌트를 붙이기 전에 이 열 가지를 통과하면 ONAIR 톤에서 벗어나지 않습니다.</p></div>
+    <div class="grid g2">
+      <div class="panel pad check">
+        <div class="it"><span class="bx">✓</span><div><b>semantic alias만</b> <span>— raw hex 직접값 0개, 전부 var(--*)</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>큰 면은 중성</b> <span>— 색은 점·글자·가는 선에만</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>위계가 타이포로 먼저</b> <span>— 색·그림자 빼도 읽히나(squint test)</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>4px 그리드 위</b> <span>— 오프-스케일 간격 없음</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>반지름 한 가족</b> <span>— 패널12·타일8·컨트롤 pill 섞지 않기</span></div></div>
+      </div>
+      <div class="panel pad check">
+        <div class="it"><span class="bx">✓</span><div><b>surface는 벌어서</b> <span>— 불필요한 카드·카드 속 카드 없음</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>그라데이션·글로우·베벨 0</b> <span>— 위계는 그림자(높이)로만</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>테두리는 전체 균일</b> <span>— 한쪽만 색 넣는 side rail 금지</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>상태엔 색+비색 단서</b> <span>— 점/아이콘/텍스트 동반</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>서체 역할대로</b> <span>— 라틴 Avenir · 한글 Pretendard · 숫자 Geist Mono</span></div></div>
+        <div class="it"><span class="bx">✓</span><div><b>모션은 필요한 곳만</b> <span>— ease-out, 바운스·패럴랙스 없음</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21 reference assembly -->
+  <section>
+    <div class="sec-head"><span class="num">21</span><h3>레퍼런스 조립 예시</h3>
+      <p>아래 K7 콜 카드는 이 문서의 <b>토큰과 레시피만으로</b> 조립했습니다. 새 화면을 붙여도 이렇게 앉으면 톤이 맞은 것입니다.</p></div>
+    <div class="panel pad" style="background:var(--floor)">
+      <div class="demo-card">
+        <div class="sechd"><span class="h">AI 요약</span><span class="ts">14:32:08 · G002</span></div>
+        <div class="bd">
+          <div class="title">대출 한도 상향 문의 — 신용점수 확인 후 재상담 안내 필요</div>
+          <div class="order" style="margin-top:12px;gap:8px">
+            <span class="lamp"><span class="dot dot-a"></span>처리중</span>
+            <span class="chip2">대출상담</span>
+            <span class="chip2">우선순위 2</span>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="l">대기시간</span><span class="v">1:24</span></div>
+            <div class="stat"><span class="l">감정온도</span><span class="v">안정</span></div>
+          </div>
+          <div class="act"><button class="btn btn-pri">상담원 배정</button><button class="btn btn-sec">보류</button></div>
+        </div>
+      </div>
+    </div>
+    <p style="margin:12px 2px 0;color:var(--faint);font-size:12.5px;font-family:var(--font-mono)">↑ 카드=surface+border+radius-12+sh-near · 헤더=Section14 · 문장=Title18 · 상태=신호 점 · 숫자=tabular · 색은 점·버튼에만.</p>
+  </section>
+
+  <footer>
+    <span>KARI-NA · Response Innovation</span>
+    <span>Brand &amp; Design System v1.0 · ONAIR v2.1 · 2026.07</span>
+    <span>#2F5FC4 · Avenir Next / Pretendard / Geist Mono</span>
+  </footer>
+</div>
