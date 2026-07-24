@@ -39,21 +39,18 @@ export function BrandSymbol({ size = 22, color }: { size?: number; color?: strin
 export function BrandFace({
   size = 40,
   color = "var(--blue-700)",
-  ink = "#fff",
 }: {
   size?: number;
   color?: string;
-  ink?: string;
 }) {
+  // 배경(흰 원)은 스피너가 깔아 준다 — 여기는 파란 표정(눈·미소)만. 세로 캡슐 눈 + 채워진 반원 미소.
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} style={{ display: "block", flex: "none" }} aria-hidden="true">
-      {/* 라운드 블롭 얼굴 바탕 */}
-      <rect x="7" y="7" width="86" height="86" rx="31" fill={color} />
-      {/* 눈 */}
-      <circle cx="37" cy="43" r="6.2" fill={ink} />
-      <circle cx="63" cy="43" r="6.2" fill={ink} />
-      {/* 미소 */}
-      <path d="M34 59 Q50 74 66 59" fill="none" stroke={ink} strokeWidth="6.4" strokeLinecap="round" />
+      {/* 눈 — 세로 캡슐 */}
+      <rect x="31" y="30" width="12" height="27" rx="6" fill={color} />
+      <rect x="57" y="30" width="12" height="27" rx="6" fill={color} />
+      {/* 미소 — 채워진 반원(위 평평·아래 둥근) */}
+      <path d="M27 62 A23 20 0 0 0 73 62 Z" fill={color} />
     </svg>
   );
 }

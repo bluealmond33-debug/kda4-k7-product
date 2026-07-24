@@ -6,12 +6,12 @@ import Spinner from "../Spinner";
 const FONT = "'Avenir Next','Pretendard',system-ui,sans-serif";
 
 /** 접수 대기 화면 — idle이면 대기(Standby). 접수 중엔 대기 화면을 '흐릿하게만' 두고,
- *  로고(얼굴) 스피너 위주로 "지금 어느 단계인지"만 가볍게 알린다.
- *  STT 원문·상세 신호바는 보여주지 않는다(텍스트 최소화 · 대기 화면을 덮지 않음). */
+ *  로고(얼굴) 스피너 위주로 "어느 단계·얼마나 진행됐는지"만 가볍게 알린다.
+ *  STT 원문은 보여주지 않는다(텍스트 최소화). 진행 단계 + 접수 경과·감정온도는 남긴다. */
 export default function Waiting({ vm }: { vm: CallFlowVM }) {
   if (vm.phIdle) return <Standby />;
 
-  // 진행 단계 — 듣는 중 → 요약·정리 → 카드 생성. 무엇을 듣는지(STT)가 아니라 '단계'만 보여준다.
+  // 진행 단계 — 듣는 중 → 요약·정리 → 카드 생성. 무엇을 듣는지(STT)가 아니라 '단계'만.
   const listening = vm.showWave || vm.silenceLeft > 0 || vm.liveTranscriptLines.length === 0;
   const stage = listening ? 0 : 1;
   const steps = ["고객 발화 듣는 중", "AI가 요약·정리 중", "상담 카드 생성"];
@@ -34,18 +34,13 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
         <div
           data-tour="intake-live"
           style={css(
-            "display:flex;flex-direction:column;align-items:center;gap:18px;padding:30px 46px;border-radius:24px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 60px rgba(28,32,45,.16),0 2px 8px rgba(28,32,45,.05);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4)"
+            "display:flex;flex-direction:column;align-items:center;gap:20px;padding:32px 46px 26px;border-radius:24px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 60px rgba(28,32,45,.16),0 2px 8px rgba(28,32,45,.05);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4)"
           )}
         >
           {/* 로고(얼굴) 스피너 — 이 화면의 주인공 */}
-          <Spinner size={86} mark speedMs={1050} />
+          <Spinner size={92} mark speedMs={1050} />
 
-          <span style={css("display:inline-flex;align-items:center;gap:7px;font:700 12px " + FONT + ";letter-spacing:.4px;color:var(--blue-900);background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.22);border-radius:9999px;padding:6px 15px")}>
-            <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--blue-700);animation:recBlink 1.1s infinite")} />
-            AI 접수 진행 중
-          </span>
-
-          {/* 진행 단계 — 지금 어디쯤인지만 */}
+          {/* 진행 단계 — 지금 어디쯤인지 */}
           <div style={css("display:flex;align-items:center;gap:9px")}>
             {steps.map((label, i) => {
               const done = i < stage, on = i === stage;
@@ -61,7 +56,32 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
             })}
           </div>
 
-          <span style={css("font:400 12.5px " + FONT + ";color:var(--gray-600)")}>완료되면 상담 준비 카드가 표시됩니다</span>
+          {/* 라이브 신호 — 감정온도 · 접수 경과 · 무음/수신 (이전에 있던 유용한 정보 복원) */}
+          <div style={css("display:flex;align-items:center;gap:20px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.8);border-radius:9999px;padding:9px 20px;box-shadow:0 1px 4px rgba(28,32,45,.06)")}>
+            <span style={css("display:flex;align-items:center;gap:8px")} title="실시간 감정온도">
+              <span style={css("font:600 11px " + FONT + ";color:var(--gray-700)")}>감정온도</span>
+              <span className="lampdots">
+                <i className={"g" + (vm.emo === 1 ? " lit" : "")} />
+                <i className={"a" + (vm.emo === 2 ? " lit" : "")} />
+                <i className={"r" + (vm.emo >= 3 ? " lit" : "")} />
+              </span>
+              <span style={css("font:600 12px " + FONT + ";color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--gray-700)"))}>
+                {vm.emo >= 3 ? "고조" : vm.emo >= 1 ? "상승 중" : "안정"}
+              </span>
+            </span>
+            <span style={css("width:1.3px;height:16px;background:var(--gray-300)")} />
+            <span style={css("display:flex;align-items:center;gap:5px;font:600 12px " + FONT + ";color:var(--gray-700)")}>
+              접수 경과 <span className="mono" style={css("color:var(--gray-1000)")}>{vm.clockStr}</span>
+            </span>
+            <span style={css("width:1.3px;height:16px;background:var(--gray-300)")} />
+            <span style={css("font:600 12px " + FONT + ";color:var(--gray-700)")}>
+              {vm.silenceLeft > 0 ? (
+                <>무음 <span className="mono" style={css("color:var(--gray-1000)")}>{vm.silenceLeft}초</span> 후 요약</>
+              ) : (
+                "고객 발화 수신 중"
+              )}
+            </span>
+          </div>
         </div>
       </div>
     </div>
