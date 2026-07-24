@@ -12,7 +12,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.compat import build_compat_router
 from app.database import initialize_database, ping_database
 from app.rag import RegulationSearchUnavailable, embedder, initialize_rag
 from app.routers.mvp import router as mvp_router
@@ -52,7 +51,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(build_compat_router(settings))
+# 레거시 데모 경로(/analyze-text·/summarize·/emotion·/judge·/rag·/briefing·/stt·
+# /analyze)는 엔진 pipeline 라우터가 온프레미스(stub/local/OpenAI) 인지 형태로 제공한다.
+# product의 compat 라우터(app/compat.py)는 같은 경로의 부분집합을 OpenAI 전용으로만
+# 제공해 온프레미스 핸들러를 가렸으므로 include하지 않는다(ADR-0012 이식 정리).
 app.include_router(pipeline_router)
 app.include_router(mvp_router)
 app.include_router(regulations_router)  # 규정 지식베이스 /api/v1/regulations/*
