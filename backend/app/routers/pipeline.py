@@ -42,6 +42,7 @@ from app.services.rag import search_procedures
 from app.services.react_adapter import build_call_summary, emotion_label, emotion_level_and_signals
 from app.services.routing_classifier import classify_routing_safe
 from app.services.stt import transcribe_audio
+from app.services.consult_guide import generate_consult_guide, stub_consult_guide
 from app.services.stub_models import analyze_transcript_stub, transcribe_audio_stub
 from app.services.text_emotion import TextEmotionError, classify_text_emotion
 from app.services.voice_anger import analyze_voice_anger
@@ -69,6 +70,29 @@ def _get_openai_client() -> OpenAI:
     if not settings.openai_api_key:
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY가 서버에 설정되어 있지 않습니다.")
     return OpenAI(api_key=settings.openai_api_key)
+
+
+# 유의사항 카드에 띄울 규정의 코사인 점수 하한. 아래 analyze_text_endpoint 주석 참조.
+#
+# 하한이 둘인 이유: 부서 필터가 걸린 검색은 이미 대분류가 맞는 문서만 후보라, 남은 위험은
+# "그 부서 안에서 덜 맞는 문서" 정도라 느슨해도 된다. 반면 필터 없는 전체 검색(일반상담팀)은
+# 도메인을 넘나든 잡음이 들어올 수 있어 빡세게 잡는다. 실측상 사고·신고(SG) 절차 문서는
+# 맞더라도 0.53~0.63대에 머문다(짧은 산문) — 상품설명서(0.72~0.78, 긴 PDF)와 점수대가 달라
+# 단일 하한을 쓰면 사고 규정만 통째로 잘려 나간다.
+_RAG_MIN_SCORE_FILTERED = 0.50
+_RAG_MIN_SCORE_UNFILTERED = 0.60
+
+# 라우팅 부서 → 규정 대분류(TAXONOMY) 하드 필터. 사고 계열 통화에 상품설명서(DEP/LON)가
+# 섞이는 것을 막는다 — 실측: 보이스피싱 건 유의사항 3개 중 2위가 '주택청약종합저축'(0.620)
+# 이었다. 점수 하한만으로는 못 거른다(하한을 그 위로 올리면 '지급정지 신청 절차' 0.601도
+# 같이 날아간다). 매핑에 없는 부서(일반상담팀 등)는 필터 없이 전체 검색한다.
+_DEPT_RAG_CATEGORIES: dict[str, list[str]] = {
+    "보이스피싱대응팀": ["SG", "EFN", "CRD"],
+    "카드분실신고팀": ["CRD", "SG"],
+    "계좌보안팀": ["SG", "EFN", "CRD"],
+    "이체오류처리팀": ["EFN", "SG"],
+    "대출상담팀": ["LON"],
+}
 
 
 def _rag_query(reason_codes: list[AttentionReasonCode], summary: str) -> str:
@@ -203,11 +227,44 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
     emotion_label, emotion_score = emotion_label_and_score(emotion_result)
 
     # 관련 규정(김동희 RAG) — 상담 유의사항/응대 가이드로 프론트에 넘긴다. 실패해도 분석은 유지.
+    #
+    # 질의는 **전사 원문이 아니라 요약+키워드**로 만든다(2026-07-23). 원문에는 "연락처는
+    # 010-…", "어떻게 해야 하나요?" 같은 잡음이 섞여 있어, PDF 상품설명서 말미의 콜센터
+    # 전화번호·민원접수 안내 표가 의미적으로 끌려온다. 실측: ATM 도난 건에서 원문 질의는
+    # 가계대출·보금자리론·청약저축(0.585/0.580/0.569)을, 요약+키워드 질의는 명의도용·해킹
+    # 신고 대응·이상금융거래 신고 처리(0.575/0.569)를 반환했다. 대출 문의에서도 요약+키워드
+    # 쪽이 절차 문서("대출 만기 연장·중도상환·약정변경 상담", 0.761)를 1위로 올린다.
+    # 부수효과로 개인정보가 RAG 질의에 실리지 않는다(주제 12).
+    rag_query = " ".join(filter(None, [gpt_result.summary, " ".join(gpt_result.keywords)])).strip()
+    rag_categories = _DEPT_RAG_CATEGORIES.get(gpt_result.department)
     try:
-        references = search_procedures(settings, body.text, top_k=3)
+        references = search_procedures(
+            settings, rag_query or body.text, top_k=3, categories=rag_categories
+        )
+        # 점수 하한. 벡터검색은 항상 top_k개를 채워주므로, 맞는 규정이 없어도 "그나마 가까운"
+        # 무관한 문서가 유의사항 카드에 뜬다. 하한 미달이면 비우고, 프론트는 일반 유의사항으로
+        # 채운다 — 엉뚱한 규정을 근거로 안내하는 것보다 일반 원칙을 보여주는 편이 안전하다.
+        floor = _RAG_MIN_SCORE_FILTERED if rag_categories else _RAG_MIN_SCORE_UNFILTERED
+        references = [d for d in references if d.score >= floor]
     except Exception:
         logger.warning("규정 RAG 검색 실패 — references 없이 진행", exc_info=True)
         references = []
+
+    # 상담 가이드(EXAONE) — 단계별 스크립트·후속 조치·상담 결과를 실제 통화 내용으로 생성.
+    # 하드코딩 스크립트가 실제 문의(예: 계좌 개설)와 어긋나던 문제의 해소 지점.
+    # RAG 근거(references)를 함께 넘겨 "3. 절차 안내"가 실물 규정을 반영하게 한다.
+    # 실패해도 분석은 유지 — 빈 가이드를 보내면 프론트가 기존 픽스처로 폴백한다.
+    try:
+        if settings.stub_models:
+            guide = stub_consult_guide(gpt_result.summary, gpt_result.department)
+        else:
+            guide = generate_consult_guide(
+                settings, gpt_result.summary, gpt_result.department,
+                gpt_result.keywords, references,
+            )
+    except Exception:
+        logger.warning("상담 가이드 생성 실패 — 스크립트 없이 진행", exc_info=True)
+        guide = None
 
     return LegacyAnalyzeResponse(
         call_id=str(uuid.uuid4()),
@@ -221,6 +278,9 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
         ),
         keywords=gpt_result.keywords,
         references=references,
+        script_steps=guide.script_steps if guide else [],
+        follow_ups=guide.follow_ups if guide else [],
+        result_label=guide.result_label if guide else "",
     )
 
 

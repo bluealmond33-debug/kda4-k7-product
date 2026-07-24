@@ -170,6 +170,28 @@ class JudgeResult(BaseModel):
     recommended_agent_level: RecommendedAgentLevel
 
 
+# ---------- 상담 가이드 (EXAONE 생성 — 단계별 스크립트·후속 조치) ----------
+
+class ConsultScriptStep(BaseModel):
+    """단계별 상담 스크립트 한 단계. 상담사가 그대로 읽을 수 있는 문장."""
+
+    title: str
+    text: str
+
+
+class ConsultGuide(BaseModel):
+    """통화 내용 기반 상담 가이드 — EXAONE이 요약·키워드·RAG 근거로 생성.
+
+    프론트의 '단계별 상담 스크립트'(script_steps), 후처리 시트의 '후속 조치' 칩
+    (follow_ups), '상담 결과' 기본값(result_label)을 채운다. 생성 실패 시 프론트는
+    기존 데모 픽스처로 폴백하므로 세 필드 모두 비어 있을 수 있다.
+    """
+
+    script_steps: list[ConsultScriptStep] = []
+    follow_ups: list[str] = []
+    result_label: str = ""
+
+
 # ---------- RAG ----------
 
 class RagDocument(BaseModel):
@@ -227,6 +249,10 @@ class LegacyAnalyzeResponse(BaseModel):
     routing: LegacyRouting
     keywords: list[str]
     references: list[RagDocument] = []  # 관련 규정(RAG) — 상담 유의사항/응대 가이드용
+    # 상담 가이드(EXAONE 생성) — 단계별 스크립트·후속 조치·상담 결과. 실패 시 빈 값(프론트 폴백).
+    script_steps: list[ConsultScriptStep] = []
+    follow_ups: list[str] = []
+    result_label: str = ""
 
 
 # ---------- kda4-k7-product(팀 React 데모) 연동 ----------
