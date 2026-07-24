@@ -16,3 +16,12 @@ yarn-error.log*
 *.tsbuildinfo
 .vercel
 .env*
+
+# ── 실행 엔진 이식(ADR-0012): 대용량 런타임 모델·인덱스는 git 제외 ──
+# 배포/시연 장비에 별도로 배치한다(엔진 저장소도 동일). 코퍼스 jsonl은 추적한다.
+backend/app/services/k7modeling/models/*.joblib
+backend/app/services/k7modeling/models/*.pt
+backend/app/services/k7modeling/models/hf_cache/
+backend/app/services/routing/models/*.joblib
+backend/app/services/rag_data/*.index
+backend/app/services/rag_data/*.fingerprint
