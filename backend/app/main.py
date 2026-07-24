@@ -8,9 +8,10 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 import threading
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.classification import feedback_demo as clf_feedback
 from app.config import settings
 from app.database import initialize_database, ping_database
 from app.rag import RegulationSearchUnavailable, embedder, initialize_rag
@@ -59,6 +60,34 @@ app.include_router(pipeline_router)
 app.include_router(mvp_router)
 app.include_router(regulations_router)  # 규정 지식베이스 /api/v1/regulations/*
 app.include_router(ws_router)           # 실시간 통화 WebSocket /ws/call/{call_id}
+
+
+# ── 분류기 개선 피드백 루프 — 상담사가 후처리 화면에서 AI 분류 판정을 검수/교정한다.
+#    틀린 판정만 edge_cases.jsonl에 학습 데이터로 축적된다. verdict=incorrect 만 학습
+#    마스터에 append, task_code에서 부서·업무명·handler를 서버가 파생.
+@app.post("/api/v1/classifier/feedback", status_code=status.HTTP_201_CREATED)
+def classifier_feedback(payload: dict) -> dict:
+    try:
+        return clf_feedback.save_feedback(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/classifier/catalog")
+def classifier_catalog() -> dict:
+    """교정 드롭다운용 업무 카탈로그 — code·name·routing(S/G/E)·department·business_code."""
+    return {"tasks": clf_feedback.task_catalog()}
+
+
+@app.get("/api/v1/classifier/stats")
+def classifier_stats() -> dict:
+    """학습 후보 통계 — total·incorrect·reusable_edge_cases(고유 정규화 발화 수)."""
+    return clf_feedback.feedback_stats()
+
+
+@app.post("/api/v1/classifier/session/start", status_code=status.HTTP_201_CREATED)
+def classifier_session_start() -> dict:
+    return clf_feedback.start_review_session()
 
 
 @app.get("/health")
