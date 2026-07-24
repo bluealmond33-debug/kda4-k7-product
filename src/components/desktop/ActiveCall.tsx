@@ -3,9 +3,8 @@ import { css } from "../../lib/css";
 import { highlight } from "../../lib/highlight";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import Spinner from "../Spinner";
-import BrandLogo from "../BrandLogo";
+import BriefingCardBody from "./BriefingCardBody";
 import { AGENT } from "../../data/demoContent";
-import { SGE_META } from "../../services/sge";
 import DesktopShell from "./DesktopShell";
 
 /* 데모 기준일 2026.07.21 — ago(상대 시점)를 함께 표기해 최근 항목이 '오늘 상담'으로 오해되지 않게 한다 */
@@ -553,53 +552,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         {/* ── 중 컬럼 ── (통화 연결 시 브리핑 카드가 먼저 제자리로 안착하고, 스크립트·메모는 뒤이어 아래서 올라온다) */}
         <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
           {/* 안착 대상 — 준비 카드가 살짝 컸다가 딱 제자리로 가라앉는다(가장 먼저) */}
-          <div className="card" style={css("flex:none;padding:15px 17px;animation:consoleSettle .5s cubic-bezier(.2,.8,.2,1) both")}>
-            <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
-              <BrandLogo size={14} symbolColor="var(--blue-700)" color="var(--gray-1000)" />
-              <span style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-500)")}>브리핑</span>
-              <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>· {vm.summarySourceLabel}</span>
-            </div>
-            {/* 라우팅 배정 메타 — 이 카드가 자동 라우팅되어 온 것임을 어필: SGE(1층)·부서(2층)·업무유형(3층)·확신 */}
-            <div style={css("display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:11px")}>
-              <span style={css("display:inline-flex;align-items:center;gap:4px;font:700 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-700);background:var(--gray-100);border-radius:9999px;padding:3px 9px")}>
-                <span className="mi" style={css("font-size:13px")}>alt_route</span>자동 라우팅
-              </span>
-              {(() => { const m = SGE_META[vm.prepSge]; return (
-                <span title={m.desc} style={css("display:inline-flex;align-items:center;gap:5px;font:600 11px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);border-radius:9999px;padding:3px 10px;color:" + m.fg)}>
-                  <span style={css("width:6px;height:6px;border-radius:9999px;background:" + m.bar)} />SGE {vm.prepSge}·{m.label}
-                </span>
-              ); })()}
-              <span style={css("display:inline-flex;align-items:center;gap:4px;font:600 11px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);border-radius:9999px;padding:3px 10px;color:var(--gray-1000)")}>
-                <span style={css("font-weight:500;color:var(--gray-600)")}>부서</span>{vm.prepRoutingTitle}
-              </span>
-              <span style={css("display:inline-flex;align-items:center;gap:4px;font:600 11px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);border-radius:9999px;padding:3px 10px;color:var(--gray-1000)")}>
-                <span style={css("font-weight:500;color:var(--gray-600)")}>업무</span>{vm.prepBusinessType}
-              </span>
-              {vm.prepConfidencePct != null && (
-                <span style={css("display:inline-flex;align-items:baseline;gap:4px;font:600 11px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);border-radius:9999px;padding:3px 10px;color:var(--gray-1000)")}>
-                  <span style={css("font-weight:500;color:var(--gray-600)")}>확신</span>{vm.prepConfidencePct}%
-                </span>
-              )}
-            </div>
-            {/* 라우팅 근거 — 왜 이 부서로 왔는지 한 줄 */}
-            <div style={css("display:flex;gap:6px;align-items:baseline;margin-bottom:11px;font:400 11.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>
-              <span className="mi" style={css("font-size:13px;color:var(--gray-500);transform:translateY(2px)")}>subdirectory_arrow_right</span>
-              <span>근거 · {vm.prepRoutingReason}</span>
-            </div>
-            {/* 카드의 주인 문장 — Title 18px: 통화 시작 순간 첫 시선이 꽂히는 곳 */}
-            <div style={css("font:600 18px/1.4 'Avenir Next','Pretendard',sans-serif;letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:11px")}>{vm.prepHeadline}</div>
-            {/* 전화 요약 — 고객 발화 STT를 요약한 내용(대화 요약) */}
-            <div style={css("display:flex;align-items:center;gap:5px;font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:9px")}>
-              <span className="mi" style={css("font-size:14px;color:var(--gray-500)")}>summarize</span>전화 요약 <span style={css("font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-500)")}>· 고객 발화 STT 요약</span>
-            </div>
-            <div style={css("display:flex;flex-direction:column;gap:8px")}>
-              {vm.summaryPoints.map((t, i) => (
-                <div key={i} style={css("display:flex;gap:10px;align-items:baseline")}>
-                  <span style={css("flex:none;width:5px;height:5px;border-radius:9999px;background:var(--gray-500);transform:translateY(-2px)")} />
-                  <span style={css("font:400 14px/1.55 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{t}</span>
-                </div>
-              ))}
-            </div>
+          <div className="card" style={css("flex:none;padding:0;overflow:hidden;animation:consoleSettle .5s cubic-bezier(.2,.8,.2,1) both")}>
+            <BriefingCardBody vm={vm} />
           </div>
 
           {/* 단계별 스크립트 — 아코디언. 초보 상담사용 기초 안내라 기본 접힘, 헤더 클릭으로 펼침 (카드 안착 후 아래서 등장) */}
@@ -764,7 +718,6 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                             : "background:var(--onair-surface);color:var(--blue-900);border:1px solid var(--blue-700)")
                       )}
                     >
-                      {!on && <span style={css("width:5px;height:5px;border-radius:9999px;background:var(--blue-700);flex:none")} />}
                       {s2.term}
                     </span>
                   );
@@ -1160,8 +1113,8 @@ function MiniTable({ raw, q }: { raw: string; q: string }) {
 function RegReco({ vm, title, body, file, row }: { vm: CallFlowVM; title: string; body: string; file: string; row: number }) {
   return (
     <div style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
-      <div style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{title}</div>
-      <div style={css("font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{body}</div>
+      <div style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>{title}</div>
+      <div style={css("font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>{body}</div>
       <div style={css("display:flex;align-items:center;justify-content:space-between;margin-top:8px")}>
         <span style={css("font:400 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{file}</span>
         {/* 열기 = 규정집 확장 + 해당 조항 행 강조 */}
