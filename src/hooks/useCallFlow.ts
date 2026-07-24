@@ -1666,7 +1666,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       else arsControlRef.current?.endCall();
       return;
     }
-    if (phaseRef.current !== "active") {
+    // 통화 중이면 종료 화면(wrap→고객 폰은 SMS)으로. 그 전(connecting/idle)이면 reset.
+    // 고객 폰은 통화 대부분을 'recording'에서 보내므로 active만 wrap이면 끊을 때 다이얼로 리셋돼
+    // 종료 화면이 안 뜬다 → 고객 surface는 recording/confirm/prep에서 종료해도 wrap으로 보낸다.
+    const p = phaseRef.current;
+    const inCallNow =
+      p === "active" ||
+      (isCustomerSurface && (p === "recording" || p === "confirm" || p === "prep"));
+    if (!inCallNow) {
       reset();
       return;
     }
