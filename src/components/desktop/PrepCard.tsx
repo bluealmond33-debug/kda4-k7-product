@@ -35,7 +35,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
       <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5);animation:fadeIn .18s ease-out")} />
 
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;width:820px;max-width:95%;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
+      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;width:680px;max-width:94%;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
         <div data-tour="prep-card" style={css("width:100%;max-height:620px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
 
           {/* ── 상단 ── 로고(좌) / 라우팅 단계: 부서 → 업무코드 (클릭=이관) */}
@@ -43,66 +43,14 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <div style={css("display:flex;align-items:center;gap:10px;flex:none")}>
               <div style={css("display:flex;flex-direction:column;gap:2px")}>
                 <div style={css("display:flex;align-items:center;gap:7px")}>
-                  <BrandLogo size={15} color="var(--blue-700)" />
-                  <span style={css("font:700 12.5px " + FONT + ";letter-spacing:.2px;color:var(--blue-700)")}>브리핑</span>
+                  <BrandLogo size={15} symbolColor="var(--blue-700)" color="var(--gray-1000)" />
+                  <span style={css("font:700 12.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-500)")}>브리핑</span>
                 </div>
                 <span style={css("font:400 10px " + FONT + ";color:var(--gray-600)")}>{vm.summarySourceLabel} · 전화 받기 전 미리 정리했어요</span>
               </div>
             </div>
 
             <div style={css("flex:1")} />
-
-            {/* 라우팅 단계 — 부서 → 업무코드. 각 단계에 라벨을 달아 '어디로, 무슨 업무로' 갔는지 보인다 */}
-            <span style={css("position:relative;display:inline-flex;flex:none")}>
-              <span
-                onClick={() => setTransferMenu((v) => !v)}
-                title="배정 결과 — 클릭하면 다른 부서로 이관(종료 시 예약)"
-                style={css(
-                  "display:inline-flex;align-items:center;gap:10px;border-radius:10px;padding:6px 10px;cursor:pointer;border:1px solid " +
-                    (reservedDept ? "var(--blue-700)" : "var(--gray-300)") +
-                    ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)")
-                )}
-              >
-                <span style={css("display:flex;flex-direction:column;gap:1px")}>
-                  <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>배정 부서</span>
-                  <span style={css("font:700 12.5px " + FONT + ";color:" + (reservedDept ? "#fff" : "var(--gray-1000)"))}>{reservedDept ?? vm.prepRoutingTitle}</span>
-                </span>
-                <span className="mi" style={css("font-size:16px;color:" + (reservedDept ? "rgba(255,255,255,.55)" : "var(--gray-400)"))}>arrow_forward</span>
-                <span style={css("display:flex;flex-direction:column;gap:1px")}>
-                  <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>업무 코드</span>
-                  {/* 코드만 보면 무슨 업무인지 모른다 — 코드 옆에 업무명을 함께 */}
-                  <span style={css("display:flex;align-items:baseline;gap:5px")}>
-                    <span style={css("font:700 12.5px 'Geist Mono',monospace;letter-spacing:.3px;color:" + (reservedDept ? "#fff" : "var(--gray-1000)"))}>{vm.prepBusinessCode}</span>
-                    <span style={css("font:600 11px " + FONT + ";color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>{vm.prepBusinessCodeLabel}</span>
-                  </span>
-                </span>
-                <span className="mi" style={css("font-size:17px;color:" + (reservedDept ? "#fff" : "var(--gray-500)") + ";transition:transform .2s;transform:rotate(" + (transferMenu ? 180 : 0) + "deg)")}>expand_more</span>
-              </span>
-              {transferMenu && (
-                <>
-                  <span onClick={() => setTransferMenu(false)} style={css("position:fixed;inset:0;z-index:40")} />
-                  <div style={css("position:absolute;right:0;top:calc(100% + 8px);z-index:41;width:272px;background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);overflow:hidden")}>
-                    <div style={css("padding:9px 13px 7px;font:700 10.5px " + FONT + ";color:var(--gray-700);border-bottom:1px solid var(--gray-200)")}>부서 이관 · 종료 시 예약</div>
-                    {vm.transferReserved && (
-                      <div onClick={() => { vm.toggleTransferReserve(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-200);color:var(--red-800)")}>
-                        <span className="mi" style={css("font-size:15px")}>close</span>
-                        <span style={css("font:600 12px " + FONT)}>이관 예약 취소</span>
-                      </div>
-                    )}
-                    <div onClick={() => { vm.reserveTransfer(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-200)")}>
-                      <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
-                      <span style={css("font:600 12px " + FONT + ";color:var(--gray-1000)")}>AI 추천 — {vm.suggestedDept}</span>
-                    </div>
-                    {vm.transferDepts.map((d) => (
-                      <div key={d.name} onClick={() => { vm.reserveTransfer(d.name); setTransferMenu(false); }} className="memorow" style={css("display:flex;flex-direction:column;gap:1px;padding:8px 13px;cursor:pointer")}>
-                        <span style={css("display:flex;align-items:center;gap:6px;font:600 12px " + FONT + ";color:var(--gray-1000)")}>{d.name}<span style={css("font:400 10px " + FONT + ";color:var(--gray-600)")}>{d.state}</span></span>
-                        <span style={css("font:400 10.5px " + FONT + ";color:var(--gray-700)")}>{d.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </span>
           </div>
 
           {/* ── 본문 ── */}
@@ -163,7 +111,49 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                   </div>
                 </div>
 
-                {/* 확신도(도넛) + 본인인증 — 감정온도 바로 아래, 좌/우 */}
+                {/* 배정 부서 → 업무코드 — 감정온도 아래. 클릭 시 이관 드롭다운(종료 시 예약) */}
+                <div style={css("position:relative")}>
+                  <div onClick={() => setTransferMenu((v) => !v)} title="배정 결과 — 클릭하면 다른 부서로 이관(종료 시 예약)" style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;cursor:pointer;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)"))}>
+                    <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:4px")}>
+                      <div style={css("display:flex;align-items:baseline;gap:7px")}>
+                        <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>부서</span>
+                        <span style={css("font:700 12px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "#fff" : "var(--gray-1000)"))}>{reservedDept ?? vm.prepRoutingTitle}</span>
+                      </div>
+                      <div style={css("display:flex;align-items:baseline;gap:7px;min-width:0")}>
+                        <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>업무</span>
+                        <span style={css("font:700 12px 'Geist Mono',monospace;flex:none;color:" + (reservedDept ? "#fff" : "var(--gray-1000)"))}>{vm.prepBusinessCode}</span>
+                        <span style={css("font:600 10.5px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>{vm.prepBusinessCodeLabel}</span>
+                      </div>
+                    </div>
+                    <span className="mi" style={css("font-size:17px;flex:none;color:" + (reservedDept ? "#fff" : "var(--gray-500)") + ";transition:transform .2s;transform:rotate(" + (transferMenu ? 180 : 0) + "deg)")}>expand_more</span>
+                  </div>
+                  {transferMenu && (
+                    <>
+                      <span onClick={() => setTransferMenu(false)} style={css("position:fixed;inset:0;z-index:40")} />
+                      <div style={css("position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:41;background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);overflow:hidden")}>
+                        <div style={css("padding:9px 13px 7px;font:700 10.5px " + FONT + ";color:var(--gray-700);border-bottom:1px solid var(--gray-200)")}>부서 이관 · 종료 시 예약</div>
+                        {vm.transferReserved && (
+                          <div onClick={() => { vm.toggleTransferReserve(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-200);color:var(--red-800)")}>
+                            <span className="mi" style={css("font-size:15px")}>close</span>
+                            <span style={css("font:600 12px " + FONT)}>이관 예약 취소</span>
+                          </div>
+                        )}
+                        <div onClick={() => { vm.reserveTransfer(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-200)")}>
+                          <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
+                          <span style={css("font:600 12px " + FONT + ";color:var(--gray-1000)")}>AI 추천 — {vm.suggestedDept}</span>
+                        </div>
+                        {vm.transferDepts.map((d) => (
+                          <div key={d.name} onClick={() => { vm.reserveTransfer(d.name); setTransferMenu(false); }} className="memorow" style={css("display:flex;flex-direction:column;gap:1px;padding:8px 13px;cursor:pointer")}>
+                            <span style={css("display:flex;align-items:center;gap:6px;font:600 12px " + FONT + ";color:var(--gray-1000)")}>{d.name}<span style={css("font:400 10px " + FONT + ";color:var(--gray-600)")}>{d.state}</span></span>
+                            <span style={css("font:400 10.5px " + FONT + ";color:var(--gray-700)")}>{d.desc}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* 확신도(도넛) + 본인인증 — 부서 아래, 좌/우 */}
                 <div style={css("display:flex;gap:10px")}>
                   {/* 확신도 3 : 본인인증 2 — 도넛+라벨이 한 줄에 들어가도록 넓게 */}
                   <div title={vm.prepConfidence} style={css("flex:3;min-width:0;border:1px solid var(--gray-300);border-radius:10px;padding:10px 11px;display:flex;align-items:center;gap:10px")}>
@@ -182,17 +172,6 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                   </div>
                 </div>
 
-                {/* 사고 징후 — 좌측 하단 빈 공간을 채운다(flex로 우측 요약과 높이 맞춤, 위험 시 붉게) */}
-                {(() => { const risk = vm.prepRiskLabel === "높음"; return (
-                <div style={css("flex:1;min-height:66px;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:6px;border:1px solid " + (risk ? "var(--red-700)" : "var(--gray-300)") + ";background:" + (risk ? "var(--red-800)" : "var(--onair-surface)"))}>
-                  <div style={css("font:600 10px " + FONT + ";letter-spacing:.2px;color:" + (risk ? "rgba(255,255,255,.8)" : "var(--gray-600)"))}>사고 징후 · 위험도</div>
-                  <div style={css("display:flex;align-items:center;gap:9px")}>
-                    <span style={css("width:10px;height:10px;border-radius:9999px;flex:none;background:" + (risk ? "#fff" : "var(--green-700)"))} />
-                    <span style={css("font:800 22px/1 " + FONT + ";letter-spacing:-.6px;color:" + (risk ? "#fff" : "var(--gray-1000)"))}>{vm.prepRiskLabel}</span>
-                  </div>
-                  <div style={css("font:400 11px/1.4 " + FONT + ";color:" + (risk ? "rgba(255,255,255,.85)" : "var(--gray-600)"))}>{vm.prepRiskSignal}</div>
-                </div>
-                ); })()}
               </div>
 
               {/* ── 우: 전화 요약 (가장 큰 비중) ── */}

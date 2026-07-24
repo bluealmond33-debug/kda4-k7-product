@@ -554,8 +554,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;animation:consoleSettle .9s cubic-bezier(.2,.8,.2,1)")}>
           <div className="card" style={css("flex:none;padding:15px 17px")}>
             <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:9px")}>
-              <BrandLogo size={14} color="var(--blue-700)" />
-              <span style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--blue-700)")}>브리핑</span>
+              <BrandLogo size={14} symbolColor="var(--blue-700)" color="var(--gray-1000)" />
+              <span style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-500)")}>브리핑</span>
               <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>· {vm.summarySourceLabel}</span>
             </div>
             {/* 라우팅 배정 메타 — 이 카드가 자동 라우팅되어 온 것임을 어필: SGE(1층)·부서(2층)·업무유형(3층)·확신 */}
@@ -739,31 +739,34 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               )}
             </div>
 
-            {/* 실시간 추천 검색어 — 검색창 바로 아래 알약. 통화에서 실제로 나온 용어는
-                앞으로 올라오며 점등(hot)된다. 누르면 그 용어로 즉시 검색, 다시 누르면 해제. */}
-            <div style={css("display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--gray-200)")}>
-              {vm.regSuggests.map((s2) => {
-                const on = vm.regSearch === s2.term;
-                return (
-                  <span
-                    key={s2.term}
-                    onClick={() => vm.applyRegSearch(s2.term)}
-                    title={s2.hot ? "방금 통화에서 언급된 용어" : "규정에서 이 용어로 검색"}
-                    style={css(
-                      "display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Avenir Next','Pretendard',sans-serif;border-radius:9999px;padding:4px 11px;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s;" +
-                        (on
-                          ? "background:var(--blue-700);color:#fff;border:1px solid var(--blue-700)"
-                          : s2.hot
-                          ? "background:var(--onair-surface);color:var(--blue-900);border:1px solid var(--blue-700)"
-                          : "background:var(--onair-surface);color:var(--gray-900);border:1px solid var(--gray-400)")
-                    )}
-                  >
-                    {s2.hot && !on && <span style={css("width:5px;height:5px;border-radius:9999px;background:var(--blue-700);flex:none")} />}
-                    {s2.term}
-                  </span>
-                );
-              })}
-            </div>
+            {/* 실시간 추천 검색어 — 통화에서 언급된 규정 용어만, 나온 순서대로 하나씩 나타난다.
+                누르면 그 용어로 즉시 검색, 다시 누르면 해제. 언급 전에는 줄 자체가 없다. */}
+            {vm.regSuggests.length > 0 && (
+              <div style={css("display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--gray-200)")}>
+                <span style={css("display:inline-flex;align-items:center;gap:3px;font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);flex:none")}>
+                  <span className="mi" style={css("font-size:13px;color:var(--blue-700)")}>graphic_eq</span>통화 중 언급
+                </span>
+                {vm.regSuggests.map((s2) => {
+                  const on = vm.regSearch === s2.term;
+                  return (
+                    <span
+                      key={s2.term}
+                      onClick={() => vm.applyRegSearch(s2.term)}
+                      title="규정에서 이 용어로 검색"
+                      style={css(
+                        "display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Avenir Next','Pretendard',sans-serif;border-radius:9999px;padding:4px 11px;cursor:pointer;white-space:nowrap;animation:fadeIn .3s ease-out;transition:background .15s,border-color .15s;" +
+                          (on
+                            ? "background:var(--blue-700);color:#fff;border:1px solid var(--blue-700)"
+                            : "background:var(--onair-surface);color:var(--blue-900);border:1px solid var(--blue-700)")
+                      )}
+                    >
+                      {!on && <span style={css("width:5px;height:5px;border-radius:9999px;background:var(--blue-700);flex:none")} />}
+                      {s2.term}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
             {/* 검색 필터 — 엑셀 컬럼필터처럼. 확장 시에만. 문서유형·부서·시행일 드롭다운 + 표만 토글 */}
             {regWide && (

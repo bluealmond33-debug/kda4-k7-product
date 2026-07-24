@@ -28,19 +28,23 @@ export function BrandSymbol({ size = 22, color }: { size?: number; color?: strin
 export default function BrandLogo({
   size = 22,
   color,
+  symbolColor,
   tagline = false,
   wordmark = true,
 }: {
   size?: number;
+  /** 워드마크(KARI-NA) 잉크. 공식 락업은 검정(--gray-1000) */
   color?: string;
+  /** 심볼 색을 워드마크와 다르게 줄 때(공식 = 파란 심볼 + 검정 워드마크). 없으면 color를 따른다 */
+  symbolColor?: string;
   tagline?: boolean;
   wordmark?: boolean;
 }) {
   const ink = color ?? "currentColor";
-  if (!wordmark) return <BrandSymbol size={size} color={color} />;
+  if (!wordmark) return <BrandSymbol size={size} color={symbolColor ?? color} />;
   return (
     <span style={css("display:inline-flex;align-items:center;gap:" + Math.round(size * 0.42) + "px")}>
-      <BrandSymbol size={size} color={color} />
+      <BrandSymbol size={size} color={symbolColor ?? color} />
       <span style={css("display:flex;flex-direction:column;gap:1px")}>
         <span
           style={css(
