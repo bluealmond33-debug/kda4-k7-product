@@ -4,6 +4,7 @@ import { highlight } from "../../lib/highlight";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import Spinner from "../Spinner";
 import BriefingCardBody from "./BriefingCardBody";
+import ScriptTimeline from "./ScriptTimeline";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
@@ -553,7 +554,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
           {/* 안착 대상 — 준비 카드가 살짝 컸다가 딱 제자리로 가라앉는다(가장 먼저) */}
           <div className="card" style={css("flex:none;padding:0;overflow:hidden;animation:consoleSettle .62s cubic-bezier(.16,1,.3,1) both")}>
-            <BriefingCardBody vm={vm} />
+            <BriefingCardBody vm={vm} showAuth={false} />
           </div>
 
           {/* 단계별 스크립트 — 아코디언. 초보 상담사용 기초 안내라 기본 접힘, 헤더 클릭으로 펼침 (카드 안착 후 아래서 등장) */}
@@ -572,13 +573,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </span>
             </div>
             {scriptOpen && (
-              <div style={css("overflow:auto;max-height:320px;padding:14px 16px;display:flex;flex-direction:column;gap:9px")}>
-                {vm.steps.map((st, i) => (
-                  <div key={i} style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
-                    <div style={css("font:600 14px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px")}>{st.title}</div>
-                    <div style={css("font:400 14px/1.6 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{st.text}</div>
-                  </div>
-                ))}
+              <div style={css("overflow:auto;max-height:320px;padding:14px 16px;display:flex;flex-direction:column")}>
+                <ScriptTimeline steps={vm.steps} openingBadge="감정온도 연동" />
               </div>
             )}
           </div>

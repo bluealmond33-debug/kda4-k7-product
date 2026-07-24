@@ -9,7 +9,7 @@ const FONT = "'Avenir Next','Pretendard',sans-serif";
  *  상단: 로고(좌) · 이번 상담 유의 칩(우). 좌: 감정온도 → 부서/업무코드(클릭=이관 예약) → 확신도+인증.
  *  우: 전화 요약(가장 큰 비중) — 한 줄 요약 → 근거 발화 → STT 불릿 → 핵심 니즈.
  *  카드 겉면(.card border/radius/overflow)은 부모가 씌운다 — 여기는 헤더+본문만. */
-export default function BriefingCardBody({ vm }: { vm: CallFlowVM }) {
+export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlowVM; showAuth?: boolean }) {
   const [transferMenu, setTransferMenu] = useState(false);
   const reservedDept = vm.transferReserved ? vm.transferTarget ?? vm.suggestedDept : null;
   const confPct = vm.prepConfidencePct ?? 0;
@@ -120,23 +120,25 @@ export default function BriefingCardBody({ vm }: { vm: CallFlowVM }) {
               )}
             </div>
 
-            {/* 확신도(도넛) + 본인인증 — 부서 아래, 좌/우 */}
+            {/* 확신도(도넛) [+ 본인인증] — 부서 아래. 통화 화면(showAuth=false)에선 인증을 빼고 확신도가 폭을 채운다 */}
             <div style={css("display:flex;gap:10px")}>
-              {/* 확신도 3 : 본인인증 2 — 도넛+라벨이 한 줄에 들어가도록 넓게 */}
-              <div title={vm.prepConfidence} style={css("flex:3;min-width:0;border:1px solid var(--gray-300);border-radius:10px;padding:10px 11px;display:flex;align-items:center;gap:10px")}>
+              {/* 확신도 — 도넛+라벨. 인증이 있을 땐 3, 없을 땐 홀로 폭을 채운다 */}
+              <div title={vm.prepConfidence} style={css((showAuth ? "flex:3" : "flex:1") + ";min-width:0;border:1px solid var(--gray-300);border-radius:10px;padding:10px 11px;display:flex;align-items:center;gap:10px")}>
                 <ConfidenceDonut pct={confPct} known={vm.prepConfidencePct != null} />
                 <div style={css("display:flex;flex-direction:column;gap:1px;min-width:0")}>
                   <span style={css("font:600 9.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>AI 배정</span>
                   <span style={css("font:700 11.5px " + FONT + ";color:var(--gray-1000);white-space:nowrap")}>확신도</span>
                 </div>
               </div>
-              <div
-                title={vm.prepVerified ? "본인인증 완료 — 고객 상세 조회가 열립니다" : "본인인증 미완료 — 연결 직후 확인하세요"}
-                style={css("flex:2;min-width:0;border-radius:10px;padding:10px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid " + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}
-              >
-                <span className="mi" style={css("font-size:22px;flex:none;color:" + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}>{vm.prepVerified ? "lock" : "lock_open"}</span>
-                <span style={css("font:700 11px " + FONT + ";white-space:nowrap;color:" + (vm.prepVerified ? "var(--green-900)" : "var(--amber-900)"))}>인증 {vm.prepVerified ? "완료" : "미완료"}</span>
-              </div>
+              {showAuth && (
+                <div
+                  title={vm.prepVerified ? "본인인증 완료 — 고객 상세 조회가 열립니다" : "본인인증 미완료 — 연결 직후 확인하세요"}
+                  style={css("flex:2;min-width:0;border-radius:10px;padding:10px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid " + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}
+                >
+                  <span className="mi" style={css("font-size:22px;flex:none;color:" + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}>{vm.prepVerified ? "lock" : "lock_open"}</span>
+                  <span style={css("font:700 11px " + FONT + ";white-space:nowrap;color:" + (vm.prepVerified ? "var(--green-900)" : "var(--amber-900)"))}>인증 {vm.prepVerified ? "완료" : "미완료"}</span>
+                </div>
+              )}
             </div>
 
           </div>
