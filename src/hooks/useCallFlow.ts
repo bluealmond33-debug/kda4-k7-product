@@ -46,6 +46,7 @@ import {
 } from "../services";
 import {
   searchRegulations,
+  fetchRegSuggests,
   fetchRegulationDocument,
   type RegulationDoc,
   categoryForDepartment,
@@ -357,6 +358,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [regExpanded, setRegExpanded] = useState(false);
   // 규정집 실검색 — 비어 있으면 전체, 입력하면 조항·항목·내용·멘트를 훑는다
   const [regSearch, setRegSearch] = useState("");
+  // 백엔드가 고른 추천 검색어 — RAG가 전사를 보고 관련 규정을 반환. 꺼져 있으면 null → 로컬 폴백
+  const [backendRegSuggests, setBackendRegSuggests] = useState<{ term: string }[] | null>(null);
   // 검색 필터(엑셀 컬럼필터 감각) — 문서유형·부서(코드, null=카드 자동)·표만·시행일 이후
   const [regDocType, setRegDocType] = useState<string | null>(null);
   const [regDeptFilter, setRegDeptFilter] = useState<string | null>(null);
@@ -1938,6 +1941,30 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     };
   }, [regSearch, consultationResponse, regDocType, regDeptFilter, regTableOnly, regEffFrom]);
 
+  // 추천 검색어 = 백엔드 결정. 통화 전사가 쌓이면 RAG에 흘려 '관련 규정'을 받아 알약으로 띄운다.
+  // 어떤 용어를 보여줄지는 프런트가 정하지 않는다 — 백엔드가 꺼져 있으면 null로 두고 로컬 매칭이 폴백.
+  const liveTranscriptText = liveTranscriptLines.map((l) => l.text).join(" ");
+  useEffect(() => {
+    const spoken = (liveTranscriptText + " " + liveCaption).trim();
+    if (!semanticSearchEnabled || spoken.length < 6) {
+      setBackendRegSuggests(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    const t = window.setTimeout(async () => {
+      const hits = await fetchRegSuggests(spoken, {
+        category: categoryForDepartment(consultationResponse.consultation_card.department),
+        signal: ctrl.signal,
+      });
+      // null(백엔드 off/실패)이면 상태를 건드리지 않고 로컬 폴백에 맡긴다
+      if (hits) setBackendRegSuggests(hits.map((h) => ({ term: h.term })));
+    }, 600);
+    return () => {
+      ctrl.abort();
+      window.clearTimeout(t);
+    };
+  }, [liveTranscriptText, liveCaption, consultationResponse]);
+
   // CSV/XLSX 버퍼 → SheetData (첫 시트, 첫 행 = 헤더). 업로드·레포 파일 공용 파서
   const parseSheetBuffer = useCallback(async (buf: ArrayBuffer, filename: string): Promise<SheetData | null> => {
     const XLSX = await import("xlsx");
@@ -2150,16 +2177,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const actualSummaryPoints = card.customer_requests.length
     ? card.customer_requests
     : SUMMARY_POINTS[incoming];
-  const actualCallSteps = card.required_actions.length
-    ? card.required_actions.map((action, index) => ({
-        title: `${index + 1}. ${action.title}`,
-        text: action.detail,
-      }))
-    : // 스크립트 첫 스텝(오프닝)은 감정온도에 맞춰 바뀐 문장으로 교체 — '이 문장으로 여세요'와 일치시킨다
-      SCRIPTS[incoming].map((step, i) => ({
-        title: step.title,
-        text: i === 0 ? adaptiveOpening : step.text,
-      }));
+  // 상담 스크립트는 '상담원이 실제로 읽는 대본(verbatim 멘트)'이어야 한다 — 할 일(required_actions)은
+  // 유의사항 칩으로 이미 보여주므로, 스크립트에는 콜 유형별 실제 멘트를 그대로 쓴다.
+  // 첫 스텝(오프닝)은 감정온도 밴드에 맞춘 문장으로 교체 — '이 문장으로 여세요'와 일치시킨다.
+  const actualCallSteps = SCRIPTS[incoming].map((step, i) => ({
+    title: step.title,
+    text: i === 0 ? adaptiveOpening : step.text,
+  }));
 
   return {
     // refs
@@ -2557,11 +2581,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 실시간 추천 검색어 — 통화에서 실제 나온 용어(hot)를 앞으로 끌어올린다.
     // liveTranscriptLines·liveCaption 이 state라 발화가 쌓일수록 순서·점등이 갱신된다.
     regSuggests: (() => {
-      const spoken = (liveTranscriptLines.map((l) => l.text).join(" ") + " " + liveCaption).replace(/\s+/g, "");
+      // 1순위: 백엔드 RAG가 고른 관련 규정(연결 시). 어떤 용어인지는 백엔드가 결정한다.
+      if (backendRegSuggests && backendRegSuggests.length) return backendRegSuggests;
+      // 폴백: 백엔드 off — 전사에 등장한 로컬 키워드만, 처음 나온 순서대로.
+      const spoken = liveTranscriptLines.map((l) => l.text).join(" ") + " " + liveCaption;
       return REG_SUGGEST[incoming]
-        .map((term) => ({ term, hot: spoken.includes(term.replace(/\s+/g, "")) }))
-        .sort((a, b) => Number(b.hot) - Number(a.hot))
-        .slice(0, 5);
+        .map((s) => {
+          const at = s.match
+            .map((w) => spoken.indexOf(w))
+            .filter((i) => i >= 0)
+            .sort((a, b) => a - b)[0];
+          return { term: s.term, at };
+        })
+        .filter((x): x is { term: string; at: number } => x.at != null)
+        .sort((a, b) => a.at - b.at)
+        .map((x) => ({ term: x.term }));
     })(),
     // 검색 필터(엑셀 컬럼필터) — UI가 옵션을 정하고 값만 넘긴다
     regDocType,
