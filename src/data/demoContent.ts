@@ -21,7 +21,7 @@ export const CUSTOMER = {
   phoneMasked: "010-****-4821",
   type: "개인 고객",
   /** 본인확인 대조 정답 — 불일치 경로를 데모하기 위한 기준값 (원문은 화면에 표시하지 않는다) */
-  authAnswers: { phone: "4821", birth: "880214", account: "4821" },
+  authAnswers: { phone: "4821", birth: "19880214", account: "4821" },
 } as const;
 
 /** 데모 인입 콜 유형 — 라우팅 기준 후보 문서(vault 07 Outputs 2026-07-18) 참조.
@@ -30,7 +30,7 @@ export type IncomingKind = "normal" | "urgent" | "transfer";
 
 /** 긴급 콜 픽스처 — 명의도용 의심(사고 징후 high), 대기열 맨 앞 점프 */
 export const URGENT_RESPONSE = {
-  schema_version: "mvp-1.0",
+  schema_version: "mvp-1.1",
   call_id: "demo-urgent-0001",
   status: "ready",
   source_channel: "voice",
@@ -55,6 +55,19 @@ export const URGENT_RESPONSE = {
       level: "elevated",
       reason: "다급·불안 발화 반복 감지",
     },
+    attention_level: "high",
+    reason_codes: ["FINANCIAL_INCIDENT", "TEXT_HIGH_RISK_SIGNAL"],
+    routing: {
+      task_code: "E002",
+      task_name: "이상거래 신고",
+      classification: "EMERGENCY",
+      handler: "HUMAN",
+    },
+    text_emotion: {
+      content_emotion: "불안",
+      situation_severity: "high",
+      urgency_score: 95,
+    },
   },
   created_at: "2026-07-18T07:00:00Z",
 } as const;
@@ -65,7 +78,7 @@ export const URGENT_PRIORITY_REASON =
 
 /** 이관 수신 픽스처 — 주니어 상담사가 넘긴 복합 문의 */
 export const TRANSFER_RESPONSE = {
-  schema_version: "mvp-1.0",
+  schema_version: "mvp-1.1",
   call_id: "demo-transfer-0001",
   status: "ready",
   source_channel: "voice",
@@ -89,6 +102,19 @@ export const TRANSFER_RESPONSE = {
       score: 48,
       level: "caution",
       reason: "긴 상담으로 답답함 표현",
+    },
+    attention_level: "medium",
+    reason_codes: ["ATTENTION_REQUIRED"],
+    routing: {
+      task_code: "G004",
+      task_name: "기타·복합 일반 상담",
+      classification: "GENERAL",
+      handler: "HUMAN",
+    },
+    text_emotion: {
+      content_emotion: "걱정",
+      situation_severity: "medium",
+      urgency_score: 48,
     },
   },
   created_at: "2026-07-18T07:10:00Z",
@@ -129,6 +155,61 @@ export const SUGGESTED_DEPT: Record<IncomingKind, string> = {
   normal: "여신심사팀",
   urgent: "사고대응팀",
   transfer: "여신심사팀",
+};
+
+/* 규정 검색 추천어 — 통화 중 검색창 아래 알약. 콜 유형별 후보를 두고,
+   실제 발화에 등장한 용어가 앞으로 올라오며 점등된다(실시간 감각). */
+export interface RegSuggest {
+  /** 알약에 표시되고 클릭 시 검색되는 용어 */
+  term: string;
+  /** 통화 전사에 이 중 하나라도 등장하면 알약이 나타난다(표시어와 트리거어 분리) */
+  match: string[];
+}
+export const REG_SUGGEST: Record<IncomingKind, RegSuggest[]> = {
+  normal: [
+    { term: "만기 연장", match: ["만기", "연장"] },
+    { term: "재약정", match: ["재약정"] },
+    { term: "소득 증빙", match: ["소득"] },
+    { term: "등기부등본", match: ["등기부"] },
+    { term: "비대면", match: ["비대면"] },
+    { term: "연체", match: ["연체"] },
+  ],
+  urgent: [
+    { term: "지급정지", match: ["지급정지", "정지"] },
+    { term: "명의도용", match: ["명의", "도용"] },
+    { term: "보이스피싱", match: ["보이스피싱", "피싱"] },
+    { term: "사고 접수", match: ["사고", "접수"] },
+    { term: "피해구제", match: ["피해", "구제"] },
+  ],
+  transfer: [
+    { term: "중도상환수수료", match: ["중도상환", "수수료"] },
+    { term: "금리 인하", match: ["금리"] },
+    { term: "약정 변경", match: ["약정"] },
+    { term: "재약정", match: ["재약정"] },
+    { term: "면제 조건", match: ["면제"] },
+  ],
+};
+
+/* 3층 업무코드 — backend/app/routing/taxonomy.py의 BUSINESS_CODES와 같은 축.
+   1층 SGE(deriveSge) → 2층 부서(card.department) → 3층 업무코드(여기). 라우팅 체인 표시용. */
+export const PREP_BUSINESS_CODE: Record<IncomingKind, string> = {
+  normal: "G002", // 대출 — 주담대 만기 연장
+  urgent: "G001", // 사고·신고 — 명의도용 지급정지
+  transfer: "G002", // 대출 — 이관 인계
+};
+
+/* 업무코드가 무슨 업무인지 — 코드만 보면 모른다. 라우팅 단계에 함께 띄운다. */
+export const PREP_BUSINESS_CODE_LABEL: Record<IncomingKind, string> = {
+  normal: "대출",
+  urgent: "사고·신고",
+  transfer: "대출",
+};
+
+/* 핵심 니즈 태그 — 고객이 무엇을 원하는지 한눈에. 준비 카드 감정온도 옆 항목. */
+export const PREP_NEED_TAGS: Record<IncomingKind, string[]> = {
+  normal: ["만기 연장", "필요 서류", "비대면 가능"],
+  urgent: ["지급정지", "명의도용 확인", "피해 접수"],
+  transfer: ["금리 인하", "재약정", "수수료 확인"],
 };
 
 /** 관리자 화면 — 부서별 실시간 대기열 픽스처. 이름은 마스킹(최소 표시 원칙),

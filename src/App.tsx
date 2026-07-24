@@ -9,6 +9,8 @@ import AdminDashboard from "./components/admin/AdminDashboard";
 //   /employee    직원 데스크톱 단독
 // 팀 공유용 경로가 기본(k7product.vercel.app/admin — vercel.json SPA rewrite 필요),
 // 구 방식 ?role= 도 계속 동작한다. customer/employee는 탭별 독립 인스턴스.
+// call_id가 명시되면 고객·직원·관리자 화면은 중앙 WS 릴레이로 같은 통화 세션을 공유한다.
+// call_id가 없는 기본 경로는 기존 한 브라우저 합본/탭 데모를 유지한다.
 const path = window.location.pathname.replace(/\/+$/, "").split("/").pop() ?? "";
 const role = ["admin", "customer", "employee"].includes(path)
   ? path

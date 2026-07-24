@@ -4,8 +4,10 @@
 # 사용:  ./scripts/demo-up.sh          # 기동 (이미 떠 있으면 재시작)
 #        ./scripts/demo-up.sh down     # 종료
 #
-# 전제: brew postgresql@17 + pgvector, backend/.venv(uvicorn·FlagEmbedding 포함),
+# 전제: brew postgresql@17 + pgvector, backend/.venv(uvicorn·FlagEmbedding·faster-whisper 포함),
 #       k7 DB에 규정 청크 적재 완료(database/rag/README.md 절차).
+#       실시간 STT를 쓰려면: backend/.venv/bin/pip install -r backend/requirements-live-stt.txt
+#       (모델 가중치는 최초 1회만 내려받고 이후 완전 오프라인)
 # LAN IP가 바뀌어도(와이파이 이동) 다시 실행하면 env를 재생성해 맞춘다.
 set -euo pipefail
 
@@ -33,9 +35,15 @@ for i in 1 2 3 4 5; do "$PG/pg_isready" -q && break || sleep 1; done
 echo "✅ Postgres"
 
 # 2) env 재생성 — LAN IP 기준 (gitignored 파일들)
+#
+# K7_LIVE_STT_MODEL — 실시간 STT(faster-whisper, 전부 로컬).
+#   large-v3-turbo: 이 맥(M5·int8)에서 실측 실시간 1.3배, 한국어 오인식 없음 → 무대 기본값
+#   base:           실시간 17배로 빠르지만 "주택담보대 출"처럼 띄어쓰기·어미가 깨진다
+# 무대에서 지연이 거슬리면 이 줄만 base로 바꾸고 백엔드를 재시작하면 된다.
 cat > "$ROOT/backend/.env" <<EOF
 DATABASE_URL=postgresql://localhost:5432/k7
 K7_EMBED=bge-m3
+K7_LIVE_STT_MODEL=large-v3-turbo
 EXTRA_CORS_ORIGINS=https://k7product.vercel.app,http://$IP:5173,http://localhost:5173
 EOF
 cat > "$ROOT/.env.development.local" <<EOF

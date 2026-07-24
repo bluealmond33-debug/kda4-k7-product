@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
 import { ADMIN_QUEUE } from "../../data/demoContent";
 
-const FONT = "'Geist Sans','Pretendard',sans-serif";
+const FONT = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
 const MONO = "'Geist Mono','IBM Plex Mono',monospace";
 
 const fmt = (s: number) => {

@@ -1,6 +1,10 @@
 import type {
   ConsultationCardResponse,
+  MvpChecklistItem,
   MvpEmotionResult,
+  MvpKnowledgeReference,
+  MvpRoutingResult,
+  MvpTextEmotionResult,
 } from "./types";
 
 type JsonRecord = Record<string, unknown>;
@@ -9,7 +13,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function fail(path: string, message: string): never {
-  throw new Error(`Invalid mvp-1.0 response at ${path}: ${message}`);
+  throw new Error(`Invalid mvp-1.1 response at ${path}: ${message}`);
 }
 
 function record(value: unknown, path: string): JsonRecord {
@@ -78,6 +82,113 @@ function nullableNumberInRange(
 ): number | null {
   if (value === null) return null;
   return numberInRange(value, path, minimum, maximum);
+}
+
+function stringArray(value: unknown, path: string, maxItems: number): string[] {
+  if (!Array.isArray(value) || value.length > maxItems) {
+    fail(path, `expected array with at most ${maxItems} items`);
+  }
+  return value.map((item, index) => text(item, `${path}[${index}]`, { max: 1000 }) as string);
+}
+
+function nullableStringArray(
+  value: unknown,
+  path: string,
+  maxItems: number
+): string[] | null {
+  if (value === null) return null;
+  return stringArray(value, path, maxItems);
+}
+
+function parseActions(value: unknown): MvpChecklistItem[] {
+  if (!Array.isArray(value) || value.length > 8) {
+    fail("$.consultation_card.required_actions", "expected array with at most 8 items");
+  }
+  return value.map((item, index) => {
+    const path = `$.consultation_card.required_actions[${index}]`;
+    const action = record(item, path);
+    exactKeys(action, path, ["title", "detail", "source"]);
+    if (action.source !== "model" && action.source !== "policy" && action.source !== "rag") {
+      fail(`${path}.source`, "expected model, policy, or rag");
+    }
+    return {
+      title: text(action.title, `${path}.title`, { max: 200 }) as string,
+      detail: text(action.detail, `${path}.detail`, { max: 1000 }) as string,
+      source: action.source,
+    };
+  });
+}
+
+function parseKnowledge(value: unknown): MvpKnowledgeReference[] {
+  if (!Array.isArray(value) || value.length > 5) {
+    fail("$.consultation_card.knowledge_references", "expected array with at most 5 items");
+  }
+  return value.map((item, index) => {
+    const path = `$.consultation_card.knowledge_references[${index}]`;
+    const reference = record(item, path);
+    exactKeys(reference, path, ["doc_id", "title", "section", "excerpt", "source", "score"]);
+    return {
+      doc_id: text(reference.doc_id, `${path}.doc_id`, { max: 100 }) as string,
+      title: text(reference.title, `${path}.title`, { max: 300 }) as string,
+      section: text(reference.section, `${path}.section`, { max: 300 }) as string,
+      excerpt: text(reference.excerpt, `${path}.excerpt`, { max: 2000 }) as string,
+      source: text(reference.source, `${path}.source`, { max: 500 }) as string,
+      score: numberInRange(reference.score, `${path}.score`, 0, 1),
+    };
+  });
+}
+
+function parseRouting(value: unknown): MvpRoutingResult | null {
+  if (value === null) return null;
+  const path = "$.consultation_card.routing";
+  const routing = record(value, path);
+  exactKeys(routing, path, [
+    "task_code",
+    "task_name",
+    "classification",
+    "handler",
+  ]);
+  if (
+    routing.classification !== "EMERGENCY" &&
+    routing.classification !== "SIMPLE" &&
+    routing.classification !== "GENERAL"
+  ) {
+    fail(`${path}.classification`, "expected EMERGENCY, SIMPLE, or GENERAL");
+  }
+  if (routing.handler !== "HUMAN" && routing.handler !== "AI") {
+    fail(`${path}.handler`, "expected HUMAN or AI");
+  }
+  return {
+    task_code: text(routing.task_code, `${path}.task_code`, { max: 50 }) as string,
+    task_name: text(routing.task_name, `${path}.task_name`, { max: 200 }) as string,
+    classification: routing.classification,
+    handler: routing.handler,
+  };
+}
+
+function parseTextEmotion(value: unknown): MvpTextEmotionResult | null {
+  if (value === null) return null;
+  const path = "$.consultation_card.text_emotion";
+  const result = record(value, path);
+  exactKeys(result, path, [
+    "content_emotion",
+    "situation_severity",
+    "urgency_score",
+  ]);
+  if (
+    result.situation_severity !== "low" &&
+    result.situation_severity !== "medium" &&
+    result.situation_severity !== "high"
+  ) {
+    fail(`${path}.situation_severity`, "expected low, medium, or high");
+  }
+  return {
+    content_emotion: text(result.content_emotion, `${path}.content_emotion`, {
+      max: 100,
+    }) as string,
+    situation_severity: result.situation_severity,
+    urgency_score: numberInRange(result.urgency_score, `${path}.urgency_score`, 0, 100),
+  };
 }
 
 function parseEmotion(value: unknown): MvpEmotionResult {
@@ -171,8 +282,8 @@ export function parseConsultationCardResponse(
     "created_at",
   ]);
 
-  if (response.schema_version !== "mvp-1.0") {
-    fail("$.schema_version", "expected mvp-1.0");
+  if (response.schema_version !== "mvp-1.1") {
+    fail("$.schema_version", "expected mvp-1.1");
   }
   if (
     typeof response.call_id !== "string" ||
@@ -217,7 +328,15 @@ export function parseConsultationCardResponse(
     "incident_risk",
     "risk_reason",
     "routing_confidence",
+    "customer_requests",
+    "missing_information",
+    "required_actions",
+    "knowledge_references",
     "emotion",
+    "attention_level",
+    "reason_codes",
+    "routing",
+    "text_emotion",
   ]);
   if (card.incident_risk !== "low" && card.incident_risk !== "high") {
     fail("$.consultation_card.incident_risk", "expected low or high");
@@ -233,6 +352,19 @@ export function parseConsultationCardResponse(
       "$.consultation_card.risk_reason",
       "high risk requires a non-empty reason"
     );
+  }
+  if (
+    card.attention_level !== "none" &&
+    card.attention_level !== "medium" &&
+    card.attention_level !== "high"
+  ) {
+    fail("$.consultation_card.attention_level", "expected none, medium, or high");
+  }
+  if (card.incident_risk === "high" && card.attention_level !== "high") {
+    fail("$.consultation_card.attention_level", "high risk requires high attention");
+  }
+  if (card.incident_risk === "low" && card.attention_level === "high") {
+    fail("$.consultation_card.attention_level", "high attention requires high risk");
   }
 
   return {
@@ -277,7 +409,27 @@ export function parseConsultationCardResponse(
         0,
         1
       ),
+      customer_requests: stringArray(
+        card.customer_requests,
+        "$.consultation_card.customer_requests",
+        8
+      ),
+      missing_information: stringArray(
+        card.missing_information,
+        "$.consultation_card.missing_information",
+        8
+      ),
+      required_actions: parseActions(card.required_actions),
+      knowledge_references: parseKnowledge(card.knowledge_references),
       emotion: parseEmotion(card.emotion),
+      attention_level: card.attention_level,
+      reason_codes: nullableStringArray(
+        card.reason_codes,
+        "$.consultation_card.reason_codes",
+        16
+      ),
+      routing: parseRouting(card.routing),
+      text_emotion: parseTextEmotion(card.text_emotion),
     },
     created_at: response.created_at,
   };

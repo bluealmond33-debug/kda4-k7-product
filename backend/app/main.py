@@ -21,11 +21,14 @@ from app.database import (
     ping_database,
 )
 from app.integration_service import persist_pipeline_result
-from app.card_routing_pipeline import (
+from app.live_stt import router as live_stt_router
+from app.knowledge_base import apply_safety_policy, retrieve_knowledge
+from app.pipeline import (
     PipelineConfigurationError,
     request_analysis_result,
     transcribe_audio,
 )
+from app.services.routing import apply_general_topic_routing, classify_general_topic
 from app.rag import (
     RegulationSearchUnavailable,
     get_regulation_stats,
@@ -35,6 +38,7 @@ from app.rag import (
 )
 from app.rag import embedder
 from app.rag.taxonomy import is_valid_category
+from app.classification import feedback_demo as clf_feedback
 
 
 settings = get_settings()
@@ -57,7 +61,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="K7 상담카드 통합 API",
-    version="mvp-1.0",
+    version="mvp-1.1",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -65,12 +69,19 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     # Vercel 프리뷰 배포(k7product-git-<branch>-….vercel.app)도 허용 —
     # 프로덕션 외 프리뷰 URL에서도 규정검색 등 API 호출이 가능해야 리뷰가 된다.
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=(
+        r"^(?:https://.*\.vercel\.app|"
+        r"https?://(?:(?:localhost|127\.0\.0\.1|\[::1\])|"
+        r"10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|"
+        r"172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})(?::\d+)?"
+        r")$"
+    ),
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 app.include_router(build_compat_router(settings))
+app.include_router(live_stt_router)
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -78,6 +89,9 @@ def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
         database="connected" if ping_database(settings) else "not_connected",
+        pipeline_mode=settings.pipeline_mode,
+        stt_provider="faster_whisper" if settings.is_local_pipeline else "openai",
+        analysis_provider="ollama" if settings.is_local_pipeline else "openai",
     )
 
 
@@ -95,13 +109,26 @@ def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
             raise HTTPException(status_code=400, detail="audio file is empty")
         call_id = uuid4()
         transcript = transcribe_audio(settings, audio.filename or "customer-audio.wav", audio_bytes)
-        raw_model_result = request_analysis_result(settings, transcript.text)
+        knowledge_references = retrieve_knowledge(transcript.text)
+        raw_model_result = request_analysis_result(
+            settings,
+            transcript.text,
+            knowledge_references,
+        )
+        raw_model_result = apply_safety_policy(transcript.text, raw_model_result)
+        topic_routing = classify_general_topic(settings, transcript.text)
+        raw_model_result, topic_routing = apply_general_topic_routing(
+            raw_model_result,
+            topic_routing,
+        )
         return persist_pipeline_result(
             settings,
             call_id=call_id,
             audio_filename=audio.filename or "customer-audio.wav",
             transcript=transcript,
             raw_model_result=raw_model_result,
+            knowledge_references=knowledge_references,
+            routing_evidence=topic_routing.as_dict(),
         )
     except HTTPException:
         raise
@@ -115,6 +142,9 @@ def create_call(audio: UploadFile = File(...)) -> MvpCallResponse:
 def search_regulations_endpoint(
     q: str,
     category: str | None = None,
+    doc_type: str | None = None,
+    kind: str | None = None,
+    effective_from: str | None = None,
     k: int = 5,
 ) -> dict:
     """Hybrid regulation search for the "관련 규정 및 매뉴얼" panel.
@@ -122,14 +152,25 @@ def search_regulations_endpoint(
     Returns {available, documents}. `available` is False (not an error) when the
     RAG index or embedding model is not provisioned, so the panel can fall back
     to its manual file list instead of showing a failure.
+
+    Filters (all optional): category(부서 8-대분류) · doc_type(문서유형) ·
+    kind('text'|'table', 표만) · effective_from(YYYY-MM-DD, 시행일 이후).
     """
     if not q.strip():
         raise HTTPException(status_code=400, detail="q is required")
     if not is_valid_category(category):
         raise HTTPException(status_code=400, detail=f"unknown category: {category}")
+    if kind not in (None, "", "text", "table"):
+        raise HTTPException(status_code=400, detail=f"unknown kind: {kind}")
     try:
         documents = search_regulations(
-            settings, q, category=category, limit=max(1, min(k, 20))
+            settings,
+            q,
+            category=category,
+            doc_type=doc_type,
+            kind=kind,
+            effective_from=effective_from,
+            limit=max(1, min(k, 20)),
         )
     except RegulationSearchUnavailable:
         return {"query": q, "category": category, "available": False, "documents": []}
@@ -215,6 +256,34 @@ def read_regulation_document(doc_id: str) -> dict:
     if doc is None:
         raise HTTPException(status_code=404, detail=f"unknown document: {doc_id}")
     return doc
+
+
+# ── 분류기 개선 피드백 루프 — 상담사가 후처리 화면에서 AI 분류 판정을 검수/교정한다.
+#    틀린 판정만 edge_cases.jsonl에 학습 데이터로 축적된다(팀원 K7 분류기 실험실과 동일 스키마).
+#    verdict=incorrect 만 학습 마스터에 append, task_code에서 부서·업무명·handler를 서버가 파생.
+@app.post("/api/v1/classifier/feedback", status_code=status.HTTP_201_CREATED)
+def classifier_feedback(payload: dict) -> dict:
+    try:
+        return clf_feedback.save_feedback(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/classifier/catalog")
+def classifier_catalog() -> dict:
+    """교정 드롭다운용 업무 카탈로그 — code·name·routing(S/G/E)·department·business_code."""
+    return {"tasks": clf_feedback.task_catalog()}
+
+
+@app.get("/api/v1/classifier/stats")
+def classifier_stats() -> dict:
+    """학습 후보 통계 — total·incorrect·reusable_edge_cases(고유 정규화 발화 수)."""
+    return clf_feedback.feedback_stats()
+
+
+@app.post("/api/v1/classifier/session/start", status_code=status.HTTP_201_CREATED)
+def classifier_session_start() -> dict:
+    return clf_feedback.start_review_session()
 
 
 @app.get(

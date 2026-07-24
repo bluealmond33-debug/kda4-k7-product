@@ -2,7 +2,7 @@
 
 STT로 전사된 상담 텍스트를 받아 상담 요약, 업무 유형, 전달 부서, 사고징후를 반환합니다. 외부로 나가는 결과는 K7 공식 모델 입력 계약인 `database/contracts/model_consultation_result_input.schema.json`과 같은 `snake_case` 필드를 사용합니다.
 
-이 모듈의 결과를 PostgreSQL에 직접 저장하지 않습니다. FastAPI가 결과를 `mvp-1.0` 계약으로 검증하고 저장합니다.
+이 모듈의 결과를 PostgreSQL에 직접 저장하지 않습니다. FastAPI가 결과를 `mvp-1.1` 계약으로 검증하고 저장합니다.
 
 ## 응답 JSON
 

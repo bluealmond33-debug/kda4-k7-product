@@ -27,7 +27,7 @@ const INK = "var(--gray-1000)";
 const GHOST = "rgba(22,20,17,.08)";
 const ICON_GHOST = "var(--gray-200)"; // 꺼진 날씨 아이콘
 const LABEL = "var(--gray-500)";
-const SANS = "'Geist Sans','Pretendard',sans-serif";
+const SANS = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
 
 
 /**

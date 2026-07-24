@@ -8,8 +8,11 @@ def test_health_exposes_contract_and_database_state() -> None:
         response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["contract_version"] == "mvp-1.0"
+    assert response.json()["contract_version"] == "mvp-1.1"
     assert response.json()["database"] in {"connected", "not_connected"}
+    assert response.json()["pipeline_mode"] in {"cloud", "local"}
+    assert response.json()["stt_provider"] in {"openai", "faster_whisper"}
+    assert response.json()["analysis_provider"] in {"openai", "ollama"}
 
 
 def test_openapi_keeps_live_demo_paths_and_adds_mvp_paths() -> None:

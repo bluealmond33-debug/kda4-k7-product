@@ -141,26 +141,48 @@ def upsert_documents_and_chunks(
     return len(chunks)
 
 
+# 하이브리드 후보 = 의미 top-50 ∪ 키워드(불리언) 매칭. 키워드 arm은 websearch_to_tsquery라
+# AND(공백)·OR·"정확구문"·-제외 연산자를 지원한다. 키워드 매칭 청크는 의미 top-50 밖이라도
+# 후보에 반드시 들어오므로, 연산자가 순위뿐 아니라 '검색 대상 진입'을 보장한다(엑셀 필터 감각).
 _HYBRID_SQL = """
-WITH sem AS (
+WITH q AS (
+    SELECT websearch_to_tsquery('simple', %(q)s) AS tsq
+),
+sem AS (
     SELECT chunk_id, 1 - (embedding <=> %(qvec)s::vector) AS dense
     FROM rag_chunks
     WHERE embedding IS NOT NULL
     ORDER BY embedding <=> %(qvec)s::vector
     LIMIT 50
+),
+kw AS (
+    SELECT c.chunk_id, 0::float8 AS dense
+    FROM rag_chunks c, q
+    WHERE c.tsv @@ q.tsq
+    LIMIT 50
+),
+cand AS (
+    SELECT chunk_id, MAX(dense) AS dense
+    FROM (SELECT chunk_id, dense FROM sem
+          UNION ALL
+          SELECT chunk_id, dense FROM kw) u
+    GROUP BY chunk_id
 )
 SELECT
-    c.chunk_id, c.doc_id, d.title, c.page, c.section, c.kind, c.raw,
+    c.chunk_id, c.doc_id, d.title, d.doc_type, c.page, c.section, c.kind, c.raw,
     d.categories, d.version, d.effective_date,
-    sem.dense,
-    ts_rank(c.tsv, plainto_tsquery('simple', %(q)s)) AS keyword,
-    (%(wd)s * sem.dense
-     + %(wk)s * ts_rank(c.tsv, plainto_tsquery('simple', %(q)s))) AS score
-FROM sem
+    cand.dense,
+    ts_rank(c.tsv, q.tsq) AS keyword,
+    (%(wd)s * cand.dense + %(wk)s * ts_rank(c.tsv, q.tsq)) AS score
+FROM cand
 JOIN rag_chunks c USING (chunk_id)
 JOIN rag_documents d ON d.doc_id = c.doc_id
+CROSS JOIN q
 WHERE d.status = 'active'
   AND (%(category)s::text IS NULL OR %(category)s::text = ANY (d.categories))
+  AND (%(doc_type)s::text IS NULL OR d.doc_type = %(doc_type)s)
+  AND (%(kind)s::text IS NULL OR c.kind = %(kind)s)
+  AND (%(eff_from)s::date IS NULL OR d.effective_date >= %(eff_from)s::date)
 ORDER BY score DESC
 LIMIT %(limit)s
 """
@@ -171,6 +193,9 @@ def search_regulations(
     query: str,
     *,
     category: str | None = None,
+    doc_type: str | None = None,
+    kind: str | None = None,
+    effective_from: str | None = None,
     limit: int = 5,
 ) -> list[dict[str, Any]]:
     """Hybrid regulation search. Raises RegulationSearchUnavailable on any gap.
@@ -193,6 +218,9 @@ def search_regulations(
         "wd": W_DENSE,
         "wk": W_KEYWORD,
         "category": category,
+        "doc_type": doc_type or None,
+        "kind": kind or None,
+        "eff_from": effective_from or None,
         "limit": limit,
     }
     try:
@@ -210,6 +238,7 @@ def search_regulations(
             "chunk_id": r["chunk_id"],
             "doc_id": r["doc_id"],
             "title": r["title"],
+            "doc_type": r["doc_type"],
             "page": r["page"],
             "section": r["section"],
             "kind": r["kind"],

@@ -18,8 +18,12 @@ def test_checked_in_example_matches_pydantic_contract() -> None:
         )
     )
     response = MvpCallResponse.model_validate(payload)
-    assert response.schema_version == "mvp-1.0"
+    assert response.schema_version == "mvp-1.1"
     assert response.source_channel == "voice"
+    assert response.consultation_card.attention_level.value == "none"
+    assert response.consultation_card.reason_codes == []
+    assert response.consultation_card.routing is None
+    assert response.consultation_card.text_emotion is None
     assert response.consultation_card.department == "대출 및 금융상담"
 
 
@@ -45,6 +49,68 @@ def test_mvp_contract_rejects_unknown_nested_fields() -> None:
         )
     )
     payload["consultation_card"]["model_experiment"] = "must not cross API boundary"
+    with pytest.raises(ValidationError):
+        MvpCallResponse.model_validate(payload)
+
+
+def test_mvp_11_accepts_routing_and_text_emotion_projection() -> None:
+    payload = json.loads(
+        (ROOT / "database/contracts/examples/mvp_call_response.example.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    card = payload["consultation_card"]
+    card["attention_level"] = "medium"
+    card["reason_codes"] = ["TEXT_HIGH_RISK_SIGNAL"]
+    card["routing"] = {
+        "task_code": "G004",
+        "task_name": "기타·복합 일반 상담",
+        "classification": "GENERAL",
+        "handler": "HUMAN",
+    }
+    card["text_emotion"] = {
+        "content_emotion": "불안",
+        "situation_severity": "high",
+        "urgency_score": 95,
+    }
+
+    response = MvpCallResponse.model_validate(payload)
+
+    assert response.consultation_card.routing is not None
+    assert response.consultation_card.routing.task_code == "G004"
+    assert response.consultation_card.text_emotion is not None
+    assert response.consultation_card.text_emotion.urgency_score == 95
+
+
+def test_mvp_11_rejects_attention_risk_mismatch_and_boolean_urgency() -> None:
+    payload = json.loads(
+        (ROOT / "database/contracts/examples/mvp_call_response.example.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload["consultation_card"]["attention_level"] = "high"
+    with pytest.raises(ValidationError):
+        MvpCallResponse.model_validate(payload)
+
+
+def test_mvp_11_allows_nullable_reason_codes() -> None:
+    payload = json.loads(
+        (ROOT / "database/contracts/examples/mvp_call_response.example.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload["consultation_card"]["reason_codes"] = None
+
+    response = MvpCallResponse.model_validate(payload)
+
+    assert response.consultation_card.reason_codes is None
+
+    payload["consultation_card"]["attention_level"] = "medium"
+    payload["consultation_card"]["text_emotion"] = {
+        "content_emotion": "불안",
+        "situation_severity": "high",
+        "urgency_score": True,
+    }
     with pytest.raises(ValidationError):
         MvpCallResponse.model_validate(payload)
 

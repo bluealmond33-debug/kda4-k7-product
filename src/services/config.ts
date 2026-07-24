@@ -15,7 +15,8 @@ export const DATA_API_PREFIX: string = `/${String(env.VITE_DATA_API_PREFIX ?? "/
 const flag = (v: unknown) => String(v ?? "false").toLowerCase() === "true";
 
 export const useReal = {
-  data: flag(env.VITE_USE_REAL_DATA_API) && !!API_BASE_URL,
+  // An empty base URL intentionally means same-origin /api through Nginx.
+  data: flag(env.VITE_USE_REAL_DATA_API),
 };
 
 /** Typed GET helper for the active MVP API. */

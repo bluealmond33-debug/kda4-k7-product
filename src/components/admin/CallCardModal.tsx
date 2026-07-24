@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { BrandSymbol } from "../BrandLogo";
 import { css } from "../../lib/css";
 import { SGE_META } from "../../services";
 import type { AdminCallRecord } from "../../hooks/useAdminFeed";
@@ -58,12 +59,12 @@ export default function CallCardModal({
           <div style={css("display:flex;align-items:flex-start;gap:10px")}>
             <div style={css("flex:1;min-width:0")}>
               {sge === "E" ? (
-                <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:#fff;background:var(--red-800);border-radius:9999px;padding:4px 11px;margin-bottom:13px")}>
+                <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 11px 'Avenir Next','Pretendard',sans-serif;color:#fff;background:var(--red-800);border-radius:9999px;padding:4px 11px;margin-bottom:13px")}>
                   <span className="mi" style={css("font-size:13px")}>priority_high</span>
                   긴급 · 사고 징후 감지
                 </span>
               ) : sge === "S" ? (
-                <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--green-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px;margin-bottom:13px")}>
+                <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px;margin-bottom:13px")}>
                   <span className="mi" style={css("font-size:13px")}>smart_toy</span>
                   단순 업무 · AI 자동 응대
                 </span>
@@ -71,22 +72,22 @@ export default function CallCardModal({
               <div style={css("display:flex;gap:13px")}>
                 <span style={css("width:4px;border-radius:2px;background:var(--blue-500);flex:none")} />
                 <div style={css("min-width:0")}>
-                  <div style={css("display:flex;align-items:center;gap:6px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
-                    <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
-                    <span style={css("font:800 12px 'Geist Sans','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
-                    <span style={css("font:400 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>· 받기 전 미리 듣고 정리</span>
+                  <div style={css("display:flex;align-items:center;gap:6px;font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
+                    <BrandSymbol size={16} color="var(--blue-700)" />
+                    <span style={css("font:800 12px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-1000)")}>KARI-NA 브리핑</span>
+                    <span style={css("font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>· 받기 전 미리 듣고 정리</span>
                     {meta && (
-                      <span style={css("display:inline-flex;align-items:center;gap:5px;margin-left:6px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:" + meta.fg)}>
+                      <span style={css("display:inline-flex;align-items:center;gap:5px;margin-left:6px;font:700 11px 'Avenir Next','Pretendard',sans-serif;color:" + meta.fg)}>
                         <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + meta.bar)} />
                         {sge} · {meta.label}
                       </span>
                     )}
                   </div>
-                  <div style={css("font:600 23px/1.35 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>
+                  <div style={css("font:600 23px/1.35 'Avenir Next','Pretendard',sans-serif;letter-spacing:-.3px;color:var(--gray-1000)")}>
                     {card ? card.summary : "분류 진행 중입니다…"}
                   </div>
                   {card && (
-                    <div style={css("font:400 12.5px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:7px")}>
+                    <div style={css("font:400 12.5px/1.55 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-top:7px")}>
                       업무유형 · <span style={css("color:var(--gray-800)")}>{card.businessType}</span>
                     </div>
                   )}
@@ -96,8 +97,8 @@ export default function CallCardModal({
             {record.confidence != null && (
               <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 6px 4px 13px;flex:none;box-shadow:var(--sh-near)")}>
                 <span style={css("display:flex;flex-direction:column;line-height:1.15")}>
-                  <span style={css("font:600 9px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.2px")}>AI 배정</span>
-                  <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>확신도</span>
+                  <span style={css("font:600 9px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.2px")}>AI 배정</span>
+                  <span style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800)")}>확신도</span>
                 </span>
                 <ConfidenceRing pct={Math.round(record.confidence * 100)} />
               </span>
@@ -113,28 +114,28 @@ export default function CallCardModal({
           <div style={css("display:flex;gap:12px;align-items:stretch")}>
             {/* 감정온도 — 온도계 + 색 텍스트(준비 카드와 동일) */}
             <div style={css("flex:1;min-height:104px;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
-              <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
+              <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 고객 감정온도
                 <span style={css("font:600 9px 'Geist Mono',monospace;padding:2px 6px;border-radius:5px;background:var(--gray-200);color:var(--gray-600)")}>데모값</span>
               </div>
               <div style={css("display:flex;align-items:center;gap:12px")}>
                 <Thermometer score={emotion ? EMOTION_SCORE[emotion] : null} color={emotion ? EMOTION_INK[emotion] : "var(--gray-400)"} />
                 <div style={css("display:flex;align-items:baseline;gap:7px")}>
-                  <span style={css("font:800 34px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-1.2px;color:" + (emotion ? EMOTION_INK[emotion] : "var(--gray-500)"))}>{emotion ? EMOTION_SCORE[emotion] : "--"}°</span>
-                  <span style={css("font:800 15px 'Geist Sans','Pretendard',sans-serif;color:" + (emotion ? EMOTION_INK[emotion] : "var(--gray-500)"))}>{emotion ? EMO_LABEL[emotion] : "—"}</span>
+                  <span style={css("font:800 34px 'Avenir Next','Pretendard',sans-serif;letter-spacing:-1.2px;color:" + (emotion ? EMOTION_INK[emotion] : "var(--gray-500)"))}>{emotion ? EMOTION_SCORE[emotion] : "--"}°</span>
+                  <span style={css("font:800 15px 'Avenir Next','Pretendard',sans-serif;color:" + (emotion ? EMOTION_INK[emotion] : "var(--gray-500)"))}>{emotion ? EMO_LABEL[emotion] : "—"}</span>
                 </div>
               </div>
             </div>
             {/* 사고 징후(위험도) — 낮음=초록 점/중립, 높음=강한 빨강 경고 */}
             <div style={css("flex:1;min-height:104px;border-radius:8px;padding:12px 14px;background:" + (record.risk === "high" ? "var(--red-800)" : "var(--gray-100)"))}>
-              <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;margin-bottom:7px;color:" + (record.risk === "high" ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
+              <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;margin-bottom:7px;color:" + (record.risk === "high" ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
                 사고 징후 <span style={css("font-weight:400;opacity:.7")}>(위험도)</span>
               </div>
               <div style={css("display:flex;align-items:center;gap:9px")}>
                 <span style={css("width:12px;height:12px;border-radius:9999px;flex:none;background:" + (record.risk === "high" ? "#fff" : record.risk === "low" ? "var(--green-700)" : "var(--gray-400)"))} />
-                <span style={css("font:800 26px 'Geist Sans','Pretendard',sans-serif;letter-spacing:-.8px;color:" + (record.risk === "high" ? "#fff" : "var(--gray-1000)"))}>{record.risk === "high" ? "높음" : record.risk === "low" ? "낮음" : "—"}</span>
+                <span style={css("font:800 26px 'Avenir Next','Pretendard',sans-serif;letter-spacing:-.8px;color:" + (record.risk === "high" ? "#fff" : "var(--gray-1000)"))}>{record.risk === "high" ? "높음" : record.risk === "low" ? "낮음" : "—"}</span>
               </div>
-              <div style={css("font:400 11.5px/1.45 'Geist Sans','Pretendard',sans-serif;margin-top:6px;color:" + (record.risk === "high" ? "rgba(255,255,255,.88)" : "var(--gray-600)"))}>
+              <div style={css("font:400 11.5px/1.45 'Avenir Next','Pretendard',sans-serif;margin-top:6px;color:" + (record.risk === "high" ? "rgba(255,255,255,.88)" : "var(--gray-600)"))}>
                 {card?.riskReason ?? "특이 사고 징후 없음"}
               </div>
             </div>
@@ -143,21 +144,33 @@ export default function CallCardModal({
           {/* 배정 — PrepCard의 'AI 배정' 행 문법 */}
           <div style={css("background:var(--gray-100);border-radius:8px;padding:13px 16px")}>
             <div style={css("display:flex;align-items:baseline;gap:7px;flex-wrap:wrap")}>
-              <span style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
-              <span style={css("font:600 13px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{record.department ?? card?.department ?? "분석 중"}</span>
-              <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>· {stateLabel}</span>
+              <span style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
+              <span style={css("font:600 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{record.department ?? card?.department ?? "분석 중"}</span>
+              <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>· {stateLabel}</span>
               {record.transferTo && (
-                <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>· 이관 → {record.transferTo}</span>
+                <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-900)")}>· 이관 → {record.transferTo}</span>
               )}
             </div>
             {card?.routingReason && (
-              <div style={css("font:400 12px/1.55 'Geist Sans','Pretendard',sans-serif;color:var(--gray-800);margin-top:6px")}>{card.routingReason}</div>
+              <div style={css("font:400 12px/1.55 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800);margin-top:6px")}>{card.routingReason}</div>
+            )}
+            {/* 본인인증 상태 — 이관 시 받는 부서가 재확인 필요한지 신호(완료=차분, 미완료=주의) */}
+            {record.verified != null && (
+              <div style={css("display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:var(--onair-surface);border:1px solid " + (record.verified ? "var(--gray-300)" : "var(--amber-700)") + ";border-radius:9999px;padding:4px 11px 4px 8px")}>
+                <span className="mi" style={css("font-size:15px;color:" + (record.verified ? "var(--green-900)" : "var(--amber-900)"))}>{record.verified ? "verified_user" : "gpp_maybe"}</span>
+                <span style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:" + (record.verified ? "var(--gray-900)" : "var(--amber-900)"))}>
+                  본인인증 {record.verified ? "완료" : "미완료"}
+                </span>
+                <span style={css("font:400 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>
+                  {record.verified ? "· 연결 즉시 상담 가능" : "· 연결 후 본인확인 필요"}
+                </span>
+              </div>
             )}
           </div>
 
           {/* 이 콜의 파이프라인 진행 */}
           <div>
-            <div style={css("font:600 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:2px")}>백엔드 처리 진행</div>
+            <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:2px")}>백엔드 처리 진행</div>
             <MiniPipeline stages={record.stages} />
           </div>
         </div>
@@ -167,7 +180,7 @@ export default function CallCardModal({
           <span style={css("font:500 11px 'Geist Mono',monospace;color:var(--gray-700)")}>
             {fmtTime(record.startedAt)} 접수{record.endedAt ? ` · ${fmtTime(record.endedAt)} 종료` : ""}
           </span>
-          <span style={css("font:600 10.5px 'Geist Sans','Pretendard',sans-serif;color:" + (card?.source === "backend" ? "var(--green-900)" : "var(--gray-700)"))}>
+          <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:" + (card?.source === "backend" ? "var(--green-900)" : "var(--gray-700)"))}>
             {card?.source === "backend" ? "실백엔드" : "데모"}
           </span>
           <div style={css("flex:1")} />

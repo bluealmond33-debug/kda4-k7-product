@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -34,6 +34,67 @@ class EmotionTemperatureLevel(str, Enum):
     ELEVATED = "elevated"
 
 
+class AttentionLevel(str, Enum):
+    NONE = "none"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+ReasonCode = Annotated[str, Field(min_length=1, max_length=100)]
+
+
+class RoutingResult(BaseModel):
+    """Three-stage task routing selected by the local routing classifier."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    task_code: str = Field(min_length=1, max_length=50)
+    task_name: str = Field(min_length=1, max_length=200)
+    classification: Literal["EMERGENCY", "SIMPLE", "GENERAL"]
+    handler: Literal["HUMAN", "AI"]
+
+
+class TextEmotionResult(BaseModel):
+    """Text-only severity, kept separate from the audio emotion result."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    content_emotion: str = Field(min_length=1, max_length=100)
+    situation_severity: Literal["low", "medium", "high"]
+    urgency_score: float = Field(ge=0, le=100)
+
+    _validate_urgency_score = field_validator("urgency_score", mode="before")(
+        _reject_boolean_number
+    )
+
+
+class ChecklistItem(BaseModel):
+    """One counselor action generated from the call and reviewed policy."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: str = Field(min_length=1, max_length=200)
+    detail: str = Field(min_length=1, max_length=1000)
+    source: Literal["model", "policy", "rag"]
+
+
+class KnowledgeReference(BaseModel):
+    """A local knowledge-base passage used to ground the briefing."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    doc_id: str = Field(min_length=1, max_length=100)
+    title: str = Field(min_length=1, max_length=300)
+    section: str = Field(min_length=1, max_length=300)
+    excerpt: str = Field(min_length=1, max_length=2000)
+    source: str = Field(min_length=1, max_length=500)
+    score: float = Field(ge=0, le=1)
+
+    _validate_score = field_validator("score", mode="before")(
+        _reject_boolean_number
+    )
+
+
 class ModelConsultationResult(BaseModel):
     """One normalized model boundary for summary, classification and routing."""
 
@@ -46,6 +107,9 @@ class ModelConsultationResult(BaseModel):
     incident_risk: IncidentRisk = IncidentRisk.LOW
     risk_reason: str | None = Field(default=None, max_length=2000)
     routing_confidence: float | None = Field(default=None, ge=0, le=1)
+    customer_requests: list[str] = Field(default_factory=list, max_length=8)
+    missing_information: list[str] = Field(default_factory=list, max_length=8)
+    required_actions: list[ChecklistItem] = Field(default_factory=list, max_length=8)
 
     _validate_routing_confidence = field_validator(
         "routing_confidence", mode="before"
@@ -121,7 +185,15 @@ class ConsultationCard(BaseModel):
     incident_risk: IncidentRisk
     risk_reason: str | None = Field(default=None, max_length=2000)
     routing_confidence: float | None = Field(default=None, ge=0, le=1)
+    customer_requests: list[str] = Field(default_factory=list, max_length=8)
+    missing_information: list[str] = Field(default_factory=list, max_length=8)
+    required_actions: list[ChecklistItem] = Field(default_factory=list, max_length=8)
+    knowledge_references: list[KnowledgeReference] = Field(default_factory=list, max_length=5)
     emotion: EmotionResult = Field(default_factory=EmotionResult)
+    attention_level: AttentionLevel
+    reason_codes: list[ReasonCode] | None = Field(max_length=16)
+    routing: RoutingResult | None
+    text_emotion: TextEmotionResult | None
 
     _validate_routing_confidence = field_validator(
         "routing_confidence", mode="before"
@@ -131,13 +203,17 @@ class ConsultationCard(BaseModel):
     def require_high_risk_reason(self) -> "ConsultationCard":
         if self.incident_risk == IncidentRisk.HIGH and not self.risk_reason:
             raise ValueError("risk_reason is required when incident_risk is high")
+        if self.incident_risk == IncidentRisk.HIGH and self.attention_level != AttentionLevel.HIGH:
+            raise ValueError("high incident_risk requires high attention_level")
+        if self.incident_risk == IncidentRisk.LOW and self.attention_level == AttentionLevel.HIGH:
+            raise ValueError("high attention_level requires high incident_risk")
         return self
 
 
 class MvpCallResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    schema_version: Literal["mvp-1.0"] = "mvp-1.0"
+    schema_version: Literal["mvp-1.1"] = "mvp-1.1"
     call_id: UUID
     status: CallStatus
     source_channel: Literal["voice"] = "voice"
@@ -152,4 +228,7 @@ class HealthResponse(BaseModel):
 
     status: str
     database: str
-    contract_version: str = "mvp-1.0"
+    contract_version: str = "mvp-1.1"
+    pipeline_mode: Literal["cloud", "local"]
+    stt_provider: Literal["openai", "faster_whisper"]
+    analysis_provider: Literal["openai", "ollama"]

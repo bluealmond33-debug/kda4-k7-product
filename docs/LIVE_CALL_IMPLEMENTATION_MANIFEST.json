@@ -1,0 +1,109 @@
+{
+  "schema_version": "kda-live-handoff-1.0",
+  "handoff_url": "https://k7-live-call-handoff.theonewhogazes.chatgpt.site",
+  "branch": "codex/mingikim-live-call",
+  "base": {
+    "branch": "origin/mingikim",
+    "commit": "a3e326155784ed1f2339bef08fdd88def6a5fce7"
+  },
+  "guardrails": {
+    "never_push_remote_main": true,
+    "preserve_mingikim_ui": true,
+    "speaker_source": "explicit edge role",
+    "require_generation_isolation": true,
+    "require_two_speaker_final_drain": true,
+    "agent_disconnect_ends_customer_call": false,
+    "zero_is_hangup": false,
+    "hash_after_agent_connected_is_control_key": false
+  },
+  "nodes": [
+    {
+      "role": "customer_edge",
+      "hardware": "Galaxy plus Windows laptop",
+      "input": "WO Mic Device",
+      "speaker": "customer"
+    },
+    {
+      "role": "central_server",
+      "services": ["FastAPI", "faster-whisper", "Ollama EXAONE", "RAG", "DTMF sidecar"]
+    },
+    {
+      "role": "agent_edge",
+      "hardware": "Windows counselor laptop with headset",
+      "speaker": "agent"
+    }
+  ],
+  "implemented": [
+    "server-issued or safely registered call_id",
+    "customer and agent audio edge senders",
+    "K7A1 generation/audio_seq/captured_at framing",
+    "per-speaker VAD buffers",
+    "global ordered speaker-labelled transcript",
+    "intake and active audio gates",
+    "bounded serial STT queue",
+    "final two-speaker drain barrier",
+    "15-second customer control reconnect grace",
+    "same-sender replacement and sequence resume",
+    "role-aware demo relay with bounded replay",
+    "Galaxy keypad and counselor DTMF receipt",
+    "durable local DTMF SQLite journal",
+    "grounded local EXAONE summary",
+    "customer-only routing and risk classification",
+    "post-call five-section backend summary contract",
+    "Windows setup/start/stop/test/firewall scripts"
+  ],
+  "dtmf": {
+    "valid_keys": "0123456789*#",
+    "phases": ["intake", "waiting_for_agent", "active"],
+    "stored_fields": ["call_id", "generation", "seq", "digit", "phase", "captured_at_ms"],
+    "default_store": "%LOCALAPPDATA%\\K7\\live-state.sqlite3",
+    "public_raw_read_api": false,
+    "counselor_display": "masked",
+    "pre_intake_hash_completes_intake": true,
+    "active_hash_is_normal_dtmf": true
+  },
+  "models": {
+    "stt_test_laptop": {
+      "model": "small",
+      "device": "cpu",
+      "compute_type": "int8"
+    },
+    "summary_test_laptop": {
+      "runtime": "Ollama",
+      "model": "exaone3.5:2.4b"
+    },
+    "larger_installed_model": "exaone3.5:7.8b",
+    "missing_model_policy": "unavailable or explicitly labelled fallback; never fake"
+  },
+  "post_call_sections": [
+    "customer_request",
+    "agent_guidance",
+    "confirmed_items",
+    "unresolved_items",
+    "follow_up_actions"
+  ],
+  "not_implemented": [
+    "bidirectional voice playback or VoIP relay",
+    "production CTI integration",
+    "production role authentication and call tokens",
+    "encrypted DTMF and recording retention policy",
+    "real edge mute and hold control",
+    "production wrap-up persistence API",
+    "final UI for structured post-call sections"
+  ],
+  "primary_files": {
+    "server": "backend/app/live_stt.py",
+    "dtmf_store": "backend/app/live_dtmf_store.py",
+    "call_flow": "src/hooks/useCallFlow.ts",
+    "mobile_control": "src/services/arsMobile.ts",
+    "agent_control": "src/services/arsControl.ts",
+    "customer_ui": "src/components/Phone.tsx",
+    "agent_ui": "src/components/desktop/ActiveCall.tsx",
+    "windows_tools": "scripts/windows/"
+  },
+  "required_checks": [
+    "npm run check",
+    ".\\.venv\\Scripts\\python.exe -m pytest backend\\tests -q",
+    ".\\.venv\\Scripts\\python.exe scripts\\windows\\test_audio_edge_sender.py"
+  ]
+}

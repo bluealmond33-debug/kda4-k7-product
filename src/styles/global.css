@@ -15,7 +15,7 @@ body,
 
 body {
   background: #060607;
-  font-family: var(--font-sans, "Geist Sans", "Pretendard", system-ui, sans-serif);
+  font-family: var(--font-sans, "Avenir Next", "Pretendard", system-ui, sans-serif);
   color: var(--gray-1000, #171717);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -48,12 +48,12 @@ a:hover {
 /* iOS-flavoured system stack for the phone mockup only */
 .sf {
   font-family: -apple-system, "SF Pro Display", "SF Pro Text", system-ui,
-    "Geist Sans", "Pretendard", sans-serif;
+    "Avenir Next", "Pretendard", sans-serif;
 }
 
 /* Shared atoms reused across desktop screens */
 .lbl {
-  font: 700 11px "Geist Sans", "Pretendard", sans-serif;
+  font: 700 11px "Avenir Next", "Pretendard", sans-serif;
   color: var(--gray-700);
   letter-spacing: 0.2px;
 }
@@ -79,10 +79,20 @@ a:hover {
 .card:hover {
   box-shadow: var(--sh-hover, 0 2px 4px rgba(15, 18, 24, 0.12), 0 9px 20px -8px rgba(15, 18, 24, 0.22));
 }
+/* 호버 부상만 얹는 헬퍼 — .card 처럼 면·모서리·기본그림자를 관리하지 않고, 마우스가 올라간 카드형
+   요소에 '관심 신호' 그림자만 띄운다. 직원 콘솔(.card:hover)과 같은 감각을 다른 화면에도 준다. */
+.hoverraise {
+  transition: box-shadow 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hoverraise:hover {
+  /* !important — 이 요소들은 인라인으로 resting box-shadow(sh-near)를 갖는 경우가 있어
+     클래스 :hover 가 인라인에 밀리지 않도록 강제한다 */
+  box-shadow: var(--sh-hover, 0 2px 4px rgba(15, 18, 24, 0.12), 0 9px 20px -8px rgba(15, 18, 24, 0.22)) !important;
+}
 .sechd {
   /* 타입 래더 v2 Section — 실효 크기(×0.764) 기준으로 13px은 지각 하한 아래.
      700→600: 실효 10px대 한글에서 700은 뭉친다 */
-  font: 600 14px "Geist Sans", "Pretendard", sans-serif;
+  font: 600 14px "Avenir Next", "Pretendard", sans-serif;
   color: var(--gray-1000);
 }
 .cbtn {
@@ -197,7 +207,7 @@ a:hover {
   padding: 8px 14px;
   border-radius: 9999px;
   color: var(--gray-600);
-  font: 500 12.5px "Geist Sans", "Pretendard", sans-serif;
+  font: 500 12.5px "Avenir Next", "Pretendard", sans-serif;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
@@ -217,7 +227,7 @@ a:hover {
 
 /* ONAIR 대형 숫자(카운터·스탯) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
 .bignum {
-  font-family: "Geist Sans", "Pretendard", sans-serif;
+  font-family: "Avenir Next", "Pretendard", sans-serif;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -226,7 +236,7 @@ a:hover {
 
 /* ONAIR 시계 숫자 — Space Grotesk: 각진 1, 열린 6·9. 시계(대형 디스플레이)에만 쓴다 */
 .clocknum {
-  font-family: "Space Grotesk", "Geist Sans", "Pretendard", sans-serif;
+  font-family: "Space Grotesk", "Avenir Next", "Pretendard", sans-serif;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
@@ -235,7 +245,7 @@ a:hover {
 
 /* 본인확인 입력 — 입력값은 모노·자간, placeholder는 가는 산세리프로 분리 */
 .authin::placeholder {
-  font: 400 12.5px "Geist Sans", "Pretendard", sans-serif;
+  font: 400 12.5px "Avenir Next", "Pretendard", sans-serif;
   letter-spacing: 0;
   color: var(--gray-600);
 }
@@ -323,6 +333,30 @@ a:hover {
     transform: translateY(0) rotate(0);
     opacity: 1;
   }
+}
+
+/* 통화 연결 안착 morph — 준비 카드가 직원 콘솔로 '스르륵 안착'하는 느낌.
+   중앙(브리핑)은 살짝 컸다가 제자리로 가라앉고, 좌/우/상/하 콘솔 상자가 가장자리에서 등장한다. */
+@keyframes consoleSettle {
+  from { opacity: 0; transform: scale(1.06) translateY(-10px); }
+  55% { opacity: 1; }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes consoleInL {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes consoleInR {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes consoleInDown {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes consoleInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* 가이드 투어 스테퍼 — 단계 콘텐츠가 방향성 슬라이드로 전환 (앞=오른쪽서, 뒤=왼쪽서) */

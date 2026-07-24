@@ -49,6 +49,10 @@ def test_existing_pipeline_can_inject_results_without_running_stt_or_model(
     assert response.consultation_card.department == "여신·대출"
     assert response.consultation_card.incident_risk.value == "low"
     assert response.consultation_card.emotion.status.value == "unavailable"
+    assert response.consultation_card.attention_level.value == "none"
+    assert response.consultation_card.reason_codes == []
+    assert response.consultation_card.routing is None
+    assert response.consultation_card.text_emotion is None
     assert response.created_at == created_at
     assert captured["raw"] == FINANCIAL_RESULT
     assert captured["response"] is response
@@ -82,6 +86,84 @@ def test_existing_pipeline_can_supply_real_emotion_result(monkeypatch) -> None:
 
     assert response.consultation_card.emotion is emotion
     assert response.consultation_card.incident_risk.value == "high"
+    assert response.consultation_card.attention_level.value == "high"
+    assert "FINANCIAL_INCIDENT" in response.consultation_card.reason_codes
+
+
+def test_routing_evidence_is_forwarded_to_database_without_changing_contract(
+    monkeypatch,
+) -> None:
+    captured = {}
+
+    def fake_save_call(
+        _settings,
+        _response,
+        _raw_model_result,
+        raw_emotion_result,
+        routing_evidence,
+    ):
+        captured["raw_emotion_result"] = raw_emotion_result
+        captured["routing_evidence"] = routing_evidence
+
+    monkeypatch.setattr("app.integration_service.save_call", fake_save_call)
+    evidence = {
+        "status": "classified",
+        "predicted_topic": "대출문의(만기/연장/조회등)",
+        "resolved_topic": "대출문의(만기/연장/조회등)",
+        "margin": 1.2,
+        "threshold": 0.75,
+        "automatic": True,
+        "model_sha256": "ABC",
+        "application": "applied",
+        "reason": "test evidence",
+    }
+
+    persist_pipeline_result(
+        Settings(database_url="postgresql://not-used-in-unit-test"),
+        audio_filename="routing-test.wav",
+        transcript=TranscriptResult(
+            text="대출 만기 연장 문의입니다.",
+            stt_model="route-test",
+        ),
+        raw_model_result=FINANCIAL_RESULT,
+        routing_evidence=evidence,
+    )
+
+    assert captured["raw_emotion_result"] == {}
+    assert captured["routing_evidence"] == evidence
+
+
+def test_mvp_11_projects_team_routing_and_text_emotion(monkeypatch) -> None:
+    monkeypatch.setattr("app.integration_service.save_call", lambda *_args: None)
+    raw = {
+        **FINANCIAL_RESULT,
+        "attention_level": "medium",
+        "reason_codes": ["TEXT_HIGH_RISK_SIGNAL"],
+        "routing": {
+            "task_code": "G004",
+            "task_name": "기타·복합 일반 상담",
+            "classification": "GENERAL",
+            "handler": "HUMAN",
+        },
+        "text_emotion": {
+            "content_emotion": "불안",
+            "situation_severity": "high",
+            "urgency_score": 95,
+        },
+    }
+
+    response = persist_pipeline_result(
+        Settings(database_url="postgresql://not-used-in-unit-test"),
+        audio_filename="routing-test.wav",
+        transcript=TranscriptResult(text="상담이 급합니다.", stt_model="test"),
+        raw_model_result=raw,
+    )
+
+    card = response.consultation_card
+    assert card.attention_level.value == "medium"
+    assert card.reason_codes == ["TEXT_HIGH_RISK_SIGNAL"]
+    assert card.routing is not None and card.routing.task_code == "G004"
+    assert card.text_emotion is not None and card.text_emotion.urgency_score == 95
 
 
 def test_stt_duration_is_normalized_to_postgresql_precision(monkeypatch) -> None:
@@ -178,6 +260,7 @@ def test_text_and_audio_branches_join_by_precreated_call_id(monkeypatch) -> None
     assert response.consultation_card.emotion.status.value == "completed"
     assert response.consultation_card.emotion.score == 58
     assert response.consultation_card.emotion.level.value == "caution"
+    assert response.consultation_card.attention_level.value == "none"
     assert captured["raw_text"] == FINANCIAL_RESULT
     assert captured["raw_emotion"] == raw_emotion
 

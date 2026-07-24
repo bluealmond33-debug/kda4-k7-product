@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { css } from "../lib/css";
 import type { CallFlowVM } from "../hooks/useCallFlow";
 import AppleIcon from "./AppleIcon";
@@ -89,11 +89,21 @@ function KeyButton({
  *  숨긴다. 그 정보는 상단 상황 알약과 실시간 통화 패널이 대신 보여준다. */
 export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
   return (
-    <div data-tour="phone" style={css("flex:none;width:260px;height:532px;position:relative")}>
+    <div
+      data-tour="phone"
+      style={css(
+        "flex:none;position:relative;width:" +
+          (clean ? "400px" : "260px") +
+          ";height:" +
+          (clean ? "820px" : "532px")
+      )}
+    >
       <div
         className="sf"
         style={css(
-          "width:432px;height:886px;transform:scale(.6);transform-origin:top left;position:relative;filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))"
+          "width:432px;height:886px;transform:scale(" +
+            (clean ? "0.9259" : ".6") +
+            ");transform-origin:top left;position:relative;filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))"
         )}
       >
         {/* 사이드 버튼 — 프레임 뒤에서 살짝 돌출 */}
@@ -145,6 +155,33 @@ function StatusBar() {
 function HomeIndicator() {
   return (
     <span style={css("position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.85)")} />
+  );
+}
+
+function CallButtonRow({
+  color,
+  icon,
+  onClick,
+}: {
+  color: string;
+  icon: "call" | "call_end";
+  onClick?: () => void;
+}) {
+  return (
+    <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center;margin-top:16px")}>
+      <span />
+      <div
+        onClick={onClick}
+        style={css(
+          "width:88px;height:88px;border-radius:9999px;background:" +
+            color +
+            ";display:flex;align-items:center;justify-content:center;cursor:pointer"
+        )}
+      >
+        <AppleIcon name={icon === "call_end" ? "callEnd" : "call"} size={42} />
+      </div>
+      <span />
+    </div>
   );
 }
 
@@ -232,7 +269,7 @@ function FaceTimeGlyph({ size = 38 }: { size?: number }) {
             fontWeight="800"
             textAnchor="middle"
             fill="black"
-            fontFamily="'Geist Sans','Pretendard',system-ui,sans-serif"
+            fontFamily="'Avenir Next','Pretendard',system-ui,sans-serif"
           >
             ?
           </text>
@@ -245,9 +282,17 @@ function FaceTimeGlyph({ size = 38 }: { size?: number }) {
 
 /** 통화 화면 — IMG_7570/7571: 웜 그라데이션, 상단 타이머→이름, 하단 컨트롤 */
 function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
-  // 통화 중 키패드(ARS 코드 입력) — '키패드' 버튼을 누르면 열리고, 숫자를 누르면 코드가 쌓인다.
+  // 통화 중 키패드 — 고객 화면에서만 열리고(ARS 게이트가 열렸을 때), 누른 숫자는
+  // vm.customerPressDigit으로 백엔드 DTMF 저장까지 간다. 통화가 끝나면 자동으로 닫는다.
   const [keypadOpen, setKeypadOpen] = useState(false);
-  const [code, setCode] = useState("");
+  useEffect(() => {
+    if (vm.phEnded) setKeypadOpen(false);
+  }, [vm.phEnded]);
+
+  if (clean && keypadOpen && !vm.phEnded) {
+    return <CustomerKeypadScreen vm={vm} close={() => setKeypadOpen(false)} />;
+  }
+
   return (
     <div
       style={css(
@@ -334,14 +379,31 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
         {vm.showControls && !keypadOpen && (
           <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:22px;margin-bottom:5px")}>
             {CALL_CONTROLS.map((c) => (
-              <div key={c.label} style={css("display:flex;flex-direction:column;align-items:center;gap:8px")}>
+              <div
+                key={c.label}
+                style={css(
+                  "display:flex;flex-direction:column;align-items:center;gap:8px;" +
+                    (c.icon === "keypad" && clean && !vm.customerKeypadEnabled ? "opacity:.42" : "")
+                )}
+              >
                 <span
-                  onClick={c.end ? vm.endCall : c.icon === "keypad" ? () => setKeypadOpen(true) : undefined}
+                  onClick={
+                    c.end
+                      ? vm.endCall
+                      : c.icon === "keypad" && clean && vm.customerKeypadEnabled
+                      ? () => setKeypadOpen(true)
+                      : undefined
+                  }
                   style={css(
                     "width:88px;height:88px;border-radius:9999px;display:flex;align-items:center;justify-content:center;" +
                       (c.end
                         ? "background:#eb332a;cursor:pointer;box-shadow:0 0 26px rgba(235,51,42,.45)"
-                        : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px)" + (c.icon === "keypad" ? ";cursor:pointer" : ""))
+                        : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px);") +
+                      (c.icon === "keypad" && clean
+                        ? vm.customerKeypadEnabled
+                          ? "cursor:pointer"
+                          : "cursor:not-allowed"
+                        : "")
                   )}
                 >
                   {c.icon === "facetime" ? (
@@ -359,41 +421,69 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
             ))}
           </div>
         )}
-
-        {/* 인콜 키패드 — ARS 코드 입력. 누른 숫자가 위에 쌓이고, 키는 눌릴 때 밝아진다(KeyButton).
-            아래 줄: 왼쪽 지우기 · 가운데 빨간 종료 · 오른쪽 '숨기기'(컨트롤로 복귀) */}
-        {vm.showControls && keypadOpen && (
-          <div style={css("display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:5px")}>
-            <div style={css("min-height:40px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:400;letter-spacing:6px;color:#fff")}>
-              {code || " "}
-            </div>
-            <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:14px")}>
-              {KEYS.map((k) => (
-                <KeyButton key={k.d} k={k} variant="glass" onPress={(d) => setCode((s) => s + d)} />
-              ))}
-            </div>
-            <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center")}>
-              <span
-                onClick={code ? () => setCode((s) => s.slice(0, -1)) : undefined}
-                style={css("justify-self:center;transition:opacity .12s;opacity:" + (code ? "1;cursor:pointer" : ".35"))}
-              >
-                <AppleIcon name="backspace" size={34} />
-              </span>
-              <span
-                onClick={vm.endCall}
-                style={css("width:88px;height:88px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:#eb332a;cursor:pointer;box-shadow:0 0 26px rgba(235,51,42,.45)")}
-              >
-                <AppleIcon name="callEnd" size={36} />
-              </span>
-              <span
-                onClick={() => setKeypadOpen(false)}
-                style={css("justify-self:center;font-size:15px;font-weight:500;color:#fff;cursor:pointer")}
-              >
-                숨기기
-              </span>
-            </div>
+        {vm.phEnded && vm.isCustomerSurface && (
+          <div style={css("display:flex;flex-direction:column;align-items:center;gap:7px")}>
+            <span style={css("font-size:13px;color:#8a8a8e")}>새 상담을 시작할 수 있습니다</span>
+            <CallButtonRow color="#34c759" icon="call" onClick={vm.startCall} />
           </div>
         )}
+      </div>
+      <HomeIndicator />
+    </div>
+  );
+}
+
+function CustomerKeypadScreen({
+  vm,
+  close,
+}: {
+  vm: CallFlowVM;
+  close: () => void;
+}) {
+  const press = (digit: string) => {
+    if (!vm.customerKeypadEnabled) return;
+    if (vm.customerPressDigit(digit)) navigator.vibrate?.(22);
+  };
+  const prompt = vm.mobileAgentConnected
+    ? "상담원 통화 중 · 번호를 입력하세요"
+    : vm.mobileIntakePending
+    ? "마지막 발화를 처리하고 있습니다"
+    : vm.mobileIntakeComplete
+    ? "상담사가 통화를 준비하고 있습니다"
+    : "용건을 모두 말씀하셨으면 #을 눌러 주세요";
+
+  return (
+    <div style={css("position:absolute;inset:0;color:#1c1c1e;display:flex;flex-direction:column")}>
+      <StatusBar />
+      <div style={css("display:flex;align-items:center;justify-content:center;position:relative;margin-top:47px")}>
+        <span
+          onClick={close}
+          style={css("position:absolute;left:31px;width:42px;height:42px;border-radius:9999px;background:#e4e4e6;display:flex;align-items:center;justify-content:center;cursor:pointer")}
+        >
+          <span className="mi" style={css("font-size:22px")}>close</span>
+        </span>
+        <div style={css("text-align:center")}>
+          <div style={css("font-size:21px;font-weight:600")}>키움은행 고객센터</div>
+          <div style={css("font-size:13px;color:#8a8a8e;margin-top:5px")}>{prompt}</div>
+        </div>
+      </div>
+      <div style={css("height:48px;display:flex;align-items:center;justify-content:center;font:500 24px 'Geist Mono',monospace;letter-spacing:7px;color:#3478f6")}>
+        {vm.arsDigits || " "}
+      </div>
+      <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:14px;opacity:" + (vm.customerKeypadEnabled ? "1" : ".42"))}>
+        {KEYS.map((key) => (
+          <div
+            key={key.d}
+            onClick={() => press(key.d)}
+            style={css("display:flex;flex-direction:column;align-items:center;justify-content:center;width:75px;height:75px;border-radius:9999px;background:#e4e4e6;cursor:" + (vm.customerKeypadEnabled ? "pointer" : "not-allowed"))}
+          >
+            <span style={css("font-size:36px;font-weight:400;color:#1c1c1e;line-height:1" + (key.sub ? "" : ";margin-top:6px"))}>{key.d}</span>
+            <span style={css("font-size:10px;font-weight:700;letter-spacing:2px;color:#6d6d72;height:12px;margin-top:1px;text-indent:2px")}>{key.sub}</span>
+          </div>
+        ))}
+      </div>
+      <div style={css("margin-top:auto;padding-bottom:34px")}>
+        <CallButtonRow color="#ff3b30" icon="call_end" onClick={vm.endCall} />
       </div>
       <HomeIndicator />
     </div>
