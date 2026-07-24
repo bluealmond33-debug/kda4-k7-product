@@ -240,11 +240,12 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
         {/* ── 스크립트 패널 ── 오프닝 한 줄(감정온도 연동) + 펼치면 전체 */}
         <div data-tour="prep-firstline" style={css("width:100%;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near);overflow:hidden")}>
-          <div onClick={() => setScriptOpen((v) => !v)} style={css("display:flex;align-items:center;gap:11px;padding:9px 18px;cursor:pointer;user-select:none")}>
-            <span style={css("display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:9999px;background:var(--gray-1000);color:#fff;flex:none")}><span className="mi" style={css("font-size:14px")}>record_voice_over</span></span>
-            <span style={css("font:700 10px " + FONT + ";color:var(--gray-700);flex:none;white-space:nowrap")}>이 문장으로 여세요</span>
-            <div style={css("flex:1;min-width:0;font:500 13.5px/1.35 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000);white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{vm.firstLine}</div>
-            <span style={css("display:flex;align-items:center;gap:4px;font:600 12px " + FONT + ";color:var(--blue-700);flex:none")}>
+          <div onClick={() => setScriptOpen((v) => !v)} style={css("display:flex;align-items:flex-start;gap:11px;padding:11px 18px;cursor:pointer;user-select:none")}>
+            <span style={css("display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:9999px;background:var(--gray-1000);color:#fff;flex:none;margin-top:1px")}><span className="mi" style={css("font-size:14px")}>record_voice_over</span></span>
+            <span style={css("font:700 10px " + FONT + ";color:var(--gray-700);flex:none;white-space:nowrap;margin-top:4px")}>이 문장으로 여세요</span>
+            {/* 문장 전체를 두 줄로 — 잘라내지 않는다 */}
+            <div style={css("flex:1;min-width:0;font:500 13.5px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000);white-space:normal;word-break:keep-all")}>{vm.firstLine}</div>
+            <span style={css("display:flex;align-items:center;gap:4px;font:600 12px " + FONT + ";color:var(--blue-700);flex:none;margin-top:3px")}>
               {scriptOpen ? "접기" : "펼쳐 보기"}
               <span className="mi" style={css("font-size:19px;transition:transform .25s;transform:rotate(" + (scriptOpen ? 180 : 0) + "deg)")}>expand_more</span>
             </span>
