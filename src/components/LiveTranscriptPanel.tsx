@@ -7,12 +7,11 @@ import Threads from "./Threads";
  *
  * 2-TV 무대에서 고객 화면과 직원 화면이 이 컴포넌트를 함께 쓴다. 같은 대화를
  * 양쪽에 똑같이 복사하면 관객이 "왜 같은 게 두 개지?"가 되므로, **각 화면은 자기
- * 발화만** 그린다 — 고객 폰엔 고객 말풍선, 직원 콘솔엔 상담원 말풍선. 두 화면을
- * 나란히 놓으면 실제로 두 사람이 마주 보고 말하는 무대가 된다. 정렬은 패널이 무대
- * 중앙을 향하도록 준다(고객=오른쪽, 상담원=왼쪽) — 말풍선이 서로를 향해 오간다.
+ * 발화만** 그린다 — 고객 폰엔 고객 말, 직원 콘솔엔 상담원 말. 말풍선·배경·그라데이션
+ * 없이 그냥 텍스트가 실시간으로 흐르고, 화자 색으로 물들여 어느 화면인지 구분된다.
  *
  * 파형은 대화 전체에 반응한다: 자기 발화엔 크게, 상대 발화엔 잔잔하게 출렁여
- * (말풍선엔 안 보여도) 상대가 말하는 순간을 물결로 느끼게 한다.
+ * (자막엔 안 보여도) 상대가 말하는 순간을 물결로 느끼게 한다.
  *
  * 검은 패널 — 흰 폰보다 눈에 덜 띄어야 한다(주인공은 폰, 이건 배경 정보).
  * 상태 문구는 없다: 그건 상단 상황 알약의 몫이고, 이 패널은 "소리가 흐른다"(물결)와
@@ -116,11 +115,8 @@ export default function LiveTranscriptPanel({
   // 같은 크기로 읽힌다(폭 400 기준 13px, 좁아지면 줄고 넓어지면 커지되 11~15px로 클램프).
   const fontPx = Math.round(Math.max(11, Math.min(15, width * 0.033)) * 10) / 10;
 
-  // 각 화면은 '자기 발화'만 그린다 — 고객 폰=고객 말풍선, 직원 콘솔=상담원 말풍선.
-  // (양쪽 화면을 나란히 놓으면 두 사람이 마주 보고 말하는 무대가 된다)
-  // 패널은 무대 중앙을 향해 정렬: 고객 패널(폰 오른쪽)=오른쪽, 상담원 패널(콘솔 왼쪽)=왼쪽.
-  const selfSide: "left" | "right" = self === "customer" ? "right" : "left";
-  // 먼저 전체 스트림에서 같은 화자의 연속 조각을 한 그룹(말풍선)으로 묶는다 — 그래야
+  // 각 화면은 '자기 발화'만 그린다 — 고객 폰=고객 말, 직원 콘솔=상담원 말.
+  // 먼저 전체 스트림에서 같은 화자의 연속 조각을 한 그룹(줄)으로 묶는다 — 그래야
   // 발화 '턴'이 보존된다(상대 발화가 턴 경계를 가른다). 그다음 자기 발화 그룹만 남긴다.
   // (자기 것만 먼저 걸러내면 떨어져 있던 여러 턴이 한 말풍선으로 뭉쳐버린다)
   const allGroups: { who: StreamItem["who"]; texts: string[]; firstId: string; lastId: string; time: string }[] = [];
@@ -157,16 +153,13 @@ export default function LiveTranscriptPanel({
         </div>
       </div>
 
-      {/* 전사 — 검은 배경 위 코딩 글자. 오래 말하면 위로 흘러가며 상단이 점진적으로 투명해진다.
-          overlay 덮개 대신 mask 그라데이션 — 글자 자체가 위 88px에 걸쳐 서서히 사라진다 */}
+      {/* 전사 — 검은 배경 위 실시간 텍스트. 말풍선·그라데이션 없이 그냥 글자만 흐른다.
+          파형 바로 아래에서 시작해 아래로 자라고, 최신 줄이 바닥에 오도록 자동 스크롤. */}
       <div style={css("position:relative;flex:1;min-height:0")}>
       <div
         ref={scrollRef}
         style={css(
-          // justify-content:flex-start — 파형 바로 아래에서 대화를 시작한다(TV 화면: 위에서부터 읽힘).
-          // 길어지면 아래로 자라며 최신이 바닥에 오도록 자동 스크롤(옛 발화는 위로 사라진다).
-          // 상단 페이드는 약하게(28px) — 파형과의 경계만 부드럽게, 첫 발화를 지우지 않게.
-          "height:100%;overflow:hidden;padding:14px 18px;display:flex;flex-direction:column;justify-content:flex-start;gap:9px;box-sizing:border-box;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 28px);mask-image:linear-gradient(to bottom,transparent 0,#000 28px)"
+          "height:100%;overflow:hidden;padding:14px 20px;display:flex;flex-direction:column;justify-content:flex-start;gap:10px;box-sizing:border-box"
         )}
       >
         {groups.length === 0 ? (
@@ -192,11 +185,10 @@ export default function LiveTranscriptPanel({
           </div>
         ) : (
           groups.map((g, gi) => (
-            <Bubble
+            <TextLine
               key={g.firstId}
               time={g.time}
               who={g.who}
-              side={selfSide}
               fontPx={fontPx}
               full={g.texts.join(" ")}
               isLast={gi === groups.length - 1}
@@ -232,36 +224,29 @@ function useTypewriter(target: string, speedMs: number, enabled: boolean) {
   return target.slice(0, shown);
 }
 
-/** 말풍선 — 각 화면은 자기 발화만 그린다(고객 폰=고객, 직원 콘솔=상담원). 그래서 모든
- *  말풍선은 '내 말'이고 채운 색 말풍선이다. 정렬은 패널이 무대 중앙을 향하도록 side로 준다:
- *  고객 패널=오른쪽, 상담원 패널=왼쪽 → 두 화면을 나란히 놓으면 서로 마주 보는 거울이 된다.
- *  말풍선 색은 화자 정체성 색(고객 파랑·상담원 보라·KARI-NA 민트). 마지막 줄은 타자기+커서. */
-// 화자 정체성 색 — 파형·말풍선이 같은 계열. dot=커서/점, fill/border/text=채운 말풍선.
-const SPK: Record<
-  StreamItem["who"],
-  { name: string; dot: string; fill: string; border: string; text: string }
-> = {
-  customer: { name: "고객", dot: "#7fb0ff", fill: "rgba(127,176,255,.18)", border: "rgba(127,176,255,.34)", text: "#e9f1ff" },   // 파랑
-  agent: { name: "상담원", dot: "#b39dff", fill: "rgba(179,157,255,.18)", border: "rgba(179,157,255,.36)", text: "#f0ecff" },     // 보라
-  ai: { name: "KARI-NA", dot: "#6ee0c8", fill: "rgba(110,224,200,.16)", border: "rgba(110,224,200,.34)", text: "#e2fff7" },       // 민트
+/** 텍스트 줄 — 각 화면은 자기 발화만 그린다(고객 폰=고객, 직원 콘솔=상담원).
+ *  말풍선·배경·그라데이션 없이 그냥 글자만 실시간으로 흐른다. 화자 색으로 물들이고,
+ *  마지막 줄은 타자기+커서로 지금 말하는 중임을 보여준다. */
+// 화자 정체성 색 — 파형·글자가 같은 계열. cursor=커서, text=본문(검은 배경에서 잘 읽히는 톤).
+const SPK: Record<StreamItem["who"], { name: string; cursor: string; text: string }> = {
+  customer: { name: "고객", cursor: "#7fb0ff", text: "#bcd6ff" },   // 파랑
+  agent: { name: "상담원", cursor: "#b39dff", text: "#d2c6ff" },     // 보라
+  ai: { name: "KARI-NA", cursor: "#6ee0c8", text: "#a9ecdc" },       // 민트
 };
 // 파형 색(Threads uColor) — 이 화면의 주인(self) 색. 고객 화면=파랑 물결, 직원 화면=보라 물결.
 const WAVE_COLOR: Record<"customer" | "agent", [number, number, number]> = {
   customer: [0.5, 0.69, 1.0],
   agent: [0.7, 0.615, 1.0],
 };
-function Bubble({
+function TextLine({
   time,
   who,
-  side,
   fontPx,
   full,
   isLast,
 }: {
   time: string;
   who: StreamItem["who"];
-  /** 이 패널의 정렬 방향 — 무대 중앙을 향한다(고객=right, 상담원=left) */
-  side: "left" | "right";
   fontPx: number;
   full: string;
   isLast: boolean;
@@ -270,62 +255,40 @@ function Bubble({
   const text = isLast ? typed : full;
   const typing = isLast && typed.length < full.length;
   const spk = SPK[who];
-  const right = side === "right";
-  // 꼬리 — 말풍선 한 모서리만 각지게(오른쪽 정렬=우하단, 왼쪽 정렬=좌하단)
-  const radius = right ? "13px 13px 4px 13px" : "13px 13px 13px 4px";
   const timePx = Math.round(Math.max(9, fontPx - 3.5) * 10) / 10;
   return (
-    <div
-      style={css(
-        "display:flex;flex-direction:column;max-width:100%;animation:fadeIn .18s ease-out;align-items:" +
-          (right ? "flex-end" : "flex-start")
-      )}
-    >
-      {/* 말풍선 + 시각 — 시각은 말풍선 안쪽(중앙 쪽) 아래에 작게 붙는다 */}
-      <div
+    <div style={css("display:flex;gap:10px;align-items:baseline;animation:fadeIn .18s ease-out")}>
+      <span
         style={css(
-          "display:flex;align-items:flex-end;gap:6px;max-width:80%;flex-direction:" +
-            (right ? "row-reverse" : "row")
+          "flex:1;min-width:0;color:" +
+            spk.text +
+            ";font:400 " +
+            fontPx +
+            "px/1.6 'Avenir Next','Pretendard',sans-serif;letter-spacing:-.1px;word-break:keep-all;overflow-wrap:anywhere"
         )}
       >
-        <div
-          style={css(
-            "min-width:0;padding:8px 12px;border-radius:" +
-              radius +
-              ";background:" +
-              spk.fill +
-              ";border:1px solid " +
-              spk.border +
-              ";color:" +
-              spk.text +
-              ";font:400 " +
-              fontPx +
-              "px/1.55 'Avenir Next','Pretendard',sans-serif;letter-spacing:-.1px;word-break:keep-all;overflow-wrap:anywhere"
-          )}
-        >
-          {text}
-          {isLast && (
-            <span
-              style={css(
-                "display:inline-block;margin-left:1px;animation:recBlink 1s infinite;color:" +
-                  spk.dot +
-                  (typing ? "" : ";opacity:.45")
-              )}
-            >
-              ▍
-            </span>
-          )}
-        </div>
-        <span
-          style={css(
-            "flex:none;color:#4c515c;font-variant-numeric:tabular-nums;font:400 " +
-              timePx +
-              "px 'Geist Mono','IBM Plex Mono',monospace"
-          )}
-        >
-          {time}
-        </span>
-      </div>
+        {text}
+        {isLast && (
+          <span
+            style={css(
+              "display:inline-block;margin-left:1px;animation:recBlink 1s infinite;color:" +
+                spk.cursor +
+                (typing ? "" : ";opacity:.45")
+            )}
+          >
+            ▍
+          </span>
+        )}
+      </span>
+      <span
+        style={css(
+          "flex:none;color:#4c515c;font-variant-numeric:tabular-nums;font:400 " +
+            timePx +
+            "px 'Geist Mono','IBM Plex Mono',monospace"
+        )}
+      >
+        {time}
+      </span>
     </div>
   );
 }
