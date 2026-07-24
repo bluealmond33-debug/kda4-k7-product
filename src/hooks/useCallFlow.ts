@@ -1870,8 +1870,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       lastPubScaleRef.current = own;
       postStageScale({ t: "scale", scale: own });
     }
-    // 폰 창은 직원 배율이 오면 그걸 그대로 써서 정확히 일치시킨다(없으면 자기 fit).
-    const sc = surface === "phone" && syncedScaleRef.current != null ? syncedScaleRef.current : own;
+    // 폰 창은 직원 배율에 맞추되(폰트·크기 일치), 자기 창을 넘지 않게 캡(잘림 방지).
+    // → 폰을 직원만큼 키우려면 고객 창을 넓히면 own이 커지며 직원 배율까지 따라간다.
+    const sc =
+      surface === "phone" && syncedScaleRef.current != null
+        ? Math.min(syncedScaleRef.current, own)
+        : own;
     setScale((prev) => (prev !== sc ? sc : prev));
     setNatH((prev) => (prev !== h ? h : prev));
   }, [stageW, maxScale, fitPad, fitHeight, surface]);
