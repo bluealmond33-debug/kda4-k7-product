@@ -11,11 +11,13 @@ export default function SystemStatusBar({
   explain,
   onToggleExplain,
   onOpenPolicy,
+  onOpenArchive,
   onResetAll,
 }: {
   explain: boolean;
   onToggleExplain: () => void;
   onOpenPolicy: () => void;
+  onOpenArchive: () => void;
   onResetAll: () => void;
 }) {
 
@@ -86,6 +88,15 @@ export default function SystemStatusBar({
         )}
       >
         <span className="mi" style={css("font-size:15px")}>tips_and_updates</span>설명 모드
+      </span>
+
+      {/* 자료실 — 발표·분석·설계 보고서 32건 모음 */}
+      <span
+        onClick={onOpenArchive}
+        title="자료실 — 발표·분석·설계 보고서 32건"
+        style={css("display:inline-flex;align-items:center;gap:5px;border:1px solid var(--color-border);border-radius:9999px;padding:6px 13px;font:600 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);cursor:pointer;background:var(--onair-surface)")}
+      >
+        <span className="mi" style={css("font-size:15px")}>folder_open</span>자료실
       </span>
     </div>
   );
