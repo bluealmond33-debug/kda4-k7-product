@@ -5,13 +5,13 @@ import Threads from "./Threads";
 /**
  * 실시간 통화 전사 패널 — 음성 파형(Threads) + 카톡형 대화 스트림.
  *
- * 2-TV 무대에서 고객 화면과 직원 화면이 이 컴포넌트를 함께 쓴다. 같은 대화를
- * 양쪽에 똑같이 복사하면 관객이 "왜 같은 게 두 개지?"가 되므로, **각 화면은 자기
- * 발화만** 그린다 — 고객 폰엔 고객 말, 직원 콘솔엔 상담원 말. 말풍선·배경·그라데이션
- * 없이 그냥 텍스트가 실시간으로 흐르고, 화자 색으로 물들여 어느 화면인지 구분된다.
+ * 2-TV 무대에서 고객 화면과 직원 화면이 이 컴포넌트를 함께 쓴다. 통화를 들리는 대로
+ * 다 받아 적는 한 벌 전사다 — 문장별로 끊지 않고 이어 붙이되, **화자가 바뀌는
+ * 순간에만** 새 문단으로 칸을 띄운다. 말풍선·배경·그라데이션 없이 그냥 텍스트가
+ * 실시간으로 흐르고, 화자는 글자 색으로 구분한다(고객 파랑·상담원 보라·KARI-NA 민트).
  *
  * 파형은 대화 전체에 반응한다: 자기 발화엔 크게, 상대 발화엔 잔잔하게 출렁여
- * (자막엔 안 보여도) 상대가 말하는 순간을 물결로 느끼게 한다.
+ * 지금 누가 말하는지를 물결로도 느끼게 한다. 파형 색은 이 화면의 주인(self) 색.
  *
  * 검은 패널 — 흰 폰보다 눈에 덜 띄어야 한다(주인공은 폰, 이건 배경 정보).
  * 상태 문구는 없다: 그건 상단 상황 알약의 몫이고, 이 패널은 "소리가 흐른다"(물결)와
@@ -115,21 +115,19 @@ export default function LiveTranscriptPanel({
   // 같은 크기로 읽힌다(폭 400 기준 13px, 좁아지면 줄고 넓어지면 커지되 11~15px로 클램프).
   const fontPx = Math.round(Math.max(11, Math.min(15, width * 0.033)) * 10) / 10;
 
-  // 각 화면은 '자기 발화'만 그린다 — 고객 폰=고객 말, 직원 콘솔=상담원 말.
-  // 먼저 전체 스트림에서 같은 화자의 연속 조각을 한 그룹(줄)으로 묶는다 — 그래야
-  // 발화 '턴'이 보존된다(상대 발화가 턴 경계를 가른다). 그다음 자기 발화 그룹만 남긴다.
-  // (자기 것만 먼저 걸러내면 떨어져 있던 여러 턴이 한 말풍선으로 뭉쳐버린다)
-  const allGroups: { who: StreamItem["who"]; texts: string[]; firstId: string; lastId: string; time: string }[] = [];
+  // 들리는 대로 다 받아 적는 한 벌 전사 — 문장별로 끊지 않고 이어 붙이되, '다른 사람'이
+  // 말하기 시작하면 그때만 칸을 띄운다. 즉 같은 화자의 연속 발화는 한 덩이로 묶고
+  // 화자가 바뀌는 순간에만 새 문단을 연다. 화자는 글자 색으로 구분(고객 파랑·상담원 보라).
+  const groups: { who: StreamItem["who"]; texts: string[]; firstId: string; lastId: string; time: string }[] = [];
   stream.forEach((it) => {
-    const g = allGroups[allGroups.length - 1];
+    const g = groups[groups.length - 1];
     if (g && g.who === it.who) {
       g.texts.push(it.text);
       g.lastId = it.id;
     } else {
-      allGroups.push({ who: it.who, texts: [it.text], firstId: it.id, lastId: it.id, time: stamp(it.id) });
+      groups.push({ who: it.who, texts: [it.text], firstId: it.id, lastId: it.id, time: stamp(it.id) });
     }
   });
-  const groups = allGroups.filter((g) => g.who === self);
 
   return (
     <div
@@ -145,7 +143,7 @@ export default function LiveTranscriptPanel({
           위쪽 여백을 키워 살짝 아래로 내리고, 좌우 여백을 키워 아래 텍스트 상자보다 가로를 짧게(inset) 한다. */}
       <div
         style={css(
-          "flex:none;margin:30px 40px 0;height:120px;position:relative;background:#000;border-radius:14px;overflow:hidden"
+          "flex:none;margin:30px 40px 0;height:180px;position:relative;background:#000;border-radius:14px;overflow:hidden"
         )}
       >
         <div style={css("position:absolute;inset:0")}>
@@ -229,9 +227,9 @@ function useTypewriter(target: string, speedMs: number, enabled: boolean) {
  *  마지막 줄은 타자기+커서로 지금 말하는 중임을 보여준다. */
 // 화자 정체성 색 — 파형·글자가 같은 계열. cursor=커서, text=본문(검은 배경에서 잘 읽히는 톤).
 const SPK: Record<StreamItem["who"], { name: string; cursor: string; text: string }> = {
-  customer: { name: "고객", cursor: "#7fb0ff", text: "#bcd6ff" },   // 파랑
-  agent: { name: "상담원", cursor: "#b39dff", text: "#d2c6ff" },     // 보라
-  ai: { name: "KARI-NA", cursor: "#6ee0c8", text: "#a9ecdc" },       // 민트
+  customer: { name: "고객", cursor: "#7fb0ff", text: "#7db2ff" },   // 파랑 (또렷하게)
+  agent: { name: "상담원", cursor: "#c9a6ff", text: "#c9a6ff" },     // 보라 (또렷하게)
+  ai: { name: "KARI-NA", cursor: "#6ee0c8", text: "#6fe0c8" },       // 민트
 };
 // 파형 색(Threads uColor) — 이 화면의 주인(self) 색. 고객 화면=파랑 물결, 직원 화면=보라 물결.
 const WAVE_COLOR: Record<"customer" | "agent", [number, number, number]> = {
