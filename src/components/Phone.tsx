@@ -269,7 +269,7 @@ function FaceTimeGlyph({ size = 38 }: { size?: number }) {
             fontWeight="800"
             textAnchor="middle"
             fill="black"
-            fontFamily="'Avenir Next','Geist Sans','Pretendard',system-ui,sans-serif"
+            fontFamily="'Avenir Next','Pretendard',system-ui,sans-serif"
           >
             ?
           </text>

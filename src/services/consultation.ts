@@ -34,11 +34,13 @@ export function getDemoConsultationCard(): ConsultationCardResponse {
   const card = parseConsultationCardResponse(structuredClone(demoResponse));
   // 데모 더미 감정값 — 감정 모델 연동 전까지 화면용. 연동 시 이 블록만 지우면 된다.
   // (contract example JSON은 백엔드 계약 원본이므로 건드리지 않는다)
+  // 일반(normal) 콜 — 차분한 정보 문의. 당근식 온도로 36.5 기준 근처(안정/초록)에 앉는다.
+  // (긴급=고조·이관=주의와 함께 세 밴드를 모두 보여준다)
   card.consultation_card.emotion = {
     status: "completed",
-    score: 55,
-    level: "caution",
-    reason: "[SOURCE=STUB] 만기 임박 관련 불안 발화",
+    score: 0,
+    level: "stable",
+    reason: "[SOURCE=STUB] 차분한 정보 문의 — 특이 감정 신호 없음",
   };
   return card;
 }

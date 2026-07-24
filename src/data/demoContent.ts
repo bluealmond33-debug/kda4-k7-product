@@ -157,6 +157,36 @@ export const SUGGESTED_DEPT: Record<IncomingKind, string> = {
   transfer: "여신심사팀",
 };
 
+/* 규정 검색 추천어 — 통화 중 검색창 아래 알약. 콜 유형별 후보를 두고,
+   실제 발화에 등장한 용어가 앞으로 올라오며 점등된다(실시간 감각). */
+export const REG_SUGGEST: Record<IncomingKind, string[]> = {
+  normal: ["만기 연장", "재약정", "소득 증빙", "등기부등본", "비대면 접수", "연체"],
+  urgent: ["지급정지", "명의도용", "보이스피싱", "사고 접수", "피해구제"],
+  transfer: ["중도상환수수료", "금리 인하", "약정 변경", "재약정", "면제 조건"],
+};
+
+/* 3층 업무코드 — backend/app/routing/taxonomy.py의 BUSINESS_CODES와 같은 축.
+   1층 SGE(deriveSge) → 2층 부서(card.department) → 3층 업무코드(여기). 라우팅 체인 표시용. */
+export const PREP_BUSINESS_CODE: Record<IncomingKind, string> = {
+  normal: "G002", // 대출 — 주담대 만기 연장
+  urgent: "G001", // 사고·신고 — 명의도용 지급정지
+  transfer: "G002", // 대출 — 이관 인계
+};
+
+/* 업무코드가 무슨 업무인지 — 코드만 보면 모른다. 라우팅 단계에 함께 띄운다. */
+export const PREP_BUSINESS_CODE_LABEL: Record<IncomingKind, string> = {
+  normal: "대출",
+  urgent: "사고·신고",
+  transfer: "대출",
+};
+
+/* 핵심 니즈 태그 — 고객이 무엇을 원하는지 한눈에. 준비 카드 감정온도 옆 항목. */
+export const PREP_NEED_TAGS: Record<IncomingKind, string[]> = {
+  normal: ["만기 연장", "필요 서류", "비대면 가능"],
+  urgent: ["지급정지", "명의도용 확인", "피해 접수"],
+  transfer: ["금리 인하", "재약정", "수수료 확인"],
+};
+
 /** 관리자 화면 — 부서별 실시간 대기열 픽스처. 이름은 마스킹(최소 표시 원칙),
  *  용건은 AI 사전 접수 요약 한 줄. baseSec + 열람 중 경과로 대기 시간이 실제로 흐른다.
  *  대기 건수는 TRANSFER_DEPTS의 state(대기 2·1·0건)와 같은 사건을 말한다. */

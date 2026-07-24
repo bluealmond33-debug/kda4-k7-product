@@ -14,7 +14,9 @@ import {
   TRANSFER_TARGETS,
   TRANSFER_DEPTS,
   SUGGESTED_DEPT,
+  REG_SUGGEST,
   PREP_BUSINESS_CODE,
+  PREP_BUSINESS_CODE_LABEL,
   PREP_NEED_TAGS,
   ADMIN_QUEUE_POOL,
   type IncomingKind,
@@ -135,43 +137,43 @@ const GLASS: Partial<Record<Phase, string>> = {
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
 const PREP_LEN = 4;
+// 유의사항 — 준비 카드 좌측. sub는 한 줄로 짧게(멘토 피드백: 길면 안 읽힌다).
 const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
   normal: [
-    {
-      title: "본인확인 우선 진행",
-      sub: "연결 직후 연락처·생년월일 등으로 본인확인 — 완료 전에는 고객 상세 조회가 잠깁니다",
-    },
-    { title: "확정 표현 금지", sub: "“연장 확정” 단정 대신 재약정 심사 결과에 따라 달라질 수 있음을 안내" },
-    { title: "문의 내용과 담당 부서 확인", sub: "요약·업무유형·라우팅 근거가 고객 발화와 맞는지 확인" },
-    {
-      title: "녹취 고지 자동 재생 — 연결 시 자동",
-      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
-    },
+    { title: "본인확인 우선", sub: "완료 전 상세조회 잠금" },
+    { title: "확정 표현 금지", sub: "심사 결과 전 단정 금지" },
+    { title: "담당 부서 확인", sub: "요약·라우팅이 발화와 맞는지" },
   ],
   urgent: [
-    {
-      title: "본인확인 우선 진행",
-      sub: "명의도용 의심 콜 — 본인확인 없이는 어떤 조치도 진행하지 않습니다",
-    },
-    { title: "사실관계 먼저 확인", sub: "지급정지 전 '본인이 신청한 대출인지'를 반드시 확인 — 오인 접수 방지" },
-    { title: "추가 피해 방지 안내", sub: "통화 중 다른 금융기관 앱·문자 링크를 열지 않도록 안내" },
-    {
-      title: "녹취 고지 자동 재생 — 연결 시 자동",
-      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
-    },
+    { title: "본인확인 우선", sub: "확인 전 조치 보류" },
+    { title: "사실관계 먼저", sub: "본인 신청 여부 확인 후 지급정지" },
+    { title: "추가 피해 방지", sub: "통화 중 앱·링크 열지 않게" },
   ],
   transfer: [
-    {
-      title: "본인확인 상태 확인",
-      sub: "전임 상담사가 본인확인을 마쳤는지 인수인계에서 확인 — 완료면 재인증 생략",
-    },
-    { title: "인수인계 메모 확인", sub: "앞서 진행된 내용(금리 인하 요구권 안내)을 중복 안내하지 않기" },
-    { title: "확정 표현 금지", sub: "수수료 면제는 약정서 특약 확인 전에 단정하지 않기" },
-    {
-      title: "녹취 고지 자동 재생 — 연결 시 자동",
-      sub: "통화 연결과 동시에 녹취 안내 멘트가 재생됩니다",
-    },
+    { title: "인증 상태 확인", sub: "인수인계에 완료면 재인증 생략" },
+    { title: "인계 메모 확인", sub: "앞 안내 중복 금지" },
+    { title: "확정 표현 금지", sub: "특약 확인 전 단정 금지" },
   ],
+};
+
+// 감정온도 연동 오프닝 멘트 — 온도 밴드(calm/warm/hot)에 따라 첫 문장이 달라진다.
+// 낮으면 편하게, 주의면 공감+정확, 고조면 사과+안심 우선. 콜 유형별로 맥락을 실었다.
+const OPENING: Record<IncomingKind, Record<"calm" | "warm" | "hot", string>> = {
+  normal: {
+    calm: "네, 고객님. 주택담보대출 만기 연장 건으로 연락 주셨네요. 필요한 내용 미리 확인해 두었으니 편하게 말씀해 주세요.",
+    warm: "네, 고객님. 만기 연장 때문에 신경 쓰이셨죠. 제가 하나씩 정확히 확인해서 바로 안내해 드릴게요.",
+    hot: "고객님, 기다리시게 해서 죄송합니다. 지금 바로 확인해서 빠르게 도와드리겠습니다.",
+  },
+  urgent: {
+    calm: "네, 고객님. 접수하신 내용 확인했습니다. 침착하게 하나씩 같이 확인해 볼게요.",
+    warm: "네, 고객님. 많이 걱정되셨죠. 제가 바로 확인해서 필요한 조치를 안내해 드리겠습니다.",
+    hot: "고객님, 많이 놀라셨죠. 안심하세요. 지금 바로 지급정지부터 확인하고 끝까지 도와드리겠습니다.",
+  },
+  transfer: {
+    calm: "네, 고객님. 앞선 상담 내용 전달받았습니다. 이어서 바로 안내해 드릴게요.",
+    warm: "네, 고객님. 다시 설명하시게 해서 죄송해요. 앞 내용은 제가 확인했으니 이어서 도와드리겠습니다.",
+    hot: "고객님, 여러 번 안내받으시느라 불편하셨죠. 제가 끝까지 책임지고 마무리해 드리겠습니다.",
+  },
 };
 
 /** 통화(active) 로컬 데모 대화 — 상담원↔고객이 번갈아 말하는 스크립트.
@@ -2067,6 +2069,29 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       : temperature.score > 33
         ? 2
         : 1;
+  // 감정온도 = 당근 매너온도식. 36.5를 기준(평온)으로, 격앙될수록 위로 오른다.
+  // 0~100 감정강도 → 36.5~41.0°C. 밴드: ~37.4 평온(초록) · ~39.0 주의(노랑) · 그 위 고조(빨강).
+  const EMO_BASE = 36.5;
+  const tempC =
+    temperature.score == null
+      ? null
+      : Math.round((EMO_BASE + Math.min(100, Math.max(0, temperature.score)) * 0.045) * 10) / 10;
+  const emoBand: "calm" | "warm" | "hot" =
+    tempC == null ? "warm" : tempC <= 37.4 ? "calm" : tempC <= 39.0 ? "warm" : "hot";
+  const EMO_BAND_META = {
+    calm: { label: "안정", fg: "var(--green-900)", bar: "var(--green-700)" },
+    warm: { label: "주의", fg: "var(--amber-900)", bar: "var(--amber-700)" },
+    hot: { label: "고조", fg: "var(--red-900)", bar: "var(--red-700)" },
+  } as const;
+  const emoMeta = EMO_BAND_META[emoBand];
+  // 게이지 눈금 — 35.5~41.0°C 창에서 현재 온도 위치(%)와 36.5 기준점 위치(%)
+  const TEMP_MIN = 35.5;
+  const TEMP_MAX = 41.0;
+  const tempPct =
+    tempC == null ? 0 : Math.max(0, Math.min(100, ((tempC - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100));
+  const basePct = ((EMO_BASE - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100;
+  // 감정온도에 맞춘 오프닝 멘트 — 온도가 높으면 사과·안심 우선으로 첫 문장이 바뀐다.
+  const adaptiveOpening = OPENING[incoming][emoBand];
   const riskSignals = [card.risk_reason].filter((value): value is string => !!value);
   const firstLine = EXPLICIT_LIVE_CALL_ID
     ? explicitSummaryPending || groundedTranscript.length === 0
@@ -2074,7 +2099,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       : card.business_type
       ? `안녕하세요. ${card.business_type} 문의로 확인했습니다. 본인확인 후 자세히 도와드리겠습니다.`
       : "안녕하세요. 말씀해 주신 문의 내용을 확인했습니다. 본인확인 후 자세히 도와드리겠습니다."
-    : SCRIPTS[incoming][0].text;
+    : adaptiveOpening;
   const liveSteps = [
     { title: "1. 오프닝 · 문의 재확인", text: firstLine },
     {
@@ -2130,7 +2155,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         title: `${index + 1}. ${action.title}`,
         text: action.detail,
       }))
-    : SCRIPTS[incoming].map((step) => ({ title: step.title, text: step.text }));
+    : // 스크립트 첫 스텝(오프닝)은 감정온도에 맞춰 바뀐 문장으로 교체 — '이 문장으로 여세요'와 일치시킨다
+      SCRIPTS[incoming].map((step, i) => ({
+        title: step.title,
+        text: i === 0 ? adaptiveOpening : step.text,
+      }));
 
   return {
     // refs
@@ -2333,20 +2362,35 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepBusinessType: card.business_type || "업무 유형 분석 중",
     // 3층 라우팅 체인 표시용 — 업무코드(3층)와 핵심 니즈 태그
     prepBusinessCode: PREP_BUSINESS_CODE[incoming],
+    prepBusinessCodeLabel: PREP_BUSINESS_CODE_LABEL[incoming],
     prepNeedTags: PREP_NEED_TAGS[incoming],
+    // 라벨·색은 당근식 온도 밴드(36.5 기준)에서 나온다 — 온도·색·라벨·멘트가 한 소스로 일관.
     prepEmotionLabel:
       temperature.status === "unavailable"
         ? "모델 미연동"
-        : temperature.level
-        ? EMOTION_LABELS[temperature.level]
-        : "분석 중",
+        : tempC == null
+        ? "분석 중"
+        : emoMeta.label,
     // 백엔드가 reason 맨 앞에 실어 보낸 [SOURCE=...]를 배지로 분리하고, 신호 텍스트에선 접두사를 뺀다(P0-3)
     prepEmotionSourceBadge: emotionSourceBadge(parseEmotionSource(temperature.reason)),
     prepEmotionSignal:
       (temperature.reason ?? "").replace(/^\[SOURCE=[A-Z_]+\]\s*/, "") || "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
-    prepEmotionFg: temperature.level ? EMOTION_COLORS[temperature.level].fg : "var(--gray-700)",
-    prepEmotionBar: temperature.level ? EMOTION_COLORS[temperature.level].bar : "var(--gray-500)",
+    prepEmotionFg: tempC == null ? "var(--gray-700)" : emoMeta.fg,
+    prepEmotionBar: tempC == null ? "var(--gray-500)" : emoMeta.bar,
+    // 당근 매너온도식 — °C 값(36.5 기준), 게이지 창 내 위치(%)와 36.5 눈금 위치(%)
+    prepTempC: tempC,
+    prepTempPct: tempPct,
+    prepTempBasePct: basePct,
+    // 온도 밴드별 표정 — 숫자보다 얼굴이 먼저 읽힌다
+    prepEmotionFace:
+      tempC == null
+        ? "sentiment_neutral"
+        : emoBand === "calm"
+        ? "sentiment_satisfied"
+        : emoBand === "warm"
+        ? "sentiment_neutral"
+        : "sentiment_very_dissatisfied",
     prepRiskLabel: explicitSummaryPending ? "분석 중" : RISK_LABELS[card.incident_risk],
     prepRiskFg: RISK_COLORS[card.incident_risk],
     prepRiskSignal: riskSignals.join(" · ") || "특이 사고 징후 없음",
@@ -2451,9 +2495,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     steps: EXPLICIT_LIVE_CALL_ID
       ? liveSteps
       : actualCallSteps,
-    firstLine: EXPLICIT_LIVE_CALL_ID
-      ? firstLine
-      : actualCallSteps[0]?.text ?? firstLine,
+    // 오프닝은 '상담사가 실제로 말할 첫 문장'이다 — required_actions(할 일)로 덮어쓰지 않는다.
+    // 대본 경로에서는 감정온도 밴드에 맞춘 adaptiveOpening이 그대로 나간다.
+    firstLine,
     isExplicitLiveCall: !!EXPLICIT_LIVE_CALL_ID,
     regRecos: EXPLICIT_LIVE_CALL_ID ? [] : REG_RECOS[incoming],
     regQuery: EXPLICIT_LIVE_CALL_ID
@@ -2508,6 +2552,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     regSearch,
     onRegSearch: (e: React.ChangeEvent<HTMLInputElement>) => setRegSearch(e.target.value),
     clearRegSearch: () => setRegSearch(""),
+    // 알약 클릭 = 그 용어로 바로 검색 (같은 걸 다시 누르면 해제)
+    applyRegSearch: (q: string) => setRegSearch((cur) => (cur === q ? "" : q)),
+    // 실시간 추천 검색어 — 통화에서 실제 나온 용어(hot)를 앞으로 끌어올린다.
+    // liveTranscriptLines·liveCaption 이 state라 발화가 쌓일수록 순서·점등이 갱신된다.
+    regSuggests: (() => {
+      const spoken = (liveTranscriptLines.map((l) => l.text).join(" ") + " " + liveCaption).replace(/\s+/g, "");
+      return REG_SUGGEST[incoming]
+        .map((term) => ({ term, hot: spoken.includes(term.replace(/\s+/g, "")) }))
+        .sort((a, b) => Number(b.hot) - Number(a.hot))
+        .slice(0, 5);
+    })(),
     // 검색 필터(엑셀 컬럼필터) — UI가 옵션을 정하고 값만 넘긴다
     regDocType,
     setRegDocType,
