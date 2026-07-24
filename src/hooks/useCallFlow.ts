@@ -681,9 +681,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     try {
       const localApiBase =
         API_BASE_URL || `${location.protocol}//${location.hostname}:8000`;
+      // 백엔드(k7-backend) 정본: 분석은 /analyze-text 하나로 통일. 이 엔드포인트가
+      // consult_guide(EXAONE)를 통해 script_steps·follow_ups·result_label·references까지
+      // 채워 응답한다(구 /api/live-stt/analyze는 k7-backend 라우터 구조에 없음).
       const response = await fetch(
         useLocalLiveAnalysis
-          ? `${localApiBase}/api/live-stt/analyze`
+          ? `${localApiBase}/analyze-text`
           : `${API_BASE_URL}/analyze-text`,
         {
           method: "POST",
