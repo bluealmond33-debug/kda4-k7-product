@@ -88,6 +88,37 @@ function KeyButton({
 /** clean — 고객 화면(?role=customer)용: 실제 휴대폰에 없는 시연 표기(상태·안내 유리판·파형)를
  *  숨긴다. 그 정보는 상단 상황 알약과 실시간 통화 패널이 대신 보여준다. */
 export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
+  // 통화 중엔 실제로 마이크를 연다(getUserMedia). 주황 점은 '켜졌다고 표시'가 아니라
+  // 실제 마이크가 켜졌을 때만(권한 허용·스트림 활성) 점등한다. 통화 종료/언마운트 시 정리.
+  // 주의: getUserMedia는 보안 컨텍스트(localhost·https)에서만 동작 — LAN http에선 브라우저가
+  // 막아 점이 안 켜진다(그 경우 실제로 마이크가 안 켜진 게 맞으므로 의도된 동작).
+  const inCall = vm.phInCall && !vm.phEnded;
+  const [micOn, setMicOn] = useState(false);
+  useEffect(() => {
+    if (!inCall) {
+      setMicOn(false);
+      return;
+    }
+    let stream: MediaStream | null = null;
+    let cancelled = false;
+    navigator.mediaDevices
+      ?.getUserMedia({ audio: true })
+      .then((s) => {
+        if (cancelled) {
+          s.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        stream = s;
+        setMicOn(true);
+      })
+      .catch(() => setMicOn(false)); // 권한 거부·미지원·비보안 컨텍스트 → 점 안 켜짐
+    return () => {
+      cancelled = true;
+      stream?.getTracks().forEach((t) => t.stop());
+      setMicOn(false);
+    };
+  }, [inCall]);
+
   return (
     <div
       data-tour="phone"
@@ -119,9 +150,9 @@ export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: b
 
         {/* 스크린 */}
         <div style={css("position:absolute;inset:17px;border-radius:53px;overflow:hidden;background:#000")}>
-          {/* Dynamic Island — 완전한 알약. 통화 중엔 왼쪽에 주황 점(마이크 사용 표시) */}
+          {/* Dynamic Island — 완전한 알약. 실제 마이크가 켜졌을 때만 왼쪽에 주황 점 */}
           <div style={css("position:absolute;top:11px;left:50%;transform:translateX(-50%);width:122px;height:35px;border-radius:9999px;background:#000;z-index:50;display:flex;align-items:center")}>
-            {vm.phInCall && !vm.phEnded && (
+            {micOn && (
               <span style={css("width:7px;height:7px;border-radius:9999px;background:#ff9f0a;margin-left:16px")} />
             )}
           </div>
