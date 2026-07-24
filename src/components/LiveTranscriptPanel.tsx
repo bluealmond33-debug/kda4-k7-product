@@ -143,8 +143,20 @@ export default function LiveTranscriptPanel({
         )}
       >
         <div style={css("position:absolute;inset:0")}>
-          <Threads getAmplitude={getAmp} amplitude={0.9} distance={0} color={[1, 1, 1]} />
+          <Threads getAmplitude={getAmp} amplitude={0.9} distance={0} color={WAVE_COLOR[self]} />
         </div>
+      </div>
+
+      {/* 범례 — 이 화면이 누구 시점인지 + 화자 색. '고객/상담원'을 색으로 구분해 번갈아 읽힌다. */}
+      <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:9px 22px 2px")}>
+        {(["customer", "agent"] as const).map((w) => (
+          <span key={w} style={css("display:inline-flex;align-items:center;gap:5px")}>
+            <span style={css("width:7px;height:7px;border-radius:9999px;flex:none;background:" + SPK[w].color)} />
+            <span style={css("font:700 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + (w === self ? SPK[w].color : "#7c828d"))}>{SPK[w].name}{w === self ? " · 이 화면" : ""}</span>
+          </span>
+        ))}
+        <div style={css("flex:1")} />
+        <span style={css("font:400 9.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:#565b66")}>실시간 전사 · 번갈아 표시</span>
       </div>
 
       {/* 전사 — 검은 배경 위 코딩 글자. 오래 말하면 위로 흘러가며 상단이 점진적으로 투명해진다.
@@ -223,7 +235,17 @@ function useTypewriter(target: string, speedMs: number, enabled: boolean) {
 /** 로그 라인 — STT 전사 로그 스타일: [시각] [화자] 텍스트, 모노폰트.
  *  말풍선 없이 한 줄. 이 화면의 주인(self)은 밝게, 상대는 흐리게, KARI-NA(AI)는 파란 강조.
  *  마지막 줄은 타자기+커서로 실시간 전사 감각을 유지한다. */
-const SPEAKER: Record<StreamItem["who"], string> = { customer: "고객", agent: "상담원", ai: "KARI-NA" };
+// 화자 정체성 색 — 파형·라벨이 같은 색을 써서 '누구 말인지'가 눈에 바로 든다.
+const SPK: Record<StreamItem["who"], { name: string; color: string }> = {
+  customer: { name: "고객", color: "#7fb0ff" },   // 파랑
+  agent: { name: "상담원", color: "#b39dff" },     // 보라
+  ai: { name: "KARI-NA", color: "#6ee0c8" },       // 민트
+};
+// 파형 색(Threads uColor) — 이 화면의 주인(self) 색. 고객 화면=파랑 물결, 직원 화면=보라 물결.
+const WAVE_COLOR: Record<"customer" | "agent", [number, number, number]> = {
+  customer: [0.5, 0.69, 1.0],
+  agent: [0.7, 0.615, 1.0],
+};
 function LogLine({
   time,
   who,
@@ -241,12 +263,14 @@ function LogLine({
   const text = isLast ? typed : full;
   const typing = isLast && typed.length < full.length;
   const mine = who === self;
-  const labelColor = who === "ai" ? "#6f8cff" : mine ? "#e6e9ef" : "#6d7480";
-  const textColor = who === "ai" ? "#8f96a3" : mine ? "#d9dde4" : "#868c98";
+  const labelColor = SPK[who].color; // 화자 정체성 색(파형과 일치)
+  const textColor = mine ? "#dfe3ea" : "#828997"; // 이 화면 주인=밝게, 상대=흐리게
   return (
     <div style={css("display:flex;gap:9px;align-items:baseline;animation:fadeIn .18s ease-out;font:400 12.5px/1.65 'Geist Mono','IBM Plex Mono',monospace;letter-spacing:-.2px")}>
       <span style={css("flex:none;color:#4c515c;font-size:10.5px;font-variant-numeric:tabular-nums")}>{time}</span>
-      <span style={css("flex:none;width:52px;font-weight:700;font-size:11px;color:" + labelColor)}>{SPEAKER[who]}</span>
+      <span style={css("flex:none;display:inline-flex;align-items:center;gap:5px;width:60px;font-weight:700;font-size:11px;color:" + labelColor)}>
+        <span style={css("width:6px;height:6px;border-radius:9999px;flex:none;background:" + labelColor)} />{SPK[who].name}
+      </span>
       <span style={css("flex:1;min-width:0;word-break:break-all;color:" + textColor)}>
         {text}
         {isLast && (

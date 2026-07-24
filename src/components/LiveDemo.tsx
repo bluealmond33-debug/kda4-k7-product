@@ -114,9 +114,7 @@ export default function LiveDemo({
       style={css(
         "min-height:100vh;padding:" +
           (view === "phone" ? "8px" : view === "desktop" ? "12px" : "20px") +
-          ";display:flex;justify-content:center;align-items:" +
-          (view === "phone" ? "flex-start" : "center") +
-          ";background:#060607;box-sizing:border-box"
+          ";display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box"
       )}
     >
       <div

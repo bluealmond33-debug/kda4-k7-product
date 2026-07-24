@@ -14,6 +14,8 @@ import {
   TRANSFER_TARGETS,
   TRANSFER_DEPTS,
   SUGGESTED_DEPT,
+  PREP_BUSINESS_CODE,
+  PREP_NEED_TAGS,
   ADMIN_QUEUE_POOL,
   type IncomingKind,
   type SheetData,
@@ -171,6 +173,19 @@ const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
     },
   ],
 };
+
+/** 통화(active) 로컬 데모 대화 — 상담원↔고객이 번갈아 말하는 스크립트.
+ *  서버 없이도 양쪽 전사 패널에 실제 대화가 오가는 back-and-forth를 보여준다. */
+const ACTIVE_DIALOGUE: { speaker: "agent" | "customer"; text: string }[] = [
+  { speaker: "agent", text: "네 고객님, 주택담보대출 만기 연장 문의 주셨죠. 제가 바로 확인해 드릴게요." },
+  { speaker: "customer", text: "네, 다음 달이 만기인데 연장이 가능할까요?" },
+  { speaker: "agent", text: "먼저 본인 확인부터 도와드릴게요. 생년월일 여덟 자리 말씀해 주시겠어요?" },
+  { speaker: "customer", text: "890315입니다." },
+  { speaker: "agent", text: "확인되었습니다. 재약정으로 만기 연장 가능하시고, 금리는 심사 후 안내드려요." },
+  { speaker: "customer", text: "필요한 서류는 어떤 게 있나요?" },
+  { speaker: "agent", text: "소득증빙과 등기부등본이 필요하고, 비대면으로도 제출하실 수 있어요." },
+  { speaker: "customer", text: "아 네, 알겠습니다. 감사합니다." },
+];
 
 /** 데모 안내(가이드 모드) — 화면별로 "이 화면이 무엇이고 왜 이렇게 생겼는지"를 설명한다.
  *  멘토·처음 보는 사람에게 시연할 때 켠다. phase → guideKey 로 매핑. */
@@ -1082,6 +1097,23 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         return;
       }
       transitionPhase("active");
+      // 로컬 데모 — 통화 연결 후 고객↔상담원 대화를 스크립트로 재생.
+      // 양쪽 전사 패널(liveTranscriptLines·demoBus)에 화자가 번갈아 표시된다.
+      let td = 1100;
+      ACTIVE_DIALOGUE.forEach((turn) => {
+        after(td, () => {
+          const at = Date.now();
+          const seq = transcript.current.length + 1;
+          transcript.current.push({ text: turn.text, at, isFinal: true, speaker: turn.speaker, seq });
+          setLiveTranscriptLines((lines) =>
+            [...lines, { seq, text: turn.text, at, speaker: turn.speaker, generation: 0, audioSeq: seq }].slice(-40)
+          );
+          setLiveCaption(turn.text);
+          setLiveCaptionSpeaker(turn.speaker);
+          demoBus.emit("stt.utterance", { callId: respRef.current.call_id, text: turn.text, isFinal: true, atMs: at, speaker: turn.speaker });
+        });
+        td += Math.max(2600, turn.text.length * 85);
+      });
       // 통화 연결과 동시에 우측 규정 추천이 뜬다 — RAG 스테이지도 같은 시점에 점등
       demoBus.emit("pipeline.stage", {
         callId: respRef.current.call_id,
@@ -2299,6 +2331,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 라우팅 메타 — 카드가 '자동 라우팅되어 온 것'임을 어필: 부서(2층)·SGE(1층)·업무유형(3층)
     prepSge: deriveSge(card.incident_risk, card.department, incoming),
     prepBusinessType: card.business_type || "업무 유형 분석 중",
+    // 3층 라우팅 체인 표시용 — 업무코드(3층)와 핵심 니즈 태그
+    prepBusinessCode: PREP_BUSINESS_CODE[incoming],
+    prepNeedTags: PREP_NEED_TAGS[incoming],
     prepEmotionLabel:
       temperature.status === "unavailable"
         ? "모델 미연동"
