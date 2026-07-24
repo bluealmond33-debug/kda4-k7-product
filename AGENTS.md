@@ -1,11 +1,11 @@
 # K7 MVP repository rules
 
 - Active customer input is voice only. Text is an internal STT result, not a customer input mode.
-- Active MVP processing is whole-file batch processing after recording/upload completes, not live telephony or streaming STT.
+- The persisted `POST /api/v1/calls` MVP path is whole-file batch processing after recording/upload completes. Live STT/DTMF demo endpoints are a separate test harness and must not be described as deployed CTI/SIP telephony.
 - Emotion temperature may consume customer audio only. Transcript text must not be presented as an audio-emotion model result.
 - The model adapter is deterministic non-AI Python code: it maps, validates, and rejects model JSON but does not infer new customer facts.
-- Active API contract is `database/contracts/mvp_call_response.schema.json` (`mvp-1.0`).
-- Active PostgreSQL schema is `database/mvp/schema.sql` (3 tables).
+- Active API contract is `database/contracts/mvp_call_response.schema.json` (`mvp-1.1`).
+- Active PostgreSQL call/card schema is `database/mvp/schema.sql` (3 core tables). The optional regulation RAG extension may add only `rag_documents` and `rag_chunks`.
 - Do not make masking, auth, audit logs, counselor allocation, or the legacy 12-table schema an MVP dependency.
 - Frontend and model code never connect directly to PostgreSQL; only FastAPI reads `DATABASE_URL`.
 - Machine enums stay stable (`low`, `high`, `unavailable`); translate them to Korean only in the UI.

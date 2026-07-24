@@ -66,11 +66,19 @@ def test_postgresql_round_trip_preserves_korean_contract() -> None:
                     WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
                     """
                 )
-                assert {row[0] for row in cursor.fetchall()} == {
+                tables = {row[0] for row in cursor.fetchall()}
+                core_tables = {
                     "calls",
                     "transcripts",
                     "consultation_cards",
                 }
+                optional_rag_tables = {"rag_documents", "rag_chunks"}
+                assert core_tables <= tables
+                assert tables <= core_tables | optional_rag_tables
+                assert (tables & optional_rag_tables) in (
+                    set(),
+                    optional_rag_tables,
+                )
                 cursor.execute(
                     """
                     SELECT conname

@@ -11,12 +11,18 @@ $OutputEncoding = [Console]::OutputEncoding
 
 $apiBase = $ApiBaseUrl.TrimEnd("/")
 $frontendBase = $FrontendUrl.TrimEnd("/")
+$manifestPath = Join-Path $PSScriptRoot "..\database\active-manifest.json"
+$activeManifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 |
+    ConvertFrom-Json
+$expectedContractVersion = [string]$activeManifest.contract_version
+$audioSmokeRequested = -not [string]::IsNullOrWhiteSpace($AudioPath)
 $result = [ordered]@{
     checked_at = (Get-Date).ToUniversalTime().ToString("o")
     api_base_url = $apiBase
     frontend_url = $frontendBase
     backend_ready = $false
     database = $null
+    expected_contract_version = $expectedContractVersion
     contract_version = $null
     post_calls = $false
     get_consultation_card = $false
@@ -29,10 +35,64 @@ $result = [ordered]@{
     frontend_has_backend_url = $false
     frontend_has_legacy_summarize = $false
     frontend_integrated = $false
-    audio_smoke_requested = -not [string]::IsNullOrWhiteSpace($AudioPath)
+    audio_smoke_requested = $audioSmokeRequested
     audio_smoke_passed = $null
+    database_contract_verified = $null
+    database_rows_restored = $null
+    database_row_counts_before = $null
+    database_row_counts_after = $null
     release_ready = $false
     remaining_actions = @()
+}
+
+function Get-PythonCommand {
+    $venvPython = Join-Path $PSScriptRoot "..\.venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $venvPython) {
+        return (Resolve-Path -LiteralPath $venvPython).Path
+    }
+
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($null -eq $pythonCommand) {
+        throw "Python is required to verify the active PostgreSQL schema"
+    }
+    return $pythonCommand.Source
+}
+
+function Invoke-DatabaseVerification {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PythonCommand
+    )
+
+    $verificationOutput = & $PythonCommand `
+        (Join-Path $PSScriptRoot "verify-active-database.py") `
+        --database-url-env $CleanupDatabaseUrlEnvironmentVariable
+    if ($LASTEXITCODE -ne 0) {
+        throw "Active PostgreSQL verification failed"
+    }
+
+    $verificationJson = ($verificationOutput | Out-String).Trim()
+    if ([string]::IsNullOrWhiteSpace($verificationJson)) {
+        throw "Active PostgreSQL verification returned no result"
+    }
+    return $verificationJson | ConvertFrom-Json
+}
+
+function Test-RowCountsEqual {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Before,
+
+        [Parameter(Mandatory = $true)]
+        $After
+    )
+
+    foreach ($table in @("calls", "transcripts", "consultation_cards")) {
+        if ([long]$Before.$table -ne [long]$After.$table) {
+            return $false
+        }
+    }
+    return $true
 }
 
 try {
@@ -45,7 +105,7 @@ try {
     $result.backend_ready = (
         $health.status -eq "ok" -and
         $health.database -eq "connected" -and
-        $health.contract_version -eq "mvp-1.1" -and
+        $health.contract_version -eq $expectedContractVersion -and
         $result.post_calls -and
         $result.get_consultation_card
     )
@@ -102,7 +162,10 @@ try {
 }
 
 if (-not $result.backend_ready) {
-    $result.remaining_actions += "Railway must report database=connected, contract_version=mvp-1.1, and both MVP POST/GET operations"
+    $result.remaining_actions += (
+        "Railway must report database=connected, contract_version=" +
+        "$expectedContractVersion, and both MVP POST/GET operations"
+    )
 }
 
 if (-not $result.cors_ready) {
@@ -114,7 +177,44 @@ if (-not $result.frontend_integrated) {
 }
 
 if ($result.audio_smoke_requested) {
+    $databaseUrl = [Environment]::GetEnvironmentVariable(
+        $CleanupDatabaseUrlEnvironmentVariable
+    )
+    if (-not $databaseUrl) {
+        $result.audio_smoke_passed = $false
+        $result.database_contract_verified = $false
+        $result.database_rows_restored = $false
+        $result.remaining_actions += (
+            "Set $CleanupDatabaseUrlEnvironmentVariable so the release gate " +
+            "can verify PostgreSQL and remove the smoke-test call"
+        )
+    }
+
+    $python = $null
+    if ($databaseUrl) {
+        try {
+            $python = Get-PythonCommand
+            $databaseBefore = Invoke-DatabaseVerification -PythonCommand $python
+            $result.database_contract_verified = $true
+            $result.database_row_counts_before = $databaseBefore.row_counts
+        } catch {
+            $result.database_contract_verified = $false
+            $result.database_rows_restored = $false
+            $result.remaining_actions += (
+                "Pre-smoke PostgreSQL contract verification failed: " +
+                "$($_.Exception.Message)"
+            )
+        }
+    }
+
     try {
+        if (-not $databaseUrl) {
+            throw "$CleanupDatabaseUrlEnvironmentVariable is missing"
+        }
+        if ($result.database_contract_verified -ne $true) {
+            throw "Pre-smoke PostgreSQL contract verification did not pass"
+        }
+
         $resolvedAudio = (Resolve-Path -LiteralPath $AudioPath).Path
         & "$PSScriptRoot\smoke-mvp.ps1" `
             -AudioPath $resolvedAudio `
@@ -126,6 +226,28 @@ if ($result.audio_smoke_requested) {
         $result.audio_smoke_passed = $false
         $result.remaining_actions += "Real-audio POST/GET exact-match smoke failed: $($_.Exception.Message)"
     }
+
+    if ($databaseUrl -and $python -and $result.database_contract_verified) {
+        try {
+            $databaseAfter = Invoke-DatabaseVerification -PythonCommand $python
+            $result.database_row_counts_after = $databaseAfter.row_counts
+            $result.database_rows_restored = Test-RowCountsEqual `
+                -Before $result.database_row_counts_before `
+                -After $result.database_row_counts_after
+            if (-not $result.database_rows_restored) {
+                $result.remaining_actions += (
+                    "Smoke-test cleanup did not restore the original PostgreSQL " +
+                    "row counts"
+                )
+            }
+        } catch {
+            $result.database_rows_restored = $false
+            $result.remaining_actions += (
+                "Post-smoke PostgreSQL verification failed: " +
+                "$($_.Exception.Message)"
+            )
+        }
+    }
 } else {
     $result.remaining_actions += "Run again with -AudioPath after the final deploy to verify exact POST/GET equality"
 }
@@ -134,7 +256,9 @@ $result.release_ready = (
     $result.backend_ready -and
     $result.cors_ready -and
     $result.frontend_integrated -and
-    ($result.audio_smoke_passed -eq $true)
+    ($result.audio_smoke_passed -eq $true) -and
+    ($result.database_contract_verified -eq $true) -and
+    ($result.database_rows_restored -eq $true)
 )
 
 $result | ConvertTo-Json -Depth 6

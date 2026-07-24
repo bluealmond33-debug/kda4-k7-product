@@ -79,9 +79,21 @@ if (
 ) {
   throw new Error("active model adapter must remain deterministic non-AI code");
 }
+if (
+  manifest.release_validation?.requires_real_audio !== true ||
+  manifest.release_validation?.database_row_policy !==
+    "restore_pre_smoke_counts"
+) {
+  throw new Error(
+    "final release validation must use real audio and restore pre-smoke DB counts"
+  );
+}
 
 const governedPaths = [
   manifest.database.schema,
+  ...Object.values(manifest.database.optional_extensions ?? {}).map(
+    (extension) => extension.schema
+  ),
   ...Object.values(manifest.contracts),
   manifest.backend.app,
   manifest.backend.pydantic_contracts,
@@ -90,6 +102,10 @@ const governedPaths = [
   manifest.backend.integration_service,
   manifest.backend.database_gateway,
   ...Object.values(manifest.frontend),
+  manifest.release_validation.gate,
+  manifest.release_validation.database_verifier,
+  manifest.release_validation.test_call_cleanup,
+  ...Object.values(manifest.handoffs),
 ];
 for (const relativePath of governedPaths) {
   if (!fs.existsSync(path.join(root, relativePath))) {
@@ -106,6 +122,30 @@ if (JSON.stringify(actualTables) !== JSON.stringify(expectedTables)) {
   throw new Error(
     `active table drift: expected=${expectedTables.join(",")} actual=${actualTables.join(",")}`
   );
+}
+
+for (const [extensionName, extension] of Object.entries(
+  manifest.database.optional_extensions ?? {}
+)) {
+  if (extension.required !== false) {
+    throw new Error(`optional database extension must not be required: ${extensionName}`);
+  }
+  const extensionSql = fs.readFileSync(path.join(root, extension.schema), "utf8");
+  const extensionTables = [
+    ...extensionSql.matchAll(/^CREATE TABLE IF NOT EXISTS\s+([a-z_]+)/gm),
+  ]
+    .map((match) => match[1])
+    .sort();
+  const expectedExtensionTables = [...extension.tables].sort();
+  if (
+    JSON.stringify(extensionTables) !== JSON.stringify(expectedExtensionTables)
+  ) {
+    throw new Error(
+      `optional table drift (${extensionName}): ` +
+        `expected=${expectedExtensionTables.join(",")} ` +
+        `actual=${extensionTables.join(",")}`
+    );
+  }
 }
 
 const responseSchema = readJson(manifest.contracts.api_response);

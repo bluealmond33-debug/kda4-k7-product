@@ -24,7 +24,7 @@ Galaxy WO Mic과 고객·상담사 오디오 edge는 동일한 `call_id` 세션�
 |---|---|
 | 프론트엔드 | `src/` — React + Vite |
 | 백엔드 | `backend/app/` — FastAPI |
-| DB | `database/mvp/schema.sql` — PostgreSQL 3테이블 |
+| DB | `database/mvp/schema.sql` — PostgreSQL 핵심 3테이블 |
 | 활성 자산 매니페스트 | `database/active-manifest.json` |
 | API 계약 | `database/contracts/mvp_call_response.schema.json` |
 | 모델 결과 어댑터 | `backend/app/model_adapter.py` |
@@ -32,6 +32,7 @@ Galaxy WO Mic과 고객·상담사 오디오 edge는 동일한 `call_id` 세션�
 | 데모 업무가이드 | `database/knowledge/demo_guides.ko.json` |
 | 음성 감정 어댑터 | `backend/app/emotion_adapter.py` |
 | 이중 분석 명세 | `docs/AUDIO_TEXT_DUAL_PIPELINE.md` |
+| 음성 감정 모델 인수 요청 | `docs/AUDIO_EMOTION_MODEL_HANDOFF.md` |
 | 기존 파이프라인 연결 함수 | `backend/app/integration_service.py` |
 | 금융 모델 후처리 | `database/mvp/model_postprocessing.v1.json` |
 | Railway 설정 | `railway.toml` |
@@ -111,13 +112,15 @@ $env:K7_TEST_DATABASE_URL = "postgresql://테스트용-DB-URL"
 Remove-Item Env:K7_TEST_DATABASE_URL
 ```
 
-배포된 실제 음성 E2E 확인:
+최종 배포 게이트:
 
 ```powershell
-.\scripts\smoke-mvp.ps1 `
-  -AudioPath .\samples\customer.wav `
-  -ApiBaseUrl https://<railway-backend>
+$env:K7_TEST_DATABASE_URL = "postgresql://화면에-출력하지-않는-검증용-URL"
+.\scripts\check-release-gates.ps1 -AudioPath .\samples\customer.wav
+Remove-Item Env:K7_TEST_DATABASE_URL
 ```
+
+이 명령은 운영 API·CORS·Vercel 번들, 실제 음성 POST/GET 완전 동일성, PostgreSQL 활성 스키마를 확인합니다. 실제 음성 검수 전후의 세 테이블 행 수를 비교하므로 기존 데이터가 있어도 지우지 않으며, 검수용 `call_id`만 삭제되어 원래 행 수로 복구됐을 때만 `release_ready=true`가 됩니다.
 
 운영 백엔드가 DB 경계까지 반영됐는지 음성 호출 없이 읽기 전용으로 확인:
 
@@ -131,13 +134,13 @@ Remove-Item Env:K7_TEST_DATABASE_URL
 
 검증 대상:
 
-- 활성 자산 매니페스트와 정확히 3개 테이블
+- 활성 자산 매니페스트와 핵심 3테이블, 선택 규정 RAG 2테이블 경계
 - JSON Schema와 예제
 - 기존 모델 결과 어댑터
 - `mvp-1.1` 활성 모델 결과 어댑터
 - TypeScript와 Vite 프로덕션 빌드
 - FastAPI `mvp-1.1` Pydantic 계약
-- 비마스킹 3테이블 활성 SQL
+- 비마스킹 핵심 3테이블 활성 SQL
 - 기존 Railway 9개 경로와 새 DB 경로의 OpenAPI 공존
 
 ## 팀 연결 경계

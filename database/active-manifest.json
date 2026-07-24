@@ -47,7 +47,14 @@
   "database": {
     "engine": "postgresql",
     "schema": "database/mvp/schema.sql",
-    "tables": ["calls", "transcripts", "consultation_cards"]
+    "tables": ["calls", "transcripts", "consultation_cards"],
+    "optional_extensions": {
+      "regulation_rag": {
+        "schema": "database/rag/schema.sql",
+        "tables": ["rag_documents", "rag_chunks"],
+        "required": false
+      }
+    }
   },
   "contracts": {
     "model_input": "database/contracts/model_consultation_result_input.schema.json",
@@ -75,5 +82,15 @@
     "response_validator": "src/services/consultationContract.ts",
     "types": "src/services/types.ts",
     "upload_ui": "src/components/LiveDemo.tsx"
+  },
+  "release_validation": {
+    "gate": "scripts/check-release-gates.ps1",
+    "database_verifier": "scripts/verify-active-database.py",
+    "test_call_cleanup": "scripts/cleanup-test-call.py",
+    "requires_real_audio": true,
+    "database_row_policy": "restore_pre_smoke_counts"
+  },
+  "handoffs": {
+    "audio_emotion_model": "docs/AUDIO_EMOTION_MODEL_HANDOFF.md"
   }
 }

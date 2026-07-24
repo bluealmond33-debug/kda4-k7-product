@@ -2,11 +2,11 @@
 
 ## 결론
 
-이찬희 담당 범위인 `mvp-1.0` 데이터 계약, 활성 자산 매니페스트, 모델 결과 어댑터, PostgreSQL 3테이블, FastAPI 저장·조회 경계, React 음성 업로드 연결은 `lch` 브랜치에 구현됐습니다.
+이찬희 담당 범위인 `mvp-1.1` 데이터 계약, 활성 자산 매니페스트, 모델 결과 어댑터, PostgreSQL 핵심 3테이블, FastAPI 저장·조회 경계, React 음성 업로드 연결은 최신 `lch` 브랜치에 구현됐습니다. 규정 RAG를 켜면 같은 DB에 `rag_documents`, `rag_chunks` 두 선택 테이블만 추가될 수 있도록 활성 매니페스트로 통제합니다.
 
 실제 한국어 WAV로 `STT → 구조화 → PostgreSQL 저장 → call_id 재조회`를 Railway 검증 서비스에서 통과했고, 별도의 PostgreSQL 통합 테스트도 형진 모델 원시 4필드 → 어댑터 → UTF-8 왕복 저장을 확인한 뒤 테스트 행을 자동 삭제합니다.
 
-이희창 운영 FastAPI에는 `lch`의 계약·DB 경계가 반영됐고 Railway `DATABASE_URL`도 연결됐습니다. 남은 핵심은 실제 STT가 반환하는 부동소수점 시간을 DB 정밀도와 동일하게 정규화하고, Vercel 소유자가 자기 계정으로 최신 통합 API를 화면에 연결하는 것입니다. 유료 Vercel 팀 권한 공유는 요구하지 않습니다.
+공개 Railway FastAPI에는 이전 `mvp-1.0` 계약·DB 경계와 `DATABASE_URL` 연결까지 반영됐습니다. 최신 `lch`의 목표 계약은 `mvp-1.1`이므로 운영 백엔드가 최신 계약으로 배포되기 전에는 완료로 판정하지 않습니다. Vercel 소유자도 자기 계정에서 최신 통합 API 화면을 배포해야 하며 유료 팀 권한 공유는 요구하지 않습니다.
 
 ## 현재 팀 전체 구조
 
@@ -15,7 +15,7 @@ flowchart LR
     A["고객 음성"] --> B["Vercel React"]
     B --> C["이희창 Railway 백엔드"]
     C --> D["실제 STT·임시 분석"]
-    D --> E["이찬희 mvp-1.0 표준화"]
+    D --> E["이찬희 mvp-1.1 표준화"]
     E --> F[("Railway PostgreSQL\nconnected·UTF-8·3테이블")]
     F --> G["상담카드 GET"]
     G -. "Vercel 최신 배포 미반영" .-> B
@@ -23,7 +23,7 @@ flowchart LR
 
 Railway 배포 메타데이터에서 `HeeChang50/kda4-k7-backend` PR #1이 `main` commit `9f3c4da57a9cc12813f483093d51088037c23595`로 머지됐고 deployment `09fe8b9c-ba9f-4f65-b503-95d84f4e2aa0`가 `SUCCESS`임을 확인했습니다.
 
-2026-07-16 최신 공개 상태 확인에서 운영 API는 기존 8개 POST 경로와 새 `/api/v1/calls`, 상담카드 GET, `/health`를 합쳐 11개 경로를 제공합니다. `/health`는 `database=connected`, `contract_version=mvp-1.0`을 반환하며 `scripts/check-production-readiness.ps1` 결과는 `ready=true`입니다.
+최신 공개 상태 확인에서 운영 API는 `/api/v1/calls`, 상담카드 GET과 기존 호환 경로를 제공하고 `/health`는 `database=connected`, `contract_version=mvp-1.0`을 반환합니다. 최신 `lch` 목표가 `mvp-1.1`이므로 현재 최종 릴리스 게이트의 `backend_ready`는 의도대로 `false`입니다.
 
 실제 한국어 WAV도 운영 POST 201과 GET 200까지 성공했습니다. 상담 데이터는 동일했지만 STT의 이진 부동소수점 `duration_sec=10.100000381469727`이 PostgreSQL `numeric(10,3)` 저장 후 `10.1`로 조회되는 정밀도 차이를 발견했습니다. `lch` 통합 서비스에서 저장 전에 소수점 셋째 자리로 정규화하여 POST와 GET이 처음부터 같은 계약 값을 사용하도록 수정합니다.
 
@@ -35,7 +35,7 @@ flowchart LR
     B --> C["POST /api/v1/calls"]
     C --> D["이희창 실제 STT"]
     D --> E["팀 요약·분류·라우팅"]
-    E --> F["이찬희 mvp-1.0 계약 검증"]
+    E --> F["이찬희 mvp-1.1 계약 검증"]
     F --> G[("PostgreSQL 3테이블 저장")]
     G --> H["GET /api/v1/calls/{call_id}/consultation-card"]
     H --> I["상담카드 표시"]
@@ -48,17 +48,18 @@ flowchart LR
 | 고객 음성 입력 | React `audio/*` 업로드 구현 | 완료 | Vercel 운영 API 주소 적용 |
 | STT | 실제 한국어 WAV가 정확한 한국어 텍스트로 변환됨 | 검증 완료 | 이희창 STT 유지 |
 | 요약·분류·라우팅 | MVP 구조화 결과 동작 | 임시 로직 | 전형진·김설빈 로직으로 교체 |
-| 표준화 | JSON Schema·Pydantic·TypeScript `mvp-1.0` 일치 | 완료 | 계약 변경은 PR로만 관리 |
+| 표준화 | JSON Schema·Pydantic·TypeScript `mvp-1.1` 일치 | 완료 | 계약 변경은 PR로만 관리 |
 | 활성 자산 통제 | 매니페스트가 버전·파일·3테이블·음성·비마스킹 정책 검증 | 완료 | `active-manifest.json` 변경은 PR 필수 |
 | 모델 어댑터 | canonical 결과와 형진 모델 `summary/task_category/consulting_situation/qa_topic`을 모두 표준화 | 완료 | 실제 전체 라벨 목록으로 후처리 규칙 확인 |
-| 프론트 응답 검증 | 브라우저 경계에서 `mvp-1.0` 버전·voice 채널·UUID·위험·감정 조합·추가 필드 검사 | 완료 | 계약 위반 응답은 화면 반영 전 거절 |
-| PostgreSQL | Railway Online, UTF-8, 3테이블, 운영 `database=connected` | 운영 완료 | 참조 변수 유지 |
-| 저장 API | 운영 `POST /api/v1/calls` 201 및 call_id 반환 | 운영 완료 | 시간 정밀도 수정 반영 |
-| 조회 API | 같은 call_id로 운영 GET 200, 카드 내용 동일 | 보완 중 | `duration_sec` 3자리 정규화 |
+| 프론트 응답 검증 | 브라우저 경계에서 `mvp-1.1` 버전·voice 채널·UUID·위험·감정 조합·추가 필드 검사 | 완료 | 계약 위반 응답은 화면 반영 전 거절 |
+| PostgreSQL | Railway Online, UTF-8, 핵심 3테이블, 운영 `database=connected` | 운영 완료 | 선택 RAG 2테이블 외 미승인 테이블 차단 |
+| 저장 API | 운영 `POST /api/v1/calls`는 `mvp-1.0`, 최신 소스는 `mvp-1.1` | 배포 대기 | 최신 `lch` 운영 배포 |
+| 조회 API | 같은 call_id 재조회 구현, 최신 계약은 `mvp-1.1` | 배포 대기 | 운영 POST·GET 전체 JSON 동일성 재검수 |
 | 감정 | 음성 전용 입력 계약·어댑터·점수 구간·call_id 결합·DB 원시 결과 저장 완료, 운영은 `unavailable` | 통합 경계 완료 | 실제 음성 모델 URL·인증·응답 수령 후 호출 연결 |
 | Vercel | 사이트 200, 현재 번들에는 `/api/v1/calls`·Railway 주소가 없고 `/summarize`만 존재 | 소유자 작업 필요 | `VITE_API_BASE_URL`, `VITE_USE_REAL_DATA_API=true` 적용 후 직접 재배포 |
 
 Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포·화면 검증 체크리스트를 전달합니다.
+음성 감정 담당자에게는 `docs/AUDIO_EMOTION_MODEL_HANDOFF.md`의 HTTP 입력·정상/실패 응답·인수 테스트를 전달합니다.
 
 ## Railway 검증 결과
 
@@ -88,10 +89,12 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 - 활성 감정 상태를 `unavailable | completed`로 제한하고 `demo`는 Pydantic·JSON Schema·React·PostgreSQL에서 모두 거절
 - 실제 Railway DB에서 OpenAI 원시 결과 + 음성 감정 원시 결과 결합·저장·재조회 및 잘못된 점수–단계 INSERT 차단 확인
 - 운영 실제 음성 스모크 테스트는 성공·실패와 무관하게 생성 행을 `finally`에서 삭제하도록 자동화
+- 최종 릴리스 게이트는 실제 음성 검수 전후 PostgreSQL 행 수가 동일한지 비교해 기존 데이터는 보존하고 검수 행만 제거됐는지 자동 확인
 - 어댑터 성격 확정: 비-AI 결정론적 Python 매핑·검증 코드
-- React가 API JSON을 타입으로 단순 가정하지 않고 `mvp-1.0` 런타임 검증을 통과한 응답만 상담카드에 반영
+- React가 API JSON을 타입으로 단순 가정하지 않고 `mvp-1.1` 런타임 검증을 통과한 응답만 상담카드에 반영
 - 프론트 런타임 계약 검증: 정상 fixture 1건 통과, 계약 위반 8건 거절
-- 최신 회귀검증: Python `40 passed, 1 skipped`, 프론트 계약 위반 8건 거절
+- 최신 원격 `lch` 포함 회귀검증: Python `165 passed, 3 skipped`, 프론트 계약 위반 12건 거절, 라이브콜 계약 검증과 프로덕션 빌드 통과
+- 규정 Excel 파서는 취약한 npm `xlsx 0.18.5` 대신 공식 SheetJS `0.20.3` 배포판으로 교체하고 `npm audit` 취약점 0건 확인
 - 실제 Railway 한국어 WAV의 POST·GET 응답이 프론트 런타임 검증을 모두 통과
 - 실제 Railway PostgreSQL: 3테이블 각각 0건, `raw_emotion_result=jsonb`, 활성 감정 제약 3개 확인
 
@@ -99,7 +102,7 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 
 ## 이찬희 담당 완료 범위
 
-1. 음성 전용 `mvp-1.0` 표준 JSON과 enum
+1. 음성 전용 `mvp-1.1` 표준 JSON과 enum
 2. 모델 출력 → 표준 계약 경계
 3. PostgreSQL 최소 3테이블과 자동 스키마 적용
 4. FastAPI 저장·조회 API
@@ -110,6 +113,7 @@ Vercel 소유자에게는 `docs/VERCEL_OWNER_HANDOFF.md`의 환경변수·배포
 9. 활성·참고 자산 구분과 CI 매니페스트 검증
 10. 이희창·Claude용 운영 통합 인계 프롬프트
 11. 텍스트 분석·음성 감정 이중 파이프라인과 모델 인수 계약
+12. 운영 API·Vercel·CORS·DB 스키마·검수 행 복구를 한 번에 판정하는 최종 릴리스 게이트
 
 ## 검증 명령
 
@@ -128,24 +132,25 @@ $env:K7_TEST_DATABASE_URL = "postgresql://테스트용-DB-URL"
 Remove-Item Env:K7_TEST_DATABASE_URL
 ```
 
-실제 음성 E2E:
+최종 실제 음성·DB 복구 게이트:
 
 ```powershell
+$env:K7_TEST_DATABASE_URL = "postgresql://화면에-출력하지-않는-검증용-URL"
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\smoke-mvp.ps1 `
-  -AudioPath .\samples\customer.wav `
-  -ApiBaseUrl https://운영-Railway-백엔드
+  -File .\scripts\check-release-gates.ps1 `
+  -AudioPath .\samples\customer.wav
+Remove-Item Env:K7_TEST_DATABASE_URL
 ```
 
 ## 남은 팀 작업
 
-1. 이희창: `lch` commit `00454d2`의 `duration_sec` 3자리 정규화와 `emotion_source="audio"` 검증을 운영 백엔드에 반영
-2. 이희창: 반영 후 실제 음성 스모크 테스트의 POST/GET 전체 동일성 통과
+1. 이희창: 최신 `lch`의 `mvp-1.1` 계약·`duration_sec` 정규화·`emotion_source="audio"` 검증을 운영 백엔드에 반영
+2. 이희창: 배포 후 `/health contract_version=mvp-1.1`과 실제 음성 POST/GET 전체 동일성 통과
 3. Railway: 현재 `DATABASE_URL=${{Postgres.DATABASE_URL}}` 참조 연결 유지. 회전 전 복사한 DB URL은 사용 금지
 4. 전형진: 금융 모델 서버 URL·인증·정상/오류 JSON·세 분류축 전체 라벨 목록 제공
 5. 이희창: Railway에서 접근 가능한 형진 모델 서버 경로를 기존 STT 뒤에 연결
 6. 김민기: 실제 규정 파일과 RAG·브리핑카드 조립 연결
-7. 음성 감정 담당: Railway에서 호출 가능한 모델 URL·인증·정상/실패 응답을 `emotion_temperature_result.schema.json`으로 제공
+7. 음성 감정 담당: `docs/AUDIO_EMOTION_MODEL_HANDOFF.md`에 따라 Railway에서 호출 가능한 모델 URL·인증·지원 형식·정상/실패 응답·처리시간을 제공
 8. 이희창: 선발급 `call_id`와 동일 `audio_bytes`를 실제 음성 모델에 전달하고 통합 함수에 결합
 9. Vercel 소유자: 유료 팀 공유 없이 자기 계정에서 운영 API 환경변수와 배포 반영
 10. Railway 관리자: POST/GET·Vercel 최종 검수 후 연결 해제된 `k7-mvp-lch-preview` 검증 서비스 삭제
