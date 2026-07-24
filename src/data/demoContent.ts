@@ -159,10 +159,35 @@ export const SUGGESTED_DEPT: Record<IncomingKind, string> = {
 
 /* 규정 검색 추천어 — 통화 중 검색창 아래 알약. 콜 유형별 후보를 두고,
    실제 발화에 등장한 용어가 앞으로 올라오며 점등된다(실시간 감각). */
-export const REG_SUGGEST: Record<IncomingKind, string[]> = {
-  normal: ["만기 연장", "재약정", "소득 증빙", "등기부등본", "비대면 접수", "연체"],
-  urgent: ["지급정지", "명의도용", "보이스피싱", "사고 접수", "피해구제"],
-  transfer: ["중도상환수수료", "금리 인하", "약정 변경", "재약정", "면제 조건"],
+export interface RegSuggest {
+  /** 알약에 표시되고 클릭 시 검색되는 용어 */
+  term: string;
+  /** 통화 전사에 이 중 하나라도 등장하면 알약이 나타난다(표시어와 트리거어 분리) */
+  match: string[];
+}
+export const REG_SUGGEST: Record<IncomingKind, RegSuggest[]> = {
+  normal: [
+    { term: "만기 연장", match: ["만기", "연장"] },
+    { term: "재약정", match: ["재약정"] },
+    { term: "소득 증빙", match: ["소득"] },
+    { term: "등기부등본", match: ["등기부"] },
+    { term: "비대면", match: ["비대면"] },
+    { term: "연체", match: ["연체"] },
+  ],
+  urgent: [
+    { term: "지급정지", match: ["지급정지", "정지"] },
+    { term: "명의도용", match: ["명의", "도용"] },
+    { term: "보이스피싱", match: ["보이스피싱", "피싱"] },
+    { term: "사고 접수", match: ["사고", "접수"] },
+    { term: "피해구제", match: ["피해", "구제"] },
+  ],
+  transfer: [
+    { term: "중도상환수수료", match: ["중도상환", "수수료"] },
+    { term: "금리 인하", match: ["금리"] },
+    { term: "약정 변경", match: ["약정"] },
+    { term: "재약정", match: ["재약정"] },
+    { term: "면제 조건", match: ["면제"] },
+  ],
 };
 
 /* 3층 업무코드 — backend/app/routing/taxonomy.py의 BUSINESS_CODES와 같은 축.

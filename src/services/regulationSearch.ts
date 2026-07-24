@@ -79,6 +79,49 @@ export async function searchRegulations(
 }
 
 
+
+/**
+ * 실시간 추천 검색어 — 통화 전사를 백엔드 RAG(pgvector)에 흘려, 백엔드가 '관련 있다'고
+ * 판단한 규정을 짧은 라벨로 돌려준다. 어떤 용어를 띄울지는 프런트가 아니라 백엔드가 결정한다.
+ * 백엔드가 꺼져 있거나(available:false) 실패하면 null — 호출부가 로컬 키워드 매칭으로 폴백한다.
+ */
+export interface RegSuggestion {
+  term: string;
+  docId: string;
+  score: number;
+}
+
+function shortLabel(hit: RegulationHit): string {
+  const raw = (hit.section && hit.section.trim()) || hit.title || "";
+  // 절/조항 접두 제거하고 20자 내로 — 알약에 들어갈 길이
+  return raw.replace(/^제?\s*\d+\s*[조절항]\s*[.·]?\s*/, "").replace(/\s+/g, " ").trim().slice(0, 20);
+}
+
+export async function fetchRegSuggests(
+  transcript: string,
+  opts: { category?: string | null; signal?: AbortSignal } = {}
+): Promise<RegSuggestion[] | null> {
+  const q = transcript.trim().slice(-600); // 최근 발화 위주
+  if (!q || !semanticSearchEnabled) return null;
+  try {
+    const res = await searchRegulations(q, { category: opts.category, k: 8, signal: opts.signal });
+    if (!res.available || res.documents.length === 0) return null;
+    const seen = new Set<string>();
+    const out: RegSuggestion[] = [];
+    for (const h of res.documents) {
+      const term = shortLabel(h);
+      if (term && !seen.has(term)) {
+        seen.add(term);
+        out.push({ term, docId: h.doc_id, score: h.score });
+      }
+      if (out.length >= 5) break;
+    }
+    return out;
+  } catch {
+    return null; // 취소·오류 — 폴백
+  }
+}
+
 // ── 원문 열람 — 검색 히트를 클릭하면 그 문서 전체를 '엑셀 룩' 시트로 연다 ──
 export interface RegulationDocChunk {
   chunk_id: string;
