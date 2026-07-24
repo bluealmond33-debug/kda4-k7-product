@@ -338,8 +338,9 @@ a:hover {
 /* 통화 연결 안착 morph — 준비 카드가 직원 콘솔로 '스르륵 안착'하는 느낌.
    중앙(브리핑)은 살짝 컸다가 제자리로 가라앉고, 좌/우/상/하 콘솔 상자가 가장자리에서 등장한다. */
 @keyframes consoleSettle {
-  from { opacity: 0; transform: scale(1.035); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(1.06) translateY(-10px); }
+  55% { opacity: 1; }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 @keyframes consoleInL {
   from { opacity: 0; transform: translateX(-28px); }
