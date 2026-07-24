@@ -242,15 +242,24 @@ const TOPICS: Topic[] = [
   },
 ];
 
+// ONAIR: 면은 한 색, 경계는 그림자(보더 없음). 색은 점·값·가는 선(1.5px)·글자에만.
+const CARD = "background:var(--panel);border:none;border-radius:12px;box-shadow:var(--sh-near);padding:13px 16px";
+const TILE = "background:var(--panel);border:none;border-radius:8px;box-shadow:var(--sh-near)";
+
 function Block({ b, tc }: { b: Blk; tc: string }) {
-  if (b.t === "lede") return <p style={css("font:400 13px/1.6 " + FONT + ";color:var(--gray-800);margin:0 0 16px;max-width:74ch")}>{b.html}</p>;
-  if (b.t === "rowh") return <div style={css("font:750 12px " + FONT + ";color:var(--gray-1000);margin:16px 0 8px")}>{b.s}</div>;
+  if (b.t === "lede") return <p style={css("font:400 13px/1.6 " + FONT + ";color:var(--gray-800);margin:0 0 14px;max-width:74ch")}>{b.html}</p>;
+  if (b.t === "rowh") return (
+    <div style={css("display:flex;align-items:center;gap:7px;margin:14px 0 8px")}>
+      <span style={css("width:6px;height:6px;border-radius:2px;flex:none;background:" + tc)} />
+      <span style={css("font:600 13px " + FONT + ";color:var(--gray-1000)")}>{b.s}</span>
+    </div>
+  );
   if (b.t === "metrics") return (
-    <div style={css("display:grid;grid-template-columns:repeat(" + b.items.length + ",1fr);gap:10px;margin-bottom:4px")}>
+    <div style={css("display:grid;grid-template-columns:repeat(" + b.items.length + ",1fr);gap:10px;margin-bottom:2px")}>
       {b.items.map((m, i) => (
-        <div key={i} style={css("background:var(--panel);border:1px solid var(--gray-200);border-top:3px solid " + tc + ";border-radius:11px;padding:12px 13px;box-shadow:var(--sh-near)")}>
+        <div key={i} className="hoverraise" style={css(CARD)}>
           <div style={css("font:800 24px " + MONO + ";letter-spacing:-.02em;color:" + tc)}>{m.v}</div>
-          <div style={css("font:600 11px " + FONT + ";color:var(--gray-700);margin-top:2px;line-height:1.35")}>{m.l}</div>
+          <div style={css("font:500 11px " + FONT + ";color:var(--gray-700);margin-top:3px;line-height:1.35")}>{m.l}</div>
         </div>
       ))}
     </div>
@@ -258,12 +267,12 @@ function Block({ b, tc }: { b: Blk; tc: string }) {
   if (b.t === "cards") return (
     <div style={css("display:grid;grid-template-columns:repeat(" + (b.cols || 2) + ",1fr);gap:10px")}>
       {b.items.map((c, i) => (
-        <div key={i} style={css("background:var(--panel);border:1px solid var(--gray-200);border-top:3px solid " + tc + ";border-radius:11px;padding:12px 13px;box-shadow:var(--sh-near)")}>
-          {c.h && <div style={css("font:750 12.5px " + FONT + ";color:var(--gray-1000);margin-bottom:7px;display:flex;align-items:center;gap:6px")}>{c.k && <span style={css("font:800 10px " + MONO + ";color:" + tc)}>{c.k}</span>}{c.h}</div>}
-          <ul style={css("list-style:none;display:flex;flex-direction:column;gap:5px;margin:0;padding:0")}>
+        <div key={i} className="hoverraise" style={css(CARD)}>
+          {c.h && <div style={css("font:600 13px " + FONT + ";color:var(--gray-1000);margin-bottom:8px;display:flex;align-items:center;gap:6px")}>{c.k ? <span style={css("font:800 10px " + MONO + ";color:" + tc)}>{c.k}</span> : <span style={css("width:6px;height:6px;border-radius:2px;flex:none;background:" + tc)} />}{c.h}</div>}
+          <ul style={css("list-style:none;display:flex;flex-direction:column;gap:6px;margin:0;padding:0")}>
             {c.lines.map((l, j) => (
-              <li key={j} style={css("font:400 11.5px/1.5 " + FONT + ";color:var(--gray-800);padding-left:12px;position:relative")}>
-                <span style={css("position:absolute;left:0;top:7px;width:4px;height:4px;border-radius:2px;background:" + tc + ";opacity:.6")} />{l}
+              <li key={j} style={css("font:400 12px/1.5 " + FONT + ";color:var(--gray-800);padding-left:12px;position:relative")}>
+                <span style={css("position:absolute;left:0;top:7px;width:4px;height:4px;border-radius:9999px;background:var(--gray-500)")} />{l}
               </li>
             ))}
           </ul>
@@ -274,9 +283,9 @@ function Block({ b, tc }: { b: Blk; tc: string }) {
   if (b.t === "quotes") return (
     <div style={css("display:grid;grid-template-columns:repeat(" + b.items.length + ",1fr);gap:10px")}>
       {b.items.map((q, i) => (
-        <div key={i} style={css("background:var(--gray-100);border-left:3px solid " + tc + ";border-radius:8px;padding:11px 13px")}>
+        <div key={i} style={css("background:var(--onair-bg);border-left:2px solid " + tc + ";border-radius:0 8px 8px 0;padding:11px 14px")}>
           <div style={css("font:400 12.5px/1.45 " + FONT + ";color:var(--gray-1000)")}>{q.q}</div>
-          <div style={css("font:400 10.5px " + FONT + ";color:var(--gray-600);margin-top:5px")}>{q.sub}</div>
+          <div style={css("font:400 11px " + FONT + ";color:var(--gray-700);margin-top:5px")}>{q.sub}</div>
         </div>
       ))}
     </div>
@@ -286,31 +295,31 @@ function Block({ b, tc }: { b: Blk; tc: string }) {
       {b.items.map((s, i) => (
         <div key={i} style={css("display:flex;align-items:center;gap:6px")}>
           {i > 0 && <span style={css("color:var(--gray-500);font-weight:700")}>→</span>}
-          <div style={css("background:var(--panel);border:1px solid var(--gray-200);border-radius:9px;padding:8px 11px;box-shadow:var(--sh-near)")}>
+          <div style={css(TILE + ";padding:8px 12px")}>
             <div style={css("font:800 9px " + MONO + ";color:" + tc + ";letter-spacing:.4px")}>{s.a}</div>
-            <div style={css("font:700 12px " + FONT + ";color:var(--gray-1000);margin-top:2px")}>{s.b}</div>
-            {s.c && <div style={css("font:400 10.5px " + FONT + ";color:var(--gray-600);margin-top:1px")}>{s.c}</div>}
+            <div style={css("font:600 12px " + FONT + ";color:var(--gray-1000);margin-top:2px")}>{s.b}</div>
+            {s.c && <div style={css("font:400 11px " + FONT + ";color:var(--gray-700);margin-top:1px")}>{s.c}</div>}
           </div>
         </div>
       ))}
     </div>
   );
   if (b.t === "badges") return (
-    <div style={css("display:flex;flex-wrap:wrap;gap:6px")}>
+    <div style={css("display:flex;flex-wrap:wrap;gap:7px")}>
       {b.items.map((x, i) => (
-        <span key={i} style={css("font:650 11px " + FONT + ";padding:5px 11px;border-radius:9999px;background:" + tc + "18;color:" + tc)}>{x}</span>
+        <span key={i} style={css("font:600 11.5px " + FONT + ";padding:5px 12px;border-radius:9999px;background:var(--onair-surface);border:1.5px solid " + tc + ";color:" + tc)}>{x}</span>
       ))}
     </div>
   );
   if (b.t === "table") return (
-    <div style={css("overflow-x:auto;border:1px solid var(--gray-200);border-radius:10px")}>
-      <table style={css("width:100%;border-collapse:collapse;font:400 11.5px " + FONT)}>
-        <thead><tr>{b.head.map((h, i) => <th key={i} style={css("text-align:" + (i === 0 ? "left" : "right") + ";padding:8px 12px;font-weight:750;color:var(--gray-700);background:var(--gray-100);border-bottom:1px solid var(--gray-200);font-size:10.5px")}>{h}</th>)}</tr></thead>
-        <tbody>{b.rows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => <td key={ci} style={css("text-align:" + (ci === 0 ? "left" : "right") + ";padding:7px 12px;color:" + (ci === 0 ? "var(--gray-1000)" : "var(--gray-800)") + ";border-bottom:1px solid var(--gray-200);font-family:" + (ci === 0 ? FONT : MONO) + ";" + (ci === 0 ? "font-weight:600" : ""))}>{c}</td>)}</tr>)}</tbody>
+    <div style={css("overflow-x:auto;" + TILE)}>
+      <table style={css("width:100%;border-collapse:collapse;font:400 12px " + FONT)}>
+        <thead><tr>{b.head.map((h, i) => <th key={i} style={css("text-align:" + (i === 0 ? "left" : "right") + ";padding:9px 14px;font-weight:600;color:var(--gray-700);border-bottom:1px solid var(--gray-200);font-size:11px")}>{h}</th>)}</tr></thead>
+        <tbody>{b.rows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => <td key={ci} style={css("text-align:" + (ci === 0 ? "left" : "right") + ";padding:8px 14px;color:" + (ci === 0 ? "var(--gray-1000)" : "var(--gray-800)") + (ri < b.rows.length - 1 ? ";border-bottom:1px solid var(--gray-200)" : "") + ";font-family:" + (ci === 0 ? FONT : MONO) + ";" + (ci === 0 ? "font-weight:600" : ""))}>{c}</td>)}</tr>)}</tbody>
       </table>
     </div>
   );
-  if (b.t === "note") return <div style={css("margin-top:6px;background:var(--gray-100);border-radius:9px;padding:11px 13px;font:400 11px/1.55 " + FONT + ";color:var(--gray-700)")}>{b.html}</div>;
+  if (b.t === "note") return <div style={css("margin-top:6px;background:var(--onair-bg);border-radius:8px;padding:11px 14px;font:400 11.5px/1.55 " + FONT + ";color:var(--gray-700)")}>{b.html}</div>;
   return null;
 }
 
@@ -363,16 +372,17 @@ export default function ArchiveModal({ onClose }: { onClose: () => void }) {
           </div>
           {/* 관련 원문 */}
           <div style={css("margin-top:18px;padding-top:14px;border-top:1px solid var(--gray-200)")}>
-            <div style={css("font:700 10px " + MONO + ";color:var(--gray-500);letter-spacing:.4px;margin-bottom:8px")}>관련 원문 (claude.ai)</div>
+            <div style={css("font:500 10px " + MONO + ";color:var(--gray-600);letter-spacing:.4px;margin-bottom:8px")}>관련 원문 · claude.ai</div>
             <div style={css("display:flex;flex-wrap:wrap;gap:7px")}>
               {topic.links.map((l) => (
-                <a key={l.id} href={BASE + l.id} target="_blank" rel="noopener noreferrer"
-                  style={css("display:inline-flex;align-items:center;gap:5px;text-decoration:none;font:600 11px " + FONT + ";color:var(--gray-800);background:var(--panel);border:1px solid var(--gray-200);border-left:3px solid " + tc + ";border-radius:8px;padding:6px 11px")}>
-                  <span className="mi" style={css("font-size:13px;color:var(--gray-500)")}>open_in_new</span>{l.t}
+                <a key={l.id} href={BASE + l.id} target="_blank" rel="noopener noreferrer" className="hoverraise"
+                  style={css("display:inline-flex;align-items:center;gap:6px;text-decoration:none;font:600 11px " + FONT + ";color:var(--gray-900);" + TILE + ";padding:6px 12px")}>
+                  <span style={css("width:6px;height:6px;border-radius:9999px;flex:none;background:" + tc)} />{l.t}
+                  <span className="mi" style={css("font-size:12px;color:var(--gray-500)")}>open_in_new</span>
                 </a>
               ))}
             </div>
-            <div style={css("font:400 10px " + FONT + ";color:var(--gray-500);margin-top:9px")}>* 발표 원고류 일부는 claude.ai 아티팩트 전용이라 본문은 링크로만 제공됩니다.</div>
+            <div style={css("font:400 10px " + FONT + ";color:var(--gray-600);margin-top:9px")}>* 발표 원고류 일부는 claude.ai 아티팩트 전용이라 본문은 링크로만 제공됩니다.</div>
           </div>
         </main>
       </div>
