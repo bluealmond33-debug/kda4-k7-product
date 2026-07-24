@@ -200,10 +200,10 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 <div style={css("display:flex;align-items:center;gap:5px;font:600 10.5px " + FONT + ";color:var(--gray-600);margin-bottom:8px")}>
                   <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>summarize</span>전화 요약 · 고객 발화 STT
                 </div>
-                {/* 한 줄 요약 — 짧게 참고용(주인공은 아래 STT 요약 내용) */}
-                <div style={css("font:700 14.5px/1.45 " + FONT + ";letter-spacing:-.2px;color:var(--gray-1000)")}>{vm.prepHeadline}</div>
-                {/* 근거 발화 — 한 줄로 작게(이탤릭 유지), 아래 구분선 */}
-                <div style={css("font:400 11.5px/1.5 " + FONT + ";color:var(--gray-700);margin-top:8px;padding-bottom:11px;border-bottom:1px solid var(--gray-200)")}>
+                {/* 한 줄 요약 — 제목(크게). 근거 발화는 바로 아래 붙인다 */}
+                <div style={css("font:700 17px/1.4 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>{vm.prepHeadline}</div>
+                {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선 */}
+                <div style={css("font:400 11.5px/1.45 " + FONT + ";color:var(--gray-700);margin-top:3px;padding-bottom:11px;border-bottom:1px solid var(--gray-200)")}>
                   근거 발화 · <span style={css("font-style:italic;color:var(--gray-900)")}>“{vm.transcriptQuote}”</span>
                 </div>
                 {/* STT 요약 불릿 — 이 박스의 주인공. 크고 또렷하게 */}
