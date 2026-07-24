@@ -110,7 +110,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                       </div>
                       <div style={css("display:flex;align-items:baseline;gap:7px;min-width:0")}>
                         <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>업무</span>
-                        <span style={css("font:700 12px 'Geist Mono',monospace;flex:none;color:" + (reservedDept ? "#fff" : "var(--gray-1000)"))}>{vm.prepBusinessCode}</span>
+                        <span style={css("font:800 12px " + FONT + ";letter-spacing:.3px;flex:none;color:" + (reservedDept ? "#fff" : "var(--gray-1000)"))}>{vm.prepBusinessCode}</span>
                         <span style={css("font:600 10.5px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>{vm.prepBusinessCodeLabel}</span>
                       </div>
                     </div>
