@@ -1,17 +1,21 @@
-"""Regulation RAG store on PostgreSQL + pgvector.
+"""규정 RAG pgvector 저장소 — 구현은 app/services/rag_store.py로 통합됐다(ADR-0012).
 
-Owns the rag schema, chunk upsert, and hybrid retrieval (semantic vector +
-keyword full-text) with taxonomy filtering and supersede (active-only) filtering.
+김민기 원본이 담당하던 적재·문서조회·통계·예외·스키마초기화는 실행 엔진 이식으로
+`app.services.rag_store`에 흡수됐다. 이 모듈은 기존 호출부(app/rag/__init__.py,
+app/rag/auto_ingest.py 등)가 깨지지 않도록 그 이름들을 **재노출**한다.
 
-Mirrors app/database.py conventions (psycopg3, explicit transactions). Degrades
-gracefully: when the database or an embedding backend is unavailable, callers get
-``RegulationSearchUnavailable`` and can fall back to placeholder documents.
+예외로 남긴 것: `search_regulations`(list[dict], `limit=`/`category=` 시그니처)는
+레거시 compat 라우터(`app/compat.py`)가 그 형태로 쓰고 있어 여기 유지한다. 실행 엔진의
+`rag_store.search_regulations`(list[RagDocument], `top_k=`/`categories=`)와는 별개다.
+
+⚠️ 이 compat용 search는 아직 FlagEmbedding(embedder)로 질의를 임베딩한다. rag_store는
+Ollama bge-m3로 통일돼 있으므로, pgvector를 실가동할 때는 compat.py도 rag_store 경로로
+옮겨 임베딩 백엔드를 일원화해야 한다. 현재 데모는 FAISS 폴백이라 이 경로는 휴면 상태다.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import psycopg
 from psycopg.rows import dict_row
@@ -20,18 +24,19 @@ from app.config import Settings
 from app.rag import embedder
 from app.rag.taxonomy import is_valid_category
 
-# backend/app/rag/store.py -> parents[3] == repo root (matches app/database.py)
-RAG_SCHEMA_PATH = (
-    Path(__file__).resolve().parents[3] / "database" / "rag" / "schema.sql"
+# 통합 구현 재노출 — 하위호환. auto_ingest는 upsert_documents_and_chunks·_database_url을,
+# app/rag/__init__.py는 아래 이름들을 이 모듈에서 import한다.
+from app.services.rag_store import (  # noqa: F401
+    RegulationSearchUnavailable,
+    get_regulation_document,
+    get_regulation_stats,
+    initialize_rag,
+    upsert_documents_and_chunks,
 )
 
 # score fusion weights: semantic vs keyword. Kept explicit for tuning.
 W_DENSE = 0.65
 W_KEYWORD = 0.35
-
-
-class RegulationSearchUnavailable(RuntimeError):
-    """Raised when regulation search cannot run (no DB / no embedding model)."""
 
 
 def _database_url(settings: Settings) -> str:
@@ -40,105 +45,9 @@ def _database_url(settings: Settings) -> str:
     return settings.database_url
 
 
-def _vector_literal(vec: Sequence[float]) -> str:
+def _vector_literal(vec) -> str:
     """pgvector text literal, e.g. '[0.1,0.2,...]' — avoids a pgvector-python dep."""
     return "[" + ",".join(f"{x:.7f}" for x in vec) + "]"
-
-
-def initialize_rag(settings: Settings) -> None:
-    """Create the rag schema (requires the pgvector extension). No-op without DB."""
-    if not settings.database_url:
-        return
-    schema = RAG_SCHEMA_PATH.read_text(encoding="utf-8")
-    try:
-        with psycopg.connect(settings.database_url) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(schema)
-    except psycopg.Error as exc:
-        # pgvector extension may be unavailable on the instance; do not block boot.
-        raise RegulationSearchUnavailable(
-            "regulation schema initialization failed"
-        ) from exc
-
-
-def upsert_documents_and_chunks(
-    settings: Settings, chunks: Sequence[Mapping[str, Any]]
-) -> int:
-    """Load ingest.py output (chunk dicts) into rag_documents + rag_chunks.
-
-    Idempotent: re-running replaces text/embedding for existing chunk_ids and
-    refreshes document version/status/effective_date (supports supersede).
-    Returns the number of chunks written.
-    """
-    if not chunks:
-        return 0
-    dim = embedder.dimension()
-    vectors = embedder.embed([c["text"] for c in chunks])
-
-    documents: dict[str, Mapping[str, Any]] = {}
-    for c in chunks:
-        documents.setdefault(c["doc_id"], c)
-
-    try:
-        with psycopg.connect(_database_url(settings)) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(RAG_SCHEMA_PATH.read_text(encoding="utf-8"))
-                for d in documents.values():
-                    cursor.execute(
-                        """
-                        INSERT INTO rag_documents
-                            (doc_id, title, doc_type, categories, version,
-                             effective_date, status, source_file)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (doc_id) DO UPDATE SET
-                            title = EXCLUDED.title,
-                            doc_type = EXCLUDED.doc_type,
-                            categories = EXCLUDED.categories,
-                            version = EXCLUDED.version,
-                            effective_date = EXCLUDED.effective_date,
-                            status = EXCLUDED.status
-                        """,
-                        (
-                            d["doc_id"],
-                            d["title"],
-                            d.get("doc_type", ""),
-                            list(d.get("categories", [])),
-                            d.get("version", "v1"),
-                            d.get("effective_date"),
-                            d.get("status", "active"),
-                            d.get("filename", d["doc_id"]),
-                        ),
-                    )
-                for chunk, vec in zip(chunks, vectors):
-                    if len(vec) != dim:
-                        raise RegulationSearchUnavailable(
-                            f"embedding dim {len(vec)} != schema {dim}"
-                        )
-                    cursor.execute(
-                        """
-                        INSERT INTO rag_chunks
-                            (chunk_id, doc_id, page, kind, section, raw, text, embedding)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::vector)
-                        ON CONFLICT (chunk_id) DO UPDATE SET
-                            text = EXCLUDED.text,
-                            raw = EXCLUDED.raw,
-                            section = EXCLUDED.section,
-                            embedding = EXCLUDED.embedding
-                        """,
-                        (
-                            chunk["chunk_id"],
-                            chunk["doc_id"],
-                            chunk.get("page", 1),
-                            chunk.get("kind", "text"),
-                            chunk.get("section"),
-                            chunk["raw"],
-                            chunk["text"],
-                            _vector_literal(vec),
-                        ),
-                    )
-    except psycopg.Error as exc:
-        raise RegulationSearchUnavailable("regulation upsert failed") from exc
-    return len(chunks)
 
 
 _HYBRID_SQL = """
@@ -173,10 +82,11 @@ def search_regulations(
     category: str | None = None,
     limit: int = 5,
 ) -> list[dict[str, Any]]:
-    """Hybrid regulation search. Raises RegulationSearchUnavailable on any gap.
+    """레거시 compat 라우터용 하이브리드 검색(list[dict], FlagEmbedding 질의).
 
-    Each hit carries doc/page/section provenance so the UI can open the source
-    at the right place ("31행 · 열기"), plus the fused score components.
+    실행 엔진 경로는 rag_store.search_regulations / rag.search_procedures를 쓴다.
+    이 함수는 app/compat.py의 `_regulation_references`가 그 반환 형태로 의존하고 있어
+    유지한다. DB·임베딩이 없으면 RegulationSearchUnavailable을 던져 호출부가 폴백한다.
     """
     query = (query or "").strip()
     if not query:
@@ -222,73 +132,3 @@ def search_regulations(
         }
         for r in rows
     ]
-
-
-def get_regulation_document(settings: Settings, doc_id: str) -> dict[str, Any] | None:
-    """문서 메타 + 페이지순 청크 전체 — 프론트의 '원문 열람 시트'(엑셀 룩) 데이터.
-
-    검색 히트의 '열기'가 이 문서를 열어 해당 청크 행을 강조한다.
-    """
-    try:
-        with psycopg.connect(
-            _database_url(settings), row_factory=dict_row
-        ) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT doc_id, title, doc_type, categories, version, effective_date, source_file "
-                    "FROM rag_documents WHERE doc_id = %s AND status = 'active'",
-                    (doc_id,),
-                )
-                doc = cursor.fetchone()
-                if doc is None:
-                    return None
-                cursor.execute(
-                    "SELECT chunk_id, page, kind, section, raw "
-                    "FROM rag_chunks WHERE doc_id = %s ORDER BY page, chunk_id",
-                    (doc_id,),
-                )
-                chunks = cursor.fetchall()
-    except psycopg.Error as exc:
-        raise RegulationSearchUnavailable("regulation document query failed") from exc
-    return {
-        "doc_id": doc["doc_id"],
-        "title": doc["title"],
-        "doc_type": doc["doc_type"],
-        "categories": list(doc["categories"] or []),
-        "version": doc["version"],
-        "effective_date": str(doc["effective_date"]) if doc["effective_date"] else None,
-        "source_file": doc["source_file"],
-        "chunks": [
-            {
-                "chunk_id": c["chunk_id"],
-                "page": c["page"],
-                "kind": c["kind"],
-                "section": c["section"],
-                "text": c["raw"],
-            }
-            for c in chunks
-        ],
-    }
-
-
-def get_regulation_stats(settings: Settings) -> dict[str, int]:
-    """활성 문서·청크 수 — 관리자 콘솔 'DB·지식베이스' 패널의 실측 통계."""
-    try:
-        with psycopg.connect(_database_url(settings)) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT count(*) FROM rag_documents WHERE status = 'active'"
-                )
-                documents = cursor.fetchone()[0]
-                cursor.execute(
-                    """
-                    SELECT count(*)
-                    FROM rag_chunks c
-                    JOIN rag_documents d ON d.doc_id = c.doc_id
-                    WHERE d.status = 'active'
-                    """
-                )
-                chunks = cursor.fetchone()[0]
-    except psycopg.Error as exc:
-        raise RegulationSearchUnavailable("regulation stats query failed") from exc
-    return {"documents": documents, "chunks": chunks}

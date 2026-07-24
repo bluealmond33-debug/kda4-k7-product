@@ -20,7 +20,7 @@ pgvector 확장은 벡터(1024) 컬럼과 hnsw 인덱스에 필요하다. Smart 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Mapping, Sequence
 
 import psycopg
 from psycopg.rows import dict_row
@@ -28,8 +28,10 @@ from psycopg.rows import dict_row
 from app.config import Settings
 from app.schemas import RagDocument
 
-# app/services/rag_store.py -> parents[2] == backend 루트 (database.py와 동일 관례)
-RAG_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "database" / "rag" / "schema.sql"
+# 모노레포 이식(ADR-0012): 스키마 정본은 저장소 루트 database/rag/schema.sql이다.
+# app/services/rag_store.py -> parents[3] == repo 루트 (김민기 store.py와 동일 위치).
+# (이식 전 개인 백엔드에서는 parents[2]였으나, 모노레포에선 backend/database가 없다.)
+RAG_SCHEMA_PATH = Path(__file__).resolve().parents[3] / "database" / "rag" / "schema.sql"
 
 # 점수 융합 가중치: 시맨틱 vs 키워드. 모노레포와 동일값(튜닝 여지 위해 명시).
 W_DENSE = 0.65
@@ -255,3 +257,157 @@ def search_regulations(
             )
         )
     return documents
+
+
+# ── 김민기 store.py에서 흡수한 함수 (ADR-0012 pgvector 단일화) ─────────────────
+# 적재/문서조회/통계. 이식하며 upsert의 임베딩을 이 모듈 표준(rag._embed → Ollama
+# bge-m3)으로 통일했다 — 위 seed_demo_regulations·search_regulations와 같은 벡터
+# 공간이라야 검색이 맞는다. (김민기 원본은 FlagEmbedding이었음.)
+#
+# ⚠️ 현재 데모는 FAISS 폴백으로 돌고 pgvector 경로는 휴면 상태다(pgvector_ready()=False).
+#    app/rag/store.py에 남아 있는 김민기 search_regulations(compat.py 전용)는 아직
+#    FlagEmbedding 질의라, pgvector를 실가동할 때 그 경로도 이 모듈로 일원화해야 한다.
+
+def upsert_documents_and_chunks(
+    settings: Settings, chunks: Sequence[Mapping[str, Any]]
+) -> int:
+    """ingest.py 산출 청크(dict)를 rag_documents + rag_chunks에 적재. 반환=적재 청크 수.
+
+    멱등: 같은 chunk_id 재실행 시 text/embedding 교체, 문서 version/status/effective_date
+    갱신(supersede 지원). 임베딩은 rag._embed(Ollama bge-m3, 1024차원 L2정규화)로 배치.
+    """
+    if not chunks:
+        return 0
+
+    from app.services import rag  # 지연 import — 순환참조 회피
+
+    vectors = rag._embed(settings, [c["text"] for c in chunks])  # (N, 1024)
+
+    documents: dict[str, Mapping[str, Any]] = {}
+    for c in chunks:
+        documents.setdefault(c["doc_id"], c)
+
+    try:
+        with psycopg.connect(_database_url(settings)) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(RAG_SCHEMA_PATH.read_text(encoding="utf-8"))
+                for d in documents.values():
+                    cursor.execute(
+                        """
+                        INSERT INTO rag_documents
+                            (doc_id, title, doc_type, categories, version,
+                             effective_date, status, source_file)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (doc_id) DO UPDATE SET
+                            title = EXCLUDED.title,
+                            doc_type = EXCLUDED.doc_type,
+                            categories = EXCLUDED.categories,
+                            version = EXCLUDED.version,
+                            effective_date = EXCLUDED.effective_date,
+                            status = EXCLUDED.status
+                        """,
+                        (
+                            d["doc_id"],
+                            d["title"],
+                            d.get("doc_type", ""),
+                            list(d.get("categories", [])),
+                            d.get("version", "v1"),
+                            d.get("effective_date"),
+                            d.get("status", "active"),
+                            d.get("filename", d["doc_id"]),
+                        ),
+                    )
+                for chunk, vec in zip(chunks, vectors):
+                    cursor.execute(
+                        """
+                        INSERT INTO rag_chunks
+                            (chunk_id, doc_id, page, kind, section, raw, text, embedding)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::vector)
+                        ON CONFLICT (chunk_id) DO UPDATE SET
+                            text = EXCLUDED.text,
+                            raw = EXCLUDED.raw,
+                            section = EXCLUDED.section,
+                            embedding = EXCLUDED.embedding
+                        """,
+                        (
+                            chunk["chunk_id"],
+                            chunk["doc_id"],
+                            chunk.get("page", 1),
+                            chunk.get("kind", "text"),
+                            chunk.get("section"),
+                            chunk["raw"],
+                            chunk["text"],
+                            _vector_literal(vec.tolist()),
+                        ),
+                    )
+    except psycopg.Error as exc:
+        raise RegulationSearchUnavailable("regulation upsert failed") from exc
+    reset_readiness()  # 적재 직후 재판정되게
+    return len(chunks)
+
+
+def get_regulation_document(settings: Settings, doc_id: str) -> dict[str, Any] | None:
+    """문서 메타 + 페이지순 청크 전체 — 프론트 '원문 열람 시트'(엑셀 룩) 데이터."""
+    try:
+        with psycopg.connect(
+            _database_url(settings), row_factory=dict_row
+        ) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT doc_id, title, doc_type, categories, version, effective_date, source_file "
+                    "FROM rag_documents WHERE doc_id = %s AND status = 'active'",
+                    (doc_id,),
+                )
+                doc = cursor.fetchone()
+                if doc is None:
+                    return None
+                cursor.execute(
+                    "SELECT chunk_id, page, kind, section, raw "
+                    "FROM rag_chunks WHERE doc_id = %s ORDER BY page, chunk_id",
+                    (doc_id,),
+                )
+                chunks = cursor.fetchall()
+    except psycopg.Error as exc:
+        raise RegulationSearchUnavailable("regulation document query failed") from exc
+    return {
+        "doc_id": doc["doc_id"],
+        "title": doc["title"],
+        "doc_type": doc["doc_type"],
+        "categories": list(doc["categories"] or []),
+        "version": doc["version"],
+        "effective_date": str(doc["effective_date"]) if doc["effective_date"] else None,
+        "source_file": doc["source_file"],
+        "chunks": [
+            {
+                "chunk_id": c["chunk_id"],
+                "page": c["page"],
+                "kind": c["kind"],
+                "section": c["section"],
+                "text": c["raw"],
+            }
+            for c in chunks
+        ],
+    }
+
+
+def get_regulation_stats(settings: Settings) -> dict[str, int]:
+    """활성 문서·청크 수 — 관리자 콘솔 'DB·지식베이스' 패널의 실측 통계."""
+    try:
+        with psycopg.connect(_database_url(settings)) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT count(*) FROM rag_documents WHERE status = 'active'"
+                )
+                documents = cursor.fetchone()[0]
+                cursor.execute(
+                    """
+                    SELECT count(*)
+                    FROM rag_chunks c
+                    JOIN rag_documents d ON d.doc_id = c.doc_id
+                    WHERE d.status = 'active'
+                    """
+                )
+                chunks = cursor.fetchone()[0]
+    except psycopg.Error as exc:
+        raise RegulationSearchUnavailable("regulation stats query failed") from exc
+    return {"documents": documents, "chunks": chunks}
