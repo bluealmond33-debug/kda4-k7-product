@@ -165,7 +165,7 @@ export default function ClassifierFeedback({ vm }: { vm: CallFlowVM }) {
               type="button"
               onClick={tapCorrect}
               disabled={submitting}
-              style={btn("flex:1;display:flex;align-items:center;justify-content:center;gap:5px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;border-radius:8px;padding:9px 0;color:var(--green-900);background:var(--green-100);border:1px solid var(--green-400)")}
+              style={btn("flex:1;display:flex;align-items:center;justify-content:center;gap:5px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;border-radius:8px;padding:9px 0;color:var(--green-900);background:var(--onair-surface);border:1.5px solid var(--green-500)")}
             >
               <span className="mi" style={css("font-size:16px")}>check</span>맞음
             </button>
@@ -173,7 +173,7 @@ export default function ClassifierFeedback({ vm }: { vm: CallFlowVM }) {
               type="button"
               aria-pressed={mode === "correcting"}
               onClick={() => setMode(mode === "correcting" ? "idle" : "correcting")}
-              style={btn("flex:1;display:flex;align-items:center;justify-content:center;gap:5px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;border-radius:8px;padding:9px 0;" + (mode === "correcting" ? "color:#fff;background:var(--red-800);border:1px solid var(--red-800)" : "color:var(--red-900);background:var(--red-100);border:1px solid var(--red-400)"))}
+              style={btn("flex:1;display:flex;align-items:center;justify-content:center;gap:5px;font:700 12.5px 'Geist Sans','Pretendard',sans-serif;border-radius:8px;padding:9px 0;" + (mode === "correcting" ? "color:#fff;background:var(--red-800);border:1.5px solid var(--red-800)" : "color:var(--red-900);background:var(--onair-surface);border:1.5px solid var(--red-500)"))}
             >
               <span className="mi" style={css("font-size:16px")}>edit</span>수정 필요
             </button>

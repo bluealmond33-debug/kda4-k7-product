@@ -190,9 +190,9 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--gray-200)")}>
               <span style={css("font:400 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>시트를 접으면 방금 통화 화면을 다시 볼 수 있습니다</span>
               <div style={css("flex:1")} />
-              <span style={css("font:500 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>저장하지 않음</span>
-              <span onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-500);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-1000);cursor:pointer;background:var(--onair-surface)")}>
-                <span className="mi" style={css("font-size:18px")}>coffee</span> 초안 폐기·휴식
+              {/* 좌: 저장 안 하고 대기 화면으로(휴식) · 우: 저장하고 다음 콜 받기 */}
+              <span onClick={vm.reset} title="이 후처리 초안을 저장하지 않고 대기 화면으로 돌아갑니다" style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-400);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-800);cursor:pointer;background:var(--onair-surface)")}>
+                <span className="mi" style={css("font-size:18px")}>coffee</span> 저장 안 함 · 휴식
               </span>
               <span data-tour="wrap-save" onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
                 <span className="mi" style={css("font-size:18px")}>call</span> 저장 후 다음 콜
