@@ -43,8 +43,8 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <div style={css("display:flex;align-items:center;gap:10px;flex:none")}>
               <div style={css("display:flex;flex-direction:column;gap:2px")}>
                 <div style={css("display:flex;align-items:center;gap:7px")}>
-                  <BrandLogo size={15} color="var(--gray-1000)" />
-                  <span style={css("font:700 12.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-500)")}>브리핑</span>
+                  <BrandLogo size={15} color="var(--blue-700)" />
+                  <span style={css("font:700 12.5px " + FONT + ";letter-spacing:.2px;color:var(--blue-700)")}>브리핑</span>
                 </div>
                 <span style={css("font:400 10px " + FONT + ";color:var(--gray-600)")}>{vm.summarySourceLabel} · 전화 받기 전 미리 정리했어요</span>
               </div>
@@ -196,18 +196,18 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               </div>
 
               {/* ── 우: 전화 요약 (가장 큰 비중) ── */}
-              <div style={css("flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;border:1.5px solid var(--blue-700);border-radius:10px;padding:16px 18px")}>
-                <div style={css("display:flex;align-items:center;gap:5px;font:600 10.5px " + FONT + ";color:var(--gray-600);margin-bottom:8px")}>
+              <div style={css("flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;border:1.5px solid var(--blue-700);border-radius:10px;padding:11px 18px 14px")}>
+                <div style={css("display:flex;align-items:center;gap:5px;font:600 10.5px " + FONT + ";color:var(--gray-600);margin-bottom:5px")}>
                   <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>summarize</span>전화 요약 · 고객 발화 STT
                 </div>
                 {/* 한 줄 요약 — 제목(크게). 근거 발화는 바로 아래 붙인다 */}
-                <div style={css("font:700 17px/1.4 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>{vm.prepHeadline}</div>
+                <div style={css("font:700 17px/1.35 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>{vm.prepHeadline}</div>
                 {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선 */}
-                <div style={css("font:400 11.5px/1.45 " + FONT + ";color:var(--gray-700);margin-top:3px;padding-bottom:11px;border-bottom:1px solid var(--gray-200)")}>
+                <div style={css("font:400 11.5px/1.4 " + FONT + ";color:var(--gray-700);margin-top:2px;padding-bottom:8px;border-bottom:1px solid var(--gray-200)")}>
                   근거 발화 · <span style={css("font-style:italic;color:var(--gray-900)")}>“{vm.transcriptQuote}”</span>
                 </div>
                 {/* STT 요약 불릿 — 이 박스의 주인공. 크고 또렷하게 */}
-                <div style={css("flex:1;display:flex;flex-direction:column;gap:11px;margin-top:12px")}>
+                <div style={css("flex:1;display:flex;flex-direction:column;gap:11px;margin-top:10px")}>
                   {vm.summaryPoints.map((p, i) => (
                     <div key={i} style={css("display:flex;gap:10px;align-items:baseline")}>
                       <span style={css("flex:none;width:6px;height:6px;border-radius:9999px;background:var(--blue-700);transform:translateY(-2px)")} />
