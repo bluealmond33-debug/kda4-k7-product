@@ -21,3 +21,4 @@ yarn-error.log*
 models/
 artifacts/
 backend/app/services/routing/models/*.joblib
+backend/data/classifier_feedback/sessions/

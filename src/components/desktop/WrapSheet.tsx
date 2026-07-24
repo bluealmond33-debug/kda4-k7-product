@@ -4,6 +4,7 @@ import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
 import Spinner from "../Spinner";
 import DesktopShell from "./DesktopShell";
+import ClassifierFeedback from "./ClassifierFeedback";
 
 /** 1b — 통화 종료 · 후처리 바텀 시트.
  *  통화 화면(ActiveCall)이 배경에 그대로 남고, 시트가 그 위로 올라온다 — 통화→후처리는 한 흐름.
@@ -92,9 +93,11 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 </div>
                 <SelectField label="상담 유형" value={vm.wrapType} open={vm.typeMenu} onToggle={vm.toggleTypeMenu} opts={vm.typeOpts} />
                 <SelectField label="상담 결과" value={vm.wrapResult} open={vm.resultMenu} onToggle={vm.toggleResultMenu} opts={vm.resultOpts} />
-                <div style={css("flex:1")} />
+                {/* AI 분류 검수·피드백 — 판정 교정이 학습 데이터로 축적된다(계속 개선되는 시스템) */}
+                <ClassifierFeedback vm={vm} />
+                <div style={css("flex:1;min-height:6px")} />
                 <div style={css("font:400 11px/1.6 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
-                  저장 API 미연동 · 화면 전환 시 이 초안은 폐기됩니다
+                  분류 교정은 학습 데이터로 저장됩니다 · 초안 저장 API는 미연동
                 </div>
               </div>
 

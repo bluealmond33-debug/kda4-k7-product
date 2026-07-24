@@ -38,6 +38,7 @@ from app.rag import (
 )
 from app.rag import embedder
 from app.rag.taxonomy import is_valid_category
+from app.classification import feedback_demo as clf_feedback
 
 
 settings = get_settings()
@@ -255,6 +256,34 @@ def read_regulation_document(doc_id: str) -> dict:
     if doc is None:
         raise HTTPException(status_code=404, detail=f"unknown document: {doc_id}")
     return doc
+
+
+# ── 분류기 개선 피드백 루프 — 상담사가 후처리 화면에서 AI 분류 판정을 검수/교정한다.
+#    틀린 판정만 edge_cases.jsonl에 학습 데이터로 축적된다(팀원 K7 분류기 실험실과 동일 스키마).
+#    verdict=incorrect 만 학습 마스터에 append, task_code에서 부서·업무명·handler를 서버가 파생.
+@app.post("/api/v1/classifier/feedback", status_code=status.HTTP_201_CREATED)
+def classifier_feedback(payload: dict) -> dict:
+    try:
+        return clf_feedback.save_feedback(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/classifier/catalog")
+def classifier_catalog() -> dict:
+    """교정 드롭다운용 업무 카탈로그 — code·name·routing(S/G/E)·department·business_code."""
+    return {"tasks": clf_feedback.task_catalog()}
+
+
+@app.get("/api/v1/classifier/stats")
+def classifier_stats() -> dict:
+    """학습 후보 통계 — total·incorrect·reusable_edge_cases(고유 정규화 발화 수)."""
+    return clf_feedback.feedback_stats()
+
+
+@app.post("/api/v1/classifier/session/start", status_code=status.HTTP_201_CREATED)
+def classifier_session_start() -> dict:
+    return clf_feedback.start_review_session()
 
 
 @app.get(
