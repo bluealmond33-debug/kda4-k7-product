@@ -35,13 +35,22 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
       <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5);animation:fadeIn .18s ease-out")} />
 
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;width:680px;max-width:94%;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
+      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;width:860px;max-width:95%;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
         <div data-tour="prep-card" style={css("width:100%;max-height:620px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
 
           {/* ── 상단 ── 로고(좌) / 라우팅 단계: 부서 → 업무코드 (클릭=이관) */}
           <div style={css("flex:none;padding:12px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:14px")}>
             <BrandLogo size={17} symbolColor="var(--blue-700)" color="var(--gray-1000)" />
             <div style={css("flex:1")} />
+            {/* 이번 상담 유의 — 통화 전 스치듯 확인하는 가드레일. 헤더 우측 칩으로 스캔 빠르게 */}
+            <div data-tour="prep-checks" style={css("display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:7px")}>
+              <span style={css("font:700 10px " + FONT + ";letter-spacing:.2px;color:var(--gray-500);margin-right:1px;flex:none")}>이번 상담 유의</span>
+              {vm.prepRows.map((r, i) => (
+                <span key={i} style={css("display:inline-flex;align-items:center;gap:5px;font:600 11.5px " + FONT + ";color:var(--gray-1000);border:1px solid var(--gray-400);border-radius:9999px;padding:3px 11px;white-space:nowrap")}>
+                  <span className="mi" style={css("font-size:14px;color:var(--green-700)")}>check</span>{r.title}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* ── 본문 ── */}
@@ -149,22 +158,6 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                   >
                     <span className="mi" style={css("font-size:22px;flex:none;color:" + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}>{vm.prepVerified ? "lock_open" : "lock"}</span>
                     <span style={css("font:700 11px " + FONT + ";white-space:nowrap;color:" + (vm.prepVerified ? "var(--green-900)" : "var(--amber-900)"))}>인증 {vm.prepVerified ? "완료" : "미완료"}</span>
-                  </div>
-                </div>
-
-                {/* 이번 상담 유의 — 통화 전 스치듯 확인하는 가드레일. 좌측 하단, 남는 높이를 채운다 */}
-                <div data-tour="prep-checks" style={css("flex:1;min-height:60px;border:1px solid var(--gray-300);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:8px")}>
-                  <div style={css("display:flex;align-items:center;gap:5px")}>
-                    <span className="mi" style={css("font-size:14px;color:var(--gray-600)")}>info</span>
-                    <span style={css("font:700 10px " + FONT + ";letter-spacing:.2px;color:var(--gray-600)")}>이번 상담 유의</span>
-                  </div>
-                  <div style={css("display:flex;flex-direction:column;gap:7px")}>
-                    {vm.prepRows.map((r, i) => (
-                      <div key={i} style={css("display:flex;align-items:center;gap:7px")}>
-                        <span className="mi" style={css("font-size:15px;color:var(--green-700);flex:none")}>check_circle</span>
-                        <span style={css("font:600 12px " + FONT + ";color:var(--gray-1000)")}>{r.title}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
 
