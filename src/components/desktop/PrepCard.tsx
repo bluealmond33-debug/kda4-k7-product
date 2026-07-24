@@ -156,7 +156,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                     title={vm.prepVerified ? "본인인증 완료 — 고객 상세 조회가 열립니다" : "본인인증 미완료 — 연결 직후 확인하세요"}
                     style={css("flex:2;min-width:0;border-radius:10px;padding:10px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid " + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}
                   >
-                    <span className="mi" style={css("font-size:22px;flex:none;color:" + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}>{vm.prepVerified ? "lock_open" : "lock"}</span>
+                    <span className="mi" style={css("font-size:22px;flex:none;color:" + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}>{vm.prepVerified ? "lock" : "lock_open"}</span>
                     <span style={css("font:700 11px " + FONT + ";white-space:nowrap;color:" + (vm.prepVerified ? "var(--green-900)" : "var(--amber-900)"))}>인증 {vm.prepVerified ? "완료" : "미완료"}</span>
                   </div>
                 </div>
@@ -175,7 +175,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                   근거 발화 · <span style={css("font-style:italic;color:var(--gray-900)")}>“{vm.transcriptQuote}”</span>
                 </div>
                 {/* STT 요약 불릿 — 이 박스의 주인공. 크고 또렷하게 */}
-                <div style={css("flex:1;display:flex;flex-direction:column;gap:11px;margin-top:10px")}>
+                <div style={css("flex:1;display:flex;flex-direction:column;gap:7px;margin-top:9px")}>
                   {vm.summaryPoints.map((p, i) => (
                     <div key={i} style={css("display:flex;gap:10px;align-items:baseline")}>
                       <span style={css("flex:none;width:6px;height:6px;border-radius:9999px;background:var(--blue-700);transform:translateY(-2px)")} />
