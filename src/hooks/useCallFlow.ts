@@ -1529,8 +1529,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const pressCustomerDigit = useCallback(
     (digit: string) => {
-      // 로컬 데모(서버 없음)에선 키패드 입력을 조용히 무시 — 오류 배너 띄우지 않는다.
-      if (!customerLiveMode) return true;
+      // 로컬 데모(서버 없음): 서버로 보낼 채널이 없으니 입력을 화면에만 반영한다. 예전엔 그냥
+      // return true 했는데, 그러면 눌러도 입력창에 아무것도 안 떠서 '안 눌리는' 것처럼 보였다.
+      // (실서버 모드에선 서버 onDigit 이벤트가 arsDigits를 채우므로 여기서 건드리지 않는다.)
+      if (!customerLiveMode) {
+        setArsDigits((value) => (value + digit).slice(-24));
+        return true;
+      }
       const sent = mobileArsRef.current?.pressDigit(digit) ?? false;
       if (!sent) {
         setMicErr("키패드 전송 채널이 준비되지 않았습니다. 연결 상태를 확인해 주세요.");
@@ -1739,13 +1744,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       else arsControlRef.current?.endCall();
       return;
     }
-    // 통화 중이면 종료 화면(wrap→고객 폰은 SMS)으로. 그 전(connecting/idle)이면 reset.
-    // 고객 폰은 통화 대부분을 'recording'에서 보내므로 active만 wrap이면 끊을 때 다이얼로 리셋돼
-    // 종료 화면이 안 뜬다 → 고객 surface는 recording/confirm/prep에서 종료해도 wrap으로 보낸다.
+    // 통화 중이면 종료 화면(wrap→고객 폰은 SMS)으로. 아직 연결 전(connecting/idle)이면 reset.
+    // active만 허용하면 통화 대부분을 'recording'에서 보내는 폰이 끊을 때 다이얼로 리셋돼
+    // 종료 화면이 안 뜬다 → 이미 말이 오가는 recording/confirm도 통화 중으로 본다(합본 화면 포함).
+    // prep(상담사 준비)은 고객 쪽에선 통화가 붙어 있는 상태라 고객 surface에서만 통화 중.
     const p = phaseRef.current;
     const inCallNow =
       p === "active" ||
-      (isCustomerSurface && (p === "recording" || p === "confirm" || p === "prep"));
+      p === "recording" ||
+      p === "confirm" ||
+      (isCustomerSurface && p === "prep");
     if (!inCallNow) {
       reset();
       return;
@@ -2427,12 +2435,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     mobileIntakeComplete,
     mobileIntakePending,
     mobileAgentConnected,
+    // 통화 중이면 키패드는 항상 눌린다. 실기기에서 통화 중 키패드가 잠기는 일은 없다.
+    // - 실서버 모드: DTMF를 보낼 채널이 실제로 열려 있어야 한다(고객 폰 + 서버 연결).
+    // - 로컬 데모(백엔드 없이 시연): 통화 중이면 무조건 열린다. 고객이 #을 눌러 통화를 끝내는
+    //   흐름을 보여줘야 하고, 합본 화면(surface="full")의 폰도 같이 눌려야 한다.
+    //   이 값은 Phone.tsx에서만 쓰이고 Phone은 직원 전용 화면에선 렌더되지 않아 안전하다.
     customerKeypadEnabled:
-      isCustomerSurface &&
-      realCallActiveRef.current &&
-      mobileServerConnected &&
       !mobileIntakePending &&
-      (p === "recording" || p === "confirm" || p === "active"),
+      (customerLiveMode
+        ? isCustomerSurface &&
+          realCallActiveRef.current &&
+          mobileServerConnected &&
+          (p === "recording" || p === "confirm" || p === "active")
+        : p === "recording" || p === "confirm" || p === "active" || p === "prep"),
     customerPressDigit: pressCustomerDigit,
     // desktop waiting
     showWaiting: ["idle", "connecting", "recording", "confirm"].includes(p),
