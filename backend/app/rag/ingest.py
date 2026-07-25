@@ -38,6 +38,10 @@ MAX_CHARS = 1200
 MIN_CHARS = 60
 
 
+from .readers import read_tabular
+from .structure import Record, structure_record
+
+
 def load_registry(path: str | Path) -> dict[str, dict[str, str]]:
     with open(path, newline="", encoding="utf-8") as f:
         return {row["filename"]: row for row in csv.DictReader(f)}
@@ -137,6 +141,9 @@ def _make_chunk(meta: dict[str, Any], page: int, kind: str, body: str, section: 
         "entities": extract_entities(body),
         "text": f"{header}\n{body}",
         "raw": body,
+        # 화면이 조항/항목/내용/안내멘트로 보여 주려면 그 칸이 데이터에 있어야 한다.
+        # 구조화는 형식을 모르는 structure.py가 전담한다 — PDF든 엑셀이든 같은 모양이 나온다.
+        "structured": structure_record(Record(body=body, page=page, section=section, kind=kind)),
     }
 
 
@@ -191,13 +198,33 @@ def ingest_files(registry_path: str | Path, paths: list[str]) -> list[dict[str, 
             raise SystemExit(f"'{Path(p).name}' not in {registry_path} — add it first")
         meta = dict(row)
         meta["categories"] = [c for c in row.get("categories", "").split(";") if c]
-        out.extend(ingest_pdf(p, meta))
+        out.extend(ingest_path(p, meta))
+    return out
+
+
+def ingest_path(path: str | Path, meta: dict[str, Any]) -> list[dict[str, Any]]:
+    """확장자를 보고 알맞은 리더로 보낸다.
+
+    PDF는 기존 경로 그대로, csv·xlsx는 표 리더를 태운다. 어느 쪽이든 마지막에
+    _make_chunk를 지나므로 **청크 스키마와 구조화 필드는 동일**하다 — 화면은 원본이
+    무엇이었는지 알 필요가 없다.
+    """
+    suffix = Path(path).suffix.lower()
+    if suffix == ".pdf":
+        return ingest_pdf(path, meta)
+
+    out: list[dict[str, Any]] = []
+    for rec in read_tabular(path):
+        chunk = _make_chunk(meta, rec.page, rec.kind, rec.body, rec.section or meta["title"])
+        # 표에서 온 값은 추출값보다 정확하다 — 리더가 읽은 열을 그대로 구조화기에 넘긴다
+        chunk["structured"] = structure_record(rec)
+        out.append(chunk)
     return out
 
 
 def main(argv: list[str]) -> None:
     if len(argv) < 2:
-        raise SystemExit("usage: python3 -m app.rag.ingest <registry.csv> <file.pdf> ...")
+        raise SystemExit("usage: python3 -m app.rag.ingest <registry.csv> <file.pdf|.xlsx|.csv> ...")
     chunks = ingest_files(argv[0], argv[1:])
     kinds = [c["kind"] for c in chunks]
     print(f"{len(chunks)} chunks (text={kinds.count('text')}, table={kinds.count('table')})")

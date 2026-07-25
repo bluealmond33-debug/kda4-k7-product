@@ -190,6 +190,11 @@ export default function Standby() {
   const logged = useCallLog();
   const doneCount = logged.filter((e) => e.status !== "미상담 종료").length;
   const wrapDoneCount = logged.filter((e) => e.status === "후처리 완료").length;
+  // 네 번째 지표는 '콜백 예약'으로 둔다. 앞의 셋은 전부 지나간 일(처리·완료·평균)이라
+  // 훑어도 할 일이 안 남는다 — 콜백만이 **아직 남은 약속**이라 오늘 행동을 바꾼다.
+  const callbackCount =
+    logged.filter((e) => e.status === "콜백 예약").length +
+    TODAY.rows.filter((r) => r.status === "콜백 예약").length;
   const rows = [
     ...logged.map((e) => ({
       time: e.time,
@@ -270,17 +275,25 @@ export default function Standby() {
       {view === "today" && (
         <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0")}>
           <SubHead onBack={back} title="처리 내역" sub="오늘" />
-          {/* 요약 스탯 3장 — 아이콘 + bignum 타일 */}
-          <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px")}>
+          {/* 요약 스탯 4장 — 아이콘 + bignum 타일. 넷째(콜백 예약)만 앞을 보는 지표라
+              값이 있을 때 앰버로 든다: 색은 '아직 남은 약속'이라는 신호에만 쓴다. */}
+          <div style={css("display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px")}>
             {[
-              { icon: <History size={17} color="var(--blue-700)" strokeWidth={2} />, label: "처리", value: `${TODAY.count + doneCount}`, unit: "건" },
-              { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>task_alt</span>, label: "후처리 완료", value: `${TODAY.wrapDone + wrapDoneCount}`, unit: "건" },
-              { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>timer</span>, label: "평균 통화", value: TODAY.avgTalk, unit: "" },
+              { icon: <History size={17} color="var(--blue-700)" strokeWidth={2} />, label: "처리", value: `${TODAY.count + doneCount}`, unit: "건", tone: "" },
+              { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>task_alt</span>, label: "후처리 완료", value: `${TODAY.wrapDone + wrapDoneCount}`, unit: "건", tone: "" },
+              { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>timer</span>, label: "평균 통화", value: TODAY.avgTalk, unit: "", tone: "" },
+              {
+                icon: <span className="mi" style={css("font-size:17px;color:" + (callbackCount ? "var(--amber-700)" : "var(--blue-700)"))}>event</span>,
+                label: "콜백 예약",
+                value: `${callbackCount}`,
+                unit: "건",
+                tone: callbackCount ? "var(--amber-900)" : "",
+              },
             ].map((s) => (
               <div key={s.label} className="card" style={css("padding:13px 16px;box-shadow:var(--sh-near)")}>
                 <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{s.icon}{s.label}</div>
                 <div style={css("margin-top:6px")}>
-                  <span className="bignum" style={css("font-size:24px;color:var(--gray-1000)")}>{s.value}</span>
+                  <span className="bignum" style={css("font-size:24px;color:" + (s.tone || "var(--gray-1000)"))}>{s.value}</span>
                   {s.unit && <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-left:2px")}>{s.unit}</span>}
                 </div>
               </div>
@@ -301,13 +314,30 @@ export default function Standby() {
                 : "color:var(--green-900);background:rgba(29,122,72,.10)";
               const icon = noTalk ? "call_end" : cb ? "event" : "check";
               return (
-                <div key={i} className="ptile" style={css("display:flex;gap:14px;padding:2px 4px;border-radius:8px")}>
-                  {/* 레일 */}
-                  <div style={css("display:flex;flex-direction:column;align-items:center;flex:none;width:10px")}>
-                    <span style={css("width:9px;height:9px;border-radius:9999px;margin-top:15px;flex:none;background:" + dot)} />
-                    {!last && <span style={css("flex:1;width:1.5px;background:var(--gray-200)")} />}
+                <div key={i} className="ptile" style={css("display:flex;gap:10px;padding:0 4px;border-radius:8px")}>
+                  {/* 레일 — 점은 시각 바로 왼쪽에 붙고, 선은 위아래 행까지 끊김 없이 이어진다.
+                      전에는 레일이 행마다 독립된 세로 상자라 행 사이(패딩·구분선)에서 선이
+                      끊겨 점만 흩어져 보였다. 이제 선을 절대배치로 행 높이 전체에 걸치고,
+                      첫 행은 점에서 시작 · 마지막 행은 점에서 끝나게 잘라 준다. */}
+                  <div style={css("position:relative;flex:none;width:9px;align-self:stretch")}>
+                    {/* 첫 행은 점에서 아래로, 마지막 행은 위에서 점까지, 가운데 행은 위아래로 관통.
+                        행이 하나뿐이면 이을 곳이 없으므로 선을 그리지 않는다. */}
+                    {!(i === 0 && last) && (
+                      <span
+                        style={css(
+                          "position:absolute;left:50%;transform:translateX(-50%);width:1.5px;background:var(--gray-200);" +
+                            (i === 0 ? "top:26px;bottom:0" : last ? "top:0;height:26px" : "top:0;bottom:0")
+                        )}
+                      />
+                    )}
+                    <span
+                      style={css(
+                        "position:absolute;left:50%;top:26px;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:9999px;background:" +
+                          dot
+                      )}
+                    />
                   </div>
-                  <div style={css("flex:1;display:flex;align-items:center;gap:14px;padding:12px 4px" + (last ? "" : ";border-bottom:1px solid var(--gray-200)"))}>
+                  <div style={css("flex:1;display:flex;align-items:center;gap:12px;padding:12px 4px" + (last ? "" : ";border-bottom:1px solid var(--gray-200)"))}>
                     <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);width:44px;flex:none")}>{r.time}</span>
                     <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:2px")}>
                       <span style={css("font:600 13.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.type}</span>
@@ -429,18 +459,36 @@ export default function Standby() {
                 ))}
               </div>
 
-              {/* 최근 7일 처리량 — 막대 미니 차트 */}
+              {/* 최근 7일 처리량 — 막대 미니 차트.
+                  막대는 슬롯을 꽉 채우지 않고 폭을 캡한다(≤22px). 전에는 width:100%라
+                  칸마다 통짜 블록이 서서 차트가 아니라 벽돌담처럼 뚱뚱해 보였다 —
+                  남는 자리는 여백으로 두는 게 막대의 높이 차이를 읽게 만든다.
+                  값 라벨은 오늘 하나만: 모든 막대에 숫자를 얹으면 라벨이 작동을 멈춘다.
+                  나머지 값은 각 칸에 올리면(title) 나온다. */}
               <div style={css("background:var(--background-200);border-radius:8px;padding:13px 16px")}>
                 <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>최근 7일 처리량</div>
-                <div style={css("display:flex;align-items:flex-end;gap:10px;height:56px")}>
+                <div style={css("display:flex;align-items:flex-end;gap:10px;height:74px")}>
                   {COACH.trend.map((d, i) => {
                     const max = Math.max(...COACH.trend.map((x) => x.n));
                     const isLast = i === COACH.trend.length - 1;
+                    const h = Math.round((d.n / max) * 46);
                     return (
-                      <div key={i} style={css("flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end")}>
-                        <span className="bignum" style={css("font-size:10.5px;color:" + (isLast ? "var(--gray-1000)" : "var(--gray-600)"))}>{d.n || ""}</span>
-                        <span style={css("width:100%;border-radius:3px 3px 0 0;background:" + (isLast ? "var(--blue-700)" : "var(--gray-400)") + ";height:" + Math.max(3, Math.round((d.n / max) * 32)) + "px")} />
-                        <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{d.day}</span>
+                      <div
+                        key={i}
+                        title={d.day + "요일 · " + d.n + "건"}
+                        style={css("flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end")}
+                      >
+                        <span className="bignum" style={css("font-size:11px;height:13px;color:var(--gray-1000)")}>{isLast ? d.n : ""}</span>
+                        {/* 0건인 날은 막대를 세우지 않는다 — 3px짜리 토막을 세우면 '조금 했다'로 읽힌다.
+                            바닥에 가는 눈금만 남겨 '그날이 존재하지만 0이었다'를 표시한다. */}
+                        <span
+                          style={css(
+                            "width:100%;max-width:22px;border-radius:4px 4px 0 0;background:" +
+                              (d.n === 0 ? "var(--gray-300)" : isLast ? "var(--blue-700)" : "var(--gray-400)") +
+                              ";height:" + (d.n === 0 ? 2 : Math.max(4, h)) + "px"
+                          )}
+                        />
+                        <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:" + (isLast ? "var(--gray-900)" : "var(--gray-600)"))}>{d.day}</span>
                       </div>
                     );
                   })}
@@ -478,8 +526,11 @@ export default function Standby() {
                 </div>
               </div>
 
-              {/* §6 잘한 점 — 반드시 함께 (감시 화면이 되지 않게) */}
-              <div style={css("background:var(--background-200);border-left:3px solid var(--green-700);border-radius:8px;padding:12px 16px")}>
+              {/* §6 잘한 점 — 반드시 함께 (감시 화면이 되지 않게).
+                  한쪽만 색 넣은 테두리(side rail)는 쓰지 않는다 — 상자를 반쪽만 칠한 것처럼
+                  보이고, 우리 규칙에서 금지한 형태다. 초록은 아이콘과 제목 글자에만 남긴다:
+                  '잘한 점'이라는 신호는 색 한 점으로 충분하고, 면은 다른 카드와 같아야 한다. */}
+              <div style={css("background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:8px;padding:12px 16px")}>
                 <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:5px")}>
                   <span className="mi" style={css("font-size:15px;color:var(--green-700)")}>verified</span>
                   <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900)")}>잘한 점 · {COACH.good.title}</span>
