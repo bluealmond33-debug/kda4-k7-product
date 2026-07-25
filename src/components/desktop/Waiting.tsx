@@ -46,14 +46,19 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
         <Standby />
       </div>
 
-      {/* 좌하단 접수 패널 — 바텀업으로 등장(작게, 화면을 덮지 않음).
-          카드 생성 단계(stage 2)에 들어가면 한 번 부풀어 오른다 — 이 작은 패널이 곧 중앙의
-          준비 카드로 '자라난다'는 예고다. 이어서 PrepCard가 이 자리에서 커지며 날아온다
+      {/* 좌하단 접수 패널 — 바텀업으로 등장. 자리는 구석에 두되(대기 화면을 가리지 않는다)
+          관객이 읽을 수 있는 크기로 키운다. 폭만 늘리면 늘어난 여백만 보이므로 스피너·글자·
+          칩을 같은 비율로 함께 키웠다.
+          위치를 중앙으로 옮기지 않는 이유: '구석에서 작게 접수 → 중앙에서 크게 카드'라는
+          크기·위치 대비가 "정리되어 올라왔다"를 말한다. 접수부터 중앙이면 카드가 떠도
+          자리만 바뀐 것으로 읽히고, 아래 레벨업 모션도 근거를 잃는다.
+          카드 생성 단계(stage 2)에 들어가면 한 번 부풀어 오른다 — 이 패널이 곧 중앙의 준비
+          카드로 '자라난다'는 예고다. 이어서 PrepCard가 이 자리에서 커지며 날아온다
           (cardArrive: 좌하단 scale .34 → 중앙 1.0). 두 모션이 한 동작으로 읽힌다. */}
       <div
         data-tour="intake-live"
         style={css(
-          "position:absolute;left:22px;bottom:22px;width:314px;box-sizing:border-box;display:flex;flex-direction:column;gap:13px;padding:15px 17px;border-radius:16px;background:#fff;border:1px solid var(--gray-200);box-shadow:0 18px 44px rgba(28,32,45,.20),0 2px 8px rgba(28,32,45,.08);font-family:" +
+          "position:absolute;left:24px;bottom:24px;width:392px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;padding:19px 21px;border-radius:18px;background:#fff;border:1px solid var(--gray-200);box-shadow:0 20px 50px rgba(28,32,45,.22),0 2px 9px rgba(28,32,45,.09);font-family:" +
             FONT +
             ";animation:" +
             (stage >= 2
@@ -62,27 +67,27 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
         )}
       >
         {/* 헤더 — 얼굴 스피너 + 제목 + 접수 경과 */}
-        <div style={css("display:flex;align-items:center;gap:12px")}>
-          <Spinner size={42} mark speedMs={stage >= 2 ? 620 : 1050} />
-          <div style={css("display:flex;flex-direction:column;gap:3px;min-width:0")}>
-            <span style={css("font:700 13px " + FONT + ";color:var(--gray-1000);letter-spacing:-.2px")}>
+        <div style={css("display:flex;align-items:center;gap:14px")}>
+          <Spinner size={52} mark speedMs={stage >= 2 ? 620 : 1050} />
+          <div style={css("display:flex;flex-direction:column;gap:4px;min-width:0")}>
+            <span style={css("font:700 15.5px " + FONT + ";color:var(--gray-1000);letter-spacing:-.3px")}>
               {stage >= 2 ? "상담 카드 만드는 중" : "AI가 접수·요약 중"}
             </span>
-            <span style={css("font:600 11.5px " + FONT + ";color:var(--gray-600)")}>
+            <span style={css("font:600 13px " + FONT + ";color:var(--gray-600)")}>
               접수 경과 <span style={css("color:var(--gray-1000);font-variant-numeric:tabular-nums")}>{vm.clockStr}</span>
             </span>
           </div>
         </div>
 
-        {/* 진행 단계 — 컴팩트 */}
-        <div style={css("display:flex;align-items:center;gap:5px")}>
+        {/* 진행 단계 */}
+        <div style={css("display:flex;align-items:center;gap:6px")}>
           {steps.map((label, i) => {
             const done = i < stage, on = i === stage;
             return (
-              <span key={label} style={css("display:inline-flex;align-items:center;gap:5px")}>
-                {i > 0 && <span style={css("width:12px;height:1.5px;background:" + (done || on ? "var(--blue-400)" : "var(--gray-300)"))} />}
-                <span style={css("display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:9999px;font:700 11px " + FONT + ";" + (on ? "background:var(--blue-700);color:#fff" : done ? "background:var(--gray-1000);color:#fff" : "background:var(--gray-100);color:var(--gray-500)"))}>
-                  {done ? <span className="mi" style={css("font-size:12px")}>check</span> : on ? <span style={css("width:5px;height:5px;border-radius:9999px;background:#fff;animation:recBlink 1s infinite")} /> : <span style={css("width:5px;height:5px;border-radius:9999px;background:var(--gray-400)")} />}
+              <span key={label} style={css("display:inline-flex;align-items:center;gap:6px")}>
+                {i > 0 && <span style={css("width:14px;height:1.5px;background:" + (done || on ? "var(--blue-400)" : "var(--gray-300)"))} />}
+                <span style={css("display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:9999px;font:700 12.5px " + FONT + ";white-space:nowrap;" + (on ? "background:var(--blue-700);color:#fff" : done ? "background:var(--gray-1000);color:#fff" : "background:var(--gray-100);color:var(--gray-500)"))}>
+                  {done ? <span className="mi" style={css("font-size:13px")}>check</span> : on ? <span style={css("width:6px;height:6px;border-radius:9999px;background:#fff;animation:recBlink 1s infinite")} /> : <span style={css("width:6px;height:6px;border-radius:9999px;background:var(--gray-400)")} />}
                   {label}
                 </span>
               </span>
@@ -94,14 +99,14 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
             신호등(점 3개)을 축 하나로 바꿨다: 점은 세 상태 중 하나만 말하는데, 감정은 계단이
             아니라 눈금 위를 오가는 값이고 상담사가 알아야 하는 건 '지금 어디쯤이며 평소보다
             얼마나 올라왔는가'다. 준비 카드의 온도계와 같은 축·같은 마커를 쓴다(EmotionBar). */}
-        <div style={css("display:flex;flex-direction:column;gap:7px;padding-top:11px;border-top:1px solid var(--gray-200)")}>
-          <div style={css("display:flex;align-items:center;gap:7px")}>
-            <span style={css("font:600 10.5px " + FONT + ";color:var(--gray-600)")}>감정온도</span>
-            <span style={css("font:700 11px " + FONT + ";color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--green-900)"))}>
+        <div style={css("display:flex;flex-direction:column;gap:9px;padding-top:14px;border-top:1px solid var(--gray-200)")}>
+          <div style={css("display:flex;align-items:center;gap:8px")}>
+            <span style={css("font:600 12px " + FONT + ";color:var(--gray-600)")}>감정온도</span>
+            <span style={css("font:700 12.5px " + FONT + ";color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--green-900)"))}>
               {vm.emo >= 3 ? "고조" : vm.emo >= 1 ? "상승" : "안정"}
             </span>
             <span style={css("flex:1")} />
-            <span style={css("font:600 11px " + FONT + ";color:var(--gray-600)")}>
+            <span style={css("font:600 12.5px " + FONT + ";color:var(--gray-600)")}>
               {vm.silenceLeft > 0 ? (
                 <>무음 <span style={css("color:var(--gray-1000);font-variant-numeric:tabular-nums")}>{vm.silenceLeft}s</span></>
               ) : (
@@ -110,8 +115,8 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
             </span>
           </div>
           <EmotionBar
-            title="실시간 감정온도 — 흰 눈금은 평소 기준선"
-            height={7}
+            title="실시간 감정온도 — 눈금은 평소 기준선"
+            height={8}
             pct={vm.prepTempC != null ? vm.prepTempPct : vm.prepTempBasePct}
             basePct={vm.prepTempBasePct}
             color={vm.prepEmotionBar}
