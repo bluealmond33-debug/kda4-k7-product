@@ -88,33 +88,26 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
         ) : (
           <>
             <div style={css("flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 22px;min-height:0")}>
-              {/* 재료(녹취·메모) — 기본 접힘. 초안이 주인공이고, 재료는 의심될 때만 펼친다.
-                  헤더만 남아 한 줄이라 초안 상자가 그만큼 커진다 */}
-              <div style={css("flex:none;display:flex;gap:10px;align-items:flex-start")}>
-                <div style={css("flex:1.4;min-width:0;background:var(--gray-100);border-radius:8px;padding:9px 12px;display:flex;flex-direction:column;gap:8px")}>
-                  <div onClick={() => setMatsOpen((v) => !v)} style={css("display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none")}>
-                    <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
-                    <span style={css("font:700 12px " + FONT + ";color:var(--gray-800)")}>음성 녹취</span>
-                    <span style={css("font:400 11px " + FONT + ";color:var(--gray-600)")}>· 통화 {vm.clockStr}</span>
-                    <div style={css("flex:1")} />
-                    <span className="mi" style={css("font-size:18px;color:var(--gray-600);transition:transform .2s;transform:rotate(" + (matsOpen ? 180 : 0) + "deg)")}>expand_more</span>
-                  </div>
-                  {matsOpen && (
-                    <>
+              {/* 재료(녹취·메모) — 아코디언 토글 하나로 함께 여닫는다. 기본 접힘(초안이 주인공).
+                  헤더 한 줄만 남아 접히면 초안 상자가 그만큼 커진다. */}
+              <div style={css("flex:none;display:flex;flex-direction:column;gap:8px")}>
+                <div onClick={() => setMatsOpen((v) => !v)} style={css("display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:2px 2px")}>
+                  <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
+                  <span style={css("font:700 12px " + FONT + ";color:var(--gray-800)")}>음성 녹취 · 상담원 메모</span>
+                  <span style={css("font:400 11px " + FONT + ";color:var(--gray-600)")}>· 통화 {vm.clockStr} · 메모 {vm.memoItems.length}건</span>
+                  <div style={css("flex:1")} />
+                  <span style={css("font:600 11px " + FONT + ";color:var(--gray-600)")}>{matsOpen ? "접기" : "펼쳐 보기"}</span>
+                  <span className="mi" style={css("font-size:18px;color:var(--gray-600);transition:transform .2s;transform:rotate(" + (matsOpen ? 180 : 0) + "deg)")}>expand_more</span>
+                </div>
+                {matsOpen && (
+                  <div style={css("display:flex;gap:10px;align-items:flex-start")}>
+                    <div style={css("flex:1.4;min-width:0;background:var(--gray-100);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:8px")}>
+                      <span style={css("font:700 11px " + FONT + ";color:var(--gray-700)")}>음성 녹취</span>
                       <audio controls preload="none" src="/demo/recording.mp3" style={{ width: "100%", height: 34 }} />
                       <div style={css("flex:none;font:400 12.5px/1.6 " + FONT + ";color:var(--gray-900);background:var(--onair-surface);border-radius:6px;padding:9px 11px;height:80px;overflow:auto")}>{vm.wrapSummaryDefault}</div>
-                    </>
-                  )}
-                </div>
-                <div style={css("flex:1;min-width:0;background:var(--gray-100);border-radius:8px;padding:9px 12px;display:flex;flex-direction:column;gap:7px")}>
-                  <div onClick={() => setMatsOpen((v) => !v)} style={css("display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none")}>
-                    <span style={css("font:700 12px " + FONT + ";color:var(--gray-800)")}>✎ 상담원 메모</span>
-                    <span style={css("font:400 11px " + FONT + ";color:var(--gray-600)")}>· {vm.memoItems.length}건</span>
-                    <div style={css("flex:1")} />
-                    <span className="mi" style={css("font-size:18px;color:var(--gray-600);transition:transform .2s;transform:rotate(" + (matsOpen ? 180 : 0) + "deg)")}>expand_more</span>
-                  </div>
-                  {matsOpen && (
-                    <>
+                    </div>
+                    <div style={css("flex:1;min-width:0;background:var(--gray-100);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:7px")}>
+                      <span style={css("font:700 11px " + FONT + ";color:var(--gray-700)")}>✎ 상담원 메모</span>
                       <div style={css("max-height:104px;overflow:auto;display:flex;flex-direction:column;gap:3px")}>
                         {vm.memoItems.map((m, i) => (
                           <div key={i} style={css("display:flex;gap:5px;align-items:baseline")}>
@@ -128,9 +121,9 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                         <span style={css("color:var(--blue-700);font-weight:700;font-size:12px")}>•</span>
                         <input value={vm.memoDraft} onChange={vm.onMemoDraft} onKeyDown={vm.onMemoKey} placeholder="메모 추가 후 Enter" style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px " + FONT + ";color:var(--gray-1000)")} />
                       </div>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 상담 정보(자동 채움) 바로 오른쪽에 후처리 초안 — 채워진 값과 초안을 나란히 대조한다 */}

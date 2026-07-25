@@ -58,8 +58,8 @@ const ALERTS = [
     action: "",
   },
   {
-    title: "품질 평가 결과 도착 · 6월",
-    sub: "상담 품질 A등급 — 상세는 코칭·리뷰에서",
+    title: "이번 주 코칭 포인트 도착",
+    sub: "대출 상담 마무리 안내 보완 — 상세는 코칭·리뷰에서",
     time: "그저께",
     unread: false,
     today: false,
@@ -67,11 +67,19 @@ const ALERTS = [
   },
 ];
 
+/* 코칭·리뷰 — 평가·순위 화면이 아니라 '다음 행동'을 알려주는 성장 지원 화면.
+   구성안(KARINA_코칭리뷰_콘텐츠구성안_CSAT제외) 기준:
+   · CSAT·감정온도를 점수로 쓰지 않는다 · 없는 데이터는 숫자로 만들지 않는다
+   · 전체 평균이 아니라 동일 업무·유사 숙련도 안에서 비교 · 잘한 점을 반드시 함께
+   · 코칭 포인트는 근거 상담과, 미션은 코칭 포인트와 연결 · AI 추천과 관리자 확정을 구분
+   여기 값은 1단계(데모)에서 실제 수집 가능한 항목만 사용한다. */
 const COACH = {
-  stats: [
-    { label: "어제 처리", value: "12콜" },
-    { label: "감정온도", value: "안정 유지" },
-    { label: "이관", value: "0건" },
+  // §4 상단 요약 — 전체+업무별 병기, 동일 업무 평균, 이관, 후처리 수정
+  summary: [
+    { label: "최근 7일 처리", value: "42건", sub: "대출 업무 18건" },
+    { label: "동일 업무 평균시간", value: "7분 12초", sub: "대출 만기 연장" },
+    { label: "이관", value: "2건", sub: "정상 인계 포함" },
+    { label: "후처리 수정", value: "3건", sub: "업무유형 수정" },
   ],
   /* 최근 7일 처리량 — 막대 미니 차트용 */
   trend: [
@@ -83,12 +91,34 @@ const COACH = {
     { day: "목", n: 10 },
     { day: "금", n: 12 },
   ],
-  warmup: [
-    { label: "오프닝 멘트 3종 낭독 — 공감·사실확인·마무리", meta: "3분" },
-    { label: "발성·속도 체크 (권장 속도 대비)", meta: "2분" },
+  // §5 이번 주 코칭 포인트 — 근거가 가장 분명한 한 가지만
+  point: {
+    topic: "대출 상담 마무리 안내 보완",
+    source: "AI 추천", // 관리자 확정과 구분 (§9)
+    reasons: [
+      "동일 업무 상담시간이 그룹 기준보다 반복적으로 길었음",
+      "후처리에서 후속조치 항목이 3회 수정됨",
+    ],
+    basis: "대출 만기 연장 · 동일 숙련도 그룹 · 최근 7일 · 최소 10건",
+    action: "통화 종료 전 처리 결과·필요 서류·다음 절차를 한 문장으로 확인",
+  },
+  // §6 잘한 점 — 문제점만 보이면 감시 화면이 된다
+  good: {
+    title: "본인확인 절차 누락 없음",
+    detail: "최근 대출 상담 18건에서 승인된 본인확인 순서를 모두 준수했습니다.",
+  },
+  // §7 근거 상담 리뷰 — 코칭 포인트의 근거가 된 실제 상담 (원음 휘발 → 마스킹 전사·카드 근거)
+  reviews: [
+    { at: "어제 14:22", task: "대출 만기 연장", code: "G002", dur: "9분 04초", result: "완료", reason: "마무리에서 다음 절차 안내 누락" },
+    { at: "어제 11:40", task: "대출 만기 연장", code: "G002", dur: "8분 12초", result: "완료", reason: "동일 업무 평균 대비 상담시간 김" },
   ],
-  good: "사실확인 단계 누락 없음 — 전 콜에서 유지",
-  improve: "마무리 후속 안내 문장을 한 호흡 짧게",
+  // §8 오늘의 미션 — 코칭 포인트와 직접 연결, 최대 2개
+  missions: [
+    { label: "대출 만기 연장 우수 상담 흐름 비교", meta: "3분" },
+    { label: "처리 결과·다음 절차 마무리 문장 연습", meta: "2분" },
+  ],
+  // §9 진행 상태 — AI 추천을 곧바로 확정으로 쓰지 않는다
+  flow: ["AI 추천", "관리자 검토", "상담사 확인", "미션 수행", "변화 확인"],
 };
 
 const MANUAL_ROWS = [
@@ -334,79 +364,138 @@ export default function Standby() {
       )}
 
       {view === "coach" && (
-        <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0")}>
-          <SubHead onBack={back} title="코칭·리뷰" sub="어제 성과 + 오늘의 워밍업" />
-          <div style={css("flex:1;display:flex;gap:14px;min-height:0")}>
-            {/* 좌 — 성과: 스탯 + 7일 추이 + AI 코칭 */}
-            <div style={css("flex:1.3;display:flex;flex-direction:column;gap:12px;min-width:0")}>
-              <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px")}>
-                {COACH.stats.map((s) => (
-                  <div key={s.label} style={css("background:var(--background-200);border-radius:8px;padding:13px 16px")}>
+        <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 22px;min-height:0")}>
+          <SubHead onBack={back} title="코칭·리뷰" sub="무엇을 잘했고 · 오늘 무엇을 연습할지" />
+          {/* 좌: 요약·추이·코칭 포인트·잘한 점 / 우: 근거 상담·오늘의 미션·진행 상태 (§12 순서) */}
+          <div style={css("flex:1;display:flex;gap:14px;min-height:0;overflow:auto")}>
+
+            {/* ── 좌 열 ── */}
+            <div style={css("flex:1.35;display:flex;flex-direction:column;gap:12px;min-width:0")}>
+              {/* §4 최근 7일 요약 — 전체+업무별 병기, 동일 업무 평균, 이관, 후처리 수정 */}
+              <div style={css("display:grid;grid-template-columns:1fr 1fr;gap:10px")}>
+                {COACH.summary.map((s) => (
+                  <div key={s.label} style={css("background:var(--background-200);border-radius:8px;padding:12px 14px")}>
                     <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{s.label}</div>
                     <div className="bignum" style={css("font-size:19px;color:var(--gray-1000);margin-top:4px")}>{s.value}</div>
+                    <div style={css("font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-top:3px")}>{s.sub}</div>
                   </div>
                 ))}
               </div>
+
               {/* 최근 7일 처리량 — 막대 미니 차트 */}
-              <div style={css("background:var(--background-200);border-radius:8px;padding:14px 16px")}>
-                <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:12px")}>최근 7일 처리량</div>
-                <div style={css("display:flex;align-items:flex-end;gap:10px;height:64px")}>
+              <div style={css("background:var(--background-200);border-radius:8px;padding:13px 16px")}>
+                <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>최근 7일 처리량</div>
+                <div style={css("display:flex;align-items:flex-end;gap:10px;height:56px")}>
                   {COACH.trend.map((d, i) => {
                     const max = Math.max(...COACH.trend.map((x) => x.n));
                     const isLast = i === COACH.trend.length - 1;
                     return (
                       <div key={i} style={css("flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end")}>
                         <span className="bignum" style={css("font-size:10.5px;color:" + (isLast ? "var(--gray-1000)" : "var(--gray-600)"))}>{d.n || ""}</span>
-                        <span style={css("width:100%;border-radius:3px 3px 0 0;background:" + (isLast ? "var(--blue-700)" : "var(--gray-400)") + ";height:" + Math.max(3, Math.round((d.n / max) * 38)) + "px")} />
+                        <span style={css("width:100%;border-radius:3px 3px 0 0;background:" + (isLast ? "var(--blue-700)" : "var(--gray-400)") + ";height:" + Math.max(3, Math.round((d.n / max) * 32)) + "px")} />
                         <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{d.day}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
-              {/* AI 코칭 */}
-              <div style={css("background:var(--background-200);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px")}>
-                <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>AI 코칭 — 어제 12콜 기반</div>
-                <div style={css("display:flex;align-items:baseline;gap:8px")}>
-                  <span style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900);flex:none")}>잘한 점</span>
-                  <span style={css("font:400 13px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.good}</span>
+
+              {/* §5 이번 주 코칭 포인트 — 근거가 가장 분명한 한 가지 */}
+              <div style={css("background:var(--onair-surface);border:1px solid var(--blue-500);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:9px")}>
+                <div style={css("display:flex;align-items:center;gap:7px")}>
+                  <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>tips_and_updates</span>
+                  <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>이번 주 코칭 포인트</span>
+                  {/* AI 추천 vs 관리자 확정 — 곧바로 확정으로 쓰지 않는다(§9) */}
+                  <span style={css("margin-left:auto;font:600 9.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-900);border:1px solid var(--blue-400);border-radius:9999px;padding:2px 8px")}>{COACH.point.source}</span>
                 </div>
-                <div style={css("display:flex;align-items:baseline;gap:8px")}>
-                  <span style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--amber-900);flex:none")}>개선</span>
-                  <span style={css("font:400 13px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.improve}</span>
+                <div style={css("font:700 15px/1.4 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{COACH.point.topic}</div>
+                <div>
+                  <div style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:4px")}>선정 근거</div>
+                  {COACH.point.reasons.map((r, i) => (
+                    <div key={i} style={css("display:flex;gap:7px;align-items:baseline;margin-bottom:3px")}>
+                      <span style={css("flex:none;width:4px;height:4px;border-radius:9999px;background:var(--gray-500);transform:translateY(-2px)")} />
+                      <span style={css("font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{r}</span>
+                    </div>
+                  ))}
                 </div>
+                <div style={css("display:flex;align-items:baseline;gap:6px")}>
+                  <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);flex:none")}>비교 기준</span>
+                  <span style={css("font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{COACH.point.basis}</span>
+                </div>
+                <div style={css("display:flex;gap:8px;align-items:flex-start;background:var(--gray-100);border-radius:7px;padding:9px 11px")}>
+                  <span className="mi" style={css("font-size:15px;color:var(--blue-700);flex:none")}>arrow_forward</span>
+                  <div>
+                    <div style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:2px")}>권장 행동</div>
+                    <div style={css("font:600 12.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{COACH.point.action}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* §6 잘한 점 — 반드시 함께 (감시 화면이 되지 않게) */}
+              <div style={css("background:var(--background-200);border-left:3px solid var(--green-700);border-radius:8px;padding:12px 16px")}>
+                <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:5px")}>
+                  <span className="mi" style={css("font-size:15px;color:var(--green-700)")}>verified</span>
+                  <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900)")}>잘한 점 · {COACH.good.title}</span>
+                </div>
+                <div style={css("font:400 12.5px/1.55 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.good.detail}</div>
               </div>
             </div>
-            {/* 우 — 오늘의 워밍업 (체크 인터랙션 + 게이지) */}
-            <div style={css("flex:1;display:flex;flex-direction:column;min-width:0")}>
-              <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:8px")}>
-                <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800)")}>오늘의 워밍업</span>
-                <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
-                  <span style={css("display:flex;gap:3px")}>
-                    {COACH.warmup.map((_, i) => (
-                      <span key={i} style={css("width:20px;height:5px;border-radius:2px;transition:background .25s;background:" + (warmDone.has(i) ? "var(--green-700)" : "var(--gray-200)"))} />
-                    ))}
-                  </span>
-                  <span style={css("font:600 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{warmDone.size}/{COACH.warmup.length}</span>
-                </span>
-              </div>
+
+            {/* ── 우 열 ── */}
+            <div style={css("flex:1;display:flex;flex-direction:column;gap:12px;min-width:0")}>
+              {/* §7 근거 상담 리뷰 — 코칭 포인트의 근거가 된 실제 상담 */}
               <div style={css("display:flex;flex-direction:column;gap:8px")}>
-                {COACH.warmup.map((w, i) => {
+                <div style={css("display:flex;align-items:center;gap:6px")}>
+                  <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800)")}>근거 상담 리뷰</span>
+                  <span style={css("font:500 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>· 마스킹 전사·상담카드 기준</span>
+                </div>
+                {COACH.reviews.map((r, i) => (
+                  <div key={i} className="hoverraise" style={css("background:var(--background-200);border-radius:8px;padding:11px 13px;cursor:pointer;transition:box-shadow .28s")}>
+                    <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:4px")}>
+                      <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.task}</span>
+                      <span style={css("font:600 10px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>{r.code}</span>
+                      <span style={css("margin-left:auto;display:inline-flex;align-items:center;gap:4px;font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>
+                        {r.result}<span className="mi" style={css("font-size:15px;color:var(--gray-500)")}>chevron_right</span>
+                      </span>
+                    </div>
+                    <div style={css("display:flex;align-items:center;gap:8px;font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:5px")}>
+                      <span>{r.at}</span><span>·</span><span>{r.dur}</span>
+                    </div>
+                    <div style={css("font:400 11.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800)")}>{r.reason}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* §8 오늘의 미션 — 코칭 포인트와 직접 연결, 체크 인터랙션 + 게이지 */}
+              <div style={css("display:flex;flex-direction:column;gap:8px")}>
+                <div style={css("display:flex;align-items:center;gap:8px")}>
+                  <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800)")}>오늘의 미션</span>
+                  <span style={css("font:500 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>· 코칭 포인트 연습</span>
+                  <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
+                    <span style={css("display:flex;gap:3px")}>
+                      {COACH.missions.map((_, i) => (
+                        <span key={i} style={css("width:20px;height:5px;border-radius:2px;transition:background .25s;background:" + (warmDone.has(i) ? "var(--green-700)" : "var(--gray-200)"))} />
+                      ))}
+                    </span>
+                    <span style={css("font:600 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{warmDone.size}/{COACH.missions.length}</span>
+                  </span>
+                </div>
+                {COACH.missions.map((w, i) => {
                   const on = warmDone.has(i);
                   return (
                     <div
                       key={i}
                       className="hoverraise"
                       onClick={() =>
-                        setWarmDone((s) => {
-                          const next = new Set(s);
+                        setWarmDone((set) => {
+                          const next = new Set(set);
                           if (on) next.delete(i);
                           else next.add(i);
                           return next;
                         })
                       }
                       style={css(
-                        "display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:8px;cursor:pointer;user-select:none;transition:background .2s,box-shadow .28s;background:" +
+                        "display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;cursor:pointer;user-select:none;transition:background .2s,box-shadow .28s;background:" +
                           (on ? "var(--gray-100)" : "var(--background-200)")
                       )}
                     >
@@ -418,18 +507,39 @@ export default function Standby() {
                       >
                         {on && <span className="mi" style={css("font-size:13px")}>check</span>}
                       </span>
-                      <span style={css("flex:1;font:500 13px/1.45 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)" + (on ? ";text-decoration:line-through;opacity:.6" : ""))}>{w.label}</span>
-                      <span style={css("font:600 12px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{w.meta}</span>
+                      <span style={css("flex:1;font:500 12.5px/1.45 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)" + (on ? ";text-decoration:line-through;opacity:.6" : ""))}>{w.label}</span>
+                      <span style={css("font:600 11.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{w.meta}</span>
                     </div>
                   );
                 })}
+                {warmDone.size === COACH.missions.length && (
+                  <div style={css("display:flex;align-items:center;gap:6px;font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900)")}>
+                    <span className="mi" style={css("font-size:15px")}>check_circle</span>
+                    오늘의 미션 완료 — 첫 콜 받을 준비가 됐어요
+                  </div>
+                )}
               </div>
-              {warmDone.size === COACH.warmup.length && (
-                <div style={css("margin-top:10px;display:flex;align-items:center;gap:6px;font:600 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900)")}>
-                  <span className="mi" style={css("font-size:16px")}>check_circle</span>
-                  워밍업 완료 — 첫 콜 받을 준비가 됐어요
+
+              {/* §9 진행 상태 — AI 추천을 곧바로 확정으로 쓰지 않는다 */}
+              <div style={css("margin-top:auto;background:var(--background-200);border-radius:8px;padding:11px 14px")}>
+                <div style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-bottom:8px")}>진행 상태</div>
+                <div style={css("display:flex;align-items:center;gap:5px;flex-wrap:wrap")}>
+                  {COACH.flow.map((f, i) => (
+                    <span key={f} style={css("display:inline-flex;align-items:center;gap:5px")}>
+                      {i > 0 && <span className="mi" style={css("font-size:14px;color:var(--gray-400)")}>chevron_right</span>}
+                      <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:" + (i === 0 ? "var(--blue-900)" : "var(--gray-600)"))}>{f}</span>
+                    </span>
+                  ))}
                 </div>
-              )}
+                <div style={css("display:flex;gap:7px;margin-top:11px")}>
+                  <span className="hoverraise" style={css("display:inline-flex;align-items:center;gap:5px;font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:#fff;background:var(--blue-700);border-radius:9999px;padding:7px 14px;cursor:pointer")}>
+                    <span className="mi" style={css("font-size:15px")}>check</span>코칭 확인
+                  </span>
+                  <span className="hoverraise" style={css("display:inline-flex;align-items:center;gap:5px;font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);border:1px solid var(--gray-400);border-radius:9999px;padding:7px 14px;cursor:pointer")}>
+                    <span className="mi" style={css("font-size:15px")}>edit_note</span>의견 남기기
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -540,7 +650,7 @@ export default function Standby() {
                 <span style={css("position:relative;display:inline-flex")}>
                   <Bell size={15} strokeWidth={2} />
                   {unreadCount > 0 && (
-                    <span style={css("position:absolute;top:-5px;right:-7px;min-width:13px;height:13px;padding:0 3px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 9px 'Avenir Next','Avenir Next','Avenir Next',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
+                    <span style={css("position:absolute;top:-5px;right:-7px;min-width:13px;height:13px;padding:0 3px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 9px 'Avenir Next','Pretendard',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
                   )}
                 </span>
                 알림
