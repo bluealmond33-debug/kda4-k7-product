@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { css } from "../../lib/css";
 import { SGE_META } from "../../services";
 
-const FONT = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
-const MONO = "'Geist Mono',monospace";
+const FONT = "'Avenir Next','Pretendard',sans-serif";
+const MONO = "ui-monospace,'SF Mono',Menlo,Consolas,monospace";
 
 /* ── 노드 좌표 (절대 캔버스, 콜 인입→게이트→E/S/G→목적지 왼→오른) ── */
 type N = { x: number; y: number; w: number; h: number };

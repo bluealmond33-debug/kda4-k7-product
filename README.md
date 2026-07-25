@@ -6,20 +6,23 @@
 
 금융 민감정보(음성·계좌·상담이력)를 외부로 반출하지 않는다는 것이 이 프로젝트의 설계 전제입니다([ADR-0007](https://github.com/bluealmond33-debug/kda4-k7-hippo/blob/main/02%20Decisions/ADR-0007-아키텍처-온프레미스.md) · [ADR-0011](https://github.com/bluealmond33-debug/kda4-k7-hippo/blob/main/02%20Decisions/ADR-0011-온프레미스-전면전환.md)).
 
-| | 실행 기준 (활성) | 폴백 (비활성) |
-|---|---|---|
-| **STT** | faster-whisper `large-v3-turbo` (로컬 GPU) | OpenAI Whisper API |
-| **요약·분류·라우팅** | Ollama `exaone3.5:7.8b` (로컬) | OpenAI GPT |
-| **임베딩** | bge-m3 (로컬) | — |
-| **RAG 벡터저장소** | 설계 표준 pgvector / 데모 실구동 FAISS (둘 다 로컬) | — |
-| **배포** | 호스트 직접 실행 (도커 미사용) | Railway / Vercel |
+**실행 경로는 온프레미스 하나입니다.** 클라우드는 쓰지 않으며, `OPENAI_API_KEY`도 두지 않습니다.
+
+| 레이어 | 실행 |
+|---|---|
+| **STT** | faster-whisper `large-v3-turbo` (로컬 GPU) |
+| **요약·분류·라우팅** | Ollama `exaone3.5:7.8b` (로컬) |
+| **임베딩** | bge-m3 (로컬) |
+| **RAG 벡터저장소** | 설계 표준 pgvector / 데모 실구동 FAISS (둘 다 로컬) |
+| **배포** | 호스트 직접 실행 (도커 미사용) |
 
 **실행 엔진은 이 저장소가 아니라 [`HeeChang50/kda4-k7-backend`](https://github.com/HeeChang50/kda4-k7-backend)입니다** (`USE_LOCAL_MODELS=true`, 외부 호출 0).
 
 이 저장소(`kda4-k7-product`)가 담당하는 것은 **계약 · 저장 · 적재 · 프론트**입니다.
 
-- 이 저장소 `backend/`에 남아 있는 **OpenAI 호출 경로는 레거시**입니다. 모델 팀 산출물이 도착하기 전 `mvp-1.0` 계약을 자체 검증하려고 만든 것이며, **활성 데모 경로가 아닙니다.**
-- 온프레미스 장비가 없는 팀원이 화면만 확인하거나, 데모 당일 장비 장애 시 폴백으로만 사용합니다.
+이 저장소 `backend/`에 남아 있는 **OpenAI 호출 경로는 레거시**입니다. 모델 팀 산출물이 도착하기 전 `mvp-1.0` 계약을 자체 검증하려고 만든 것이며 **활성 경로가 아닙니다.** 발표 후 정리 대상입니다.
+
+> 장비 장애 대비는 클라우드가 아니라 실행 엔진의 `STUB_MODELS=true`입니다 — GPU·Ollama·외부 API 없이 화면 흐름만 재현합니다.
 
 ## 한 줄 흐름
 
@@ -76,13 +79,15 @@ GET /health
 
 ## 프론트엔드 실행
 
+> 화면 구조(4화면)·디자인 자산·폰트 정책은 **[`docs/FRONTEND_MAP.md`](docs/FRONTEND_MAP.md)** 한 장에 정리돼 있습니다.
+
 ```powershell
 npm install
 Copy-Item .env.example .env
 npm run dev
 ```
 
-**온프레미스 실행 엔진에 붙을 때 `.env` (기본·발표 데모 기준):**
+**온프레미스 실행 엔진에 붙습니다:**
 
 ```dotenv
 VITE_API_BASE_URL=http://<온프레미스-서버-IP>:8000
@@ -90,10 +95,10 @@ VITE_USE_REAL_DATA_API=true
 VITE_DATA_API_PREFIX=/api/v1
 ```
 
-실시간 통화(`/ws/call/{call_id}`)와 온프레미스 STT·LLM은 이 경로에서만 동작합니다.
+실시간 통화(`/ws/call/{call_id}`)·온프레미스 STT·LLM·규정 검색이 모두 이 주소 하나로 동작합니다.
 
 <details>
-<summary>클라우드 폴백 <code>.env</code> (온프레미스 장비가 없을 때만)</summary>
+<summary>참고: 예전 Railway 배포 주소 (더 이상 쓰지 않음)</summary>
 
 ```dotenv
 VITE_API_BASE_URL=https://kda4-k7-backend-production.up.railway.app

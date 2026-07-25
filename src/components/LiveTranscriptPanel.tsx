@@ -282,7 +282,7 @@ function TextLine({
         style={css(
           "flex:none;color:#4c515c;font-variant-numeric:tabular-nums;font:400 " +
             timePx +
-            "px 'Geist Mono','IBM Plex Mono',monospace"
+            "px ui-monospace,'SF Mono',Menlo,Consolas,monospace"
         )}
       >
         {time}

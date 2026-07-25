@@ -27,8 +27,27 @@ const INK = "var(--gray-1000)";
 const GHOST = "rgba(22,20,17,.08)";
 const ICON_GHOST = "var(--gray-200)"; // 꺼진 날씨 아이콘
 const LABEL = "var(--gray-500)";
-const SANS = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
+const SANS = "'Avenir Next','Pretendard',sans-serif";
 
+
+/**
+ * 외부 날씨 호출을 끈 기본 상태(=온프레미스)에서 시계 위젯이 쓰는 **고정 표시값**.
+ *
+ * ⚠️ 실측이 아니다. 망분리 전제상 외부 API를 부르지 않으므로 실시간 기상값을 가져올 수
+ * 없고, 그렇다고 `--`로 비워두면 화면이 미완성처럼 보여 화면 구성용 상수를 둔다.
+ * 서울 한여름 기준으로 서로 모순 없게 맞췄다(체감 > 기온, tmin < 기온 < tmax, 강수 0).
+ * 실시간 값이 필요하면 VITE_ENABLE_WEATHER=1로 빌드 — 단 그 순간 외부 호출이 생긴다.
+ */
+const DEMO_WEATHER = {
+  temp: 29,
+  humidity: 68,
+  code: 1, // 구름 조금
+  feels: 32, // 습도 높아 체감이 기온보다 위
+  wind: 2,
+  precip: 0,
+  tmax: 31,
+  tmin: 25,
+} as const;
 
 /** 실물 기상 LCD처럼 아이콘을 다 깔아두고 현재 날씨만 켠다(나머지는 고스트로 끔). */
 const WX_ICONS: LucideIcon[] = [Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudLightning];
@@ -101,6 +120,16 @@ export default function LedClock({ dimmed = false }: { dimmed?: boolean }) {
   } | null>(null);
   const [detailOpen, setDetailOpen] = useState(false); // 날씨 상세 팝오버
   useEffect(() => {
+    // 날씨는 유일한 외부 인터넷 호출이라 기본으로 끈다(2026-07-23). 이 제품은 망분리
+    // 온프레미스 전제 — STT·LLM·임베딩·규정검색이 전부 사내에서 도는데 시계 위젯 하나가
+    // 밖으로 나가면 그 전제가 깨진다. 인터넷이 있는 환경에서 보고 싶으면 빌드 시
+    // VITE_ENABLE_WEATHER=1. 그 순간 외부 호출이 되살아난다는 점에 유의.
+    if (import.meta.env.VITE_ENABLE_WEATHER !== "1") {
+      // 외부 호출을 끈 상태에서 날씨 칸이 `--`로 비면 화면이 미완성처럼 보인다.
+      // ⚠️ DEMO_WEATHER는 **실측이 아니라 화면 구성용 고정 상수**다(실시간 아님).
+      setWx(DEMO_WEATHER);
+      return;
+    }
     let alive = true;
     const load = () => {
       fetch(

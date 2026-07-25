@@ -116,7 +116,7 @@ export default function CallCardModal({
             <div style={css("flex:1;min-height:104px;background:var(--gray-100);border-radius:8px;padding:12px 14px")}>
               <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:8px")}>
                 고객 감정온도
-                <span style={css("font:600 9px 'Geist Mono',monospace;padding:2px 6px;border-radius:5px;background:var(--gray-200);color:var(--gray-600)")}>데모값</span>
+                <span style={css("font:600 9px ui-monospace,'SF Mono',Menlo,Consolas,monospace;padding:2px 6px;border-radius:5px;background:var(--gray-200);color:var(--gray-600)")}>데모값</span>
               </div>
               <div style={css("display:flex;align-items:center;gap:12px")}>
                 <Thermometer score={emotion ? EMOTION_SCORE[emotion] : null} color={emotion ? EMOTION_INK[emotion] : "var(--gray-400)"} />
@@ -177,14 +177,14 @@ export default function CallCardModal({
 
         {/* 푸터 — 시각·출처·ID (PrepCard 푸터 스트립 문법) */}
         <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:13px 24px;box-shadow:var(--sh-joint);background:var(--gray-100)")}>
-          <span style={css("font:500 11px 'Geist Mono',monospace;color:var(--gray-700)")}>
+          <span style={css("font:500 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>
             {fmtTime(record.startedAt)} 접수{record.endedAt ? ` · ${fmtTime(record.endedAt)} 종료` : ""}
           </span>
           <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:" + (card?.source === "backend" ? "var(--green-900)" : "var(--gray-700)"))}>
             {card?.source === "backend" ? "실백엔드" : "데모"}
           </span>
           <div style={css("flex:1")} />
-          <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-600)")}>{record.callId}</span>
+          <span style={css("font:500 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>{record.callId}</span>
         </div>
       </div>
     </>

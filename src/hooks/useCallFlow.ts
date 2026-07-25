@@ -139,6 +139,18 @@ const GLASS: Partial<Record<Phase, string>> = {
   prep: "상담사에게 우선 연결하고 있습니다.",
 };
 const PREP_LEN = 4;
+// 업무 유형과 무관하게 항상 맞는 유의사항. 실제 규정(RAG)이 PREP_LEN보다 적게 잡혔을 때
+// 뒤를 채운다 — 규정이 0건인 통화(코퍼스에 해당 규정이 없는 경우)에도 카드가 비지 않고,
+// 무엇보다 엉뚱한 규정을 근거로 안내하는 것보다 일반 원칙을 보여주는 편이 안전하다.
+const GENERIC_CHECKS: { title: string; sub: string }[] = [
+  {
+    title: "본인확인 우선",
+    sub: "연락처·생년월일 뒷자리 등으로 본인확인 후 상세 조회 — 완료 전에는 잠깁니다",
+  },
+  { title: "개인정보 보호", sub: "민감정보는 마스킹, 확정 표현 대신 확인 후 안내" },
+  { title: "사고 여부 확인", sub: "금전피해·무단거래 정황이면 즉시 사고·지급정지 절차" },
+  { title: "규정 근거 안내", sub: "관련 규정을 확인하고 근거에 따라 정확히 안내" },
+];
 // 유의사항 — 준비 카드 좌측. sub는 한 줄로 짧게(멘토 피드백: 길면 안 읽힌다).
 const PREP_ITEMS: Record<IncomingKind, { title: string; sub: string }[]> = {
   normal: [
@@ -284,6 +296,30 @@ type SpeakerTranscriptChunk = TranscriptChunk & {
 
 type SummaryScope = "intake" | "full";
 
+// 후속 조치 라벨 → Material Symbols 아이콘. 백엔드(EXAONE)가 라벨 문자열만 주므로
+// 아이콘은 프론트가 키워드로 고른다(픽스처 Followup과 같은 모양을 유지하기 위함).
+const followupIcon = (label: string): string =>
+  /sms|문자/i.test(label) ? "sms"
+  : /콜백|예약|일정|대기/.test(label) ? "event"
+  : /등록|접수/.test(label) ? "description"
+  : /이메일|메일/.test(label) ? "mail"
+  : "task_alt";
+
+// ── 침묵 판정 민감도 ──────────────────────────────────────────────────────────
+// 마이크 레벨(onLevel, 초당 ~4회)로 "아직 말하는 중"을 판정해 침묵 카운트다운을 리셋한다.
+// 예전엔 임계 0.02를 **한 번만** 넘어도 즉시 리셋해서, 실제 시연장의 키보드·숨소리·주변
+// 잡음에 카운트다운이 계속 되돌아가 요약이 영영 시작되지 않았다(되돌이표).
+// 그래서 ①임계를 실제 발화 대역(0.05~0.3)에 가깝게 올리고 ②연속 N회 지속될 때만
+// 발화로 인정한다. 잠깐 튄 잡음은 무시되고, 실제 말은 0.5초면 인정된다.
+// 조용히 말해 레벨이 낮은 경우에도 STT 전사가 확정되면 onTranscript가 리셋하므로 안전하다.
+const SPEECH_LEVEL_THRESHOLD = 0.06; // 잡음(≈0.005~0.03) 위, 발화(≈0.05~0.3) 하단
+const SPEECH_SUSTAIN_TICKS = 2; // 연속 2회(≈0.5초) 이상 지속돼야 발화로 인정
+// 말소리 지속 중에는 카운트다운을 5초로 '리셋'하지 않고 잔여시간 하한만 지킨다(보류).
+// 리셋 방식은 숫자가 4→5→2처럼 널뛰어 사용자를 헷갈리게 했다. 보류 방식은 숫자가
+// 내려가다 ~2초에서 멈춰 기다리고, **확정 전사(onTranscript)가 도착했을 때만** 처음부터
+// 다시 센다 — 진짜 발화는 곧 전사가 확정되므로 잘못 만료될 틈이 없다.
+const SPEECH_HOLD_MS = 2000;
+
 export function useCallFlow(config: CallFlowConfig = {}) {
   const s1 = config.silenceSec1 ?? 5;
   const s2 = config.silenceSec2 ?? 5;
@@ -370,6 +406,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [manualData, setManualData] = useState<SheetData | null>(null);
   // 규정집을 '열기'로 열면 해당 조항 행이 강조된다 (0-base 행 인덱스)
   const [regTargetRow, setRegTargetRow] = useState<number | null>(null);
+  // 상담 가이드(EXAONE) — 단계별 스크립트. 비어 있으면 콜 유형 픽스처(SCRIPTS)로 폴백.
+  const [guideSteps, setGuideSteps] = useState<{ title: string; text: string }[]>([]);
+  // (summaryPending 는 위쪽 mingikim 상태 선언에서 이미 관리한다 — 중복 선언 방지)
   // 실제 규정 원문 열람 — 검색 히트를 클릭하면 그 문서의 청크 전체가 시트로 열린다
   const [regDoc, setRegDoc] = useState<RegulationDoc | null>(null);
   const [regDocChunk, setRegDocChunk] = useState<string | null>(null);
@@ -413,6 +452,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [followups, setFollowups] = useState<Followup[]>(WRAP_DEFAULTS.normal.followups);
 
   const [summary, setSummary] = useState<CallSummary | null>(null);
+  // 백엔드가 통화 내용으로 검색해 준 실제 규정(RAG). 준비 카드의 "이번 상담 유의사항"을
+  // 픽스처 대신 이걸로 채운다 — 관련 규정이 없으면 빈 배열이고, 그때는 GENERIC_CHECKS로
+  // 넘어간다(백엔드가 점수 하한 미달이면 일부러 비워 보낸다).
+  const [ragRefs, setRagRefs] = useState<{ title: string; excerpt: string; category?: string }[]>(
+    []
+  );
   const [consultationResponse, setConsultationResponse] =
     useState<ConsultationCardResponse>(() => getDemoConsultationCard());
   const summaryText = useRef("");
@@ -425,6 +470,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const clockT = useRef<number | null>(null);
   const silT = useRef<number | null>(null);
   const silStage = useRef<null | "first" | "confirmPause" | "second">(null);
+  // 임계 이상 레벨이 연속 몇 회 이어졌는지 — 순간 잡음과 실제 발화를 가른다.
+  const loudRun = useRef(0);
   const silEnd = useRef(0);
   const stt = useRef<SttSession | null>(null);
   const live = useRef<LiveHandle | null>(null);
@@ -484,6 +531,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       silT.current = null;
     }
     silStage.current = null;
+    loudRun.current = 0; // 다음 통화가 이전 통화의 레벨 연속 카운트를 물려받지 않도록
     if (stt.current) {
       stt.current.stop();
       stt.current = null;
@@ -681,9 +729,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     try {
       const localApiBase =
         API_BASE_URL || `${location.protocol}//${location.hostname}:8000`;
+      // 백엔드(k7-backend) 정본: 분석은 /analyze-text 하나로 통일. 이 엔드포인트가
+      // consult_guide(EXAONE)를 통해 script_steps·follow_ups·result_label·references까지
+      // 채워 응답한다(구 /api/live-stt/analyze는 k7-backend 라우터 구조에 없음).
       const response = await fetch(
         useLocalLiveAnalysis
-          ? `${localApiBase}/api/live-stt/analyze`
+          ? `${localApiBase}/analyze-text`
           : `${API_BASE_URL}/analyze-text`,
         {
           method: "POST",
@@ -695,6 +746,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       if (!response.ok) throw new Error(`analyze-text ${response.status}`);
       const data = await response.json();
       if (!isCurrent()) return false;
+      // 관련 규정(RAG) — 준비 카드 유의사항의 근거. 백엔드가 부서 카테고리로 필터하고
+      // 점수 하한을 넘긴 것만 보내므로 그대로 신뢰해 담는다. 없으면 GENERIC_CHECKS 폴백.
+      setRagRefs(Array.isArray(data?.references) ? data.references : []);
+      // 상담 가이드(EXAONE) — 스크립트가 실제 통화 내용을 따라간다. 4단계가 다 오면 교체,
+      // 아니면(생성 실패) 콜 유형 픽스처(SCRIPTS) 유지 — 화면이 깨지지 않는 폴백 원칙.
+      const guideStepsNext = (Array.isArray(data?.script_steps) ? data.script_steps : [])
+        .filter((s: unknown): s is { title: string; text: string } =>
+          !!s &&
+          typeof (s as { title?: unknown }).title === "string" &&
+          typeof (s as { text?: unknown }).text === "string")
+        .slice(0, 4);
+      if (guideStepsNext.length === 4) setGuideSteps(guideStepsNext);
+      if (typeof data?.result_label === "string" && data.result_label.trim())
+        setWrapResult(data.result_label.trim());
       const emotionAvailable =
         data?.emotion?.status === "completed" &&
         typeof data?.emotion?.score === "number";
@@ -1055,6 +1120,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setTransferReserved(false);
     setTransferTarget(null);
     setEmoDrift(null);
+    setRagRefs([]); // 지난 통화의 규정이 다음 통화 유의사항에 남지 않게
+    setGuideSteps([]); // 지난 통화의 스크립트도 마찬가지 — 픽스처로 시작해 분석 도착 시 교체
     transitionPhase("connecting");
     setClock(0);
     setCallStartedAt(fmtCallTimestamp(new Date()));
@@ -1172,6 +1239,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setLiveActionItems([]);
     setSummaryPending(false);
     setSummary(null);
+    setRagRefs([]);
+    setGuideSteps([]);
     const demo = getDemoConsultationCard();
     demo.call_id = LIVE_CALL_ID;
     setConsultationResponse(demo);
@@ -1197,6 +1266,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setWrapType(WRAP_DEFAULTS.normal.type);
     setWrapResult(WRAP_DEFAULTS.normal.result);
     setFollowups(WRAP_DEFAULTS.normal.followups);
+    setRagRefs([]);
+    setGuideSteps([]);
     setTransferReserved(false);
     setTransferTarget(null);
     setEmoDrift(null);
@@ -1633,6 +1704,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setWrapType(wrap.type);
       setWrapResult(wrap.result);
       setFollowups(wrap.followups);
+      setRagRefs([]);
+      setGuideSteps([]);
       setTransferReserved(false);
       setEmoDrift(null);
       setMicErr("");
@@ -1738,6 +1811,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           speaker: "customer",
         });
         setSummary(null);
+        setSummaryPending(false);
         setPrepChecks(Array(PREP_LEN).fill(true));
         setPhase("prep");
         emitCardPipeline("backend", 250);
@@ -2401,6 +2475,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }),
     prepDone: prepChecks.filter(Boolean).length,
     prepTotal: prepDefinitions.length,
+    // 분석 대기 중에는 픽스처 카드(주담대)를 숨긴다 — 실통화에서 엉뚱한 브리핑 선노출 방지
+    summaryPending,
     // 본인인증 상태 — 인수인계(transfer) 콜은 전임 상담사가 이미 인증(재인증 생략),
     // 신규·긴급은 연결 직후 상담사가 인증한다(=아직 미완료). 유의사항 첫 항목과 일치.
     prepVerified: incoming === "transfer",
@@ -2469,7 +2545,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         : "확신도 산출 전 · 상담사 확인 필요",
     // 배정 확신도 % 숫자만 (상단 배지용)
     prepConfidencePct:
-      card.routing_confidence != null ? Math.round(card.routing_confidence * 100) : null,
+      !summaryPending && card.routing_confidence != null
+        ? Math.round(card.routing_confidence * 100)
+        : null,
     // 감정온도 숫자(당근 매너온도 스타일) — 신호등 대신 큰 숫자로
     prepEmotionScore: temperature.score ?? null,
     transcriptQuote: groundedTranscript,
@@ -2558,15 +2636,30 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 지금 물어야 할 값 — 안내 문구가 대조 방식을 따라간다
     authAskLabel:
       authMethod === "birth" ? "생년월일 8자리 (YYYYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
-    // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다
+    // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다.
+    // 실통화 EXAONE 스크립트(guideSteps 4단계)가 도착하면 그걸, 아니면 콜 유형 픽스처(actualCallSteps).
     steps: EXPLICIT_LIVE_CALL_ID
       ? liveSteps
+      : guideSteps.length === 4
+      ? guideSteps.map((st) => ({ title: st.title, text: st.text }))
       : actualCallSteps,
     // 오프닝은 '상담사가 실제로 말할 첫 문장'이다 — required_actions(할 일)로 덮어쓰지 않는다.
     // 대본 경로에서는 감정온도 밴드에 맞춘 adaptiveOpening이 그대로 나간다.
     firstLine,
     isExplicitLiveCall: !!EXPLICIT_LIVE_CALL_ID,
-    regRecos: EXPLICIT_LIVE_CALL_ID ? [] : REG_RECOS[incoming],
+    // 관련 규정 AI 추천 — 실제 RAG 근거(백엔드가 점수 하한 통과분만 보냄) 우선.
+    // 실데이터는 시트 행(row)이 없어 row:null — '열기'는 규정집 의미검색(query)으로 연결.
+    regRecos: EXPLICIT_LIVE_CALL_ID
+      ? []
+      : ragRefs.length
+      ? ragRefs.slice(0, 3).map((r) => ({
+          title: r.title,
+          body: (r.excerpt || "").replace(/^\[[^\]]*\]\s*/, "").replace(/\s+/g, " ").trim().slice(0, 110),
+          file: `실물 규정 · AI 검색${r.category ? ` · ${r.category}` : ""}`,
+          row: null as number | null,
+          query: r.title as string | null,
+        }))
+      : REG_RECOS[incoming].map((r) => ({ ...r, row: r.row as number | null, query: null as string | null })),
     regQuery: EXPLICIT_LIVE_CALL_ID
       ? explicitSummaryPending
         ? "본인확인"
@@ -2594,6 +2687,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     openManualAt: (row: number) => {
       setRegSearch(""); // 검색 필터가 대상 행을 가리지 않게 — 열기는 항상 원본 시트에서 그 행을 보여준다
       setRegTargetRow(row);
+      setRegExpanded(true);
+    },
+    // 실제 RAG 추천 규정의 '열기' — 시트 행이 없으므로 규정집 의미검색으로 그 문서를 찾아 보여준다
+    openRegQuery: (q: string) => {
+      setRegTargetRow(null);
+      setRegSearch(q);
       setRegExpanded(true);
     },
     closeReg: () => {
@@ -2691,7 +2790,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setTypeMenu(false);
       },
     })),
-    resultOpts: WRAP_RESULT_OPTIONS.map((o) => ({
+    // 실분석 result_label이 고정 목록에 없으면 맨 위에 끼워 드롭다운에서도 선택 가능하게
+    resultOpts: [
+      ...(wrapResult && !WRAP_RESULT_OPTIONS.includes(wrapResult) ? [wrapResult] : []),
+      ...WRAP_RESULT_OPTIONS,
+    ].map((o) => ({
       label: o,
       pick: () => {
         setWrapResult(o);

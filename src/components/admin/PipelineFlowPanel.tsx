@@ -61,16 +61,16 @@ export default function PipelineFlowPanel({
       {/* 헤더 */}
       <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:12px")}>
         <span className="sechd">백엔드 프로세스 플로우</span>
-        <span style={css("font:400 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+        <span style={css("font:400 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>
           발화부터 후처리까지 — 전 과정 온프레미스, 외부 API 0
         </span>
         <div style={css("flex:1")} />
         {/* 동시 처리 — 이 파이프라인을 지금 몇 콜이 지나는지 (알약에서 이관) */}
         <span style={css("display:inline-flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
           <span className={"onairdot" + (concurrent ? "" : " off")} />
-          <span style={css("font:600 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>동시 처리</span>
+          <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>동시 처리</span>
           <span className="bignum" style={css("font-size:14px;color:var(--gray-1000)")}>{concurrent}</span>
-          <span style={css("font:600 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+          <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
         {flowCall ? (
           <span style={css("display:inline-flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
@@ -78,13 +78,13 @@ export default function PipelineFlowPanel({
               className={"onairdot" + (flowCall.endedAt === null ? "" : " off")}
               style={flowCall.endedAt === null ? { animation: "recBlink 1.4s infinite" } : undefined}
             />
-            <span style={css("font:600 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
+            <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>
               {flowCall.endedAt === null ? "처리 중" : "최근 처리"} · {KIND_LABEL[flowCall.kind]} 콜
             </span>
-            <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700)")}>{flowCall.callId}</span>
+            <span style={css("font:500 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{flowCall.callId}</span>
           </span>
         ) : (
-          <span style={css("font:600 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600);background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
+          <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
             인입 대기 — 상담사 화면에서 콜을 시작하거나 상단 테스트 콜을 눌러보세요
           </span>
         )}
@@ -167,7 +167,7 @@ export default function PipelineFlowPanel({
                           ...(lv.pulse ? { animation: "livePulse 2.2s ease-in-out infinite" } : null),
                         }}
                       />
-                      <span style={css("font:600 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:-.1px;color:" + (on || done ? "var(--gray-1000)" : "var(--gray-700)"))}>
+                      <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:-.1px;color:" + (on || done ? "var(--gray-1000)" : "var(--gray-700)"))}>
                         {node.label}
                       </span>
                     </span>
@@ -175,16 +175,16 @@ export default function PipelineFlowPanel({
                 })()}
                 {/* 기술 캡션(어떤 AI·기술인지) — 설명 모드에서만. 평소 관제 화면은 조용하게 */}
                 {explain && (
-                  <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700);line-height:1.45;animation:dockDown .25s var(--ease-out)")}>
+                  <span style={css("font:500 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700);line-height:1.45;animation:dockDown .25s var(--ease-out)")}>
                     {node.tech.split(" · ").map((seg) => (
                       <span key={seg} style={css("display:block;white-space:nowrap")}>{seg}</span>
                     ))}
                   </span>
                 )}
                 {explain && (
-                  <span style={css("font:400 10.5px/1.5 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:7px 9px;text-align:left;animation:dockDown .25s var(--ease-out)")}>
+                  <span style={css("font:400 10.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:7px 9px;text-align:left;animation:dockDown .25s var(--ease-out)")}>
                     {node.explain}
-                    <span style={css("display:block;margin-top:4px;font:600 9.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>
+                    <span style={css("display:block;margin-top:4px;font:600 9.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-900)")}>
                       클릭 → 실사용 모델 상세
                     </span>
                   </span>

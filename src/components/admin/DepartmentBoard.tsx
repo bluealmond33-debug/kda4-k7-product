@@ -27,9 +27,9 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
         <span style={css("align-self:center;width:8px;height:8px;border-radius:9999px;flex:none;background:" + (value > 0 ? "var(--red-700)" : "rgba(188,63,43,.25)"))} />
       )}
       {lead === "ai" && <span className="mi" style={css("align-self:center;font-size:14px;color:var(--green-900)")}>smart_toy</span>}
-      <span style={css("font:600 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{label}</span>
+      <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{label}</span>
       <span className="bignum" style={css("font-size:20px;color:" + valueColor)}>{value}</span>
-      <span style={css("font:600 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+      <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
     </span>
   );
 
@@ -40,7 +40,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
         {/* 설명 모드에선 이 패널의 백엔드 역할을(회색 블록 — 다른 패널과 동일 문법), 평소엔 안내를 */}
         <span
           style={css(
-            "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;" +
+            "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 11px 'Avenir Next','Pretendard',sans-serif;" +
               (explain
                 ? "color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:4px 9px;animation:dockDown .25s var(--ease-out)"
                 : "color:var(--gray-600)")
@@ -102,7 +102,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                       >
                         {/* 값 라벨 — 막대 바로 위 */}
                         <div style={css("flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px")}>
-                          <span style={css("font:600 10.5px 'Geist Mono',monospace;white-space:nowrap;color:var(--gray-800)")}>
+                          <span style={css("font:600 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;white-space:nowrap;color:var(--gray-800)")}>
                             {r.c.e > 0 && <span style={css("color:var(--red-900)")}>E{r.c.e}</span>}
                             {r.c.e > 0 && r.c.g > 0 && "·"}
                             {r.c.g > 0 && <span style={css("color:var(--blue-900)")}>G{r.c.g}</span>}
@@ -128,7 +128,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                   {rows.map((r) => (
                     <span
                       key={r.name}
-                      style={css("flex:1;min-width:0;text-align:center;font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:" + (r.name === "사고·신고" ? "var(--red-900)" : "var(--gray-800)"))}
+                      style={css("flex:1;min-width:0;text-align:center;font:600 10px 'Avenir Next','Pretendard',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:" + (r.name === "사고·신고" ? "var(--red-900)" : "var(--gray-800)"))}
                     >
                       {r.name}
                     </span>
@@ -136,12 +136,12 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                 </div>
                 <div style={css("display:flex;justify-content:flex-end;gap:12px;padding:5px 2px 0")}>
                   {(["E", "G"] as const).map((k) => (
-                    <span key={k} style={css("display:inline-flex;align-items:center;gap:4px;font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>
+                    <span key={k} style={css("display:inline-flex;align-items:center;gap:4px;font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>
                       <span style={css("width:8px;height:8px;border-radius:9999px;background:" + SGE_META[k].bar)} />
                       {k} {SGE_META[k].label}
                     </span>
                   ))}
-                  <span style={css("font:400 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>막대에 올리면 대기 목록</span>
+                  <span style={css("font:400 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>막대에 올리면 대기 목록</span>
                 </div>
               </>
             );
@@ -170,22 +170,22 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                   <span className="mi" style={css("flex:none;font-size:16px;color:" + (urgent ? "var(--red-900)" : "var(--gray-800)"))}>
                     {isIncident ? "e911_emergency" : "groups"}
                   </span>
-                  <span style={css("min-width:0;font:600 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{dept.name}</span>
+                  <span style={css("min-width:0;font:600 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{dept.name}</span>
                   {isIncident && (
-                    <span style={css("flex:none;font:700 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--red-900)")}>긴급 직결</span>
+                    <span style={css("flex:none;font:700 10px 'Avenir Next','Pretendard',sans-serif;color:var(--red-900)")}>긴급 직결</span>
                   )}
                   <div style={css("flex:1")} />
                   {/* 대기 건수 — 카드에서 제일 먼저 읽혀야 할 숫자라 헤더 우측에 크게 */}
                   <span style={css("flex:none;display:inline-flex;align-items:baseline;gap:3px")}>
                     <span className="bignum" style={css("font-size:17px;color:" + (urgent ? "var(--red-900)" : items.length > 0 ? "var(--gray-1000)" : "var(--gray-500)"))}>{items.length}</span>
-                    <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+                    <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
                   </span>
                 </div>
 
                 {/* 대기 목록 — 항상 보인다. 넘치면 카드 안에서 스크롤 */}
                 <div style={css("flex:1;min-height:0;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:4px")}>
                   {items.length === 0 && (
-                    <div style={css("font:400 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600);padding:2px 1px")}>대기 없음</div>
+                    <div style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);padding:2px 1px")}>대기 없음</div>
                   )}
                   {items.map((it) => {
                     const meta = SGE_META[it.sge];
@@ -199,13 +199,13 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                         <span style={css("flex:none;width:8px;height:8px;border-radius:9999px;background:" + meta.bar)} />
                         {/* 3층 업무코드 — taxonomy의 ARS 코드 (미정의 부서는 생략) */}
                         {it.code && (
-                          <span style={css("flex:none;font:600 9px 'Geist Mono',monospace;letter-spacing:.3px;color:var(--gray-700)")}>{it.code}</span>
+                          <span style={css("flex:none;font:600 9px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:.3px;color:var(--gray-700)")}>{it.code}</span>
                         )}
-                        <span style={css("flex:1;min-width:0;font:500 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
+                        <span style={css("flex:1;min-width:0;font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
                           {it.label}
                         </span>
                         {it.callId && (
-                          <span style={css("flex:none;font:700 8.5px 'Geist Mono',monospace;letter-spacing:.4px;color:var(--blue-900)")}>LIVE</span>
+                          <span style={css("flex:none;font:700 8.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:.4px;color:var(--blue-900)")}>LIVE</span>
                         )}
                         {/* 액션 — 행에 올렸을 때만 (연결 · 이관) */}
                         <span className="memoact" style={css("flex:none;display:inline-flex;gap:4px")}>
@@ -226,7 +226,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                         </span>
                         {pickerOpen && (
                           <div style={css("position:absolute;right:0;top:30px;z-index:40;background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);padding:6px;min-width:172px;animation:dockDown .2s var(--ease-out)")}>
-                            <div style={css("font:700 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600);padding:4px 8px 5px")}>이관할 부서</div>
+                            <div style={css("font:700 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);padding:4px 8px 5px")}>이관할 부서</div>
                             {DEPARTMENTS.filter((d) => d.name !== dept.name).map((d) => (
                               <div
                                 key={d.name}
@@ -238,7 +238,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                                   });
                                   setTransferFrom(null);
                                 }}
-                                style={css("font:500 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);border-radius:7px;padding:6px 8px;cursor:pointer;transition:background .15s")}
+                                style={css("font:500 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);border-radius:7px;padding:6px 8px;cursor:pointer;transition:background .15s")}
                                 onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--gray-100)")}
                                 onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
                               >
@@ -262,7 +262,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                       <span
                         key={k}
                         style={css(
-                          "display:inline-flex;align-items:center;gap:5px;font:700 12.5px 'Geist Mono',monospace;transition:opacity .3s;" +
+                          "display:inline-flex;align-items:center;gap:5px;font:700 12.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;transition:opacity .3s;" +
                             (n > 0 ? "color:" + meta.fg : "color:var(--gray-500)")
                         )}
                       >

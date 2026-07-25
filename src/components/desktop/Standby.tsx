@@ -7,7 +7,7 @@ import { AGENT, SHEETS } from "../../data/demoContent";
 
 /**
  * 아침 대기 화면 (phase === "idle") — "기다리는 콜센터 → 준비되는 콜센터".
- * 큰 시계(Geist Sans — 모노의 슬래시 제로 회피) + 준비 공간 4타일:
+ * 큰 시계(Avenir Next — 모노의 슬래시 제로 회피) + 준비 공간 4타일:
  * 오늘 처리 내역 · 알림 · 코칭·리뷰 · 매뉴얼. 각 서브 화면은 서로 다른 구조.
  * 아이콘: Lucide(업계 표준) — 매뉴얼만 기존 Material 유지(사용자 지시).
  * 상태 표시는 우상단 램프 한 곳만. 온에어 문법: 빛 없음, 그림자가 위계.
@@ -106,7 +106,7 @@ function Lamp({ tone, label }: { tone: "g" | "a"; label: string }) {
             (tone === "g" ? "var(--green-700)" : "var(--amber-700)")
         )}
       />
-      <span style={css("font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{label}</span>
+      <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{label}</span>
     </span>
   );
 }
@@ -124,8 +124,8 @@ function SubHead({ onBack, title, sub }: { onBack: () => void; title: string; su
       >
         <span className="mi" style={css("font-size:19px")}>arrow_back</span>
       </span>
-      <span style={css("font:700 20px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{title}</span>
-      <span style={css("margin-left:8px;font:600 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{sub}</span>
+      <span style={css("font:700 20px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{title}</span>
+      <span style={css("margin-left:8px;font:600 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{sub}</span>
     </div>
   );
 }
@@ -157,7 +157,7 @@ export default function Standby() {
   return (
     <div
       style={css(
-        "width:1100px;height:688px;position:relative;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near);display:flex;flex-direction:column;font-family:'Avenir Next','Geist Sans','Pretendard',system-ui,sans-serif;overflow:hidden"
+        "width:1100px;height:688px;position:relative;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-near);display:flex;flex-direction:column;font-family:'Avenir Next','Pretendard',system-ui,sans-serif;overflow:hidden"
       )}
     >
       {/* ── 상단: 프로필(좌, 작게) + 날짜·상태·운영정보(우, 작게) — 시계가 주인공이 되도록 모두 물러난다 ── */}
@@ -168,14 +168,14 @@ export default function Standby() {
           </span>
           <div>
             <div style={css("display:flex;align-items:center;gap:7px")}>
-              <span style={css("font:600 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>
+              <span style={css("font:600 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>
                 {AGENT.name} {AGENT.role}
               </span>
               {/* 숙련도 — 틴트 없이 잉크만 */}
               <span
                 title="부서 내 숙련도 — 이관 방향(주니어→시니어)의 기준"
                 style={css(
-                  "display:inline-flex;align-items:center;gap:2px;font:700 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" +
+                  "display:inline-flex;align-items:center;gap:2px;font:700 10.5px 'Avenir Next','Pretendard',sans-serif;color:" +
                     (AGENT.level === "시니어" ? "var(--green-900)" : "var(--amber-900)")
                 )}
               >
@@ -185,24 +185,24 @@ export default function Standby() {
                 {AGENT.level}
               </span>
             </div>
-            <div style={css("font:400 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-top:2px")}>
+            <div style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-top:2px")}>
               {AGENT.dept} · {AGENT.tenure} · {AGENT.id}
             </div>
           </div>
         </div>
         <div style={css("display:flex;flex-direction:column;align-items:flex-end;gap:5px")}>
           <div style={css("display:flex;align-items:center;gap:10px")}>
-            <span style={css("font:500 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{dateStr}</span>
+            <span style={css("font:500 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{dateStr}</span>
             {onBreak ? <Lamp tone="a" label="휴식 중" /> : <Lamp tone="g" label="대기 중 · 수신 가능" />}
           </div>
           {!onBreak && !view && (
             <>
               {/* 개인 일정만 — 대기열(집계)은 관리자 콘솔 몫, 여기는 내 다음 콜백만 남긴다 */}
-              <div style={css("display:flex;align-items:center;gap:6px;font:500 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>
+              <div style={css("display:flex;align-items:center;gap:6px;font:500 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>
                 <CalendarClock size={12} color="var(--gray-500)" strokeWidth={2} />
                 다음 콜백 <span className="bignum" style={css("font-size:11.5px;color:var(--gray-800)")}>11:00</span>
               </div>
-              <div style={css("font:400 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-500)")}>
+              <div style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-500)")}>
                 전화가 오면 준비 카드가 이 자리에 도착합니다
               </div>
             </>
@@ -221,10 +221,10 @@ export default function Standby() {
               { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>timer</span>, label: "평균 통화", value: TODAY.avgTalk, unit: "" },
             ].map((s) => (
               <div key={s.label} className="card" style={css("padding:13px 16px;box-shadow:var(--sh-near)")}>
-                <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{s.icon}{s.label}</div>
+                <div style={css("display:flex;align-items:center;gap:6px;font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{s.icon}{s.label}</div>
                 <div style={css("margin-top:6px")}>
                   <span className="bignum" style={css("font-size:24px;color:var(--gray-1000)")}>{s.value}</span>
-                  {s.unit && <span style={css("font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600);margin-left:2px")}>{s.unit}</span>}
+                  {s.unit && <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);margin-left:2px")}>{s.unit}</span>}
                 </div>
               </div>
             ))}
@@ -242,9 +242,9 @@ export default function Standby() {
                     {!last && <span style={css("flex:1;width:1.5px;background:var(--gray-200)")} />}
                   </div>
                   <div style={css("flex:1;display:flex;align-items:center;gap:14px;padding:12px 4px" + (last ? "" : ";border-bottom:1px solid var(--gray-200)"))}>
-                    <span style={css("font:600 12.5px 'Geist Mono',monospace;color:var(--gray-600);width:44px;flex:none")}>{r.time}</span>
-                    <span style={css("flex:1;font:600 13.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.type}</span>
-                    <span style={css("display:inline-flex;align-items:center;gap:4px;font:600 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;border-radius:9999px;padding:4px 10px;" + (cb ? "color:var(--amber-900);background:rgba(178,116,0,.10)" : "color:var(--green-900);background:rgba(29,122,72,.10)"))}>
+                    <span style={css("font:600 12.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600);width:44px;flex:none")}>{r.time}</span>
+                    <span style={css("flex:1;font:600 13.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.type}</span>
+                    <span style={css("display:inline-flex;align-items:center;gap:4px;font:600 11px 'Avenir Next','Pretendard',sans-serif;border-radius:9999px;padding:4px 10px;" + (cb ? "color:var(--amber-900);background:rgba(178,116,0,.10)" : "color:var(--green-900);background:rgba(29,122,72,.10)"))}>
                       <span className="mi" style={css("font-size:13px")}>{cb ? "event" : "check"}</span>{r.status}
                     </span>
                   </div>
@@ -268,7 +268,7 @@ export default function Standby() {
                 key={key}
                 onClick={() => setAlertFilter(key)}
                 style={css(
-                  "padding:6px 14px;border-radius:9999px;font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;cursor:pointer;" +
+                  "padding:6px 14px;border-radius:9999px;font:600 12px 'Avenir Next','Pretendard',sans-serif;cursor:pointer;" +
                     (alertFilter === key
                       ? "background:var(--gray-1000);color:var(--onair-surface)"
                       : "background:var(--gray-100);color:var(--gray-800)")
@@ -280,7 +280,7 @@ export default function Standby() {
             {unreadCount > 0 && (
               <span
                 onClick={() => setReadSet(new Set(ALERTS.map((_, i) => i)))}
-                style={css("margin-left:auto;font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--blue-700);cursor:pointer")}
+                style={css("margin-left:auto;font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-700);cursor:pointer")}
               >
                 모두 읽음 처리
               </span>
@@ -296,7 +296,7 @@ export default function Standby() {
               if (!visible.length) return null;
               return (
                 <div key={label}>
-                  <div style={css("font:700 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.4px;margin-bottom:7px")}>{label}</div>
+                  <div style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);letter-spacing:.4px;margin-bottom:7px")}>{label}</div>
                   <div style={css("display:flex;flex-direction:column;gap:8px")}>
                     {visible.map(({ a, i }) => {
                       const un = isUnread(i);
@@ -312,16 +312,16 @@ export default function Standby() {
                         >
                           <span style={css("width:8px;height:8px;border-radius:9999px;margin-top:5px;flex:none;transition:background .25s;background:" + (un ? "var(--blue-700)" : "var(--gray-300)"))} />
                           <div style={css("flex:1")}>
-                            <div style={css("font:700 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{a.title}</div>
-                            <div style={css("font:400 12px/1.5 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>{a.sub}</div>
+                            <div style={css("font:700 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{a.title}</div>
+                            <div style={css("font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>{a.sub}</div>
                           </div>
                           {a.action && un && (
-                            <span style={css("flex:none;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:9999px;border:1px solid var(--blue-400);color:var(--blue-700);font:600 11.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif")}>
+                            <span style={css("flex:none;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:9999px;border:1px solid var(--blue-400);color:var(--blue-700);font:600 11.5px 'Avenir Next','Pretendard',sans-serif")}>
                               <span className="mi" style={css("font-size:14px")}>call</span>
                               {a.action}
                             </span>
                           )}
-                          <span style={css("font:600 11px 'Geist Mono',monospace;color:var(--gray-600);flex:none;margin-top:2px")}>{a.time}</span>
+                          <span style={css("font:600 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600);flex:none;margin-top:2px")}>{a.time}</span>
                         </div>
                       );
                     })}
@@ -342,14 +342,14 @@ export default function Standby() {
               <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px")}>
                 {COACH.stats.map((s) => (
                   <div key={s.label} style={css("background:var(--background-200);border-radius:8px;padding:13px 16px")}>
-                    <div style={css("font:600 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>{s.label}</div>
+                    <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{s.label}</div>
                     <div className="bignum" style={css("font-size:19px;color:var(--gray-1000);margin-top:4px")}>{s.value}</div>
                   </div>
                 ))}
               </div>
               {/* 최근 7일 처리량 — 막대 미니 차트 */}
               <div style={css("background:var(--background-200);border-radius:8px;padding:14px 16px")}>
-                <div style={css("font:600 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:12px")}>최근 7일 처리량</div>
+                <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:12px")}>최근 7일 처리량</div>
                 <div style={css("display:flex;align-items:flex-end;gap:10px;height:64px")}>
                   {COACH.trend.map((d, i) => {
                     const max = Math.max(...COACH.trend.map((x) => x.n));
@@ -358,7 +358,7 @@ export default function Standby() {
                       <div key={i} style={css("flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end")}>
                         <span className="bignum" style={css("font-size:10.5px;color:" + (isLast ? "var(--gray-1000)" : "var(--gray-600)"))}>{d.n || ""}</span>
                         <span style={css("width:100%;border-radius:3px 3px 0 0;background:" + (isLast ? "var(--blue-700)" : "var(--gray-400)") + ";height:" + Math.max(3, Math.round((d.n / max) * 38)) + "px")} />
-                        <span style={css("font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-600)")}>{d.day}</span>
+                        <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{d.day}</span>
                       </div>
                     );
                   })}
@@ -366,28 +366,28 @@ export default function Standby() {
               </div>
               {/* AI 코칭 */}
               <div style={css("background:var(--background-200);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px")}>
-                <div style={css("font:600 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>AI 코칭 — 어제 12콜 기반</div>
+                <div style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>AI 코칭 — 어제 12콜 기반</div>
                 <div style={css("display:flex;align-items:baseline;gap:8px")}>
-                  <span style={css("font:700 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--green-900);flex:none")}>잘한 점</span>
-                  <span style={css("font:400 13px/1.5 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.good}</span>
+                  <span style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900);flex:none")}>잘한 점</span>
+                  <span style={css("font:400 13px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.good}</span>
                 </div>
                 <div style={css("display:flex;align-items:baseline;gap:8px")}>
-                  <span style={css("font:700 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--amber-900);flex:none")}>개선</span>
-                  <span style={css("font:400 13px/1.5 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.improve}</span>
+                  <span style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--amber-900);flex:none")}>개선</span>
+                  <span style={css("font:400 13px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{COACH.improve}</span>
                 </div>
               </div>
             </div>
             {/* 우 — 오늘의 워밍업 (체크 인터랙션 + 게이지) */}
             <div style={css("flex:1;display:flex;flex-direction:column;min-width:0")}>
               <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:8px")}>
-                <span style={css("font:700 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>오늘의 워밍업</span>
+                <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800)")}>오늘의 워밍업</span>
                 <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
                   <span style={css("display:flex;gap:3px")}>
                     {COACH.warmup.map((_, i) => (
                       <span key={i} style={css("width:20px;height:5px;border-radius:2px;transition:background .25s;background:" + (warmDone.has(i) ? "var(--green-700)" : "var(--gray-200)"))} />
                     ))}
                   </span>
-                  <span style={css("font:600 11px 'Geist Mono',monospace;color:var(--gray-700)")}>{warmDone.size}/{COACH.warmup.length}</span>
+                  <span style={css("font:600 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{warmDone.size}/{COACH.warmup.length}</span>
                 </span>
               </div>
               <div style={css("display:flex;flex-direction:column;gap:8px")}>
@@ -418,14 +418,14 @@ export default function Standby() {
                       >
                         {on && <span className="mi" style={css("font-size:13px")}>check</span>}
                       </span>
-                      <span style={css("flex:1;font:500 13px/1.45 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)" + (on ? ";text-decoration:line-through;opacity:.6" : ""))}>{w.label}</span>
-                      <span style={css("font:600 12px 'Geist Mono',monospace;color:var(--gray-700)")}>{w.meta}</span>
+                      <span style={css("flex:1;font:500 13px/1.45 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)" + (on ? ";text-decoration:line-through;opacity:.6" : ""))}>{w.label}</span>
+                      <span style={css("font:600 12px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{w.meta}</span>
                     </div>
                   );
                 })}
               </div>
               {warmDone.size === COACH.warmup.length && (
-                <div style={css("margin-top:10px;display:flex;align-items:center;gap:6px;font:600 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
+                <div style={css("margin-top:10px;display:flex;align-items:center;gap:6px;font:600 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900)")}>
                   <span className="mi" style={css("font-size:16px")}>check_circle</span>
                   워밍업 완료 — 첫 콜 받을 준비가 됐어요
                 </div>
@@ -448,7 +448,7 @@ export default function Standby() {
                   value={manualSearch}
                   onChange={(e) => setManualSearch(e.target.value)}
                   placeholder="규정·절차 검색"
-                  style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}
+                  style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}
                 />
                 {manualSearch && (
                   <span className="mi" onClick={() => setManualSearch("")} style={css("font-size:15px;color:var(--gray-500);cursor:pointer")}>close</span>
@@ -457,8 +457,8 @@ export default function Standby() {
               {MANUAL_ROWS.map((r, i) => (
                 <div key={i} className="ptile" style={css("display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--background-200);border-radius:8px;box-shadow:none")}>
                   <span className="mi" style={css("font-size:18px;color:var(--gray-700);flex:none")}>{r.icon}</span>
-                  <span style={css("flex:1;font:500 13px/1.45 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.label}</span>
-                  <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700);flex:none")}>{r.meta}</span>
+                  <span style={css("flex:1;font:500 13px/1.45 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.label}</span>
+                  <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);flex:none")}>{r.meta}</span>
                 </div>
               ))}
             </div>
@@ -466,15 +466,15 @@ export default function Standby() {
             <div style={css("flex:1;min-width:0;background:var(--onair-surface);border-radius:8px;box-shadow:var(--sh-near);overflow:hidden;display:flex;flex-direction:column")}>
               <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--excel-green);color:#fff;flex:none")}>
                 <span className="mi" style={css("font-size:17px")}>grid_on</span>
-                <span style={css("font:600 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif")}>{SHEETS.manual.file}</span>
-                <span style={css("font:400 11px 'Geist Mono',monospace;opacity:.8")}>· {SHEETS.manual.sheet} 시트</span>
+                <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif")}>{SHEETS.manual.file}</span>
+                <span style={css("font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;opacity:.8")}>· {SHEETS.manual.sheet} 시트</span>
               </div>
               <div style={css("flex:1;min-height:0;overflow:auto;background:#fff")}>
                 <div style={css("display:flex;flex-direction:column;min-width:max-content")}>
                   <div style={css("display:flex;position:sticky;top:0")}>
                     <span style={css("width:34px;flex:none;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300)")} />
                     {SHEETS.manual.cols.map((c, i) => (
-                      <span key={i} style={css("width:" + c.w + "px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}</span>
+                      <span key={i} style={css("width:" + c.w + "px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}</span>
                     ))}
                   </div>
                   {SHEETS.manual.rows
@@ -485,9 +485,9 @@ export default function Standby() {
                     )
                     .map(([row, ri]) => (
                     <div key={ri} style={css("display:flex")}>
-                      <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Geist Mono',monospace;color:var(--gray-600)")}>{ri + 1}</span>
+                      <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>{ri + 1}</span>
                       {row.map((cell, ci) => (
-                        <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(cell, manualSearch)}</span>
+                        <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(cell, manualSearch)}</span>
                       ))}
                     </div>
                   ))}
@@ -507,14 +507,14 @@ export default function Standby() {
             <LedClock dimmed={onBreak} />
             {onBreak && (
               <>
-                <div style={css("margin-top:18px;display:flex;align-items:center;gap:8px;font:600 14px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-800)")}>
+                <div style={css("margin-top:18px;display:flex;align-items:center;gap:8px;font:600 14px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800)")}>
                   <span style={css("width:8px;height:8px;border-radius:9999px;background:var(--amber-700)")} />
                   휴식 중 — 복귀하면 수신 대기로 전환됩니다
                 </div>
                 <span
                   onClick={() => setOnBreak(false)}
                   style={css(
-                    "margin-top:16px;display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus);pointer-events:auto"
+                    "margin-top:16px;display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 12px 'Avenir Next','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus);pointer-events:auto"
                   )}
                 >
                   <span className="mi" style={css("font-size:15px")}>play_arrow</span>복귀하기
@@ -540,7 +540,7 @@ export default function Standby() {
                 <span style={css("position:relative;display:inline-flex")}>
                   <Bell size={15} strokeWidth={2} />
                   {unreadCount > 0 && (
-                    <span style={css("position:absolute;top:-5px;right:-7px;min-width:13px;height:13px;padding:0 3px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 9px 'Avenir Next','Avenir Next','Avenir Next','Geist Sans',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
+                    <span style={css("position:absolute;top:-5px;right:-7px;min-width:13px;height:13px;padding:0 3px;border-radius:9999px;background:var(--red-700);color:#fff;font:700 9px 'Avenir Next','Avenir Next','Avenir Next',sans-serif;display:flex;align-items:center;justify-content:center;box-sizing:border-box")}>{unreadCount}</span>
                   )}
                 </span>
                 알림

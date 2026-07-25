@@ -3,7 +3,7 @@ import { css } from "../../lib/css";
 import { BrandSymbol } from "../BrandLogo";
 
 const FONT = "'Avenir Next','Pretendard',sans-serif";
-const MONO = "'Geist Mono',monospace";
+const MONO = "ui-monospace,'SF Mono',Menlo,Consolas,monospace";
 const BASE = "https://claude.ai/code/artifact/";
 
 /**
