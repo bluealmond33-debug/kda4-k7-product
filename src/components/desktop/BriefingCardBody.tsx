@@ -31,19 +31,21 @@ export default function BriefingCardBody({
     <>
       {/* ── 상단 ── 로고+설명(좌) / AI 정확도(우).
           카드의 '표지'다 — 본문보다 두껍게 두고 로고를 크게 세워 어떤 카드인지 먼저 읽히게 한다. */}
-      <div style={css("flex:none;padding:13px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:13px")}>
+      <div style={css("flex:none;padding:12px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:15px")}>
         {/* 공식 아트워크 락업 — 배경 투명 원본 그대로(심볼 + 워드마크 + Response Innovation).
             CSS로 조판한 글자가 아니라 실제 로고라 자간·자형이 원본과 같다.
             자산에서 투명 여백을 잘라 뒀으므로 이 height가 곧 보이는 로고 높이다.
-            38px: 이 아래로 내리면 "Response Innovation"이 4px 얼룩이 된다(대문자 22px·
-            태그라인 5.5px). 원본을 자르지 않고 쓰기로 했으니 태그라인이 읽히는 크기가 하한이다. */}
+            46px — 원본 그대로 넣되 원본처럼 보이려면 이 크기가 필요하다. 자산은 사용자가 준
+            파일과 픽셀 단위로 동일함을 확인했고(같은 높이로 렌더해 diff = 0), 남은 문제는
+            표시 크기뿐이었다. 46px에서 대문자 26px · 태그라인 6.7px로 "Response Innovation"이
+            글자로 읽힌다. 30~38px에서는 태그라인이 얼룩으로, 심볼 곡선이 뭉개져 보였다. */}
         <img
           src={BRAND_LOCKUP_PNG}
           alt="KARI-NA · Response Innovation"
-          style={{ display: "block", flex: "none", height: 38, width: 38 * BRAND_LOCKUP_RATIO }}
+          style={{ display: "block", flex: "none", height: 46, width: 46 * BRAND_LOCKUP_RATIO }}
         />
         {/* 워드마크 오른쪽에 가는 선 하나 두고 설명을 잇는다 — 한 줄로 눕히면 헤더가 훨씬 얇아진다 */}
-        <span style={css("flex:none;width:1px;height:17px;background:var(--gray-300)")} />
+        <span style={css("flex:none;width:1px;height:20px;background:var(--gray-300)")} />
         <span style={css("font:600 11.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>카드 브리핑 요약</span>
         <div style={css("flex:1")} />
         {/* AI 정확도 — 도넛을 뺐다. 22px 고리는 94라는 값을 더 잘 읽히게 하지 못하면서
@@ -82,20 +84,23 @@ export default function BriefingCardBody({
 
         <div style={css("display:flex;gap:12px;align-items:stretch")}>
           {/* ── 좌: 감정온도 → 부서/업무 → 확신도·본인인증 ── */}
-          <div style={css("flex:none;width:200px;display:flex;flex-direction:column;gap:10px")}>
+          {/* 왼쪽 열 200 → 136px(2/3). 이 열은 '흘끗 보는 지표'(온도·부서·유의사항)라 폭이
+              필요하지 않고, 정작 읽어야 하는 전화 요약이 좁았다 — 남는 64px을 요약이 가져간다.
+              폭을 줄인 만큼 안쪽도 함께 줄였다: 폭만 줄이면 숫자·표정이 칸을 넘어 줄바꿈된다. */}
+          <div style={css("flex:none;width:136px;display:flex;flex-direction:column;gap:9px")}>
             {/* 감정온도 — 표정 + 당근식 36.5 기준 온도계 */}
-            <div style={css("border:1px solid var(--gray-300);border-radius:10px;padding:13px 14px;display:flex;flex-direction:column;gap:10px")}>
+            <div style={css("border:1px solid var(--gray-300);border-radius:10px;padding:11px 12px;display:flex;flex-direction:column;gap:8px")}>
               <div style={css("display:flex;align-items:center;gap:5px")}>
                 <span style={css("font:600 10px " + FONT + ";letter-spacing:.2px;color:var(--gray-600)")}>고객 감정온도</span>
               </div>
-              <div style={css("display:flex;align-items:center;gap:9px")}>
+              {/* 표정 + 온도만 한 줄에 두고 상태 라벨은 축 옆으로 내렸다 — 136px 안에 셋을
+                  한 줄로 넣으면(필요 ~118px / 가용 110px) 라벨이 접혀 두 줄이 된다. */}
+              <div style={css("display:flex;align-items:center;gap:8px")}>
                 {/* 표정 — 숫자보다 얼굴이 먼저 읽힌다 */}
-                <span className="mi" style={css("font-size:34px;line-height:1;color:" + vm.prepEmotionBar)}>{vm.prepEmotionFace}</span>
-                <span style={css("display:flex;align-items:baseline;gap:6px")}>
-                  <span style={css("font:600 32px/1 " + FONT + ";letter-spacing:-1.4px;font-variant-numeric:tabular-nums;color:" + vm.prepEmotionBar)}>{vm.prepTempC != null ? vm.prepTempC.toFixed(1) : "--"}<span style={css("font:500 18px " + FONT + ";margin-left:1px")}>°</span></span>
-                  <span style={css("font:700 12.5px " + FONT + ";color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
-                </span>
+                <span className="mi" style={css("font-size:26px;line-height:1;color:" + vm.prepEmotionBar)}>{vm.prepEmotionFace}</span>
+                <span style={css("font:600 27px/1 " + FONT + ";letter-spacing:-1.1px;font-variant-numeric:tabular-nums;color:" + vm.prepEmotionBar)}>{vm.prepTempC != null ? vm.prepTempC.toFixed(1) : "--"}<span style={css("font:500 15px " + FONT + ";margin-left:1px")}>°</span></span>
               </div>
+              <div style={css("font:700 11.5px " + FONT + ";color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</div>
               {/* 접수 화면(Waiting)과 같은 축·같은 마커 — 두 화면이 다른 감정온도 그림을 쓰면
                   같은 값을 두 번 배워야 한다. 마커는 원이 아니라 페이더 썸(EmotionBar 참조) */}
               <EmotionBar
