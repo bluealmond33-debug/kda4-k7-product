@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -24,6 +24,15 @@ class IncidentRisk(str, Enum):
 
 
 class EmotionStatus(str, Enum):
+    """활성 계약은 unavailable·completed만 허용한다.
+
+    실행 엔진(ADR-0012 이식원)에는 `DEMO = "demo"`가 선언돼 있었으나 코드
+    어디에서도 쓰지 않는 죽은 값이었다. product는 "스텁을 진짜 모델인 척하지
+    않는다"는 원칙으로 demo를 계약·DB 체크제약
+    (`consultation_cards_available_emotion_chk`)에서 모두 거부하므로 가져오지
+    않는다. 감정 미연동은 unavailable + [SOURCE=STUB] reason으로 표현한다.
+    """
+
     UNAVAILABLE = "unavailable"
     COMPLETED = "completed"
 
@@ -32,67 +41,6 @@ class EmotionTemperatureLevel(str, Enum):
     STABLE = "stable"
     CAUTION = "caution"
     ELEVATED = "elevated"
-
-
-class AttentionLevel(str, Enum):
-    NONE = "none"
-    MEDIUM = "medium"
-    HIGH = "high"
-
-
-ReasonCode = Annotated[str, Field(min_length=1, max_length=100)]
-
-
-class RoutingResult(BaseModel):
-    """Three-stage task routing selected by the local routing classifier."""
-
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    task_code: str = Field(min_length=1, max_length=50)
-    task_name: str = Field(min_length=1, max_length=200)
-    classification: Literal["EMERGENCY", "SIMPLE", "GENERAL"]
-    handler: Literal["HUMAN", "AI"]
-
-
-class TextEmotionResult(BaseModel):
-    """Text-only severity, kept separate from the audio emotion result."""
-
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    content_emotion: str = Field(min_length=1, max_length=100)
-    situation_severity: Literal["low", "medium", "high"]
-    urgency_score: float = Field(ge=0, le=100)
-
-    _validate_urgency_score = field_validator("urgency_score", mode="before")(
-        _reject_boolean_number
-    )
-
-
-class ChecklistItem(BaseModel):
-    """One counselor action generated from the call and reviewed policy."""
-
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    title: str = Field(min_length=1, max_length=200)
-    detail: str = Field(min_length=1, max_length=1000)
-    source: Literal["model", "policy", "rag"]
-
-
-class KnowledgeReference(BaseModel):
-    """A local knowledge-base passage used to ground the briefing."""
-
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    doc_id: str = Field(min_length=1, max_length=100)
-    title: str = Field(min_length=1, max_length=300)
-    section: str = Field(min_length=1, max_length=300)
-    excerpt: str = Field(min_length=1, max_length=2000)
-    source: str = Field(min_length=1, max_length=500)
-    score: float = Field(ge=0, le=1)
-
-    _validate_score = field_validator("score", mode="before")(
-        _reject_boolean_number
-    )
 
 
 class ModelConsultationResult(BaseModel):
@@ -107,9 +55,6 @@ class ModelConsultationResult(BaseModel):
     incident_risk: IncidentRisk = IncidentRisk.LOW
     risk_reason: str | None = Field(default=None, max_length=2000)
     routing_confidence: float | None = Field(default=None, ge=0, le=1)
-    customer_requests: list[str] = Field(default_factory=list, max_length=8)
-    missing_information: list[str] = Field(default_factory=list, max_length=8)
-    required_actions: list[ChecklistItem] = Field(default_factory=list, max_length=8)
 
     _validate_routing_confidence = field_validator(
         "routing_confidence", mode="before"
@@ -185,15 +130,7 @@ class ConsultationCard(BaseModel):
     incident_risk: IncidentRisk
     risk_reason: str | None = Field(default=None, max_length=2000)
     routing_confidence: float | None = Field(default=None, ge=0, le=1)
-    customer_requests: list[str] = Field(default_factory=list, max_length=8)
-    missing_information: list[str] = Field(default_factory=list, max_length=8)
-    required_actions: list[ChecklistItem] = Field(default_factory=list, max_length=8)
-    knowledge_references: list[KnowledgeReference] = Field(default_factory=list, max_length=5)
     emotion: EmotionResult = Field(default_factory=EmotionResult)
-    attention_level: AttentionLevel
-    reason_codes: list[ReasonCode] | None = Field(max_length=16)
-    routing: RoutingResult | None
-    text_emotion: TextEmotionResult | None
 
     _validate_routing_confidence = field_validator(
         "routing_confidence", mode="before"
@@ -203,17 +140,13 @@ class ConsultationCard(BaseModel):
     def require_high_risk_reason(self) -> "ConsultationCard":
         if self.incident_risk == IncidentRisk.HIGH and not self.risk_reason:
             raise ValueError("risk_reason is required when incident_risk is high")
-        if self.incident_risk == IncidentRisk.HIGH and self.attention_level != AttentionLevel.HIGH:
-            raise ValueError("high incident_risk requires high attention_level")
-        if self.incident_risk == IncidentRisk.LOW and self.attention_level == AttentionLevel.HIGH:
-            raise ValueError("high attention_level requires high incident_risk")
         return self
 
 
 class MvpCallResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    schema_version: Literal["mvp-1.1"] = "mvp-1.1"
+    schema_version: Literal["mvp-1.0"] = "mvp-1.0"
     call_id: UUID
     status: CallStatus
     source_channel: Literal["voice"] = "voice"
@@ -228,7 +161,13 @@ class HealthResponse(BaseModel):
 
     status: str
     database: str
-    contract_version: str = "mvp-1.1"
-    pipeline_mode: Literal["cloud", "local"]
-    stt_provider: Literal["openai", "faster_whisper"]
-    analysis_provider: Literal["openai", "ollama"]
+    contract_version: str = "mvp-1.0"
+
+
+# ── 실행 엔진 호환 별칭 (ADR-0012 이식) ──────────────────────────────────
+# 실행 엔진 코드는 MvpEmotionResult·MvpHealthResponse라는 이름을 쓴다. 필드와
+# 의미가 같으므로 이름만 재노출한다. level은 실행 엔진이 "stable"·"caution"·
+# "elevated" 문자열을 넣는데 EmotionTemperatureLevel enum 값과 일치해 Pydantic이
+# 그대로 변환한다.
+MvpEmotionResult = EmotionResult
+MvpHealthResponse = HealthResponse

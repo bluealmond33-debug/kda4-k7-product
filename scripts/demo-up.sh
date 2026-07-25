@@ -36,14 +36,21 @@ echo "✅ Postgres"
 
 # 2) env 재생성 — LAN IP 기준 (gitignored 파일들)
 #
-# K7_LIVE_STT_MODEL — 실시간 STT(faster-whisper, 전부 로컬).
-#   large-v3-turbo: 이 맥(M5·int8)에서 실측 실시간 1.3배, 한국어 오인식 없음 → 무대 기본값
-#   base:           실시간 17배로 빠르지만 "주택담보대 출"처럼 띄어쓰기·어미가 깨진다
-# 무대에서 지연이 거슬리면 이 줄만 base로 바꾸고 백엔드를 재시작하면 된다.
+# k7-backend(HeeChang) config.py 변수명에 맞춘다(ADR-0012 모노레포 통합):
+#   USE_LOCAL_MODELS=true      → OpenAI 대신 로컬 STT(faster-whisper)+로컬 LLM(Ollama exaone)
+#   STUB_MODELS=true           → 모델·Ollama 없이 canned 응답(화면 흐름만). `demo-up.sh stub` 로 켠다
+#   LOCAL_WHISPER_DEVICE       → 이 맥은 cuda 없으니 cpu/int8. GPU 서버는 cuda/float16로 바꾼다
+#   OLLAMA_MODEL               → 상담가이드(consult_guide) 생성용. 미기동이면 canned 폴백
+STUB=false; [ "${1:-}" = "stub" ] && STUB=true
 cat > "$ROOT/backend/.env" <<EOF
 DATABASE_URL=postgresql://localhost:5432/k7
-K7_EMBED=bge-m3
-K7_LIVE_STT_MODEL=large-v3-turbo
+USE_LOCAL_MODELS=true
+STUB_MODELS=$STUB
+LOCAL_WHISPER_MODEL=large-v3-turbo
+LOCAL_WHISPER_DEVICE=cpu
+LOCAL_WHISPER_COMPUTE_TYPE=int8
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=exaone3.5:7.8b
 EXTRA_CORS_ORIGINS=https://k7product.vercel.app,http://$IP:5173,http://localhost:5173
 EOF
 cat > "$ROOT/.env.development.local" <<EOF

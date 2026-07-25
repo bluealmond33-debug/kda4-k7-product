@@ -756,7 +756,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                         ))
                       ) : vm.regRecos.length ? (
                         vm.regRecos.map((r) => (
-                          <RegReco key={r.title} vm={vm} title={r.title} body={r.body} file={r.file} row={r.row} />
+                          <RegReco key={r.title} vm={vm} title={r.title} body={r.body} file={r.file} row={r.row} query={r.query} />
                         ))
                       ) : (
                         <div style={css("font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>
@@ -1073,17 +1073,23 @@ function MiniTable({ raw, q }: { raw: string; q: string }) {
   );
 }
 
-function RegReco({ vm, title, body, file, row }: { vm: CallFlowVM; title: string; body: string; file: string; row: number }) {
+function RegReco({ vm, title, body, file, row, query }: { vm: CallFlowVM; title: string; body: string; file: string; row: number | null; query?: string | null }) {
+  // 열기 — 픽스처(row 있음)는 규정집 시트의 그 행을 강조, 실제 RAG 추천(row 없음)은
+  // 규정집 의미검색으로 그 문서를 찾아 보여준다. 둘 다 없으면 버튼을 숨긴다.
+  const open = row != null ? () => vm.openManualAt(row) : query ? () => vm.openRegQuery(query) : null;
   return (
     <div style={css("background:var(--gray-100);border-radius:8px;padding:11px 13px")}>
       <div style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>{title}</div>
       <div style={css("font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>{body}</div>
       <div style={css("display:flex;align-items:center;justify-content:space-between;margin-top:8px")}>
         <span style={css("font:400 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>{file}</span>
-        {/* 열기 = 규정집 확장 + 해당 조항 행 강조 */}
-        <span onClick={() => vm.openManualAt(row)} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);background:var(--onair-surface);border-radius:9999px;padding:4px 11px;cursor:pointer")}>
-          <span className="mi" style={css("font-size:14px")}>open_in_new</span> 열기
-        </span>
+        {/* 열기 — 픽스처(row 있음)는 규정집 시트의 그 행을 강조, 실제 RAG 추천(row 없음)은
+             규정집 의미검색(query)으로 그 문서를 찾아 보여준다. 둘 다 없으면 버튼을 숨긴다. */}
+        {open && (
+          <span onClick={open} style={css("display:inline-flex;align-items:center;gap:4px;font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-700);border:1px solid var(--blue-400);background:var(--onair-surface);border-radius:9999px;padding:4px 11px;cursor:pointer")}>
+            <span className="mi" style={css("font-size:14px")}>open_in_new</span> 열기
+          </span>
+        )}
       </div>
     </div>
   );
