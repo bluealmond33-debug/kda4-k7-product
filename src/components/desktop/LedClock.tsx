@@ -27,7 +27,7 @@ const INK = "var(--gray-1000)";
 const GHOST = "rgba(22,20,17,.08)";
 const ICON_GHOST = "var(--gray-200)"; // 꺼진 날씨 아이콘
 const LABEL = "var(--gray-500)";
-const SANS = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
+const SANS = "'Avenir Next','Pretendard',sans-serif";
 
 
 /** 실물 기상 LCD처럼 아이콘을 다 깔아두고 현재 날씨만 켠다(나머지는 고스트로 끔). */

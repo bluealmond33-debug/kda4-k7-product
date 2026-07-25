@@ -76,6 +76,8 @@ GET /health
 
 ## 프론트엔드 실행
 
+> 화면 구조(4화면)·디자인 자산·폰트 정책은 **[`docs/FRONTEND_MAP.md`](docs/FRONTEND_MAP.md)** 한 장에 정리돼 있습니다.
+
 ```powershell
 npm install
 Copy-Item .env.example .env

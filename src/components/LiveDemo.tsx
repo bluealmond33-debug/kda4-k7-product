@@ -169,7 +169,7 @@ export default function LiveDemo({
                     >
                       <span
                         style={css(
-                          "width:21px;height:21px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px 'Geist Mono',monospace;" +
+                          "width:21px;height:21px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;" +
                             (active
                               ? "background:var(--blue-700);color:#fff"
                               : done

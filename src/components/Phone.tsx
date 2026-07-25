@@ -571,7 +571,7 @@ function CustomerKeypadScreen({
           <div style={css("font-size:13px;color:#8a8a8e;margin-top:5px")}>{prompt}</div>
         </div>
       </div>
-      <div style={css("height:48px;display:flex;align-items:center;justify-content:center;font:500 24px 'Geist Mono',monospace;letter-spacing:7px;color:#3478f6")}>
+      <div style={css("height:48px;display:flex;align-items:center;justify-content:center;font:500 24px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:7px;color:#3478f6")}>
         {vm.arsDigits || " "}
       </div>
       <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:14px;opacity:" + (vm.customerKeypadEnabled ? "1" : ".42"))}>
