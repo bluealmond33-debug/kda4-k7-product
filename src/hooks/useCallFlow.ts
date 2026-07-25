@@ -295,6 +295,11 @@ type SpeakerTranscriptChunk = TranscriptChunk & {
 
 type SummaryScope = "intake" | "full";
 
+/** 카드 생성 창 — 침묵이 끝나고 준비 카드가 날아오기까지 '카드 만드는 중'을 보여 주는 시간.
+ *  0으로 두면(예전 동작) 카드가 즉시 떠서 '카드 생성' 단계가 한 번도 켜지지 않는다.
+ *  실제 요약·분류가 쓰는 시간과 비슷한 눈금으로 잡는다 — 화면이 사실보다 빠른 척하지 않게. */
+const CARD_BUILD_MS = 1200;
+
 /** 단계 바에서 '후처리'로 건너뛸 때 표시할 통화 길이(초).
  *  후처리는 통화가 끝난 뒤의 화면이라 시계가 흐르면 안 된다 — 끝난 통화의 길이로 고정한다. */
 const WRAP_JUMP_CALL_SEC = 187;
@@ -369,6 +374,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [analysisSource, setAnalysisSource] = useState("demo");
   const [liveActionItems, setLiveActionItems] = useState<string[]>([]);
   const [summaryPending, setSummaryPending] = useState(false);
+  /** 카드 생성 창이 도는 중 — 접수 패널의 '카드 생성' 단계를 켜고, 끝나면 카드가 날아온다 */
+  const [cardBuilding, setCardBuilding] = useState(false);
   const [arsDigits, setArsDigits] = useState("");
   const [dtmfEvents, setDtmfEvents] = useState<ArsDtmfEvent[]>([]);
   const [arsMobileConnected, setArsMobileConnected] = useState(false);
@@ -472,6 +479,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const timers = useRef<number[]>([]);
   const clockT = useRef<number | null>(null);
   const silT = useRef<number | null>(null);
+  /** 카드 생성 창 타이머 — 리셋 때 반드시 끊는다(안 끊으면 초기화한 뒤에 prep으로 튄다) */
+  const buildT = useRef<number | null>(null);
   const silStage = useRef<null | "first" | "confirmPause" | "second">(null);
   // 임계 이상 레벨이 연속 몇 회 이어졌는지 — 순간 잡음과 실제 발화를 가른다.
   const loudRun = useRef(0);
@@ -893,10 +902,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAnalysisSource("pending");
       setSummaryPending(true);
     }
-    transitionPhase("prep");
     // 최신 준비 카드는 체크박스 없이 유의사항을 한 번에 제시한다.
     // 연결 게이트는 체크 동작 대신 실제 요약 완료 여부로만 제어한다.
     setPrepChecks(Array(PREP_LEN).fill(true));
+    // 요약·분류는 지금 바로 시작한다(아래 카드 생성 창과 병렬로 돈다)
     void runSummary({ forceLive, scope: "intake" }).then((completed) => {
       if (completed) {
         emitCardPipeline(forceLive ? "backend" : "demo", forceLive ? 250 : 700, {
@@ -904,6 +913,18 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         });
       }
     });
+    // 카드 생성 창 — 접수 패널의 '카드 생성' 단계를 실제로 보여주는 시간.
+    // 예전엔 침묵이 끝나자마자 prep으로 넘어가 패널이 그 순간 사라졌고, 그래서 '카드 생성'
+    // 단계가 한 번도 켜지지 않았다(카드 생성이 0초로 보였다). 실제 시스템은 요약·분류에
+    // 시간을 쓰므로 그 시간을 눈에 보이게 둔다 — 화면이 사실보다 빠른 척하면 시연에서
+    // "이게 진짜 도는 건가"라는 의심을 부른다. 이 창이 끝나면 카드가 날아온다.
+    setCardBuilding(true);
+    if (buildT.current) clearTimeout(buildT.current);
+    buildT.current = window.setTimeout(() => {
+      buildT.current = null;
+      setCardBuilding(false);
+      transitionPhase("prep");
+    }, CARD_BUILD_MS);
   }, [emitCardPipeline, runSummary, transitionPhase]);
 
   const armFirst = useCallback(() => {
@@ -1225,6 +1246,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     endRequested.current = false;
     resetRequested.current = false;
     inactiveStatePolls.current = 0;
+    // 카드 생성 창을 끊는다 — 안 끊으면 초기화한 뒤에 예약된 타이머가 prep으로 튄다
+    if (buildT.current) {
+      clearTimeout(buildT.current);
+      buildT.current = null;
+    }
+    setCardBuilding(false);
     clearAll();
     transcript.current = [];
     summaryText.current = "";
@@ -2552,6 +2579,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     customerPressDigit: pressCustomerDigit,
     // desktop waiting
     showWaiting: ["idle", "connecting", "recording", "confirm"].includes(p),
+    /** 카드를 만드는 중 — 접수 패널의 '카드 생성' 단계를 켠다(끝나면 카드가 날아온다) */
+    cardBuilding,
     waitingText:
       p === "idle"
         ? "상담 대기 중"

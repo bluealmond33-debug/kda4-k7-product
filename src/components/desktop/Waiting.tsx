@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import Standby from "./Standby";
@@ -6,16 +7,33 @@ import EmotionBar from "./EmotionBar";
 
 const FONT = "'Avenir Next','Pretendard',system-ui,sans-serif";
 
+const STEPS = ["듣는 중", "요약·정리", "카드 생성"];
+
 /** 접수 대기 화면 — idle이면 대기(Standby). 접수 중엔 대기 화면을 가리지 않고,
  *  좌하단에 작은 접수 패널이 바텀업으로 떠서 "어느 단계·얼마나 진행됐는지"만 알린다.
  *  STT 원문은 보여주지 않는다(텍스트 최소화). */
 export default function Waiting({ vm }: { vm: CallFlowVM }) {
-  if (vm.phIdle) return <Standby />;
+  // 지금 어느 단계인가 — 원값. 고객이 말하면 0, 침묵이 흐르면 1, 요약이 돌면 2.
+  const speaking = vm.showWave || vm.liveTranscriptLines.length === 0;
+  const rawStage = vm.cardBuilding || vm.summaryPending ? 2 : speaking ? 0 : 1;
 
-  // 진행 단계 — 듣는 중 → 요약·정리 → 카드 생성. 무엇을 듣는지(STT)가 아니라 '단계'만.
-  const listening = vm.showWave || vm.silenceLeft > 0 || vm.liveTranscriptLines.length === 0;
-  const stage = listening ? 0 : 1;
-  const steps = ["듣는 중", "요약·정리", "카드 생성"];
+  /* 진행 표시는 **되돌아가지 않는다**(도달한 최고 단계를 붙잡는다).
+     고객이 말을 멈췄다 다시 말하면 실제 상태는 '요약·정리 ↔ 듣는 중'을 오간다. 그게 사실이긴
+     하지만, 진행 막대가 왕복하면 "되돌아갔다 = 뭔가 잘못됐다"로 읽혀 시연에서 불안해 보인다.
+     접수는 한 방향으로 끝나는 절차이므로 표시도 한 방향으로만 간다. */
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    setStage((s) => Math.max(s, rawStage));
+  }, [rawStage]);
+  // 새 콜이면 처음부터
+  const idle = vm.phIdle;
+  useEffect(() => {
+    if (idle) setStage(0);
+  }, [idle]);
+
+  if (idle) return <Standby />;
+
+  const steps = STEPS;
 
   return (
     <div
@@ -28,18 +46,28 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
         <Standby />
       </div>
 
-      {/* 좌하단 접수 패널 — 바텀업으로 등장(작게, 화면을 덮지 않음) */}
+      {/* 좌하단 접수 패널 — 바텀업으로 등장(작게, 화면을 덮지 않음).
+          카드 생성 단계(stage 2)에 들어가면 한 번 부풀어 오른다 — 이 작은 패널이 곧 중앙의
+          준비 카드로 '자라난다'는 예고다. 이어서 PrepCard가 이 자리에서 커지며 날아온다
+          (cardArrive: 좌하단 scale .34 → 중앙 1.0). 두 모션이 한 동작으로 읽힌다. */}
       <div
         data-tour="intake-live"
         style={css(
-          "position:absolute;left:22px;bottom:22px;width:314px;box-sizing:border-box;display:flex;flex-direction:column;gap:13px;padding:15px 17px;border-radius:16px;background:#fff;border:1px solid var(--gray-200);box-shadow:0 18px 44px rgba(28,32,45,.20),0 2px 8px rgba(28,32,45,.08);animation:dockUp .42s cubic-bezier(.2,.8,.2,1) both;font-family:" + FONT
+          "position:absolute;left:22px;bottom:22px;width:314px;box-sizing:border-box;display:flex;flex-direction:column;gap:13px;padding:15px 17px;border-radius:16px;background:#fff;border:1px solid var(--gray-200);box-shadow:0 18px 44px rgba(28,32,45,.20),0 2px 8px rgba(28,32,45,.08);font-family:" +
+            FONT +
+            ";animation:" +
+            (stage >= 2
+              ? "dockUp .42s cubic-bezier(.2,.8,.2,1) both,intakeLevelUp .7s cubic-bezier(.2,.8,.2,1) .05s both"
+              : "dockUp .42s cubic-bezier(.2,.8,.2,1) both")
         )}
       >
         {/* 헤더 — 얼굴 스피너 + 제목 + 접수 경과 */}
         <div style={css("display:flex;align-items:center;gap:12px")}>
-          <Spinner size={42} mark speedMs={1050} />
+          <Spinner size={42} mark speedMs={stage >= 2 ? 620 : 1050} />
           <div style={css("display:flex;flex-direction:column;gap:3px;min-width:0")}>
-            <span style={css("font:700 13px " + FONT + ";color:var(--gray-1000);letter-spacing:-.2px")}>AI가 접수·요약 중</span>
+            <span style={css("font:700 13px " + FONT + ";color:var(--gray-1000);letter-spacing:-.2px")}>
+              {stage >= 2 ? "상담 카드 만드는 중" : "AI가 접수·요약 중"}
+            </span>
             <span style={css("font:600 11.5px " + FONT + ";color:var(--gray-600)")}>
               접수 경과 <span style={css("color:var(--gray-1000);font-variant-numeric:tabular-nums")}>{vm.clockStr}</span>
             </span>
