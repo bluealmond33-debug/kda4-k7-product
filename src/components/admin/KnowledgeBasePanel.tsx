@@ -24,7 +24,7 @@ export default function KnowledgeBasePanel({
   const stat = (value: string, label: string, accent = "var(--gray-1000)") => (
     <span style={css("display:flex;flex-direction:column;gap:3px;align-items:flex-start;min-width:82px")}>
       <span className="bignum" style={css("font-size:21px;color:" + accent)}>{value}</span>
-      <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>{label}</span>
+      <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>{label}</span>
     </span>
   );
   const divider = <span style={css("width:1px;align-self:stretch;background:var(--gray-200)")} />;
@@ -39,7 +39,7 @@ export default function KnowledgeBasePanel({
           <span className="sechd" style={css("display:block;white-space:nowrap")}>DB · 지식베이스</span>
           {/* 설명 모드 — 다른 패널과 같은 회색 블록 캡션 문법 */}
           {explain && (
-            <span style={css("display:inline-block;margin-top:4px;font:400 10.5px/1.5 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:4px 9px;white-space:nowrap;animation:dockDown .25s var(--ease-out)")}>
+            <span style={css("display:inline-block;margin-top:4px;font:400 10.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:4px 9px;white-space:nowrap;animation:dockDown .25s var(--ease-out)")}>
               모든 규정검색의 지식원 — PDF를 올리면 즉시 자랍니다
             </span>
           )}
@@ -55,11 +55,11 @@ export default function KnowledgeBasePanel({
       <span style={css("display:flex;flex-direction:column;gap:5px;min-width:0")}>
         <span style={css("display:inline-flex;align-items:center;gap:7px;white-space:nowrap")}>
           <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + (rag ? "var(--green-700)" : rag === false ? "var(--amber-700)" : "var(--gray-500)"))} />
-          <span style={css("font:600 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);white-space:nowrap")}>
+          <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);white-space:nowrap")}>
             {rag ? "pgvector 하이브리드 가동" : rag === false ? "임베딩 미적재 — 폴백" : "RAG 실측 대기 (데모)"}
           </span>
         </span>
-        <span style={css("font:400 10.5px 'Geist Mono',monospace;color:var(--gray-700);white-space:nowrap")}>
+        <span style={css("font:400 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700);white-space:nowrap")}>
           dense .65 + kw .35 · bge-m3 · HNSW
         </span>
       </span>
@@ -67,7 +67,7 @@ export default function KnowledgeBasePanel({
       {/* PDF 업로드 — 청킹→추천→임베딩→적재→검색 반영까지 한 번에. CTA는 ONAIR 규약대로 파랑 */}
       <span
         onClick={onOpenUpload}
-        style={css("flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;border-radius:9999px;padding:8px 15px;font:600 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;background:var(--blue-700);color:#fff;cursor:pointer")}
+        style={css("flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;border-radius:9999px;padding:8px 15px;font:600 12.5px 'Avenir Next','Pretendard',sans-serif;background:var(--blue-700);color:#fff;cursor:pointer")}
       >
         <span className="mi" style={css("font-size:16px")}>upload_file</span>PDF 업로드
       </span>

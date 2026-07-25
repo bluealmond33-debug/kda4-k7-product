@@ -15,7 +15,7 @@ body,
 
 body {
   background: #060607;
-  font-family: var(--font-sans, "Avenir Next", "Pretendard", system-ui, sans-serif);
+  font-family: var(--font-sans);
   color: var(--gray-1000, #171717);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -41,7 +41,7 @@ a:hover {
 }
 
 .mono {
-  font-family: var(--font-mono, "Geist Mono", ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -53,7 +53,7 @@ a:hover {
 
 /* Shared atoms reused across desktop screens */
 .lbl {
-  font: 700 11px "Avenir Next", "Pretendard", sans-serif;
+  font: 700 11px var(--font-sans);
   color: var(--gray-700);
   letter-spacing: 0.2px;
 }
@@ -92,7 +92,7 @@ a:hover {
 .sechd {
   /* 타입 래더 v2 Section — 실효 크기(×0.764) 기준으로 13px은 지각 하한 아래.
      700→600: 실효 10px대 한글에서 700은 뭉친다 */
-  font: 600 14px "Avenir Next", "Pretendard", sans-serif;
+  font: 600 14px var(--font-sans);
   color: var(--gray-1000);
 }
 .cbtn {
@@ -207,7 +207,7 @@ a:hover {
   padding: 8px 14px;
   border-radius: 9999px;
   color: var(--gray-600);
-  font: 500 12.5px "Avenir Next", "Pretendard", sans-serif;
+  font: 500 12.5px var(--font-sans);
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
@@ -225,18 +225,18 @@ a:hover {
   opacity: 1;
 }
 
-/* ONAIR 대형 숫자(카운터·스탯) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
+/* ONAIR 대형 숫자(카운터·스탯) — Avenir Next 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
 .bignum {
-  font-family: "Avenir Next", "Pretendard", sans-serif;
+  font-family: var(--font-sans);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1;
 }
 
-/* ONAIR 시계 숫자 — Space Grotesk: 각진 1, 열린 6·9. 시계(대형 디스플레이)에만 쓴다 */
+/* ONAIR 시계 숫자 — 시스템 모노(고정폭): 대형 디스플레이의 시계 숫자에만 쓴다 */
 .clocknum {
-  font-family: "Space Grotesk", "Avenir Next", "Pretendard", sans-serif;
+  font-family: var(--font-mono);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
@@ -245,7 +245,7 @@ a:hover {
 
 /* 본인확인 입력 — 입력값은 모노·자간, placeholder는 가는 산세리프로 분리 */
 .authin::placeholder {
-  font: 400 12.5px "Avenir Next", "Pretendard", sans-serif;
+  font: 400 12.5px var(--font-sans);
   letter-spacing: 0;
   color: var(--gray-600);
 }

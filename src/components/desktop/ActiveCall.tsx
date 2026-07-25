@@ -188,7 +188,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <span style={css("font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
             <span style={css("font:600 14px 'Avenir Next','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</span>
           </span>
-          <span style={css("font:500 15px 'Geist Mono','IBM Plex Mono',monospace")}>{vm.clockStr}</span>
+          <span style={css("font:500 15px ui-monospace,'SF Mono',Menlo,Consolas,monospace")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           {/* 이관 예약 상태 — 조작 버튼은 아래 통화 컨트롤(음소거 왼쪽 cbtn)로 옮겼고, 여기선 상태만 */}
           {vm.transferReserved && (
@@ -312,7 +312,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <div style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-top:1px")}>{AGENT.dept} · {AGENT.tenure} · {AGENT.id}</div>
             </div>
             <div style={css("text-align:right;flex:none;padding-left:10px;border-left:1px solid var(--gray-200)")}>
-              <div style={css("font:700 16px 'Geist Mono','IBM Plex Mono',monospace;color:var(--blue-700)")}>12</div>
+              <div style={css("font:700 16px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--blue-700)")}>12</div>
               <div className="lbl">오늘 후처리</div>
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <div>
                 <div style={css("font-weight:700;font-size:18px;line-height:1.2")}>{vm.customerName}</div>
                 <div style={css("font:400 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-top:2px")}>
-                  {vm.customerType} · 발신 <span style={css("font-family:'Geist Mono','IBM Plex Mono',monospace")}>{vm.customerPhone}</span>
+                  {vm.customerType} · 발신 <span style={css("font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace")}>{vm.customerPhone}</span>
                 </div>
               </div>
             </div>
@@ -347,7 +347,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       {vm.dtmfPersisted ? "서버 저장됨" : "저장 확인 필요"}
                     </span>
                   </div>
-                  <div style={css("font:600 13px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-1000);margin-top:2px;letter-spacing:2px")}>{vm.dtmfMasked}</div>
+                  <div style={css("font:600 13px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-1000);margin-top:2px;letter-spacing:2px")}>{vm.dtmfMasked}</div>
                 </div>
                 {!vm.verified && (
                   <span
@@ -368,7 +368,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   </span>
                   <div style={css("flex:1")}>
                     <span style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900)")}>본인인증 완료</span>
-                    <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--green-600);margin-left:6px")}>{vm.authTime}</span>
+                    <span style={css("font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--green-600);margin-left:6px")}>{vm.authTime}</span>
                   </div>
                   <span onClick={vm.resetAuth} style={css("display:flex;align-items:center;gap:2px;font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);cursor:pointer")}>
                     재인증 <span className="mi" style={css("font-size:15px")}>restart_alt</span>
@@ -401,7 +401,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                           key={bi}
                           style={css(
                             "width:" + (vm.authMaxLen >= 8 ? "27px" : vm.authMaxLen === 6 ? "29px" : "38px") +
-                              ";height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 16px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-1000);background:var(--onair-surface);box-sizing:border-box;transition:border-color .15s;border:1.5px " +
+                              ";height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 16px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-1000);background:var(--onair-surface);box-sizing:border-box;transition:border-color .15s;border:1.5px " +
                               (cur ? "solid var(--blue-700)" : ch ? "solid var(--gray-500)" : "dashed var(--gray-400)")
                           )}
                         >
@@ -463,7 +463,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockDown .25s cubic-bezier(0.2,0.8,0.2,1)")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">과거 상담 이력</span>
-                <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>최근 6개월 · {HISTORY.length}건</span>
+                <span style={css("font:500 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>최근 6개월 · {HISTORY.length}건</span>
               </div>
               {/* 타임라인 — 불릿이 세로선으로 이어져 시간의 흐름을 만든다 */}
               <div style={css("overflow:auto;padding:6px 15px 4px")}>
@@ -475,7 +475,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                     </div>
                     <div style={css("flex:1;padding:8px 0 14px")}>
                       <div style={css("display:flex;align-items:center;gap:6px")}>
-                        <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{h.date}</span>
+                        <span style={css("font:500 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{h.date}</span>
                         <span style={css("font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>· {h.ago}</span>
                         {i === 0 && (
                           <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-900)")}>가장 최근</span>
@@ -494,7 +494,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div className="card" style={css("flex:none;display:flex;flex-direction:column;overflow:hidden;animation:dockDown .25s cubic-bezier(0.2,0.8,0.2,1)")}>
               <div style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px dashed var(--color-border)")}>
                 <span className="sechd">보유 계좌 및 카드</span>
-                <span style={css("font:500 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700)")}>{ACCOUNTS.length}건 · 정상</span>
+                <span style={css("font:500 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{ACCOUNTS.length}건 · 정상</span>
               </div>
               <div style={css("overflow:auto")}>
                 {ACCOUNTS.map((a, i) => (
@@ -504,7 +504,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       <span style={css("font:600 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{a.name}</span>
                       <span style={css("font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900);margin-left:auto")}>정상</span>
                     </div>
-                    <div style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-700);margin-top:4px;padding-left:2px")}>
+                    <div style={css("font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700);margin-top:4px;padding-left:2px")}>
                       {a.no} · 개설 {a.opened}
                     </div>
                   </div>
@@ -785,7 +785,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
                   <span className="mi" style={css("font-size:18px")}>grid_on</span>
                   <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif")}>{vm.regFile}</span>
-                  <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>· {vm.regSheet} 시트</span>
+                  <span style={css("font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>· {vm.regSheet} 시트</span>
                   <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
                     <label title="실제 규정 파일 열기 (CSV·XLSX)" style={css("display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 10px;font:600 11px 'Avenir Next','Pretendard',sans-serif")}>
                       <span className="mi" style={css("font-size:14px")}>folder_open</span>파일 열기
@@ -818,7 +818,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       const ment = r.cells[3] && r.cells[3].text !== "—" ? r.cells[3].text : null;
                       return (
                         <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--gray-1000);position:relative;z-index:1" : ""))}>
-                          <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:" + (hit ? "var(--gray-1000)" : "var(--gray-600)") + ";background:" + (hit ? "var(--gray-100)" : "var(--gray-100)"))}>{r.n}</span>
+                          <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:" + (hit ? "var(--gray-1000)" : "var(--gray-600)") + ";background:" + (hit ? "var(--gray-100)" : "var(--gray-100)"))}>{r.n}</span>
                           {r.cells.slice(0, 2).map((cell, ci) => (
                             <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--gray-100)" : "transparent"))}>{highlight(cell.text, vm.regSearch)}</span>
                           ))}
@@ -906,7 +906,7 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
         <span className="mi" style={css("font-size:18px")}>grid_on</span>
         <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>{doc ? doc.title : "원문 불러오는 중…"}</span>
         {doc && (
-          <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600);flex:none")}>· {doc.version} · {doc.chunks.length}행</span>
+          <span style={css("font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600);flex:none")}>· {doc.version} · {doc.chunks.length}행</span>
         )}
         <span style={css("margin-left:auto;flex:none;font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px")}>{doc?.source_file ?? ""}</span>
       </div>
@@ -935,7 +935,7 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
               const bg = xlRowBg(hit, ri);
               return (
                 <div key={c.chunk_id} ref={hit ? hitRef : undefined} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--blue-700);position:relative;z-index:1" : ""))}>
-                  <span style={{ ...css("width:40px;flex:none;padding:9px 0;text-align:center;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:" + (hit ? "700" : "400") + " 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-500)"), background: hit ? bg : XL_GUT }}>{ri + 1}</span>
+                  <span style={{ ...css("width:40px;flex:none;padding:9px 0;text-align:center;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:" + (hit ? "700" : "400") + " 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-500)"), background: hit ? bg : XL_GUT }}>{ri + 1}</span>
                   <span style={{ ...css("width:160px;flex:none;padding:9px 10px;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:" + (hit ? "700" : "600") + " 11.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800);overflow:hidden;text-overflow:ellipsis"), background: bg }}>{c.section ?? ""}</span>
                   <div style={{ ...css("flex:1;min-width:0;padding:9px 12px;border-bottom:1px solid " + XL_GRID), background: bg }}>
                     {c.kind === "table" ? (
@@ -988,7 +988,7 @@ function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
       <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
         <span className="mi" style={css("font-size:18px")}>manage_search</span>
         <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif")}>“{vm.regSearch}” 검색 결과</span>
-        <span style={css("font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{vm.semLoading ? "· 검색 중…" : "· " + vm.semHits.length + "건 · 파일 " + files.length + "개"}</span>
+        <span style={css("font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>{vm.semLoading ? "· 검색 중…" : "· " + vm.semHits.length + "건 · 파일 " + files.length + "개"}</span>
       </div>
       <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
         {vm.semLoading && vm.semHits.length === 0 ? (
@@ -1010,7 +1010,7 @@ function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
             const bg = ri % 2 === 1 ? XL_BAND : "#fff";
             return (
             <div key={h.chunk_id} onClick={() => vm.openRegDocReal(h.doc_id, h.chunk_id)} style={css("display:flex;cursor:pointer")}>
-              <span style={{ ...css("width:40px;flex:none;padding:9px 0;text-align:center;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:400 11px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-500)"), background: XL_GUT }}>{ri + 1}</span>
+              <span style={{ ...css("width:40px;flex:none;padding:9px 0;text-align:center;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-500)"), background: XL_GUT }}>{ri + 1}</span>
               <span style={{ ...css("width:180px;flex:none;padding:9px 10px;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:600 11.5px/1.45 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis"), background: bg }}>{h.title}</span>
               <span style={{ ...css("flex:1;min-width:0;padding:9px 12px;border-bottom:1px solid " + XL_GRID + ";font:400 12.5px/1.65 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)"), background: bg }}>{highlight(stripPipes(h.excerpt), vm.regSearch)}</span>
             </div>
@@ -1082,7 +1082,7 @@ function RegReco({ vm, title, body, file, row, query }: { vm: CallFlowVM; title:
       <div style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>{title}</div>
       <div style={css("font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>{body}</div>
       <div style={css("display:flex;align-items:center;justify-content:space-between;margin-top:8px")}>
-        <span style={css("font:400 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-600)")}>{file}</span>
+        <span style={css("font:400 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>{file}</span>
         {/* 열기 — 픽스처(row 있음)는 규정집 시트의 그 행을 강조, 실제 RAG 추천(row 없음)은
              규정집 의미검색(query)으로 그 문서를 찾아 보여준다. 둘 다 없으면 버튼을 숨긴다. */}
         {open && (

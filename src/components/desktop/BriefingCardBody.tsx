@@ -62,7 +62,7 @@ export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlow
               <div style={css("display:flex;align-items:center;gap:5px")}>
                 <span style={css("font:600 10px " + FONT + ";letter-spacing:.2px;color:var(--gray-600)")}>고객 감정온도</span>
                 <div style={css("flex:1")} />
-                <span title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델 판정" : "데모용 값"} style={css("font:600 8px 'Geist Mono',monospace;letter-spacing:.3px;padding:1.5px 5px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-600)")}>{vm.prepEmotionSourceBadge.label}</span>
+                <span title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델 판정" : "데모용 값"} style={css("font:600 8px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:.3px;padding:1.5px 5px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-600)")}>{vm.prepEmotionSourceBadge.label}</span>
               </div>
               <div style={css("display:flex;align-items:center;gap:9px")}>
                 {/* 표정 — 숫자보다 얼굴이 먼저 읽힌다 */}

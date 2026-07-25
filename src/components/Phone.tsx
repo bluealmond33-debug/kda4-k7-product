@@ -88,6 +88,48 @@ function KeyButton({
 /** clean — 고객 화면(?role=customer)용: 실제 휴대폰에 없는 시연 표기(상태·안내 유리판·파형)를
  *  숨긴다. 그 정보는 상단 상황 알약과 실시간 통화 패널이 대신 보여준다. */
 export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }) {
+  // 통화 중엔 실제로 마이크를 연다(getUserMedia). 주황 점은 '켜졌다고 표시'가 아니라
+  // 실제 마이크가 켜졌을 때만(권한 허용·스트림 활성) 점등한다. 통화 종료/언마운트 시 정리.
+  // 주의: getUserMedia는 보안 컨텍스트(localhost·https)에서만 동작 — LAN http에선 브라우저가
+  // 막아 점이 안 켜진다(그 경우 실제로 마이크가 안 켜진 게 맞으므로 의도된 동작).
+  const inCall = vm.phInCall && !vm.phEnded;
+  const [micOn, setMicOn] = useState(false);
+  useEffect(() => {
+    if (!inCall) {
+      setMicOn(false);
+      return;
+    }
+    let stream: MediaStream | null = null;
+    let cancelled = false;
+    navigator.mediaDevices
+      ?.getUserMedia({ audio: true })
+      .then((s) => {
+        if (cancelled) {
+          s.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        stream = s;
+        setMicOn(true);
+      })
+      .catch(() => setMicOn(false)); // 권한 거부·미지원·비보안 컨텍스트 → 점 안 켜짐
+    return () => {
+      cancelled = true;
+      stream?.getTracks().forEach((t) => t.stop());
+      setMicOn(false);
+    };
+  }, [inCall]);
+
+  // 통화 연결 시 AI 음성 안내(녹음 파일) 재생 — No ARS: 버튼 트리 없이 AI가 바로 응대.
+  // public/demo/greeting.mp3 를 넣으면 재생된다(파일 없거나 자동재생 차단 시 조용히 넘어감).
+  useEffect(() => {
+    if (!inCall) return;
+    const audio = new Audio("/demo/greeting.mp3");
+    audio.play().catch(() => {});
+    return () => {
+      audio.pause();
+    };
+  }, [inCall]);
+
   return (
     <div
       data-tour="phone"
@@ -119,17 +161,79 @@ export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: b
 
         {/* 스크린 */}
         <div style={css("position:absolute;inset:17px;border-radius:53px;overflow:hidden;background:#000")}>
-          {/* Dynamic Island — 완전한 알약. 통화 중엔 왼쪽에 주황 점(마이크 사용 표시) */}
+          {/* Dynamic Island — 완전한 알약. 실제 마이크가 켜졌을 때만 왼쪽에 주황 점 */}
           <div style={css("position:absolute;top:11px;left:50%;transform:translateX(-50%);width:122px;height:35px;border-radius:9999px;background:#000;z-index:50;display:flex;align-items:center")}>
-            {vm.phInCall && !vm.phEnded && (
+            {micOn && (
               <span style={css("width:7px;height:7px;border-radius:9999px;background:#ff9f0a;margin-left:16px")} />
             )}
           </div>
 
           {vm.phIdle && <IdleScreen vm={vm} />}
-          {vm.phInCall && <InCallScreen vm={vm} clean={clean} />}
+          {vm.phInCall && !vm.phEnded && <InCallScreen vm={vm} clean={clean} />}
+          {/* 통화 종료 → 문자메시지(iMessage) 화면. 잠시 뒤 상담내용·만족도 링크 문자가 도착 */}
+          {vm.phEnded && <SmsScreen vm={vm} />}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** 통화 종료 후 문자메시지(iMessage 라이트) 화면 — 잠시 뒤 상담내용·만족도 조사 링크 문자가 도착한다.
+ *  '문자 화면만 구현' — 링크는 시각 표시만(누르면 상담 카드로 가는 건 데모 밖). 좌상단 ‹ 로 새 상담. */
+function SmsScreen({ vm }: { vm: CallFlowVM }) {
+  const [shown, setShown] = useState(0); // 도착한 문자 수
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const t: number[] = [];
+    t.push(window.setTimeout(() => setTyping(true), 900));
+    t.push(window.setTimeout(() => { setTyping(false); setShown(1); }, 2100));
+    t.push(window.setTimeout(() => setTyping(true), 2900));
+    t.push(window.setTimeout(() => { setTyping(false); setShown(2); }, 4100));
+    return () => t.forEach((id) => clearTimeout(id));
+  }, []);
+  const BUBBLE = "max-width:76%;align-self:flex-start;background:#e9e9eb;color:#000;border-radius:20px;padding:10px 15px;font:400 16px/1.42 'Avenir Next','Pretendard',sans-serif;animation:cardDeal .3s ease-out";
+  const LINK = "color:#0a7cff;text-decoration:underline";
+  return (
+    <div style={css("position:absolute;inset:0;background:#fff;color:#000;display:flex;flex-direction:column")}>
+      {/* 상태바(라이트) */}
+      <div style={css("display:flex;align-items:center;justify-content:space-between;padding:19px 36px 0;font-size:15px;font-weight:600;color:#000")}>
+        <span>{vm.phoneClockStr || "9:41"}</span>
+        <span style={css("display:flex;gap:6px;align-items:center")}>
+          <span className="mi" style={css("font-size:16px")}>signal_cellular_alt</span>
+          <span className="mi" style={css("font-size:16px")}>wifi</span>
+          <span className="mi" style={css("font-size:19px")}>battery_full</span>
+        </span>
+      </div>
+      {/* iMessage 헤더 — 연락처(키움은행). ‹ 로 새 상담 시작 */}
+      <div style={css("display:flex;flex-direction:column;align-items:center;gap:5px;padding:4px 0 12px;border-bottom:1px solid #e5e5ea;position:relative")}>
+        <span onClick={vm.startCall} className="mi" style={css("position:absolute;left:18px;top:6px;font-size:30px;color:#0a7cff;cursor:pointer")}>chevron_left</span>
+        <div style={css("width:52px;height:52px;border-radius:9999px;background:linear-gradient(135deg,#2f5fc4,#5b8def);display:flex;align-items:center;justify-content:center;color:#fff;font:700 22px 'Avenir Next',sans-serif")}>키</div>
+        <span style={css("font:600 13px 'Avenir Next','Pretendard',sans-serif;display:flex;align-items:center")}>키움은행<span className="mi" style={css("font-size:15px;color:#8a8a8e")}>chevron_right</span></span>
+      </div>
+      {/* 메시지 목록 */}
+      <div style={css("flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:9px;padding:16px 16px 8px")}>
+        <div style={css("text-align:center;font:400 12px 'Avenir Next','Pretendard',sans-serif;color:#8a8a8e;margin-bottom:2px")}>문자 메시지 · 오늘 {vm.phoneClockStr || ""}</div>
+        {shown >= 1 && (
+          <div style={css(BUBBLE)}>키움은행 상담이 완료되었습니다 😊<br />상담 요약·처리 내용 확인 ▸ <span style={css(LINK)}>k7.kiwoom/c/9F2A</span></div>
+        )}
+        {shown >= 2 && (
+          <div style={css(BUBBLE)}>잠깐이면 됩니다 — 오늘 상담은 어떠셨나요?<br />만족도 조사 참여(30초) ▸ <span style={css(LINK)}>k7.kiwoom/survey/9F2A</span></div>
+        )}
+        {typing && (
+          <div style={css("align-self:flex-start;background:#e9e9eb;border-radius:20px;padding:13px 16px;display:flex;gap:5px")}>
+            {[0, 1, 2].map((i) => (
+              <span key={i} style={css("width:8px;height:8px;border-radius:9999px;background:#a3a3a8;animation:recBlink 1s infinite;animation-delay:" + i * 0.15 + "s")} />
+            ))}
+          </div>
+        )}
+      </div>
+      {/* iMessage 입력바(시각용) */}
+      <div style={css("display:flex;align-items:center;gap:9px;padding:8px 14px 6px")}>
+        <span className="mi" style={css("font-size:28px;color:#8a8a8e")}>add_circle</span>
+        <div style={css("flex:1;border:1px solid #d1d1d6;border-radius:9999px;padding:8px 15px;font:400 15px 'Avenir Next','Pretendard',sans-serif;color:#8a8a8e")}>문자 메시지</div>
+      </div>
+      {/* 홈 인디케이터(라이트 화면 → 검정 바) */}
+      <span style={css("align-self:center;width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.85);margin-bottom:9px")} />
     </div>
   );
 }
@@ -467,7 +571,7 @@ function CustomerKeypadScreen({
           <div style={css("font-size:13px;color:#8a8a8e;margin-top:5px")}>{prompt}</div>
         </div>
       </div>
-      <div style={css("height:48px;display:flex;align-items:center;justify-content:center;font:500 24px 'Geist Mono',monospace;letter-spacing:7px;color:#3478f6")}>
+      <div style={css("height:48px;display:flex;align-items:center;justify-content:center;font:500 24px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:7px;color:#3478f6")}>
         {vm.arsDigits || " "}
       </div>
       <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:14px;opacity:" + (vm.customerKeypadEnabled ? "1" : ".42"))}>
