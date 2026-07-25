@@ -156,27 +156,19 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <span style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>call</span> 통화 연결
               </span>
-              {/* 남은 초 — 마지막 5초엔 흰 알약이 차오르며 서두르라고 말한다(버튼 색은 그대로) */}
+              {/* 남은 초 — 숫자만 줄어든다. 바닥 띠·숫자 배경을 뺐다: 버튼 안에 띠와 알약까지
+                  들어가면 장식이 셋이라 정작 읽어야 하는 숫자가 묻히고, 줄어드는 선은 오류
+                  표시로 오해되기도 했다. 마지막 5초만 숫자가 굵고 밝아진다. */}
               <span
                 style={css(
-                  "display:flex;align-items:center;justify-content:center;min-width:24px;height:24px;box-sizing:border-box;border-radius:9999px;font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;transition:background .25s,color .25s;" +
-                    (auto.urgent
-                      ? "background:#fff;color:var(--blue-900)"
-                      : "background:rgba(255,255,255,.22);color:inherit")
+                  "font-variant-numeric:tabular-nums;letter-spacing:-.2px;transition:opacity .3s,font-size .3s;font-size:" +
+                    (auto.urgent ? "16px" : "14px") +
+                    ";opacity:" +
+                    (auto.counting ? (auto.urgent ? "1" : ".72") : ".45")
                 )}
               >
                 {auto.left}
               </span>
-              {/* 남은 시간 띠 — 버튼 바닥을 따라 줄어든다. 세지 않는 동안(요약 대기)엔 숨긴다 */}
-              {auto.counting && (
-                <span
-                  style={css(
-                    "position:absolute;left:0;bottom:0;height:2.5px;background:rgba(255,255,255,.85);transition:width 1s linear;width:" +
-                      auto.pct * 100 +
-                      "%"
-                  )}
-                />
-              )}
             </span>
           </div>
         </div>

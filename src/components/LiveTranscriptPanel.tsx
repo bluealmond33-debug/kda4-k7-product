@@ -119,15 +119,23 @@ export default function LiveTranscriptPanel({
     return Math.max(0.1, Math.min(1, (ampRef.current - 0.62) / 1.9));
   }, []);
 
-  // 라이브 자막 스크롤 — 타이핑으로 글자가 한 자씩 자라도 항상 바닥(최신)을 본다.
-  // 옛 텍스트는 위로 밀려 올라가 상단 페이드 아래로 사라진다 (발표용: 스크롤바 없음)
+  // 라이브 자막 스크롤 — 기본은 바닥(최신)에 붙어 따라간다. 다만 **사람이 위로 올려 읽는
+  // 동안은 따라가지 않는다**: 예전엔 150ms마다 무조건 바닥으로 끌어내려 위를 올려 볼 수가
+  // 없었다. 다시 바닥까지 내리면 자동 추적이 되살아난다(카톡·터미널과 같은 규칙).
+  const [stick, setStick] = useState(true);
   useEffect(() => {
     const id = window.setInterval(() => {
       const el = scrollRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
+      if (el && stick) el.scrollTop = el.scrollHeight;
     }, 150);
     return () => window.clearInterval(id);
-  }, []);
+  }, [stick]);
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // 바닥에서 28px 안쪽이면 '바닥에 있다'로 본다(타이핑 중 1~2px 흔들림 허용)
+    setStick(el.scrollHeight - el.scrollTop - el.clientHeight < 28);
+  };
 
   // 말풍선 글자 크기는 패널 폭에 비례 — 화면 비율/스케일이 바뀌어도 글자가 상대적으로
   // 같은 크기로 읽힌다(폭 400 기준 13px, 좁아지면 줄고 넓어지면 커지되 11~15px로 클램프).
@@ -167,9 +175,11 @@ export default function LiveTranscriptPanel({
     >
       {/* 파형 — 상자 안 상자: 어두운 패널 속 더 깊은 무대, 그 위 흰 물결.
           위쪽 여백을 키워 살짝 아래로 내리고, 좌우 여백을 키워 아래 텍스트 상자보다 가로를 짧게(inset) 한다. */}
+      {/* 파형 자리 — 배경을 패널과 같게 둔다(전엔 #000 상자라 패널보다 더 검은 사각형이
+          도려낸 것처럼 보였다). 상자를 지우면 물결만 허공에 뜬 것처럼 남는다. */}
       <div
         style={css(
-          "flex:none;margin:30px 40px 0;height:180px;position:relative;background:#000;border-radius:14px;overflow:hidden"
+          "flex:none;margin:30px 40px 0;height:180px;position:relative;background:transparent;overflow:hidden"
         )}
       >
         <div style={css("position:absolute;inset:0")}>
@@ -185,8 +195,15 @@ export default function LiveTranscriptPanel({
       <div style={css("position:relative;flex:1;min-height:0")}>
       <div
         ref={scrollRef}
+        onScroll={onScroll}
+        className="noscrollbar"
         style={css(
-          "height:100%;overflow:hidden;padding:14px 20px;display:flex;flex-direction:column;justify-content:flex-start;gap:10px;box-sizing:border-box"
+          // 위쪽 페이드 — 대화가 길어지면 옛 말풍선이 위로 밀려 올라가며 **스며들듯 사라진다**
+          // (자르면 글자가 반쯤 잘려 남아 지저분하다). mask라 실제로는 그대로 있어서
+          // 올려서 스크롤하면 다시 온전히 보인다. 스크롤바는 발표 화면이라 숨긴다.
+          "height:100%;overflow-y:auto;overflow-x:hidden;padding:14px 20px;display:flex;flex-direction:column;justify-content:flex-start;gap:10px;box-sizing:border-box;" +
+            "mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,.35) 22px,#000 62px,#000 100%);" +
+            "-webkit-mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,.35) 22px,#000 62px,#000 100%)"
         )}
       >
         {groups.length === 0 ? (
@@ -263,8 +280,9 @@ const LEFT_SIDE: StreamItem["who"] = "customer";
  *  wave=파형 3겹(겹치는 교차부가 밝아지며 시리 특유의 발광이 난다).
  *
  *  KARI-NA는 브랜드 메인 컬러(--blue-700 #2f5fc4) 계열 — 우리 서비스가 말하는 자리다.
- *  그래서 원래 파랑이던 고객을 민트로 옮겼다. 브랜드 블루와 하늘색을 나란히 두면 어두운
- *  패널에서 거의 같은 색으로 읽혀 화자 구분이 무너진다. */
+ *  고객은 민트, 상담원은 보라. 세 색을 **같은 밝기·채도 대역**으로 맞춰 한 가족처럼 보이게
+ *  하고(따로 고른 색처럼 튀지 않게), 구분은 색상(hue)이 맡는다. 브랜드 블루와 하늘색을
+ *  나란히 두면 어두운 패널에서 거의 같아 보이므로 고객은 파랑을 쓰지 않는다. */
 const SPK: Record<
   StreamItem["who"],
   { name: string; cursor: string; text: string; rgb: string; wave: string[] }
@@ -355,11 +373,12 @@ function BubbleLine({
         {mine && stampEl}
         <div
           style={css(
-            // 색은 테두리와 글자에만 — 면을 색으로 채우면 검은 패널에서 말풍선이 덩어리로
-            // 보여 글자가 뒤로 밀린다. 배경은 아주 옅은 무채색으로 '면이 있다'만 알린다.
-            "max-width:82%;border-radius:14px;padding:8px 11px;word-break:keep-all;overflow-wrap:anywhere;background:rgba(255,255,255,.035);border:1px solid rgba(" +
+            // 배경은 아예 없다(투명). 옅게라도 면을 깔면 검은 패널 위에 회색 상자가 떠서
+            // 글자보다 상자가 먼저 읽혔다. 남는 건 테두리와 글자뿐이고 둘 다 화자 색이다 —
+            // 테두리를 진하게(.62) 잡아 배경 없이도 말풍선의 윤곽이 분명하다.
+            "max-width:82%;border-radius:14px;padding:8px 11px;word-break:keep-all;overflow-wrap:anywhere;background:transparent;border:1px solid rgba(" +
               spk.rgb +
-              ",.45);color:" +
+              ",.62);color:" +
               spk.text +
               ";font:400 " +
               fontPx +

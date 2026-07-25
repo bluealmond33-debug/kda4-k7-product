@@ -225,6 +225,48 @@ a:hover {
   opacity: 1;
 }
 
+/* 이관 부서 선택 행 — 올린 행이 통째로 파랗게 찬다.
+   '이 부서를 고른다'는 선택 행위라 색을 써도 되는 자리다(예약 확정 상태도 같은 파랑으로 찬다).
+   행 안 글자색이 인라인 스타일로 박혀 있어 !important 없이는 못 덮는다. */
+/* 스크롤은 되지만 스크롤바는 보이지 않는 영역 — 발표 화면(전사 패널)용.
+   막아 두는 게 아니라 숨기는 것이라 휠·드래그로 올려 읽을 수 있다. */
+.noscrollbar {
+  scrollbar-width: none; /* Firefox */
+}
+.noscrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* 부서 선택 행 — 호버가 툭 켜지지 않게 천천히 물든다. 0.12s는 마우스가 목록을 지나가는
+   속도보다 빨라 파란 면이 깜빡이는 것처럼 보였다. 배경·글자가 같은 커브로 함께 움직이고
+   (글자만 먼저 하얘지면 순간 안 읽힌다), 나갈 때는 더 느리게 풀려 잔상이 남는다. */
+.deptrow {
+  transition: background 0.34s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.deptrow * {
+  transition: color 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.deptrow:hover {
+  background: var(--blue-700);
+  transition-duration: 0.2s;
+}
+.deptrow:hover * {
+  transition-duration: 0.2s;
+}
+.deptrow:hover,
+.deptrow:hover * {
+  color: #fff !important;
+}
+/* 취소처럼 '고르는' 행이 아닌 것 — 파랑은 선택에만 쓰고 여기선 조용한 회색으로 */
+.deptrow-quiet {
+  transition: background 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.deptrow-quiet:hover {
+  background: var(--gray-100);
+  transition-duration: 0.2s;
+}
+
 /* ONAIR 대형 숫자(카운터·스탯) — Avenir Next 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
 .bignum {
   font-family: var(--font-sans);
