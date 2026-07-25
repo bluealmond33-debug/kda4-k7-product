@@ -455,10 +455,42 @@ a:hover {
    중앙(브리핑)은 살짝 컸다가 제자리로 가라앉고, 좌/우/상/하 콘솔 상자가 가장자리에서 등장한다. */
 /* FadeContent 풍(reactbits) — 흐릿+투명에서 또렷+불투명으로 스르륵 스며들 듯 등장.
    filter는 from에만 둔다(to에 남기면 filter가 계속 걸려 position:fixed 자식의 기준이 카드로 바뀐다). */
-@keyframes consoleSettle {
-  from { opacity: 0; transform: scale(1.04) translateY(-6px); filter: blur(4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+/* 카드 안착 — "누가 봐도 앉았구나"가 되어야 한다.
+   예전(scale 1.04 · -6px · blur)은 살짝 흐려졌다 선명해지는 페이드에 가까웠고, 어디에
+   도착했는지가 안 읽혔다. 안착으로 읽히려면 세 가지가 필요하다:
+   ① 눈에 보이게 큰 데서 온다(1.16) — 준비 카드는 실제로 더 큰 모달이었다.
+   ② 목표를 지나쳐 눌렸다 되돌아온다(0.994 → 1.003 → 1) — 무게가 느껴지는 지점이다.
+   ③ 닿는 순간 그림자가 깊어졌다 제자리 그림자로 풀린다 — 접촉을 그림자가 말한다
+      (ONAIR: 빛을 쓰지 않고 그림자가 위계를 만든다).
+   filter는 100%에서 none으로 명시한다 — 남겨 두면 position:fixed 자식이 이 요소를
+   기준으로 잡혀 팝오버가 엉뚱한 자리에 뜬다. */
+@keyframes cardLand {
+  0% {
+    opacity: 0;
+    transform: scale(1.16) translateY(-30px);
+    filter: blur(7px);
+    box-shadow: 0 44px 96px rgba(16, 24, 40, 0.32);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  72% {
+    transform: scale(0.994) translateY(3px);
+    box-shadow: 0 26px 58px rgba(16, 24, 40, 0.28);
+  }
+  86% {
+    transform: scale(1.004) translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: none;
+    box-shadow: var(--sh-near);
+  }
 }
+/* (consoleSettle 제거 — cardLand가 대체했다. 안 쓰는 키프레임을 남기면 다음 사람이
+   둘 중 무엇이 진짜인지 찾게 된다.) */
 @keyframes consoleInL {
   from { opacity: 0; transform: translateX(-16px); filter: blur(8px); }
   to { opacity: 1; transform: none; }

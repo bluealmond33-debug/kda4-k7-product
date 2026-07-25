@@ -2,6 +2,7 @@ import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { BRAND_LOCKUP_PNG, BRAND_LOCKUP_RATIO } from "../../assets/brandLockup";
 import EmotionBar from "./EmotionBar";
+import { maskPii } from "../../lib/maskPii";
 
 const FONT = "'Avenir Next','Pretendard',sans-serif";
 
@@ -164,7 +165,7 @@ export default function BriefingCardBody({
             <div style={css("font:700 17px/1.35 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>{vm.prepHeadline}</div>
             {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선 */}
             <div style={css("font:400 11.5px/1.4 " + FONT + ";color:var(--gray-700);margin-top:2px;padding-bottom:8px;border-bottom:1px solid var(--gray-200)")}>
-              근거 발화 · <span style={css("font-style:italic;color:var(--gray-900)")}>“{vm.transcriptQuote}”</span>
+              근거 발화 · <span style={css("font-style:italic;color:var(--gray-900)")}>“{maskPii(vm.transcriptQuote)}”</span>
             </div>
             {/* STT 요약 불릿 — 이 박스의 주인공. 크고 또렷하게 */}
             <div style={css("flex:1;display:flex;flex-direction:column;gap:7px;margin-top:9px")}>

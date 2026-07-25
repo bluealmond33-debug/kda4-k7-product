@@ -27,10 +27,16 @@ import DiagPanel from "./DiagPanel";
  */
 export type LiveDemoView = "full" | "phone" | "desktop";
 
-/** 통화 연결 후 전사 패널이 열리기까지 기다리는 시간.
- *  준비 카드가 통화 화면 제자리로 안착하는 모션(cardDeal·consoleSettle 계열 0.45~0.6s)이
- *  끝나고 한 박자 쉰 뒤에 열려야 '카드가 앉았다 → 대화가 열렸다' 두 사건으로 읽힌다. */
-const SPLIT_DELAY_MS = 1100;
+/**
+ * 통화 연결 후 전사 패널이 열리기까지 기다리는 시간.
+ *
+ * 통화 화면 등장은 세 박자로 읽혀야 한다 — 한꺼번에 움직이면 무엇이 어디로 가는지 안 보인다:
+ *   ① 카드가 안착한다            (cardLand, 0 → 0.78s)
+ *   ② 주변 패널이 생긴다          (consoleInL/R/Up, 0.82 → 1.7s)
+ *   ③ 본체가 오른쪽으로 줄고 대사가 나온다  (여기, 1.9s부터)
+ * ②가 끝나갈 무렵에 ③을 시작해 끊기지 않게 잇는다.
+ */
+const SPLIT_DELAY_MS = 1900;
 
 export default function LiveDemo({
   view = "full",

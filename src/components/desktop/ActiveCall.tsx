@@ -303,7 +303,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
       <div style={css("flex:1;display:flex;gap:16px;min-height:0;padding:16px 16px " + (vm.showWrap ? "16px" : "42px") + " 16px")}>
         {/* ── 좌 컬럼 ── (안착 morph — 왼쪽 가장자리에서 스르륵 등장) */}
-        <div ref={leftColRef} data-tour="call-left" style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden;animation:consoleInL .95s cubic-bezier(.16,1,.3,1) .4s both")}>
+        <div ref={leftColRef} data-tour="call-left" style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden;animation:consoleInL .8s cubic-bezier(.16,1,.3,1) .82s both")}>
           <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px" + (vm.verified ? ";opacity:.93" : ""))}>
             <span className="av" style={css("width:42px;height:42px")}><span className="mi" style={css("font-size:22px")}>headset_mic</span></span>
             <div style={css("flex:1;min-width:0")}>
@@ -523,12 +523,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         {/* ── 중 컬럼 ── (통화 연결 시 브리핑 카드가 먼저 제자리로 안착하고, 스크립트·메모는 뒤이어 아래서 올라온다) */}
         <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
           {/* 안착 대상 — 준비 카드가 살짝 컸다가 딱 제자리로 가라앉는다(가장 먼저) */}
-          <div className="card" style={css("flex:none;padding:0;overflow:hidden;animation:consoleSettle .62s cubic-bezier(.16,1,.3,1) both")}>
+          <div className="card" style={css("flex:none;padding:0;overflow:hidden;animation:cardLand .78s cubic-bezier(.16,1,.3,1) both")}>
             <BriefingCardBody vm={vm} showAuth={false} />
           </div>
 
           {/* 단계별 스크립트 — 아코디언. 초보 상담사용 기초 안내라 기본 접힘, 헤더 클릭으로 펼침 (카드 안착 후 아래서 등장) */}
-          <div className="card" style={css("flex:none;min-height:0;display:flex;flex-direction:column;overflow:hidden;animation:consoleInUp .9s cubic-bezier(.16,1,.3,1) .42s both")}>
+          <div className="card" style={css("flex:none;min-height:0;display:flex;flex-direction:column;overflow:hidden;animation:consoleInUp .8s cubic-bezier(.16,1,.3,1) .9s both")}>
             <div
               onClick={() => setScriptOpen((v) => !v)}
               style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none" + (scriptOpen ? ";border-bottom:1px dashed var(--color-border)" : ""))}
@@ -549,9 +549,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             )}
           </div>
 
-          {/* 하단 메모 — 카드 안착 후 아래서 등장(래퍼가 애니메이션, 안쪽 카드는 미인증 딤 opacity 유지) */}
-          <div style={css("flex:1;min-height:0;display:flex;flex-direction:column;animation:consoleInUp .9s cubic-bezier(.16,1,.3,1) .42s both")}>
-          <div className="card" style={css("flex:1;min-height:196px;display:flex;flex-direction:column" + (focus === "memo" ? ";box-shadow:var(--sh-focus)" : vm.verified ? "" : ";opacity:.93"))}>
+          {/* 하단 메모 — 카드 안착 후 아래서 등장(래퍼가 애니메이션, 안쪽 카드는 미인증 딤 opacity 유지).
+              높이를 210으로 묶는다: flex:1로 두면 남는 세로를 메모가 다 먹어 화면 절반이 빈
+              메모칸이 된다. 메모는 통화 중 몇 줄 적는 자리이지 주인공이 아니다 —
+              남는 공간은 아래 여백으로 두고, 읽을 것(카드·스크립트)이 위에서 자리를 갖는다. */}
+          <div style={css("flex:none;height:210px;display:flex;flex-direction:column;animation:consoleInUp .8s cubic-bezier(.16,1,.3,1) .9s both")}>
+          <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column" + (focus === "memo" ? ";box-shadow:var(--sh-focus)" : vm.verified ? "" : ";opacity:.93"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:5px")}>
                 <span className="mi" style={css("font-size:17px")}>edit_note</span> 상담원 메모
@@ -633,7 +636,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
         {/* ── 우 컬럼 : 규정 ── (안착 morph — 오른쪽 가장자리에서 스르륵 등장) */}
         {/* 오토레이아웃 모션 — 규정 패널 확장(372↔640)이 스냅 대신 부드럽게 밀린다 */}
-        <div data-tour="call-right" style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1);animation:consoleInR .95s cubic-bezier(.16,1,.3,1) .4s both")}>
+        <div data-tour="call-right" style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1);animation:consoleInR .8s cubic-bezier(.16,1,.3,1) .82s both")}>
           <div className="card" style={css("flex:" + (regWide ? "1" : "none") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "reg" ? ";box-shadow:var(--sh-focus)" : ";opacity:" + (vm.verified ? ".95" : ".9")))}>
             {/* 헤더 — 제목 + 상시 검색 input(한 element로 고정) + 확장 시 축소 버튼.
                 검색 input이 여기 상주하므로 접힘↔확장·검색 유무가 바뀌어도 remount되지 않는다(한글 안 깨짐). */}

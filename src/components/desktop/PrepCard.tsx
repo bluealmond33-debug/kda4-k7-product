@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import DesktopShell from "./DesktopShell";
@@ -23,15 +23,22 @@ function useAutoConnect(vm: CallFlowVM) {
   const [left, setLeft] = useState(AUTO_CONNECT_SEC);
   const canConnect = vm.canConnect;
 
+  /* answerCall을 ref로 들고 있는다 — 이 훅의 의존성에 vm을 넣으면 안 된다.
+     vm은 useCallFlow가 매 렌더 새로 만드는 객체라, 의존성에 두면 **렌더마다 effect가 다시
+     돌아 1초 타이머가 계속 리셋된다.** 이 화면은 시계·마이크 레벨 때문에 초당 여러 번
+     리렌더되므로 타이머가 한 번도 끝나지 못하고, 카운트다운이 영원히 멈춰 있었다. */
+  const answerRef = useRef(vm.answerCall);
+  answerRef.current = vm.answerCall;
+
   useEffect(() => {
     if (!canConnect) return; // 연결 가능해질 때까지 남은 초를 그대로 붙잡고 기다린다
     if (left <= 0) {
-      vm.answerCall();
+      answerRef.current();
       return;
     }
     const id = window.setTimeout(() => setLeft((s) => s - 1), 1000);
     return () => window.clearTimeout(id);
-  }, [canConnect, left, vm]);
+  }, [canConnect, left]);
 
   return {
     left: Math.max(0, left),

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import SiriWave from "./SiriWave";
 import { getMicLevel, useMic } from "../lib/mic";
+import { maskPii } from "../lib/maskPii";
 
 /**
  * 실시간 통화 전사 패널 — 음성 파형(SiriWave) + 카톡형 대화 스트림.
@@ -235,7 +236,7 @@ export default function LiveTranscriptPanel({
               who={g.who}
               self={self}
               fontPx={fontPx}
-              full={g.texts.join(" ")}
+              full={maskPii(g.texts.join(" "))}
               isLast={gi === groups.length - 1}
             />
           ))
