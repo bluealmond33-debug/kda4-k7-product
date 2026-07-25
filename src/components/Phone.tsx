@@ -144,16 +144,10 @@ export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: b
   // 스트림은 전사 패널의 파형과 공유한다(lib/mic) — 마이크를 두 번 열지 않는다.
   const micOn = useMic(inCall);
 
-  // 통화 연결 시 AI 음성 안내(녹음 파일) 재생 — No ARS: 버튼 트리 없이 AI가 바로 응대.
-  // public/demo/greeting.mp3 를 넣으면 재생된다(파일 없거나 자동재생 차단 시 조용히 넘어감).
-  useEffect(() => {
-    if (!inCall) return;
-    const audio = new Audio("/demo/greeting.mp3");
-    audio.play().catch(() => {});
-    return () => {
-      audio.pause();
-    };
-  }, [inCall]);
+  // AI 음성 안내는 여기서 틀지 않는다. 예전엔 통화가 붙으면 greeting.mp3를 한 방에 재생했는데,
+  // 지금은 안내가 data/arsScript.ts의 여러 줄로 쪼개져 단계별로 나가고(전사 패널에 같은 글이
+  // 뜬다) 재생은 lib/arsDialogue가 맡는다. 둘을 같이 두면 인사말이 겹쳐서 두 번 들린다.
+  // 화면과 음성이 같은 스크립트 하나만 보게 하는 것이 요점이다.
 
   return (
     <div
