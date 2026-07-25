@@ -70,10 +70,13 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
       <div style={css("position:absolute;inset:0;background:rgba(22,20,17,.5);animation:fadeIn .18s ease-out")} />
 
-      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;width:760px;max-width:95%;animation:modalIn .18s cubic-bezier(0.2,0.8,0.2,1)")}>
-        <div data-tour="prep-card" style={css("width:100%;max-height:620px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
+      {/* 등장(F1) — 좌하단에서 커지며 중앙으로 날아와 잠깐 멈췄다 안착한다.
+          "AI가 분류해서 이 카드를 나에게 보냈다"를 문장이 아니라 움직임으로 말한다. */}
+      <div style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;width:760px;max-width:95%;animation:cardArrive .9s cubic-bezier(0.2,0.8,0.2,1) both")}>
+        <div style={css("position:relative;width:100%")}>
+          <div data-tour="prep-card" style={css("width:100%;max-height:620px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);overflow:hidden;display:flex;flex-direction:column")}>
 
-          <BriefingCardBody vm={vm} />
+          <BriefingCardBody vm={vm} arriving />
 
           {/* ── 하단 액션 ── */}
           <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:11px 22px;border-top:1px solid var(--gray-200)")}>
@@ -171,6 +174,15 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               </span>
             </span>
           </div>
+          </div>
+          {/* 안착 링 — 카드 도착 직후 테두리에서 한 번 퍼지고 사라진다.
+              blur 0인 '선'이라 글로우가 아니다(빛은 칠하지 않는다). 클릭은 통과시킨다. */}
+          <span
+            aria-hidden="true"
+            style={css(
+              "position:absolute;inset:0;border-radius:12px;pointer-events:none;animation:ringSettle .7s ease-out .58s both"
+            )}
+          />
         </div>
 
         {/* ── 스크립트 패널 ── 오프닝 한 줄(감정온도 연동) + 펼치면 전체 */}
@@ -196,7 +208,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
             <div style={css("padding:4px 20px 18px;display:flex;flex-direction:column;max-height:300px;overflow:auto")}>
               {/* 단계 수는 위 토글이 이미 말했다 — 여기선 겹치지 않게 맥락만 */}
               <div style={css("font:600 10.5px " + FONT + ";color:var(--gray-600);padding:2px 2px 10px")}>통화를 연결하면 상담 화면에서도 이어서 표시됩니다</div>
-              <ScriptTimeline steps={vm.steps} openingBadge="감정온도 연동" />
+              <ScriptTimeline steps={vm.steps} />
             </div>
           )}
         </div>
