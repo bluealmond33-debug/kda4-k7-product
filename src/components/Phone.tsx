@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import type { CallFlowVM } from "../hooks/useCallFlow";
 import AppleIcon from "./AppleIcon";
 import { BrandSymbol } from "./BrandLogo";
 import { CUSTOMER } from "../data/demoContent";
+import { ARS_BY_PHASE } from "../data/arsScript";
+import { useMic } from "../lib/mic";
 
 /**
  * 아이폰 목업 — 프레임을 CSS로 직접 그린다. 실기기 스크린샷(IMG_7570~7572) 기준,
@@ -17,9 +19,42 @@ import { CUSTOMER } from "../data/demoContent";
  * 티타늄 림 70px → 베젤 inset 5px(65px) → 스크린 inset 17px(53px).
  */
 
-/** 로컬 데모에서 고객이 통화를 끝내는 키. ARS 관례대로 # 하나만 종료로 쓴다.
- *  '아무 키나 누르면 종료'로 바꾸려면 CustomerKeypadScreen의 press()에서 digit 비교만 지운다. */
+/** 안내에서 '이 키를 누르세요'로 권하는 키. 실제로는 로컬 데모에서 어떤 키를 눌러도 통화가
+ *  끝나지만(시연 중 오조작 방지), 안내 문구는 ARS 관례대로 우물정자를 권한다. */
 const END_CALL_DIGIT = "#";
+
+/* ── iOS 26(Liquid Glass) 라이트 모드 톤 — 폰 세 화면이 같은 재질을 공유한다 ───────────────
+   유리는 '반투명 흰색 + 배경 블러 + 위쪽 하이라이트 + 부드러운 그림자' 네 겹으로 만든다.
+   중요: 배경에 옅은 색 얼룩이 있어야 유리가 유리로 보인다 — 완전한 단색 위에선 블러할 것이
+   없어 그냥 흰 반투명 원처럼 보인다. 그래서 통화/키패드 배경에 아주 옅은 브랜드 블루를 깐다. */
+const INK = "#1c1c1e";
+const INK_SUB = "#71757f";
+const RED_END = "#f0453a";
+
+/** 통화·키패드 배경 — 라이트 그라데이션 + 옅은 브랜드 블루 얼룩(유리가 비칠 재료) */
+const GLASS_BG =
+  "background:" +
+  "radial-gradient(115% 68% at 80% 4%,rgba(47,95,196,.20),transparent 58%)," +
+  "radial-gradient(95% 58% at 8% 96%,rgba(47,95,196,.13),transparent 60%)," +
+  "linear-gradient(168deg,#f9fafc 0%,#f0f3f8 40%,#e6ecf6 72%,#dde5f2 100%)";
+
+/** 유리 원/판 — pressed면 더 하얗게(누른 게 보이도록) */
+function glassSkin(pressed = false) {
+  return (
+    "background:rgba(255,255,255,." +
+    (pressed ? "90" : "52") +
+    ");backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)" +
+    ";border:1px solid rgba(255,255,255,.72)" +
+    ";box-shadow:inset 0 1px 1.5px rgba(255,255,255,.9),0 8px 20px rgba(26,38,64,.10)"
+  );
+}
+
+/** 다이얼 화면 키 — 흰 배경 위 흰 원이라 그림자로만 떠 보인다(IMG 라이트 다이얼 기준) */
+function dialSkin(pressed = false) {
+  return pressed
+    ? "background:#e8eaef;box-shadow:0 1px 2px rgba(0,0,0,.07)"
+    : "background:#fff;border:1px solid rgba(0,0,0,.035);box-shadow:0 1px 2.5px rgba(16,24,40,.07),0 7px 16px rgba(16,24,40,.055)";
+}
 
 const KEYS: { d: string; sub: string }[] = [
   { d: "1", sub: " " },
@@ -36,55 +71,63 @@ const KEYS: { d: string; sub: string }[] = [
   { d: "#", sub: "" },
 ];
 
-/** 키패드 원형 버튼 — 포인터 다운 시 밝아지는 눌림 피드백 + 클릭 시 숫자 입력.
- *  variant: dark=다이얼 화면(어두운 원) · glass=통화 중 인콜 키패드(반투명 흰 원). */
+/** 키패드 원형 버튼(라이트) — 포인터 다운 시 눌림 피드백 + 클릭 시 숫자 입력.
+ *  variant: dial=다이얼 화면(흰 원+그림자) · glass=통화 중 인콜 키패드(유리 원).
+ *  숫자는 원 중앙보다 살짝 위, 알파벳은 그 아래 — 실기기의 광학 배치. */
 function KeyButton({
   k,
   onPress,
-  variant = "dark",
+  variant = "dial",
+  size = 88,
 }: {
   k: { d: string; sub: string };
   onPress: (d: string) => void;
-  variant?: "dark" | "glass";
+  variant?: "dial" | "glass";
+  size?: number;
 }) {
   const [pressed, setPressed] = useState(false);
   const symbol = k.d === "*" || k.d === "#";
-  const glass = variant === "glass";
-  const bg = glass
-    ? pressed
-      ? "rgba(255,255,255,.42)"
-      : "rgba(255,255,255,.17)"
-    : pressed
-    ? "#5a5a5e"
-    : "#2c2c2e";
+  const sub = k.sub.trim();
   return (
     <div
       onPointerDown={() => setPressed(true)}
       onPointerUp={() => setPressed(false)}
       onPointerLeave={() => setPressed(false)}
       onClick={() => onPress(k.d)}
-      style={{
-        ...css("position:relative;width:88px;height:88px;border-radius:9999px;cursor:pointer;user-select:none;transition:background .09s"),
-        background: bg,
-        ...(glass ? { backdropFilter: "blur(4px)" } : null),
-      }}
+      style={css(
+        "position:relative;border-radius:9999px;cursor:pointer;user-select:none;transition:background .09s,box-shadow .09s;width:" +
+          size +
+          "px;height:" +
+          size +
+          "px;" +
+          (variant === "glass" ? glassSkin(pressed) : dialSkin(pressed))
+      )}
     >
       <span
         style={css(
-          "position:absolute;left:0;right:0;text-align:center;font-size:42px;font-weight:400;color:#fff;line-height:1;transform:translateY(-50%);top:" +
-            (k.d === "*" ? "66%" : symbol ? "55%" : "42%")
+          "position:absolute;left:0;right:0;text-align:center;font-weight:400;line-height:1;transform:translateY(-50%);color:" +
+            INK +
+            ";font-size:" +
+            Math.round(size * 0.465) +
+            "px;top:" +
+            (k.d === "*" ? "62%" : symbol ? "53%" : sub ? "41%" : "50%")
         )}
       >
         {k.d}
       </span>
-      {!symbol && (
+      {sub && (
         <span
-          style={{
-            ...css("position:absolute;left:0;right:0;bottom:14px;text-align:center;font-size:10.5px;font-weight:700;letter-spacing:2px;text-indent:2px"),
-            color: glass ? "rgba(255,255,255,.7)" : "#9a9aa0",
-          }}
+          style={css(
+            "position:absolute;left:0;right:0;text-align:center;font-weight:700;letter-spacing:2px;text-indent:2px;color:" +
+              INK_SUB +
+              ";font-size:" +
+              (size >= 80 ? "10.5" : "9.5") +
+              "px;bottom:" +
+              Math.round(size * 0.17) +
+              "px"
+          )}
         >
-          {k.sub.trim()}
+          {sub}
         </span>
       )}
     </div>
@@ -99,31 +142,8 @@ export default function Phone({ vm, clean = false }: { vm: CallFlowVM; clean?: b
   // 주의: getUserMedia는 보안 컨텍스트(localhost·https)에서만 동작 — LAN http에선 브라우저가
   // 막아 점이 안 켜진다(그 경우 실제로 마이크가 안 켜진 게 맞으므로 의도된 동작).
   const inCall = vm.phInCall && !vm.phEnded;
-  const [micOn, setMicOn] = useState(false);
-  useEffect(() => {
-    if (!inCall) {
-      setMicOn(false);
-      return;
-    }
-    let stream: MediaStream | null = null;
-    let cancelled = false;
-    navigator.mediaDevices
-      ?.getUserMedia({ audio: true })
-      .then((s) => {
-        if (cancelled) {
-          s.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        stream = s;
-        setMicOn(true);
-      })
-      .catch(() => setMicOn(false)); // 권한 거부·미지원·비보안 컨텍스트 → 점 안 켜짐
-    return () => {
-      cancelled = true;
-      stream?.getTracks().forEach((t) => t.stop());
-      setMicOn(false);
-    };
-  }, [inCall]);
+  // 스트림은 전사 패널의 파형과 공유한다(lib/mic) — 마이크를 두 번 열지 않는다.
+  const micOn = useMic(inCall);
 
   // 통화 연결 시 AI 음성 안내(녹음 파일) 재생 — No ARS: 버튼 트리 없이 AI가 바로 응대.
   // public/demo/greeting.mp3 를 넣으면 재생된다(파일 없거나 자동재생 차단 시 조용히 넘어감).
@@ -217,6 +237,93 @@ function StatusIcons({ light = false }: { light?: boolean }) {
   );
 }
 
+/* ── 고객 폰의 AI ↔ 고객 대화 ──────────────────────────────────────────────────────
+   이 화면에서 말하는 사람은 AI와 고객 둘뿐이다(상담사는 아직 연결 전). 그래서 좌/우로
+   나누고 색을 다르게 준다 — 왼쪽 유리 말풍선 = AI, 오른쪽 파란 말풍선 = 고객.
+   끊는 단위는 '발화'다. 5초 같은 고정 간격으로 자르면 문장이 중간에서 끊겨 읽기 어렵고,
+   백엔드(faster-whisper)도 침묵으로 발화를 확정해 보내주므로 그 경계를 그대로 쓴다.
+   시각은 카톡처럼 말풍선 **옆**에 작게 붙인다(줄 앞에 [15:32:07]을 붙이면 로그처럼 보인다). */
+
+type ArsBubble = { key: string; who: "ai" | "cust"; text: string; at: number };
+
+/** 카톡식 시각 — "오후 3:32" */
+function hhmm(ms: number) {
+  const d = new Date(ms);
+  const h = d.getHours();
+  return `${h < 12 ? "오전" : "오후"} ${h % 12 === 0 ? 12 : h % 12}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** phase가 바뀌면 그 단계의 AI 안내를 줄 단위로 순서대로 띄운다(줄 길이 sec만큼 간격).
+ *  같은 통화에서 같은 줄을 두 번 말하지 않고, 통화가 끝나면(idle) 대화를 비운다.
+ *  녹음 파일이 있으면 같이 재생 — 화면과 음성이 같은 스크립트를 쓰므로 어긋나지 않는다. */
+function useArsDialogue(vm: CallFlowVM, enabled: boolean) {
+  const [said, setSaid] = useState<ArsBubble[]>([]);
+  const playedRef = useRef<Set<string>>(new Set());
+  const idle = vm.phIdle;
+  const phase = vm.phase;
+
+  useEffect(() => {
+    if (idle) {
+      playedRef.current.clear();
+      setSaid([]);
+    }
+  }, [idle]);
+
+  useEffect(() => {
+    if (!enabled || idle) return;
+    const lines = ARS_BY_PHASE[phase];
+    if (!lines) return;
+    const timers: number[] = [];
+    let delay = 0;
+    for (const line of lines) {
+      if (playedRef.current.has(line.id)) continue;
+      playedRef.current.add(line.id);
+      timers.push(
+        window.setTimeout(() => {
+          setSaid((prev) => [...prev, { key: line.id, who: "ai", text: line.text, at: Date.now() }]);
+          if (line.audio) {
+            // 파일이 없거나 자동재생이 막히면 조용히 넘어간다(화면은 그대로 흐른다)
+            new Audio("/demo/" + line.audio).play().catch(() => {});
+          }
+        }, delay * 1000)
+      );
+      delay += line.sec;
+    }
+    return () => timers.forEach((t) => clearTimeout(t));
+  }, [enabled, idle, phase]);
+
+  // 고객 발화 — 확정된 전사(발화 단위)만 말풍선으로. 말하는 중(liveCaption)은 아래에서 따로 그린다.
+  const custBubbles: ArsBubble[] = vm.liveTranscriptLines
+    .filter((l) => l.speaker === "customer" && l.text.trim())
+    .map((l) => ({ key: "c" + l.seq, who: "cust" as const, text: l.text, at: l.at }));
+
+  return [...said, ...custBubbles].sort((a, b) => a.at - b.at);
+}
+
+/** 폰 대화 말풍선 — 좌(AI, 유리) / 우(고객, 브랜드 블루). 시각은 말풍선 옆 아래에 붙는다. */
+function ArsBubbleRow({ b }: { b: ArsBubble }) {
+  const ai = b.who === "ai";
+  return (
+    <div
+      style={css(
+        "display:flex;align-items:flex-end;gap:6px;animation:cardDeal .28s ease-out;justify-content:" +
+          (ai ? "flex-start" : "flex-end")
+      )}
+    >
+      {!ai && <span style={css("flex:none;font-size:10px;color:" + INK_SUB)}>{hhmm(b.at)}</span>}
+      <div
+        style={css(
+          "max-width:82%;border-radius:17px;padding:9px 13px;font-size:14px;line-height:1.5;white-space:pre-wrap;" +
+            (ai ? glassSkin() + ";color:" + INK : "background:#2f5fc4;color:#fff;box-shadow:0 4px 12px rgba(47,95,196,.28)")
+        )}
+      >
+        {b.text}
+      </div>
+      {ai && <span style={css("flex:none;font-size:10px;color:" + INK_SUB)}>{hhmm(b.at)}</span>}
+    </div>
+  );
+}
+
 /** iOS 말풍선 꼬리(수신·왼쪽) — 애플의 곡선 꼬리를 2겹 겹침으로 만든다.
  *  회색 원호를 말풍선 왼쪽 아래에 붙이고, 그 위에 배경색 원호로 안쪽을 깎아낸다. */
 function BubbleTail() {
@@ -268,10 +375,12 @@ function SmsScreen({ vm }: { vm: CallFlowVM }) {
       </div>
 
       {/* 헤더 — ‹ + 안읽음 배지(알약) / 발신자 아바타 / 이름 알약. ‹ 를 누르면 새 상담 */}
-      <div style={css("position:relative;display:flex;flex-direction:column;align-items:center;padding:8px 0 10px")}>
+      {/* 상태바와 붙지 않게 위를 띄우고, ‹ 알약은 아바타와 세로 중앙을 맞춘다(실기기 배치).
+          left도 상태바 시계(34px)와 비슷한 눈금으로 물려 모서리에 붙지 않게 한다. */}
+      <div style={css("position:relative;display:flex;flex-direction:column;align-items:center;padding:18px 0 12px")}>
         <div
           onClick={vm.startCall}
-          style={css("position:absolute;left:14px;top:8px;display:flex;align-items:center;gap:5px;background:#eeeef0;border-radius:9999px;padding:6px 10px 6px 8px;cursor:pointer")}
+          style={css("position:absolute;left:24px;top:27px;display:flex;align-items:center;gap:5px;background:#eeeef0;border-radius:9999px;padding:6px 10px 6px 8px;cursor:pointer")}
         >
           <span className="mi" style={css("font-size:22px;color:#000;margin:-4px 0")}>chevron_left</span>
           <span style={css("background:#1c1c1e;color:#fff;border-radius:9999px;padding:2px 7px;font-size:11.5px;font-weight:600")}>12</span>
@@ -325,49 +434,58 @@ function SmsScreen({ vm }: { vm: CallFlowVM }) {
         )}
       </div>
 
-      {/* 작성바(시각용) — + 원형 버튼 / 플레이스홀더 / 음성 입력 아이콘 */}
-      <div style={css("display:flex;align-items:center;gap:8px;padding:6px 12px 8px")}>
-        <span style={css("width:33px;height:33px;flex:none;border-radius:9999px;background:#eeeef0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:300;color:#3c3c40;line-height:1")}>
+      {/* 작성바(시각용) — + 원형 버튼 / 플레이스홀더 / 음성 입력 아이콘.
+          좌우를 20px까지 물려 둥근 모서리에 붙지 않게 하고, 홈 인디케이터와도 충분히 띄운다
+          (붙어 있으면 화면 아래가 끼인 것처럼 보인다). */}
+      <div style={css("display:flex;align-items:center;gap:9px;padding:6px 20px 0")}>
+        <span style={css("width:35px;height:35px;flex:none;border-radius:9999px;background:#eeeef0;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:300;color:#3c3c40;line-height:1;padding-bottom:2px;box-sizing:border-box")}>
           +
         </span>
-        <div style={css("flex:1;display:flex;align-items:center;gap:8px;border:1px solid #d8d8dc;border-radius:9999px;padding:7px 12px 7px 15px")}>
-          <span style={css("flex:1;font-size:15px;color:#a0a0a5;letter-spacing:-.2px")}>문자 메시지 · SMS</span>
+        <div style={css("flex:1;display:flex;align-items:center;gap:9px;border:1px solid #d5d5da;border-radius:9999px;padding:9px 14px 9px 16px")}>
+          <span style={css("flex:1;font-size:15.5px;color:#a0a0a5;letter-spacing:-.2px")}>문자 메시지 · SMS</span>
           {/* 음성 입력(파형) */}
-          <span style={css("display:flex;align-items:center;gap:1.5px;height:15px")}>
-            {[5, 9, 14, 9, 5].map((h, i) => (
-              <span key={i} style={css("width:2px;border-radius:1px;background:#b8b8bd;height:" + h + "px")} />
+          <span style={css("display:flex;align-items:center;gap:2px;height:17px")}>
+            {[5, 10, 16, 10, 5].map((h, i) => (
+              <span key={i} style={css("width:2.5px;border-radius:1.5px;background:#b0b0b6;height:" + h + "px")} />
             ))}
           </span>
         </div>
       </div>
 
       {/* 홈 인디케이터(라이트 화면 → 검정 바) */}
-      <span style={css("align-self:center;width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.85);margin-bottom:9px")} />
+      <span style={css("align-self:center;width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.82);margin:22px 0 9px")} />
     </div>
   );
 }
 
-/** 상태바 — 다크 화면(흰 글씨) 전용. 시계는 실제 시각(문자 화면과 값이 어긋나면 시연에서 티가 난다). */
-function StatusBar() {
+/** 상태바 — 세 화면이 모두 라이트라 기본이 검은 글씨다.
+ *  시계는 실제 시각(문자 도착 시각과 어긋나면 시연에서 티가 난다). */
+function StatusBar({ light = true }: { light?: boolean }) {
   const now = new Date();
   const h = now.getHours() % 12 === 0 ? 12 : now.getHours() % 12;
   return (
     <div
       style={css(
-        "display:flex;align-items:center;justify-content:space-between;padding:20px 34px 0;color:#fff;position:relative;z-index:60"
+        "display:flex;align-items:center;justify-content:space-between;padding:20px 34px 0;position:relative;z-index:60;color:" +
+          (light ? INK : "#fff")
       )}
     >
       <span style={css("font-size:16px;font-weight:600;letter-spacing:-.2px")}>
         {h}:{String(now.getMinutes()).padStart(2, "0")}
       </span>
-      <StatusIcons />
+      <StatusIcons light={light} />
     </div>
   );
 }
 
-function HomeIndicator() {
+function HomeIndicator({ light = true }: { light?: boolean }) {
   return (
-    <span style={css("position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.85)")} />
+    <span
+      style={css(
+        "position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:" +
+          (light ? "rgba(0,0,0,.82)" : "rgba(255,255,255,.85)")
+      )}
+    />
   );
 }
 
@@ -398,25 +516,25 @@ function CallButtonRow({
   );
 }
 
-/** 다이얼 화면 — IMG_7572: 검은 배경, 큼직한 키패드 원, 초록 발신 (애플 글리프).
- *  키패드는 클릭 가능 — 누르면 밝아지고(KeyButton) 입력한 번호가 위에 표시된다. */
+/** 다이얼 화면(라이트) — 실기기 라이트 다이얼: 흰 배경, 그림자로만 떠 보이는 흰 원, 초록 발신.
+ *  키패드는 클릭 가능 — 누르면 눌리고(KeyButton) 입력한 번호가 위에 표시된다. */
 function IdleScreen({ vm }: { vm: CallFlowVM }) {
   // 입력한 번호 — 비어 있으면 기본 대상(키움은행)을 보여주고, 누르기 시작하면 입력값으로 바뀐다
   const [dialed, setDialed] = useState("");
   const hasInput = dialed.length > 0;
   return (
-    <div style={css("position:absolute;inset:0;background:#000;color:#fff;display:flex;flex-direction:column")}>
+    <div style={css("position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;color:" + INK)}>
       <StatusBar />
       <div style={css("flex:1;display:flex;flex-direction:column;padding:0 0 30px")}>
         {/* 다이얼 대상 — 실기기처럼 번호가 크게 위, 이름은 작게 아래 (다이내믹 아일랜드와 간격 확보) */}
         <div style={css("text-align:center;margin-top:60px")}>
-          <div style={css("font-size:40px;font-weight:500;letter-spacing:.5px;color:#fff;line-height:1.1;min-height:44px")}>{hasInput ? dialed : "1588-0000"}</div>
-          <div style={css("font-size:15px;color:#fff;margin-top:10px;font-weight:400")}>
-            키움은행 고객센터 <span style={css("font-weight:700")}>mobile</span>
+          <div style={css("font-size:40px;font-weight:400;letter-spacing:.5px;line-height:1.1;min-height:44px;color:" + INK)}>{hasInput ? dialed : "1588-0000"}</div>
+          <div style={css("font-size:15px;margin-top:10px;font-weight:400;color:" + INK_SUB)}>
+            키움은행 고객센터 <span style={css("font-weight:700;color:" + INK)}>mobile</span>
           </div>
         </div>
         <div style={css("flex:1")} />
-        {/* 키패드 — 클릭 시 입력·눌림 피드백(KeyButton). 실기기 비율(IMG_7572): 큼직한 원 88px */}
+        {/* 키패드 — 클릭 시 입력·눌림 피드백(KeyButton). 실기기 비율: 큼직한 원 88px */}
         <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:16px")}>
           {KEYS.map((k) => (
             <KeyButton key={k.d} k={k} onPress={(d) => setDialed((s) => s + d)} />
@@ -429,15 +547,15 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
           <div
             data-tour="phone-call"
             onClick={vm.startCall}
-            style={css("width:88px;height:88px;border-radius:9999px;background:#30d158;display:flex;align-items:center;justify-content:center;cursor:pointer")}
+            style={css("width:88px;height:88px;border-radius:9999px;background:#31d158;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(49,209,88,.35)")}
           >
             <AppleIcon name="call" size={42} />
           </div>
           <span
             onClick={hasInput ? () => setDialed((s) => s.slice(0, -1)) : undefined}
-            style={css("justify-self:center;transition:opacity .12s;opacity:" + (hasInput ? "1;cursor:pointer" : ".35"))}
+            style={css("justify-self:center;transition:opacity .12s;opacity:" + (hasInput ? "1;cursor:pointer" : ".3"))}
           >
-            <AppleIcon name="backspace" size={34} />
+            <AppleIcon name="backspace" size={34} color={INK_SUB} />
           </span>
         </div>
       </div>
@@ -466,7 +584,7 @@ const CALL_CONTROLS: {
 
 /** FaceTime 버튼 글리프 — 실기기(IMG_7571): 카메라 본체 + 오른쪽 렌즈 + 본체에 '?' 녹아웃.
  *  (iOS가 FaceTime 미지원 번호에 표시하는 아이콘). mask로 '?'를 뚫어 배경이 비치게 한다. */
-function FaceTimeGlyph({ size = 38 }: { size?: number }) {
+function FaceTimeGlyph({ size = 38, color = "#fff" }: { size?: number; color?: string }) {
   const mid = "ftcam"; // 단일 인스턴스라 고정 id로 충분
   return (
     <svg width={size} height={size} viewBox="0 0 56 56" aria-hidden>
@@ -488,7 +606,7 @@ function FaceTimeGlyph({ size = 38 }: { size?: number }) {
           </text>
         </mask>
       </defs>
-      <rect width="56" height="56" fill="#fff" mask={`url(#${mid})`} />
+      <rect width="56" height="56" fill={color} mask={`url(#${mid})`} />
     </svg>
   );
 }
@@ -508,28 +626,40 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
     return <CustomerKeypadScreen vm={vm} close={() => setKeypadOpen(false)} />;
   }
 
+  // 상담사가 연결되면(active) 폰의 대화·파형은 전부 사라진다 — 그 뒤 대화는 직원 화면이
+  // 단독으로 보여준다(직원 화면이 메인). 폰엔 실기기처럼 타이머·이름·컨트롤만 남는다.
+  const agentConnected = vm.phase === "active";
+  const showDialogue = !agentConnected && !vm.phEnded;
+  const dialogue = useArsDialogue(vm, showDialogue);
+
+  // 말하는 중인 고객 발화 — 아직 확정 전이라 말풍선 아래에 흐리게 붙인다(발화가 끝나면 확정 말풍선이 된다)
+  const speaking = showDialogue && vm.liveCaptionSpeaker === "customer" ? vm.liveCaption : "";
+
+  // 대화가 늘어나면 항상 마지막 줄이 보이게 — 카톡처럼 아래로 따라간다
+  const logRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [dialogue.length, speaking]);
+
   return (
-    <div
-      style={css(
-        "position:absolute;inset:0;color:#fff;display:flex;flex-direction:column;background:linear-gradient(168deg,#63503f 0%,#5d4536 26%,#6e4531 52%,#8a3b28 76%,#792d20 100%)"
-      )}
-    >
+    <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;color:" + INK + ";" + GLASS_BG)}>
       <StatusBar />
-      <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;padding:0 26px 30px")}>
+      <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;padding:0 24px 30px;min-height:0")}>
         {/* 타이머 → 이름 — 실기기 순서. 타이머는 통화 누르자마자 00:01부터 */}
-        <div style={css("margin-top:58px;font-size:23px;font-weight:400;color:rgba(255,255,255,.62);letter-spacing:.5px")}>
+        <div style={css("margin-top:56px;font-size:23px;font-weight:400;letter-spacing:.5px;color:" + INK_SUB)}>
           {vm.phEnded ? "통화 종료" : vm.phoneClockStr}
         </div>
-        <div style={css("font-size:33px;font-weight:600;letter-spacing:-.3px;margin-top:6px;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.25)")}>
+        <div style={css("font-size:32px;font-weight:700;letter-spacing:-.4px;margin-top:5px;color:" + INK)}>
           키움은행 고객센터
         </div>
 
         {/* 상태 표시 — 실제 고객 화면엔 없는 정보라 '시연 표기'를 명시한다.
             clean(고객 화면)에선 통째로 숨기고 상단 상황 알약이 대신 보여준다 */}
         {!clean && (
-          <div style={css("display:flex;align-items:center;gap:7px;margin-top:12px")}>
-            <span style={css("font-size:10.5px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.35);border-radius:9999px;padding:2px 8px;background:rgba(255,255,255,.12)")}>시연 표기</span>
-            <span style={css("display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:rgba(255,255,255,.85)")}>
+          <div style={css("display:flex;align-items:center;gap:7px;margin-top:11px")}>
+            <span style={css("font-size:10.5px;font-weight:700;letter-spacing:.4px;border-radius:9999px;padding:2px 8px;color:#3f5aa6;border:1px solid rgba(47,95,196,.3);background:rgba(255,255,255,.55)")}>시연 표기</span>
+            <span style={css("display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:" + INK_SUB)}>
               {vm.showRecDot && (
                 <span style={css("width:8px;height:8px;border-radius:9999px;background:#ff453a;animation:recBlink 1.1s infinite")} />
               )}
@@ -538,53 +668,43 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
           </div>
         )}
 
-        {!clean && vm.showGlass && (
+        {/* AI ↔ 고객 대화 — 이 화면의 주인공. 상담사가 연결되면 통째로 사라진다.
+            아래로 늘어나며 스크롤되고, 위쪽 타이머·이름 배치는 흔들리지 않는다. */}
+        {showDialogue ? (
           <div
-            style={css(
-              "margin-top:20px;width:100%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:14px 16px;text-align:center;font-size:13.5px;line-height:1.55;color:rgba(255,255,255,.92);backdrop-filter:blur(6px)"
-            )}
+            ref={logRef}
+            style={css("margin-top:16px;width:100%;flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:4px")}
           >
-            {vm.glassText}
-          </div>
-        )}
-
-        {!clean && vm.showWave && (
-          <div style={css("margin-top:18px;display:flex;align-items:center;justify-content:center;gap:5px;height:24px")}>
-            {/* 바 높이는 22px 고정, 신축은 scaleY(GPU) — 위상차는 delay가 만든다 */}
-            <span style={css("width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.55);animation:wave 1s infinite")} />
-            <span style={css("width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.9);animation:wave .9s infinite .1s")} />
-            <span style={css("width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.55);animation:wave 1.1s infinite .2s")} />
-            <span style={css("width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.9);animation:wave .8s infinite .15s")} />
-            <span style={css("width:4px;height:22px;border-radius:9999px;background:rgba(255,255,255,.55);animation:wave 1s infinite .25s")} />
-          </div>
-        )}
-
-        {vm.showWave && vm.micActive && (
-          <div style={css("margin-top:14px;width:100%;display:flex;flex-direction:column;gap:8px;align-items:center")}>
-            <div style={css("display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#ff3b30")}>
-              <span style={css("width:9px;height:9px;border-radius:50%;background:#ff3b30;animation:recBlink 1.1s infinite")} />
-              마이크 녹음 중 — 말해보세요
-            </div>
-            <div style={css("width:80%;height:8px;background:rgba(0,0,0,.08);border-radius:4px;overflow:hidden")}>
-              <div style={css("height:100%;background:#22c55e;border-radius:4px;transition:width .08s;width:" + Math.min(100, vm.micLevel * 500) + "%")} />
-            </div>
-          </div>
-        )}
-
-        {vm.showWave && vm.liveCaption && (
-          <div
-            style={css(
-              "margin-top:16px;width:100%;background:rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.07);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.55;color:#1c1c1e;text-align:center"
+            {dialogue.map((b) => (
+              <ArsBubbleRow key={b.key} b={b} />
+            ))}
+            {/* 말하는 중 — 확정 전이라 흐리게. 발화가 끝나면 위의 확정 말풍선으로 올라간다 */}
+            {speaking && (
+              <div style={css("display:flex;justify-content:flex-end")}>
+                <div style={css("max-width:82%;border-radius:17px;padding:9px 13px;font-size:14px;line-height:1.5;background:rgba(47,95,196,.5);color:#fff")}>
+                  {speaking}
+                </div>
+              </div>
             )}
-          >
-            {vm.liveCaption}
+          </div>
+        ) : (
+          <div style={css("flex:1")} />
+        )}
+
+        {/* 마이크 입력 세기 — 말이 실제로 들어오는지 보여주는 시연 표기(고객 화면에선 숨김).
+            상담사 연결 뒤엔 폰에서 파형을 지우고 직원 화면에 맡긴다 */}
+        {!clean && showDialogue && vm.showWave && vm.micActive && (
+          <div style={css("margin-top:10px;width:74%;height:6px;border-radius:3px;overflow:hidden;flex:none;background:rgba(28,40,66,.10)")}>
+            <div style={css("height:100%;border-radius:3px;transition:width .08s;background:#31d158;width:" + Math.min(100, vm.micLevel * 500) + "%")} />
           </div>
         )}
 
-        <div style={css("flex:1")} />
+        {agentConnected && (
+          <div style={css("flex:none;margin-bottom:16px;font-size:13.5px;color:" + INK_SUB)}>상담사와 통화 중입니다</div>
+        )}
 
         {vm.phEnded && (
-          <div style={css("display:inline-flex;align-items:center;gap:7px;font-size:14px;color:rgba(255,255,255,.85);margin-bottom:14px")}>
+          <div style={css("display:inline-flex;align-items:center;gap:7px;font-size:14px;margin-bottom:14px;color:" + INK_SUB)}>
             <span className="mi" style={css("font-size:20px")}>check_circle</span>
             통화가 종료되었습니다
           </div>
@@ -612,8 +732,8 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
                   style={css(
                     "width:88px;height:88px;border-radius:9999px;display:flex;align-items:center;justify-content:center;" +
                       (c.end
-                        ? "background:#eb332a;cursor:pointer;box-shadow:0 0 26px rgba(235,51,42,.45)"
-                        : "background:rgba(255,255,255,.17);backdrop-filter:blur(4px);") +
+                        ? "background:" + RED_END + ";cursor:pointer;box-shadow:0 8px 22px rgba(240,69,58,.42)"
+                        : glassSkin() + ";") +
                       (c.icon === "keypad"
                         ? vm.customerKeypadEnabled
                           ? "cursor:pointer"
@@ -622,16 +742,17 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
                   )}
                 >
                   {c.icon === "facetime" ? (
-                    <FaceTimeGlyph size={c.size ?? 38} />
+                    <FaceTimeGlyph size={c.size ?? 38} color={INK} />
                   ) : (
                     <AppleIcon
                       name={c.icon}
                       size={c.size ?? 36}
+                      color={c.end ? "#fff" : INK}
                       style={c.dy ? { transform: `translateY(${c.dy}px)` } : undefined}
                     />
                   )}
                 </span>
-                <span style={css("font-size:13px;color:rgba(255,255,255,.92)")}>{c.label}</span>
+                <span style={css("font-size:13px;font-weight:500;color:" + INK)}>{c.label}</span>
               </div>
             ))}
           </div>
@@ -648,37 +769,6 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
   );
 }
 
-/** 인콜 키패드 키(라이트) — 포인터 다운에 즉시 어두워지는 눌림 피드백.
- *  눌린 게 보이지 않으면 고객은 입력이 먹었는지 알 수 없다(실기기도 눌림이 보인다). */
-function ArsKey({
-  k,
-  onPress,
-  disabled = false,
-}: {
-  k: { d: string; sub: string };
-  onPress: (d: string) => void;
-  disabled?: boolean;
-}) {
-  const [pressed, setPressed] = useState(false);
-  return (
-    <div
-      onPointerDown={() => !disabled && setPressed(true)}
-      onPointerUp={() => setPressed(false)}
-      onPointerLeave={() => setPressed(false)}
-      onClick={() => onPress(k.d)}
-      style={css(
-        "display:flex;flex-direction:column;align-items:center;justify-content:center;width:75px;height:75px;border-radius:9999px;user-select:none;transition:background .09s;background:" +
-          (pressed ? "#c6c6ca" : "#e4e4e6") +
-          ";cursor:" +
-          (disabled ? "not-allowed" : "pointer")
-      )}
-    >
-      <span style={css("font-size:36px;font-weight:400;color:#1c1c1e;line-height:1" + (k.sub ? "" : ";margin-top:6px"))}>{k.d}</span>
-      <span style={css("font-size:10px;font-weight:700;letter-spacing:2px;color:#6d6d72;height:12px;margin-top:1px;text-indent:2px")}>{k.sub}</span>
-    </div>
-  );
-}
-
 function CustomerKeypadScreen({
   vm,
   close,
@@ -689,10 +779,11 @@ function CustomerKeypadScreen({
   const press = (digit: string) => {
     if (!vm.customerKeypadEnabled) return;
     if (vm.customerPressDigit(digit)) navigator.vibrate?.(22);
-    // 로컬 데모: ARS 관례대로 #을 통화 종료로 쓴다 → 종료 화면(문자메시지)으로 넘어간다.
-    // 실서버 모드에선 #이 이미 '발화 종료(접수 완료)' 신호라 의미가 달라 건드리지 않는다.
-    // '아무 키나 누르면 종료'로 바꾸려면 아래 digit 조건만 지우면 된다.
-    if (digit === END_CALL_DIGIT && !vm.customerLiveMode) vm.endCall();
+    // 로컬 데모: 어떤 키를 눌러도 통화가 끝난다 → 종료 화면(문자메시지)으로 넘어간다.
+    // 시연 중 발표자가 아무 키나 눌러도 흐름이 이어져야 하고, 안내는 관례대로 #을 권한다.
+    // 실서버 모드에선 #이 '발화 종료(접수 완료)' 신호라 의미가 달라 건드리지 않는다.
+    // 특정 키만 종료로 되돌리려면 아래에 `digit === END_CALL_DIGIT &&` 를 다시 넣으면 된다.
+    if (!vm.customerLiveMode) vm.endCall();
   };
   const prompt = vm.mobileAgentConnected
     ? "상담원 통화 중 · 번호를 입력하세요"
@@ -701,34 +792,51 @@ function CustomerKeypadScreen({
     : vm.mobileIntakeComplete
     ? "상담사가 통화를 준비하고 있습니다"
     : vm.customerLiveMode
-    ? "용건을 모두 말씀하셨으면 #을 눌러 주세요"
-    : "상담을 마치시려면 #을 눌러 주세요";
+    ? `용건을 모두 말씀하셨으면 ${END_CALL_DIGIT}을 눌러 주세요`
+    : `상담을 마치시려면 ${END_CALL_DIGIT}을 눌러 주세요`;
 
   return (
-    <div style={css("position:absolute;inset:0;color:#1c1c1e;display:flex;flex-direction:column")}>
+    // 배경을 통화 화면과 똑같이 깐다 — 전엔 배경이 없어 폰의 검은 스크린이 그대로 비쳐
+    // 어두운 바탕에 어두운 제목이 얹혀 글씨가 안 보였다(그게 '디자인이 이상한' 원인).
+    <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;color:" + INK + ";" + GLASS_BG)}>
       <StatusBar />
-      <div style={css("display:flex;align-items:center;justify-content:center;position:relative;margin-top:47px")}>
-        <span
-          onClick={close}
-          style={css("position:absolute;left:31px;width:42px;height:42px;border-radius:9999px;background:#e4e4e6;display:flex;align-items:center;justify-content:center;cursor:pointer")}
-        >
-          <span className="mi" style={css("font-size:22px")}>close</span>
-        </span>
-        <div style={css("text-align:center")}>
-          <div style={css("font-size:21px;font-weight:600")}>키움은행 고객센터</div>
-          <div style={css("font-size:13px;color:#8a8a8e;margin-top:5px")}>{prompt}</div>
-        </div>
+      {/* 상대 정보 — 실기기는 키패드를 열어도 상단 상대 정보가 그대로 남는다(닫기 X는 없다).
+          닫기는 아래 '숨기기'가 맡는다. */}
+      <div style={css("text-align:center;margin-top:52px;padding:0 24px")}>
+        <div style={css("font-size:23px;font-weight:400;letter-spacing:.5px;color:" + INK_SUB)}>{vm.phoneClockStr}</div>
+        <div style={css("font-size:27px;font-weight:700;letter-spacing:-.4px;margin-top:4px;color:" + INK)}>키움은행 고객센터</div>
+        <div style={css("font-size:13.5px;margin-top:7px;color:" + INK_SUB)}>{prompt}</div>
       </div>
-      <div style={css("height:48px;display:flex;align-items:center;justify-content:center;font:500 24px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:7px;color:#3478f6")}>
+      {/* 누른 번호 — 실기기는 상대 정보 자리에 입력이 크게 쌓인다 */}
+      <div style={css("height:46px;display:flex;align-items:center;justify-content:center;font-size:29px;font-weight:400;letter-spacing:8px;text-indent:8px;color:" + INK)}>
         {vm.arsDigits || " "}
       </div>
-      <div style={css("display:grid;grid-template-columns:repeat(3,75px);justify-content:center;column-gap:28px;row-gap:14px;opacity:" + (vm.customerKeypadEnabled ? "1" : ".42"))}>
+      <div style={css("display:grid;grid-template-columns:repeat(3,78px);justify-content:center;column-gap:26px;row-gap:15px;opacity:" + (vm.customerKeypadEnabled ? "1" : ".45"))}>
         {KEYS.map((key) => (
-          <ArsKey key={key.d} k={key} onPress={press} disabled={!vm.customerKeypadEnabled} />
+          <KeyButton
+            key={key.d}
+            k={key}
+            variant="glass"
+            size={78}
+            onPress={vm.customerKeypadEnabled ? press : () => {}}
+          />
         ))}
       </div>
-      <div style={css("margin-top:auto;padding-bottom:34px")}>
-        <CallButtonRow color="#ff3b30" icon="call_end" onClick={vm.endCall} />
+      {/* 하단 — 빨간 종료가 가운데, 오른쪽에 '숨기기'(실기기의 Hide Keypad) */}
+      <div style={css("margin-top:auto;padding-bottom:38px;display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center")}>
+        <span />
+        <div
+          onClick={vm.endCall}
+          style={css("width:88px;height:88px;border-radius:9999px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:" + RED_END + ";box-shadow:0 8px 22px rgba(240,69,58,.42)")}
+        >
+          <AppleIcon name="callEnd" size={42} />
+        </div>
+        <span
+          onClick={close}
+          style={css("justify-self:center;font-size:14.5px;font-weight:500;cursor:pointer;color:" + INK)}
+        >
+          숨기기
+        </span>
       </div>
       <HomeIndicator />
     </div>

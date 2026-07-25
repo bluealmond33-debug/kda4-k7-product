@@ -2320,6 +2320,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     stageWpx: stageW + "px",
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
+    /** 원본 phase — 고객 폰의 AI 안내 스크립트가 단계별로 말할 줄을 고르는 데 쓴다.
+     *  화면용 라벨(phaseLabel)과 달리 상태 그 자체라 분기 조건에 안전하게 쓸 수 있다. */
+    phase: p,
     phaseLabel: LABELS[p] || p,
     // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
     stepIndex:
