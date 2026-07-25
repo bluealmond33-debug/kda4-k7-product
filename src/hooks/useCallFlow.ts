@@ -2610,6 +2610,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           .filter(Boolean)
           .join(" · ") || card.summary || "고객 음성에서 확인된 상담 내용을 검토하고 있습니다."
       : SUMMARY_PROSE[incoming],
+    /** 지금 통화 연결이 가능한가 — 준비 카드의 자동 연결 카운트다운이 이 값으로 게이트된다.
+     *  (연결 불가 상태에서 카운트다운이 0이 되면 answerCall이 조용히 무시돼 사고가 된다) */
+    canConnect,
     connectBg: canConnect ? "var(--blue-700)" : "var(--gray-200)",
     connectFg: canConnect ? "#fff" : "var(--gray-600)",
     connectCursor: canConnect ? "pointer" : "not-allowed",

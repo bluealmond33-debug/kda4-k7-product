@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { css } from "../lib/css";
 import type { CallFlowVM } from "../hooks/useCallFlow";
 import AppleIcon from "./AppleIcon";
 import { BrandSymbol } from "./BrandLogo";
 import { CUSTOMER } from "../data/demoContent";
-import { ARS_BY_PHASE } from "../data/arsScript";
 import { useMic } from "../lib/mic";
 
 /**
@@ -234,93 +233,6 @@ function StatusIcons({ light = false }: { light?: boolean }) {
         <span style={css("width:1.5px;height:4px;border-radius:0 1px 1px 0;background:" + dim)} />
       </span>
     </span>
-  );
-}
-
-/* ── 고객 폰의 AI ↔ 고객 대화 ──────────────────────────────────────────────────────
-   이 화면에서 말하는 사람은 AI와 고객 둘뿐이다(상담사는 아직 연결 전). 그래서 좌/우로
-   나누고 색을 다르게 준다 — 왼쪽 유리 말풍선 = AI, 오른쪽 파란 말풍선 = 고객.
-   끊는 단위는 '발화'다. 5초 같은 고정 간격으로 자르면 문장이 중간에서 끊겨 읽기 어렵고,
-   백엔드(faster-whisper)도 침묵으로 발화를 확정해 보내주므로 그 경계를 그대로 쓴다.
-   시각은 카톡처럼 말풍선 **옆**에 작게 붙인다(줄 앞에 [15:32:07]을 붙이면 로그처럼 보인다). */
-
-type ArsBubble = { key: string; who: "ai" | "cust"; text: string; at: number };
-
-/** 카톡식 시각 — "오후 3:32" */
-function hhmm(ms: number) {
-  const d = new Date(ms);
-  const h = d.getHours();
-  return `${h < 12 ? "오전" : "오후"} ${h % 12 === 0 ? 12 : h % 12}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-/** phase가 바뀌면 그 단계의 AI 안내를 줄 단위로 순서대로 띄운다(줄 길이 sec만큼 간격).
- *  같은 통화에서 같은 줄을 두 번 말하지 않고, 통화가 끝나면(idle) 대화를 비운다.
- *  녹음 파일이 있으면 같이 재생 — 화면과 음성이 같은 스크립트를 쓰므로 어긋나지 않는다. */
-function useArsDialogue(vm: CallFlowVM, enabled: boolean) {
-  const [said, setSaid] = useState<ArsBubble[]>([]);
-  const playedRef = useRef<Set<string>>(new Set());
-  const idle = vm.phIdle;
-  const phase = vm.phase;
-
-  useEffect(() => {
-    if (idle) {
-      playedRef.current.clear();
-      setSaid([]);
-    }
-  }, [idle]);
-
-  useEffect(() => {
-    if (!enabled || idle) return;
-    const lines = ARS_BY_PHASE[phase];
-    if (!lines) return;
-    const timers: number[] = [];
-    let delay = 0;
-    for (const line of lines) {
-      if (playedRef.current.has(line.id)) continue;
-      playedRef.current.add(line.id);
-      timers.push(
-        window.setTimeout(() => {
-          setSaid((prev) => [...prev, { key: line.id, who: "ai", text: line.text, at: Date.now() }]);
-          if (line.audio) {
-            // 파일이 없거나 자동재생이 막히면 조용히 넘어간다(화면은 그대로 흐른다)
-            new Audio("/demo/" + line.audio).play().catch(() => {});
-          }
-        }, delay * 1000)
-      );
-      delay += line.sec;
-    }
-    return () => timers.forEach((t) => clearTimeout(t));
-  }, [enabled, idle, phase]);
-
-  // 고객 발화 — 확정된 전사(발화 단위)만 말풍선으로. 말하는 중(liveCaption)은 아래에서 따로 그린다.
-  const custBubbles: ArsBubble[] = vm.liveTranscriptLines
-    .filter((l) => l.speaker === "customer" && l.text.trim())
-    .map((l) => ({ key: "c" + l.seq, who: "cust" as const, text: l.text, at: l.at }));
-
-  return [...said, ...custBubbles].sort((a, b) => a.at - b.at);
-}
-
-/** 폰 대화 말풍선 — 좌(AI, 유리) / 우(고객, 브랜드 블루). 시각은 말풍선 옆 아래에 붙는다. */
-function ArsBubbleRow({ b }: { b: ArsBubble }) {
-  const ai = b.who === "ai";
-  return (
-    <div
-      style={css(
-        "display:flex;align-items:flex-end;gap:6px;animation:cardDeal .28s ease-out;justify-content:" +
-          (ai ? "flex-start" : "flex-end")
-      )}
-    >
-      {!ai && <span style={css("flex:none;font-size:10px;color:" + INK_SUB)}>{hhmm(b.at)}</span>}
-      <div
-        style={css(
-          "max-width:82%;border-radius:17px;padding:9px 13px;font-size:14px;line-height:1.5;white-space:pre-wrap;" +
-            (ai ? glassSkin() + ";color:" + INK : "background:#2f5fc4;color:#fff;box-shadow:0 4px 12px rgba(47,95,196,.28)")
-        )}
-      >
-        {b.text}
-      </div>
-      {ai && <span style={css("flex:none;font-size:10px;color:" + INK_SUB)}>{hhmm(b.at)}</span>}
-    </div>
   );
 }
 
@@ -626,22 +538,6 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
     return <CustomerKeypadScreen vm={vm} close={() => setKeypadOpen(false)} />;
   }
 
-  // 상담사가 연결되면(active) 폰의 대화·파형은 전부 사라진다 — 그 뒤 대화는 직원 화면이
-  // 단독으로 보여준다(직원 화면이 메인). 폰엔 실기기처럼 타이머·이름·컨트롤만 남는다.
-  const agentConnected = vm.phase === "active";
-  const showDialogue = !agentConnected && !vm.phEnded;
-  const dialogue = useArsDialogue(vm, showDialogue);
-
-  // 말하는 중인 고객 발화 — 아직 확정 전이라 말풍선 아래에 흐리게 붙인다(발화가 끝나면 확정 말풍선이 된다)
-  const speaking = showDialogue && vm.liveCaptionSpeaker === "customer" ? vm.liveCaption : "";
-
-  // 대화가 늘어나면 항상 마지막 줄이 보이게 — 카톡처럼 아래로 따라간다
-  const logRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = logRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [dialogue.length, speaking]);
-
   return (
     <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;color:" + INK + ";" + GLASS_BG)}>
       <StatusBar />
@@ -668,39 +564,17 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
           </div>
         )}
 
-        {/* AI ↔ 고객 대화 — 이 화면의 주인공. 상담사가 연결되면 통째로 사라진다.
-            아래로 늘어나며 스크롤되고, 위쪽 타이머·이름 배치는 흔들리지 않는다. */}
-        {showDialogue ? (
-          <div
-            ref={logRef}
-            style={css("margin-top:16px;width:100%;flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:4px")}
-          >
-            {dialogue.map((b) => (
-              <ArsBubbleRow key={b.key} b={b} />
-            ))}
-            {/* 말하는 중 — 확정 전이라 흐리게. 발화가 끝나면 위의 확정 말풍선으로 올라간다 */}
-            {speaking && (
-              <div style={css("display:flex;justify-content:flex-end")}>
-                <div style={css("max-width:82%;border-radius:17px;padding:9px 13px;font-size:14px;line-height:1.5;background:rgba(47,95,196,.5);color:#fff")}>
-                  {speaking}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={css("flex:1")} />
-        )}
+        {/* 여기는 비워 둔다. 실제 통화 화면엔 대화 내용이 뜨지 않는다 — 전화 중에 폰 화면으로
+            대화창이 올라오는 일은 없다. 주고받는 말은 오른쪽 전사 패널(파동 아래)이 보여준다.
+            폰이 보여줄 건 실기기와 같은 것뿐: 통화 시간 · 상대 이름 · 컨트롤. */}
+        <div style={css("flex:1")} />
 
-        {/* 마이크 입력 세기 — 말이 실제로 들어오는지 보여주는 시연 표기(고객 화면에선 숨김).
-            상담사 연결 뒤엔 폰에서 파형을 지우고 직원 화면에 맡긴다 */}
-        {!clean && showDialogue && vm.showWave && vm.micActive && (
-          <div style={css("margin-top:10px;width:74%;height:6px;border-radius:3px;overflow:hidden;flex:none;background:rgba(28,40,66,.10)")}>
+        {/* 마이크 입력 세기 — 실기기엔 없는 시연 표기라 고객 화면(clean)에선 숨긴다.
+            마이크가 켜졌는지 자체는 다이나믹 아일랜드의 주황 점이 이미 알려준다 */}
+        {!clean && vm.showWave && vm.micActive && (
+          <div style={css("margin-bottom:14px;width:74%;height:6px;border-radius:3px;overflow:hidden;flex:none;background:rgba(28,40,66,.10)")}>
             <div style={css("height:100%;border-radius:3px;transition:width .08s;background:#31d158;width:" + Math.min(100, vm.micLevel * 500) + "%")} />
           </div>
-        )}
-
-        {agentConnected && (
-          <div style={css("flex:none;margin-bottom:16px;font-size:13.5px;color:" + INK_SUB)}>상담사와 통화 중입니다</div>
         )}
 
         {vm.phEnded && (
@@ -779,11 +653,10 @@ function CustomerKeypadScreen({
   const press = (digit: string) => {
     if (!vm.customerKeypadEnabled) return;
     if (vm.customerPressDigit(digit)) navigator.vibrate?.(22);
-    // 로컬 데모: 어떤 키를 눌러도 통화가 끝난다 → 종료 화면(문자메시지)으로 넘어간다.
-    // 시연 중 발표자가 아무 키나 눌러도 흐름이 이어져야 하고, 안내는 관례대로 #을 권한다.
+    // 로컬 데모: #만 통화 종료 → 종료 화면(문자메시지)으로. 한때 '아무 키나 종료'로 뒀더니
+    // 숫자를 눌러 보는 것 자체가 불가능해져(누르는 순간 끊김) 키패드를 시연할 수 없었다.
     // 실서버 모드에선 #이 '발화 종료(접수 완료)' 신호라 의미가 달라 건드리지 않는다.
-    // 특정 키만 종료로 되돌리려면 아래에 `digit === END_CALL_DIGIT &&` 를 다시 넣으면 된다.
-    if (!vm.customerLiveMode) vm.endCall();
+    if (digit === END_CALL_DIGIT && !vm.customerLiveMode) vm.endCall();
   };
   const prompt = vm.mobileAgentConnected
     ? "상담원 통화 중 · 번호를 입력하세요"

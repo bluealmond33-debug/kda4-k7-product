@@ -4,6 +4,7 @@ import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
 import { useLiveCallBus } from "../hooks/useLiveCallBus";
 import Phone from "./Phone";
 import LiveTranscriptPanel, { type StreamItem } from "./LiveTranscriptPanel";
+import { useConversationStream } from "../lib/arsDialogue";
 import Waiting from "./desktop/Waiting";
 import PrepCard from "./desktop/PrepCard";
 import ActiveCall from "./desktop/ActiveCall";
@@ -67,13 +68,17 @@ export default function LiveDemo({
   // 있으면 그쪽이 정본이다(실통화도 demoBus에 같은 발화를 흘리므로 합치면 중복된다).
   // 이렇게 둬야 희창이형 서버 없이 리허설할 때도 패널이 살아 있다.
   const bus = useLiveCallBus();
-  const phoneLines: StreamItem[] = vm.liveTranscriptLines.length
+  const spokenLines: StreamItem[] = vm.liveTranscriptLines.length
     ? vm.liveTranscriptLines.map((line) => ({
         id: `${line.generation ?? 0}-${line.audioSeq ?? line.seq}-${line.speaker}-${line.at}`,
         text: line.text,
         who: line.speaker,
       }))
     : bus.lines.map((line) => ({ id: line.id, text: line.text, who: line.speaker }));
+  // AI(KARI-NA) 안내를 발화와 한 줄기로 섞는다 — 고객이 무엇을 듣고 무엇을 답했는지가
+  // 한 화면에서 이어져 읽힌다. 안내 음성은 고객 폰 화면에서만 재생해 창이 여러 개 열려도
+  // 같은 안내가 겹쳐 들리지 않는다.
+  const phoneLines = useConversationStream(vm, spokenLines, view === "phone");
 
   // 직원 분할 뷰 — 통화 연결(active 진입)의 상승엣지에 자동 on. 리셋(idle)이면 off.
   // 상승엣지로만 켜므로, 통화 중 알약 토글로 끈 뒤 다시 켜지지 않는다(발표자 제어 유지).
