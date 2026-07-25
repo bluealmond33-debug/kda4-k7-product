@@ -41,10 +41,19 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
         "position:relative;width:1100px;height:688px;background:var(--onair-bg);border-radius:12px;box-shadow:var(--sh-near);overflow:hidden;font-family:" + FONT
       )}
     >
-      {/* 대기 화면은 그대로 — 가리지 않는다 */}
-      <div style={css("position:absolute;inset:0")}>
+      {/* 대기 화면 — 가리지는 않되 **한 겹 물러난다.** 접수 패널이 잘 안 보인다는 피드백이
+          있었는데, 원인은 패널이 흐린 게 아니라 뒤가 너무 또렷해서 눈이 어디를 볼지 못
+          고르는 것이었다. 그래서 패널을 더 키우기보다 뒤를 조용하게 만든다.
+          블러는 약하게(3px) — 세게 걸면 뒤가 무슨 화면인지 못 알아보고, 접수는 몇 초 뒤
+          끝나므로 그동안 대기 화면을 못 읽게 만들 이유가 없다.
+          inset:-8px = 블러가 만드는 흐린 테두리를 화면 밖으로 밀어낸다(안 하면 가장자리에
+          희끗한 띠가 생겨 화면이 잘린 것처럼 보인다). 바깥 overflow:hidden이 잘라 준다. */}
+      <div style={css("position:absolute;inset:-8px;filter:blur(3px) saturate(.94)")}>
         <Standby />
       </div>
+      {/* 얇은 베일 — 흰 패널이 확실히 앞으로 나오게 뒤를 살짝 누른다.
+          pointer-events:none 이라 대기 화면은 계속 클릭된다(못 쓰게 만들지 않는다). */}
+      <div style={css("position:absolute;inset:0;background:rgba(18,20,27,.13);pointer-events:none")} />
 
       {/* 좌하단 접수 패널 — 바텀업으로 등장. 자리는 구석에 두되(대기 화면을 가리지 않는다)
           관객이 읽을 수 있는 크기로 키운다. 폭만 늘리면 늘어난 여백만 보이므로 스피너·글자·

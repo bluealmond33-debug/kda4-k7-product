@@ -30,16 +30,18 @@ export default function BriefingCardBody({
     <>
       {/* ── 상단 ── 로고+설명(좌) / AI 정확도(우).
           카드의 '표지'다 — 본문보다 두껍게 두고 로고를 크게 세워 어떤 카드인지 먼저 읽히게 한다. */}
-      <div style={css("flex:none;padding:10px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:11px")}>
-        {/* 공식 아트워크 락업 — CSS로 조판한 글자가 아니라 실제 로고 이미지다(자간·자형 그대로) */}
+      <div style={css("flex:none;padding:13px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:13px")}>
+        {/* 공식 아트워크 락업 — CSS로 조판한 글자가 아니라 실제 로고 이미지다(자간·자형 그대로).
+            카드에서 가장 먼저 읽혀야 하는 건 "이게 KARI-NA 카드"라는 사실이라 로고를 키웠다.
+            19px에서는 심볼이 점처럼 보이고 워드마크가 뭉쳐 무슨 글자인지 안 읽혔다. */}
         <img
           src={BRAND_LOCKUP_PNG}
           alt="KARI-NA"
-          style={{ display: "block", flex: "none", height: 19, width: 19 * BRAND_LOCKUP_RATIO }}
+          style={{ display: "block", flex: "none", height: 27, width: 27 * BRAND_LOCKUP_RATIO }}
         />
         {/* 워드마크 오른쪽에 가는 선 하나 두고 설명을 잇는다 — 한 줄로 눕히면 헤더가 훨씬 얇아진다 */}
-        <span style={css("flex:none;width:1px;height:14px;background:var(--gray-300)")} />
-        <span style={css("font:600 10.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>카드 브리핑 요약</span>
+        <span style={css("flex:none;width:1px;height:17px;background:var(--gray-300)")} />
+        <span style={css("font:600 11.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>카드 브리핑 요약</span>
         <div style={css("flex:1")} />
         {/* AI 정확도 — 도넛을 뺐다. 22px 고리는 94라는 값을 더 잘 읽히게 하지 못하면서
             헤더에 원 하나를 더 얹을 뿐이었다. %를 붙이면 '100점 만점 중 94'가 기호로 끝난다. */}

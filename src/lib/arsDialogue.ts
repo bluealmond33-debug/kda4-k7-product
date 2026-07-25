@@ -21,6 +21,17 @@ import type { StreamItem } from "../components/LiveTranscriptPanel";
 type SaidLine = { id: string; text: string; afterCount: number };
 
 /**
+ * 안내 한 줄의 음성 파일 주소.
+ *
+ * 규칙: `public/demo/ars/<id>.mp3` — **대본의 id가 곧 파일명**이라 파일만 넣으면 잡힌다
+ * (코드를 고칠 필요가 없다). 다른 이름을 쓰려면 대본에 audio를 적어 덮어쓴다.
+ * 파일이 없으면 재생이 error로 떨어지고 그 줄은 대본의 sec만큼 머물다 넘어간다.
+ */
+function audioUrl(line: { id: string; audio?: string }) {
+  return "/demo/" + (line.audio ?? `ars/${line.id}.mp3`);
+}
+
+/**
  * @param spoken 실제 전사에서 만든 스트림(고객·상담원). 호출부가 실통화/demoBus 중
  *   정본을 골라 넘긴다.
  * @param playAudio 안내 음성을 이 화면에서 재생할지. 창이 여러 개 열려 있을 때 한 곳만
@@ -50,30 +61,57 @@ export function useConversationStream(
 
   // phase가 바뀌면 그 단계의 안내를 줄 단위로 순서대로 띄운다(줄 길이 sec만큼 간격).
   // 같은 통화에서 같은 줄을 두 번 말하지 않는다.
+  //
+  // 진행을 무엇이 이끄는가 — **녹음이 있으면 녹음이, 없으면 대본의 sec이 이끈다.**
+  // 예전엔 모든 줄을 sec 누적으로 미리 예약했다. 그러면 mp3를 넣을 때마다 실제 길이에 맞춰
+  // sec을 손으로 고쳐야 하고, 안 고치면 말풍선과 목소리가 어긋난다. 지금은 한 줄을 띄우고
+  // 그 줄의 재생이 끝나면(ended) 다음 줄로 넘어가므로, **파일만 넣으면 알아서 맞는다.**
+  // 파일이 없거나(error) 자동재생이 막히면 그 줄만 sec으로 넘어간다 — 화면은 끊기지 않는다.
   useEffect(() => {
     if (idle) return;
     const lines = ARS_BY_PHASE[phase];
     if (!lines) return;
-    const timers: number[] = [];
-    let delay = 0;
-    for (const line of lines) {
-      if (playedRef.current.has(line.id)) continue;
-      playedRef.current.add(line.id);
-      timers.push(
-        window.setTimeout(() => {
-          setSaid((prev) => [
-            ...prev,
-            { id: line.id, text: line.text, afterCount: countRef.current },
-          ]);
-          if (playAudio && line.audio) {
-            // 파일이 없거나 자동재생이 막히면 조용히 넘어간다(화면은 그대로 흐른다)
-            new Audio("/demo/" + line.audio).play().catch(() => {});
-          }
-        }, delay * 1000)
-      );
-      delay += line.sec;
-    }
-    return () => timers.forEach((t) => clearTimeout(t));
+    const queue = lines.filter((l) => !playedRef.current.has(l.id));
+    if (!queue.length) return;
+    queue.forEach((l) => playedRef.current.add(l.id));
+
+    let cancelled = false;
+    let timer = 0;
+    let audio: HTMLAudioElement | null = null;
+
+    const speak = (i: number) => {
+      if (cancelled || i >= queue.length) return;
+      const line = queue[i];
+      // 말풍선을 먼저 띄우고 그 다음 소리를 낸다 — 글과 목소리가 같은 순간에 시작한다
+      setSaid((prev) => [...prev, { id: line.id, text: line.text, afterCount: countRef.current }]);
+
+      let advanced = false;
+      const next = () => {
+        if (advanced || cancelled) return;
+        advanced = true;
+        speak(i + 1);
+      };
+      const bySec = () => {
+        timer = window.setTimeout(next, Math.max(0.6, line.sec) * 1000);
+      };
+
+      if (!playAudio) {
+        bySec();
+        return;
+      }
+      audio = new Audio(audioUrl(line));
+      audio.addEventListener("ended", next);
+      // 파일 없음·디코드 실패 → 그 줄만 대본 길이로 넘긴다(다음 줄엔 소리가 있을 수 있다)
+      audio.addEventListener("error", bySec);
+      audio.play().catch(bySec); // 자동재생 차단도 같은 처리
+    };
+
+    speak(0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      audio?.pause();
+    };
   }, [idle, phase, playAudio]);
 
   if (!said.length) return spoken;
