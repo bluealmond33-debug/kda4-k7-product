@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import BrandLogo from "../BrandLogo";
+import EmotionBar from "./EmotionBar";
 
 const FONT = "'Avenir Next','Pretendard',sans-serif";
 
@@ -10,24 +10,27 @@ const FONT = "'Avenir Next','Pretendard',sans-serif";
  *  우: 전화 요약(가장 큰 비중) — 한 줄 요약 → 근거 발화 → STT 불릿 → 핵심 니즈.
  *  카드 겉면(.card border/radius/overflow)은 부모가 씌운다 — 여기는 헤더+본문만. */
 export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlowVM; showAuth?: boolean }) {
-  const [transferMenu, setTransferMenu] = useState(false);
   const reservedDept = vm.transferReserved ? vm.transferTarget ?? vm.suggestedDept : null;
   const confPct = vm.prepConfidencePct ?? 0;
 
   return (
     <>
-      {/* ── 상단 ── 로고(좌) / 이번 상담 유의 칩(우) */}
-      <div style={css("flex:none;padding:12px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:14px")}>
-        <BrandLogo size={17} symbolColor="var(--blue-700)" color="var(--gray-1000)" />
+      {/* ── 상단 ── 로고+설명(좌) / AI 정확도(우).
+          카드의 '표지'다 — 본문보다 두껍게 두고 로고를 크게 세워 어떤 카드인지 먼저 읽히게 한다. */}
+      <div style={css("flex:none;padding:10px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:11px")}>
+        <BrandLogo size={21} symbolColor="var(--blue-700)" color="var(--gray-1000)" />
+        {/* 워드마크 오른쪽에 가는 선 하나 두고 설명을 잇는다 — 한 줄로 눕히면 헤더가 훨씬 얇아진다 */}
+        <span style={css("flex:none;width:1px;height:14px;background:var(--gray-300)")} />
+        <span style={css("font:600 10.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>카드 브리핑 요약</span>
         <div style={css("flex:1")} />
-        {/* 이번 상담 유의 — 통화 전 스치듯 확인하는 가드레일. 헤더 우측 칩으로 스캔 빠르게 */}
-        <div data-tour="prep-checks" style={css("display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:7px")}>
-          <span style={css("font:700 10px " + FONT + ";letter-spacing:.2px;color:var(--gray-500);margin-right:1px;flex:none")}>이번 상담 유의</span>
-          {vm.prepRows.map((r, i) => (
-            <span key={i} style={css("display:inline-flex;align-items:center;gap:5px;font:600 11.5px " + FONT + ";color:var(--gray-1000);border:1px solid var(--gray-400);border-radius:9999px;padding:3px 11px;white-space:nowrap")}>
-              <span className="mi" style={css("font-size:14px;color:var(--green-700)")}>check</span>{r.title}
-            </span>
-          ))}
+        {/* AI 정확도 — 카드 전체가 얼마나 믿을 만한지라 표지(헤더) 우측에 둔다.
+            숫자는 도넛 안이 아니라 오른쪽에 세운다 — 고리는 작게 줄일 수 있고 숫자는 더 크게 읽힌다. */}
+        <div title={vm.prepConfidence} style={css("flex:none;display:flex;align-items:center;gap:7px")}>
+          <span style={css("font:600 10.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>AI 정확도</span>
+          <ConfidenceDonut pct={confPct} known={vm.prepConfidencePct != null} size={22} showValue={false} />
+          <span style={css("font:800 17px/1 " + FONT + ";letter-spacing:-.5px;color:var(--gray-1000)")}>
+            {vm.prepConfidencePct != null ? confPct : "--"}
+          </span>
         </div>
       </div>
 
@@ -72,15 +75,21 @@ export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlow
                   <span style={css("font:700 12.5px " + FONT + ";color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
                 </span>
               </div>
-              <div style={css("position:relative;height:7px;border-radius:9999px;background:linear-gradient(90deg,var(--green-700) 0%,var(--green-700) 30%,var(--amber-700) 58%,var(--red-700) 100%)")}>
-                <span style={css("position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:2px;background:#fff;left:" + vm.prepTempBasePct + "%")} />
-                <span style={css("position:absolute;top:50%;width:13px;height:13px;border-radius:9999px;background:#fff;border:2.5px solid " + vm.prepEmotionBar + ";box-shadow:0 1px 4px rgba(0,0,0,.28);transform:translate(-50%,-50%);transition:left .4s;left:" + (vm.prepTempC != null ? vm.prepTempPct : vm.prepTempBasePct) + "%")} />
-              </div>
+              {/* 접수 화면(Waiting)과 같은 축·같은 마커 — 두 화면이 다른 감정온도 그림을 쓰면
+                  같은 값을 두 번 배워야 한다. 마커는 원이 아니라 페이더 썸(EmotionBar 참조) */}
+              <EmotionBar
+                height={7}
+                pct={vm.prepTempC != null ? vm.prepTempPct : vm.prepTempBasePct}
+                basePct={vm.prepTempBasePct}
+                color={vm.prepEmotionBar}
+              />
             </div>
 
-            {/* 배정 부서 → 업무코드 — 감정온도 아래. 클릭 시 이관 드롭다운(종료 시 예약) */}
+            {/* 배정 부서 → 업무코드 — 감정온도 아래. 읽기 전용이다:
+                이관은 별도 버튼(접수=하단 '이관', 통화=음소거 왼쪽 원형 버튼)이 맡는다.
+                예약이 걸리면 여기가 파랗게 채워져 '어디로 갈지'를 보여준다. */}
             <div style={css("position:relative")}>
-              <div onClick={() => setTransferMenu((v) => !v)} title="배정 결과 — 클릭하면 다른 부서로 이관(종료 시 예약)" style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;cursor:pointer;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)"))}>
+              <div title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "AI 배정 결과"} style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)"))}>
                 <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:4px")}>
                   <div style={css("display:flex;align-items:baseline;gap:7px")}>
                     <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>부서</span>
@@ -92,54 +101,33 @@ export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlow
                     <span style={css("font:600 10.5px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>{vm.prepBusinessCodeLabel}</span>
                   </div>
                 </div>
-                <span className="mi" style={css("font-size:17px;flex:none;color:" + (reservedDept ? "#fff" : "var(--gray-500)") + ";transition:transform .2s;transform:rotate(" + (transferMenu ? 180 : 0) + "deg)")}>expand_more</span>
+                {reservedDept && <span className="mi" style={css("font-size:16px;flex:none;color:#fff")}>sync_alt</span>}
               </div>
-              {transferMenu && (
-                <>
-                  <span onClick={() => setTransferMenu(false)} style={css("position:fixed;inset:0;z-index:40")} />
-                  <div style={css("position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:41;background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);overflow:hidden")}>
-                    <div style={css("padding:9px 13px 7px;font:700 10.5px " + FONT + ";color:var(--gray-700);border-bottom:1px solid var(--gray-200)")}>부서 이관 · 종료 시 예약</div>
-                    {vm.transferReserved && (
-                      <div onClick={() => { vm.toggleTransferReserve(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-200);color:var(--red-800)")}>
-                        <span className="mi" style={css("font-size:15px")}>close</span>
-                        <span style={css("font:600 12px " + FONT)}>이관 예약 취소</span>
-                      </div>
-                    )}
-                    <div onClick={() => { vm.reserveTransfer(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-200)")}>
-                      <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
-                      <span style={css("font:600 12px " + FONT + ";color:var(--gray-1000)")}>AI 추천 — {vm.suggestedDept}</span>
-                    </div>
-                    {vm.transferDepts.map((d) => (
-                      <div key={d.name} onClick={() => { vm.reserveTransfer(d.name); setTransferMenu(false); }} className="memorow" style={css("display:flex;flex-direction:column;gap:1px;padding:8px 13px;cursor:pointer")}>
-                        <span style={css("display:flex;align-items:center;gap:6px;font:600 12px " + FONT + ";color:var(--gray-1000)")}>{d.name}<span style={css("font:400 10px " + FONT + ";color:var(--gray-600)")}>{d.state}</span></span>
-                        <span style={css("font:400 10.5px " + FONT + ";color:var(--gray-700)")}>{d.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
 
-            {/* 확신도(도넛) [+ 본인인증] — 부서 아래. 통화 화면(showAuth=false)에선 인증을 빼고 확신도가 폭을 채운다 */}
-            <div style={css("display:flex;gap:10px")}>
-              {/* 확신도 — 도넛+라벨. 인증이 있을 땐 3, 없을 땐 홀로 폭을 채운다 */}
-              <div title={vm.prepConfidence} style={css((showAuth ? "flex:3" : "flex:1") + ";min-width:0;border:1px solid var(--gray-300);border-radius:10px;padding:10px 11px;display:flex;align-items:center;gap:10px")}>
-                <ConfidenceDonut pct={confPct} known={vm.prepConfidencePct != null} />
-                <div style={css("display:flex;flex-direction:column;gap:1px;min-width:0")}>
-                  <span style={css("font:600 9.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>AI 배정</span>
-                  <span style={css("font:700 11.5px " + FONT + ";color:var(--gray-1000);white-space:nowrap")}>확신도</span>
+            {/* 상담 유의사항 — 통화 전 스치듯 훑는 가드레일. 헤더에 있던 칩을 여기로 내렸다
+                (헤더 우측은 AI 정확도 자리). 체크 조작은 없다 — 읽기만 하는 목록. */}
+            <div data-tour="prep-checks" style={css("border:1px solid var(--gray-300);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:7px")}>
+              <span style={css("font:600 10px " + FONT + ";letter-spacing:.2px;color:var(--gray-600)")}>상담 유의사항</span>
+              {vm.prepRows.map((r, i) => (
+                <div key={i} style={css("display:flex;gap:7px;align-items:flex-start")}>
+                  <span className="mi" style={css("font-size:14px;flex:none;color:var(--green-700);transform:translateY(1px)")}>check</span>
+                  <span style={css("font:600 11.5px/1.45 " + FONT + ";color:var(--gray-1000);word-break:keep-all")}>{r.title}</span>
                 </div>
-              </div>
-              {showAuth && (
-                <div
-                  title={vm.prepVerified ? "본인인증 완료 — 고객 상세 조회가 열립니다" : "본인인증 미완료 — 연결 직후 확인하세요"}
-                  style={css("flex:2;min-width:0;border-radius:10px;padding:10px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid " + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}
-                >
-                  <span className="mi" style={css("font-size:22px;flex:none;color:" + (vm.prepVerified ? "var(--green-700)" : "var(--amber-700)"))}>{vm.prepVerified ? "lock" : "lock_open"}</span>
-                  <span style={css("font:700 11px " + FONT + ";white-space:nowrap;color:" + (vm.prepVerified ? "var(--green-900)" : "var(--amber-900)"))}>인증 {vm.prepVerified ? "완료" : "미완료"}</span>
-                </div>
-              )}
+              ))}
             </div>
+
+            {/* 본인인증 — 통화 화면(showAuth=false)에선 감춘다.
+                미완료는 회색으로 조용히 둔다: '아직 안 된 상태'지 경고가 아니다. 완료만 초록으로 신호. */}
+            {showAuth && (
+              <div
+                title={vm.prepVerified ? "본인인증 완료 — 고객 상세 조회가 열립니다" : "본인인증 미완료 — 연결 직후 확인하세요"}
+                style={css("border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:8px;border:1px solid " + (vm.prepVerified ? "var(--green-700)" : "var(--gray-400)"))}
+              >
+                <span className="mi" style={css("font-size:19px;flex:none;color:" + (vm.prepVerified ? "var(--green-700)" : "var(--gray-600)"))}>{vm.prepVerified ? "lock" : "lock_open"}</span>
+                <span style={css("font:700 11.5px " + FONT + ";white-space:nowrap;color:" + (vm.prepVerified ? "var(--green-900)" : "var(--gray-800)"))}>인증 {vm.prepVerified ? "완료" : "미완료"}</span>
+              </div>
+            )}
 
           </div>
 
@@ -177,13 +165,24 @@ export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlow
   );
 }
 
-/** AI 배정 확신도 — 도넛. 값이 없으면 트랙만 그린다. */
-export function ConfidenceDonut({ pct, known }: { pct: number; known: boolean }) {
+/** AI 배정 확신도 — 도넛. 값이 없으면 트랙만 그린다.
+ *  showValue=false면 숫자를 빼고 고리만 그린다(숫자를 도넛 옆에 따로 세울 때). */
+export function ConfidenceDonut({
+  pct,
+  known,
+  size = 46,
+  showValue = true,
+}: {
+  pct: number;
+  known: boolean;
+  size?: number;
+  showValue?: boolean;
+}) {
   const r = 17;
   const c = 2 * Math.PI * r;
   const on = Math.max(0, Math.min(100, pct));
   return (
-    <svg viewBox="0 0 44 44" width="46" height="46" style={{ display: "block", flex: "none" }} aria-hidden="true">
+    <svg viewBox="0 0 44 44" width={size} height={size} style={{ display: "block", flex: "none" }} aria-hidden="true">
       <circle cx="22" cy="22" r={r} fill="none" stroke="var(--gray-300)" strokeWidth="5" />
       {known && (
         <circle
@@ -198,9 +197,11 @@ export function ConfidenceDonut({ pct, known }: { pct: number; known: boolean })
           transform="rotate(-90 22 22)"
         />
       )}
-      <text x="22" y="26" textAnchor="middle" style={{ font: "800 14px 'Avenir Next',sans-serif", fill: "var(--gray-1000)" }}>
-        {known ? on : "--"}
-      </text>
+      {showValue && (
+        <text x="22" y="26" textAnchor="middle" style={{ font: "800 14px 'Avenir Next',sans-serif", fill: "var(--gray-1000)" }}>
+          {known ? on : "--"}
+        </text>
+      )}
     </svg>
   );
 }
