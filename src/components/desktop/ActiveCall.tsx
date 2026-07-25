@@ -5,6 +5,7 @@ import type { CallFlowVM } from "../../hooks/useCallFlow";
 import Spinner from "../Spinner";
 import BriefingCardBody from "./BriefingCardBody";
 import ScriptTimeline from "./ScriptTimeline";
+import EmotionBar from "./EmotionBar";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
@@ -173,22 +174,28 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <span style={css("font:600 14px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
           </span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          <span style={css("display:flex;align-items:center;gap:7px")} title="고객 감정온도">
+          {/* 감정온도 — 카드와 같은 언어로 맞춘다. 신호등(점 3개)은 카드·접수 화면에서 이미
+              그라데이션 축(EmotionBar)으로 바꿨는데 알약만 점으로 남아 있어, 같은 값이 화면마다
+              다른 그림으로 보였다. 여기는 자리가 좁으니 축을 짧게(56px) 두고 °값을 함께 세운다. */}
+          <span style={css("display:flex;align-items:center;gap:8px")} title="고객 감정온도 — 눈금은 평소 기준선">
             <span style={css("font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
-            <span className="lampdots">
-              <i className={"g" + (vm.prepEmotionBars === 1 ? " lit" : "")} />
-              <i className={"a" + (vm.prepEmotionBars === 2 ? " lit" : "")} />
-              <i className={"r" + (vm.prepEmotionBars >= 3 ? " lit" : "")} />
+            <span style={css("width:56px;flex:none")}>
+              <EmotionBar
+                height={6}
+                pct={vm.prepTempC != null ? vm.prepTempPct : vm.prepTempBasePct}
+                basePct={vm.prepTempBasePct}
+                color={vm.prepEmotionBar}
+              />
             </span>
-            <span style={css("font:600 14px 'Avenir Next','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
+            <span style={css("font:600 14px 'Avenir Next','Pretendard',sans-serif;font-variant-numeric:tabular-nums;color:" + vm.prepEmotionFg)}>
+              {vm.prepTempC != null ? vm.prepTempC.toFixed(1) + "°" : "--"}
+            </span>
+            <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
           </span>
+          {/* 사고 징후는 뺐다 — 카드에서 이미 없앤 항목이라(사용자 지시) 알약에만 남으면
+              "카드엔 없는데 알약엔 있는" 상태가 된다. 위험도는 긴급 배지가 대신 말한다. */}
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          <span style={css("display:flex;align-items:center;gap:5px")}>
-            <span className="mi" style={css("font-size:15px;color:" + vm.prepRiskFg)}>gpp_maybe</span>
-            <span style={css("font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>사고 징후</span>
-            <span style={css("font:600 14px 'Avenir Next','Pretendard',sans-serif;color:" + vm.prepRiskFg)}>{vm.prepRiskLabel}</span>
-          </span>
-          <span style={css("font:500 15px 'Avenir Next','Pretendard',sans-serif")}>{vm.clockStr}</span>
+          <span style={css("font:500 15px 'Avenir Next','Pretendard',sans-serif;font-variant-numeric:tabular-nums")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           {/* 이관 예약 상태 — 조작 버튼은 아래 통화 컨트롤(음소거 왼쪽 cbtn)로 옮겼고, 여기선 상태만 */}
           {vm.transferReserved && (
@@ -524,7 +531,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
           {/* 안착 대상 — 준비 카드가 살짝 컸다가 딱 제자리로 가라앉는다(가장 먼저) */}
           <div className="card" style={css("flex:none;padding:0;overflow:hidden;animation:cardLand .78s cubic-bezier(.16,1,.3,1) both")}>
-            <BriefingCardBody vm={vm} showAuth={false} />
+            {/* 준비 단계 카드와 **보이는 것이 완전히 같아야 한다** — 같은 카드가 옮겨 온 것이지
+                다른 카드가 아니다. 예전엔 showAuth={false}로 인증 칩만 빼서, 통화로 넘어오는
+                순간 카드에서 한 칸이 사라져 "다른 카드"처럼 보였다. */}
+            <BriefingCardBody vm={vm} />
           </div>
 
           {/* 단계별 스크립트 — 아코디언. 초보 상담사용 기초 안내라 기본 접힘, 헤더 클릭으로 펼침 (카드 안착 후 아래서 등장) */}
@@ -542,6 +552,17 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 <span className="mi" style={css("font-size:18px;color:var(--gray-500);transition:transform .25s;transform:rotate(" + (scriptOpen ? 180 : 0) + "deg)")}>expand_more</span>
               </span>
             </div>
+            {/* 접혀 있어도 **첫 멘트는 늘 보인다** — 준비 카드와 같은 구성이다.
+                통화가 붙은 직후 상담사가 당장 필요한 건 "무슨 말로 열지" 한 문장이고, 그걸
+                펼쳐야 볼 수 있으면 정작 말해야 할 순간에 못 읽는다. 접힘 = 2~4단계만 감춘다. */}
+            {!scriptOpen && (
+              <div style={css("padding:0 16px 13px;display:flex;flex-direction:column;gap:5px")}>
+                <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-600)")}>첫 응대 문장</span>
+                <div style={css("font:500 14px/1.6 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000);word-break:keep-all")}>
+                  {vm.firstLine}
+                </div>
+              </div>
+            )}
             {scriptOpen && (
               <div style={css("overflow:auto;max-height:320px;padding:14px 16px;display:flex;flex-direction:column")}>
                 <ScriptTimeline steps={vm.steps} />

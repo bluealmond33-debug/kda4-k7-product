@@ -1,5 +1,6 @@
 import { css } from "../lib/css";
 import { BRAND_MARK_PNG } from "../assets/brandMark";
+import { BRAND_LOCKUP_PNG, BRAND_LOCKUP_RATIO } from "../assets/brandLockup";
 
 const MARK_W = 186, MARK_H = 173; // 공식 아트워크 원본 비율
 
@@ -56,49 +57,25 @@ export function BrandFace({
 }
 
 /**
- * 심볼 + KARI-NA 워드마크 가로 락업. 워드마크는 Avenir Next(라틴 주서체)로 조판하고
- * 공식 로고처럼 자간을 넓게 준다. tagline을 켜면 'Response Innovation'이 아래 붙는다.
+ * 심볼 + 워드마크 가로 락업 — **공식 아트워크 이미지 그대로** 쓴다.
+ *
+ * 예전에는 심볼(마스크) 옆에 "KARI-NA"를 Avenir Next로 조판해 붙였다. 자간을 흉내 내도 실제
+ * 로고와 자형·굵기가 달라서, 같은 화면에 진짜 락업(카드 헤더)과 나란히 놓이면 두 로고가
+ * 서로 다르게 보였다. 브랜드는 한 벌만 있어야 하므로 여기도 원본 PNG를 쓴다.
+ *
+ * 원본이 이미 파란 심볼 + 검정 워드마크 + 태그라인 3단이므로 색·태그라인 옵션이 없다.
+ * 색을 칠해야 하는 자리(어두운 면 위 흰 로고 등)는 워드마크 없이 BrandSymbol을 쓴다 —
+ * 그쪽은 알파 마스크라 어떤 색이든 칠할 수 있다.
  */
-export default function BrandLogo({
-  size = 22,
-  color,
-  symbolColor,
-  tagline = false,
-  wordmark = true,
-}: {
-  size?: number;
-  /** 워드마크(KARI-NA) 잉크. 공식 락업은 검정(--gray-1000) */
-  color?: string;
-  /** 심볼 색을 워드마크와 다르게 줄 때(공식 = 파란 심볼 + 검정 워드마크). 없으면 color를 따른다 */
-  symbolColor?: string;
-  tagline?: boolean;
-  wordmark?: boolean;
-}) {
-  const ink = color ?? "currentColor";
-  if (!wordmark) return <BrandSymbol size={size} color={symbolColor ?? color} />;
+export default function BrandLogo({ size = 22 }: { size?: number }) {
+  // size = 심볼 높이 기준. 락업은 심볼보다 세로가 조금 낮으므로(태그라인 포함 정렬)
+  // 시각적으로 같은 무게가 되도록 1.28배로 세운다.
+  const h = Math.round(size * 1.28);
   return (
-    <span style={css("display:inline-flex;align-items:center;gap:" + Math.round(size * 0.42) + "px")}>
-      <BrandSymbol size={size} color={symbolColor ?? color} />
-      <span style={css("display:flex;flex-direction:column;gap:1px")}>
-        <span
-          style={css(
-            "font:500 " + Math.round(size * 0.92) + "px 'Avenir Next','Pretendard',sans-serif;letter-spacing:" +
-              (size * 0.055).toFixed(2) + "px;line-height:1;color:" + ink
-          )}
-        >
-          KARI-NA
-        </span>
-        {tagline && (
-          <span
-            style={css(
-              "font:400 " + Math.round(size * 0.3) + "px 'Avenir Next','Pretendard',sans-serif;letter-spacing:" +
-                (size * 0.06).toFixed(2) + "px;line-height:1;color:" + ink + ";opacity:.72"
-            )}
-          >
-            Response Innovation
-          </span>
-        )}
-      </span>
-    </span>
+    <img
+      src={BRAND_LOCKUP_PNG}
+      alt="KARI-NA · Response Innovation"
+      style={{ display: "block", flex: "none", height: h, width: h * BRAND_LOCKUP_RATIO }}
+    />
   );
 }
