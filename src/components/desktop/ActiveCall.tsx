@@ -232,24 +232,27 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               {transferMenu && (
                 <>
                   <span onClick={() => setTransferMenu(false)} style={css("position:fixed;inset:0;z-index:40")} />
-                  <div style={css("position:absolute;left:0;top:calc(100% + 6px);z-index:41;width:252px;background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);overflow:hidden")}>
-                    <div style={css("padding:9px 13px 7px;font:700 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);border-bottom:1px solid var(--gray-200)")}>이관 부서 선택 · 종료 시 예약</div>
-                    {vm.transferReserved && (
-                      <div onClick={() => { vm.toggleTransferReserve(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-100);color:var(--red-800)")}>
-                        <span className="mi" style={css("font-size:15px")}>close</span>
-                        <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif")}>이관 예약 취소 · {vm.transferTarget ?? vm.suggestedDept}</span>
-                      </div>
-                    )}
-                    <div onClick={() => { vm.reserveTransfer(); setTransferMenu(false); }} className="memorow" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--gray-100)")}>
-                      <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
-                      <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>AI 추천 — {vm.suggestedDept}</span>
+                  {/* 팝오버 — 꼬리로 이관 버튼과 이어 붙인다(접수 카드의 이관 창과 같은 규칙) */}
+                  <div style={css("position:absolute;left:0;top:calc(100% + 8px);z-index:41;width:252px")}>
+                    <div style={css("background:var(--onair-surface);border-radius:10px;box-shadow:var(--sh-modal);overflow:hidden")}>
+                      <div style={css("padding:9px 13px 7px;font:700 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);border-bottom:1px solid var(--gray-200)")}>어느 부서로 넘길까요 · 종료 시 이관</div>
+                      {/* AI 추천 행 없음 — 이 버튼을 눌렀다는 건 AI 배정이 틀렸다고 본 것이다.
+                          거기서 또 AI 추천을 내밀 이유가 없다. 상담원이 직접 고른다. */}
+                      {vm.transferDepts.map((d) => (
+                        <div key={d.name} onClick={() => { vm.reserveTransfer(d.name); setTransferMenu(false); }} className="deptrow" style={css("display:flex;flex-direction:column;gap:1px;padding:9px 13px;cursor:pointer")}>
+                          <span style={css("display:flex;align-items:center;gap:6px;font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name}<span style={css("font:400 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-500)")}>{d.state}</span></span>
+                          <span style={css("font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
+                        </div>
+                      ))}
+                      {vm.transferReserved && (
+                        <div onClick={() => { vm.toggleTransferReserve(); setTransferMenu(false); }} className="deptrow-quiet" style={css("display:flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;border-top:1px solid var(--gray-200);color:var(--red-800)")}>
+                          <span className="mi" style={css("font-size:15px")}>close</span>
+                          <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif")}>이관 예약 취소 · {vm.transferTarget ?? vm.suggestedDept}</span>
+                        </div>
+                      )}
                     </div>
-                    {vm.transferDepts.map((d) => (
-                      <div key={d.name} onClick={() => { vm.reserveTransfer(d.name); setTransferMenu(false); }} className="memorow" style={css("display:flex;flex-direction:column;gap:1px;padding:8px 13px;cursor:pointer")}>
-                        <span style={css("display:flex;align-items:center;gap:6px;font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{d.name}<span style={css("font:400 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-500)")}>{d.state}</span></span>
-                        <span style={css("font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{d.desc}</span>
-                      </div>
-                    ))}
+                    {/* 꼬리 — 위쪽 이관 버튼을 향해 */}
+                    <span style={css("position:absolute;left:14px;top:-5px;width:11px;height:11px;background:var(--onair-surface);transform:rotate(45deg);border-radius:2px 0 0 0")} />
                   </div>
                 </>
               )}
@@ -660,12 +663,25 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               )}
             </div>
 
-            {/* 실시간 추천 검색어 — 통화에서 언급된 규정 용어만, 나온 순서대로 하나씩 나타난다.
-                누르면 그 용어로 즉시 검색, 다시 누르면 해제. 언급 전에는 줄 자체가 없다. */}
+            {/* 실시간 추천 검색어 — 근거를 라벨에 그대로 적는다.
+                · 백엔드 RAG가 고른 용어면 "AI 추천 용어"
+                · 백엔드 off면 **고객이 실제로 말한 문장에 나온 용어**만 → "고객 발화에서"
+                한때 "통화 중 언급"이라고만 적었는데, 실제로는 AI 접수 단계에서 말한 용어라
+                상담원과 통화하기 전부터 칩이 떠 있어 "통화도 안 했는데 왜 있지"가 됐다.
+                접수 발화를 통화에 들어와서 지우지는 않는다 — 그러면 근거가 사라진다.
+                누르면 그 용어로 즉시 검색, 다시 누르면 해제. 근거가 없으면 줄 자체가 없다. */}
             {vm.regSuggests.length > 0 && (
               <div style={css("display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--gray-200)")}>
-                <span style={css("display:inline-flex;align-items:center;gap:3px;font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);flex:none")}>
-                  <span className="mi" style={css("font-size:13px;color:var(--blue-700)")}>graphic_eq</span>통화 중 언급
+                <span
+                  title={
+                    vm.regSuggestSource === "backend"
+                      ? "관련 규정(RAG)이 고른 용어 — 관련도 순"
+                      : "고객이 실제로 말한 문장에 나온 용어만 · 접수 발화 포함 · 처음 나온 순서"
+                  }
+                  style={css("display:inline-flex;align-items:center;gap:3px;font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);flex:none")}
+                >
+                  <span className="mi" style={css("font-size:13px;color:var(--blue-700)")}>graphic_eq</span>
+                  {vm.regSuggestSource === "backend" ? "AI 추천 용어" : "고객 발화에서"}
                 </span>
                 {vm.regSuggests.map((s2) => {
                   const on = vm.regSearch === s2.term;

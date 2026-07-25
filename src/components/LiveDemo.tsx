@@ -26,6 +26,11 @@ import { SCREEN_ORDER } from "../tour/steps";
  */
 export type LiveDemoView = "full" | "phone" | "desktop";
 
+/** 통화 연결 후 전사 패널이 열리기까지 기다리는 시간.
+ *  준비 카드가 통화 화면 제자리로 안착하는 모션(cardDeal·consoleSettle 계열 0.45~0.6s)이
+ *  끝나고 한 박자 쉰 뒤에 열려야 '카드가 앉았다 → 대화가 열렸다' 두 사건으로 읽힌다. */
+const SPLIT_DELAY_MS = 1100;
+
 export default function LiveDemo({
   view = "full",
   ...config
@@ -85,10 +90,20 @@ export default function LiveDemo({
 
   // 직원 분할 뷰 — 통화 연결(active 진입)의 상승엣지에 자동 on. 리셋(idle)이면 off.
   // 상승엣지로만 켜므로, 통화 중 알약 토글로 끈 뒤 다시 켜지지 않는다(발표자 제어 유지).
+  //
+  // 한 박자 늦게 켠다(SPLIT_DELAY_MS): 통화 연결을 누르면 준비 카드가 통화 화면 제자리로
+  // 안착하는 모션이 먼저 돈다. 그 순간 전사 패널까지 같이 밀려 들어오면 두 움직임이 겹쳐
+  // 무엇이 어디로 가는지 읽히지 않는다. 카드가 앉는 걸 먼저 보여주고, 그다음 "대화 보기"가
+  // 열리는 순서로 두면 시연에서 두 사건이 따로 읽힌다.
   const wasActive = useRef(false);
   useEffect(() => {
-    if (view === "desktop" && vm.showActive && !wasActive.current) setDeskSplit(true);
+    if (view !== "desktop" || !vm.showActive || wasActive.current) {
+      wasActive.current = vm.showActive;
+      return;
+    }
     wasActive.current = vm.showActive;
+    const id = window.setTimeout(() => setDeskSplit(true), SPLIT_DELAY_MS);
+    return () => window.clearTimeout(id);
   }, [view, vm.showActive]);
   useEffect(() => {
     if (vm.phIdle) setDeskSplit(false);

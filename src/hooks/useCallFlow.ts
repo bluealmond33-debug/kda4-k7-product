@@ -15,8 +15,6 @@ import {
   TRANSFER_DEPTS,
   SUGGESTED_DEPT,
   REG_SUGGEST,
-  PREP_BUSINESS_CODE,
-  PREP_BUSINESS_CODE_LABEL,
   PREP_NEED_TAGS,
   ADMIN_QUEUE_POOL,
   type IncomingKind,
@@ -28,6 +26,7 @@ import {
   type Followup,
 } from "../data/demoContent";
 import { piiVerify, piiAccounts, piiHistory } from "../services/pii";
+import { addCallLog } from "../lib/callLog";
 import { emotionLabel } from "../services/emotion";
 import type { EmotionTemperatureLevel, IncidentRisk } from "../services/types";
 import {
@@ -248,13 +247,13 @@ const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; n
   },
   wrap: {
     step: "후처리",
-    title: "상담사의 유일한 산출물 = 초안 검증",
+    title: "상담사의 유일한 산출물 = 후처리 결과 검증",
     points: [
       "통화 종료와 동시에 시트가 자동으로 올라옵니다. 통화 화면은 배경에 남아 방금 내용을 다시 볼 수 있습니다.",
-      "왼쪽 상담 정보는 녹취·메모에서 자동으로 채워지고, 상담사는 필요한 것만 고칩니다(연필 아이콘). 오른쪽 초안도 클릭해 편집합니다.",
+      "왼쪽 상담 정보는 녹취·메모에서 자동으로 채워지고, 상담사는 필요한 것만 고칩니다(연필 아이콘). 오른쪽 후처리 결과도 클릭해 편집합니다.",
       "상담 유형·결과·후속조치는 이번 콜 유형에 맞춰 미리 채워집니다.",
     ],
-    next: "'초안 폐기·다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
+    next: "'저장 후 다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
   },
 };
 
@@ -295,6 +294,10 @@ type SpeakerTranscriptChunk = TranscriptChunk & {
 };
 
 type SummaryScope = "intake" | "full";
+
+/** 단계 바에서 '후처리'로 건너뛸 때 표시할 통화 길이(초).
+ *  후처리는 통화가 끝난 뒤의 화면이라 시계가 흐르면 안 된다 — 끝난 통화의 길이로 고정한다. */
+const WRAP_JUMP_CALL_SEC = 187;
 
 // 후속 조치 라벨 → Material Symbols 아이콘. 백엔드(EXAONE)가 라벨 문자열만 주므로
 // 아이콘은 프론트가 키워드로 고른다(픽스처 Followup과 같은 모양을 유지하기 위함).
@@ -506,6 +509,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   transferRef.current = { reserved: transferReserved, target: transferTarget };
   const wrapRef = useRef({ type: wrapType, result: wrapResult });
   wrapRef.current = { type: wrapType, result: wrapResult };
+  // 통화 시간 거울 — 종료 처리는 async 콜백에서 일어나 clock 상태가 오래된 값일 수 있다
+  const clockRef = useRef(0);
+  clockRef.current = clock;
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -1397,15 +1403,29 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           const endedBeforeAgent = ["connecting", "recording", "confirm", "prep"].includes(
             currentPhase
           );
-          const hasTranscript = transcript.current.some(
+          const finals = transcript.current.filter(
             (chunk) => chunk.isFinal && chunk.text.trim().length > 0
           );
+          const hasTranscript = finals.length > 0;
+          // 후처리 진입 게이트 — "상담사와 실제로 말이 오간 콜"에만 후처리를 연다.
+          //   진입 = 상담사 연결됨(active) + 상담사·고객 양쪽 발화 최소 1턴 + 종료 이벤트
+          // ARS 접수만 하고 끊은 콜은 녹취가 있어도 '상담'이 아니다 → 후처리를 열지 않는다.
+          // 화자 라벨이 없는 라이브 STT는 라벨 대신 발화 존재로 판단한다 — 라벨을 못 받는다는
+          // 이유로 정상 상담의 후처리가 막히면 그게 더 큰 사고다.
+          const labeled = finals.filter((c) => c.speaker);
+          const hadConversation = labeled.length
+            ? labeled.some((c) => c.speaker === "agent") &&
+              labeled.some((c) => c.speaker === "customer")
+            : hasTranscript;
+          const agentConnected = currentPhase === "active";
           const customerEnded =
             event.endedBy === "customer" ||
             event.endReason === "customer_hangup" ||
             event.endReason === "customer_disconnect" ||
             (!event.endedBy && !event.endReason && !endRequested.current);
-          if (endedBeforeAgent && !hasTranscript) {
+          // 미상담 종료 — 상담사와 말이 오가기 전에 끊긴 콜. 후처리를 열지 않고 내역에만 남긴다.
+          // (전에는 ARS 녹취만 있어도 후처리가 열려 "종료 안 했는데 넘어왔다"는 신고가 나왔다)
+          if (!agentConnected || !hadConversation) {
             // A LAN counselor event must close the admin record explicitly;
             // counselor demo.reset is intentionally not relay-authorized.
             demoBus.emit("call.ended", {
@@ -1414,16 +1434,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
               endReason: event.endReason ?? "ended_before_transcript",
               endedBy: event.endedBy,
             });
+            // 대기(idle) 같은 비통화 상태에서 들어온 종료 이벤트는 콜이 아니므로 남기지 않는다
+            if (endedBeforeAgent || agentConnected) {
+              addCallLog({
+                type: wrapRef.current.type,
+                status: "미상담 종료",
+                talk: fmt(clockRef.current),
+                result: customerEnded ? "고객 종료 · 상담 없음" : "상담 전 종료",
+              });
+            }
             realCallActiveRef.current = false;
             reset();
             return;
           }
-          if (currentPhase === "active" || (endedBeforeAgent && hasTranscript)) {
+          if (agentConnected) {
             clearAll();
-            if (endedBeforeAgent) {
-              setWrapResult(customerEnded ? "상담 중단 · 고객 종료" : "추가 확인 필요");
-              setFollowups([]);
-            }
             realCallActiveRef.current = false;
             transitionPhase("summarizing");
             setWrapSheetOpen(true);
@@ -1443,7 +1468,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
                 callId: LIVE_CALL_ID,
                 stage: "wrap",
                 status: "done",
-                detail: "고객·상담원 전체 대화 후처리 초안",
+                detail: "고객·상담원 전체 대화 후처리 결과",
               });
               demoBus.emit("call.ended", {
                 callId: LIVE_CALL_ID,
@@ -1718,16 +1743,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setSilenceLeft(0);
       setVerified(false);
       setAuthInput("");
-      startClock();
       if (n === 2) {
+        startClock();
         setPrepChecks(Array(PREP_LEN).fill(true));
         setWrapSheetOpen(false);
         setPhase("prep");
       } else if (n === 3) {
+        startClock();
         setPrepChecks(Array(PREP_LEN).fill(true)); // 유의사항 확인을 거친 상태로 진입
         setWrapSheetOpen(false);
         setPhase("active");
       } else {
+        // 후처리는 '통화가 끝난 뒤'에만 존재하는 화면이다. 여기로 건너뛸 때 시계를 계속
+        // 돌리면 통화가 아직 붙어 있는 것처럼 보인다(01:02가 흘러감) — 실제로는 끝난 상태다.
+        // 그래서 시계를 멈추고 끝난 통화의 길이로 고정한다(clearAll이 이미 인터벌을 껐다).
+        setClock(WRAP_JUMP_CALL_SEC);
         setPrepChecks(Array(PREP_LEN).fill(true));
         setWrapSheetOpen(true);
         setPhase("wrap");
@@ -2310,6 +2340,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     text: i === 0 ? adaptiveOpening : step.text,
   }));
 
+  // 후처리 결과 본문 기본값 — 화면(wrapSummaryDefault)과 저장(saveWrap)이 같은 문장을 써야 하므로
+  // 한 곳에서 만든다. 상담사가 직접 고쳤다면 summaryText.current가 이걸 대신한다.
+  const wrapSummaryText = [
+    // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
+    // v0 = 카드 요약 원문. 이미 "고객이…"로 시작하므로 접두사를 붙이면 "고객의 고객이" 중복이 된다
+    summaryVersion % 2 === 0
+      ? `${card.summary ?? summary?.headline ?? "상담 내용을 요약했습니다."}`
+      : `${SUMMARY_PROSE[incoming]}`,
+    `업무유형: ${card.business_type}.`,
+    `전달부서: ${card.department}.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return {
     // refs
     rootRef,
@@ -2384,6 +2428,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setMic,
     submitAudio,
     reset: requestReset,
+    /** 후처리 저장 — 처리 내역에 한 줄 남기고 대기 화면으로. '저장' 버튼이 실제로 저장한다.
+     *  콜백 예약 후속 조치가 붙어 있으면 상태를 '콜백 예약'으로 잡는다(내역 타임라인이 색으로 구분). */
+    saveWrap: () => {
+      addCallLog({
+        type: wrapType,
+        result: wrapResult,
+        status: followups.some((f) => f.icon === "event") ? "콜백 예약" : "후처리 완료",
+        talk: fmt(clock),
+        summary: (summaryText.current || wrapSummaryText).trim(),
+        followups: followups.map((f) => ({ icon: f.icon, label: f.label })),
+      });
+      requestReset();
+    },
     jumpToStep,
     startCall: customerLiveMode ? requestCustomerStart : startCall,
     answerCall,
@@ -2443,6 +2500,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // - 로컬 데모(백엔드 없이 시연): 통화 중이면 무조건 열린다. 고객이 #을 눌러 통화를 끝내는
     //   흐름을 보여줘야 하고, 합본 화면(surface="full")의 폰도 같이 눌려야 한다.
     //   이 값은 Phone.tsx에서만 쓰이고 Phone은 직원 전용 화면에선 렌더되지 않아 안전하다.
+    //   로컬 데모는 **전화를 건 순간부터**(connecting 포함) 켠다 — 실기기는 통화 화면이
+    //   뜨는 즉시 키패드를 누를 수 있고, 처음 몇 초만 흐릿하면 고장으로 보인다.
     customerKeypadEnabled:
       !mobileIntakePending &&
       (customerLiveMode
@@ -2450,7 +2509,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           realCallActiveRef.current &&
           mobileServerConnected &&
           (p === "recording" || p === "confirm" || p === "active")
-        : p === "recording" || p === "confirm" || p === "active" || p === "prep"),
+        : p === "connecting" ||
+          p === "recording" ||
+          p === "confirm" ||
+          p === "active" ||
+          p === "prep"),
     customerPressDigit: pressCustomerDigit,
     // desktop waiting
     showWaiting: ["idle", "connecting", "recording", "confirm"].includes(p),
@@ -2522,8 +2585,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepSge: deriveSge(card.incident_risk, card.department, incoming),
     prepBusinessType: card.business_type || "업무 유형 분석 중",
     // 3층 라우팅 체인 표시용 — 업무코드(3층)와 핵심 니즈 태그
-    prepBusinessCode: PREP_BUSINESS_CODE[incoming],
-    prepBusinessCodeLabel: PREP_BUSINESS_CODE_LABEL[incoming],
+    // 3층 업무코드 — **분류 결과(card.routing)에서 그대로 읽는다.**
+    // 예전엔 콜 유형별 상수(PREP_BUSINESS_CODE)를 찍어서, 백엔드가 분류에 실패해(routing=null)
+    // 아무것도 못 줘도 화면엔 늘 코드가 떠 있었다. "업무코드가 계속 G002"의 정체가 이거였다 —
+    // 폴백이 아니라 분류 결과와 무관한 값이었고, 그래서 분류 실패가 UI에서 보이지 않았다.
+    // 이제 실패는 실패로 보인다(null → '미분류'). 조용한 기본값으로 덮지 않는다.
+    prepBusinessCode: card.routing?.task_code ?? null,
+    prepBusinessCodeLabel: card.routing?.task_name ?? null,
     prepNeedTags: PREP_NEED_TAGS[incoming],
     // 라벨·색은 당근식 온도 밴드(36.5 기준)에서 나온다 — 온도·색·라벨·멘트가 한 소스로 일관.
     prepEmotionLabel:
@@ -2584,17 +2652,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     customerType: CUSTOMER.type,
     customerPhone: CUSTOMER.phoneMasked,
     inquiryLabel,
-    wrapSummaryDefault: [
-      // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
-      // v0 = 카드 요약 원문. 이미 "고객이…"로 시작하므로 접두사를 붙이면 "고객의 고객이" 중복이 된다
-      summaryVersion % 2 === 0
-        ? `${card.summary ?? summary?.headline ?? "상담 내용을 요약했습니다."}`
-        : `${SUMMARY_PROSE[incoming]}`,
-      `업무유형: ${card.business_type}.`,
-      `전달부서: ${card.department}.`,
-    ]
-      .filter(Boolean)
-      .join(" "),
+    wrapSummaryDefault: wrapSummaryText,
     summaryVersion,
     regenerating,
     regenerateSummary: () => {
@@ -2741,8 +2799,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     clearRegSearch: () => setRegSearch(""),
     // 알약 클릭 = 그 용어로 바로 검색 (같은 걸 다시 누르면 해제)
     applyRegSearch: (q: string) => setRegSearch((cur) => (cur === q ? "" : q)),
-    // 실시간 추천 검색어 — 통화에서 실제 나온 용어(hot)를 앞으로 끌어올린다.
-    // liveTranscriptLines·liveCaption 이 state라 발화가 쌓일수록 순서·점등이 갱신된다.
+    /** 추천 검색어의 근거 — 화면이 라벨을 정직하게 붙일 수 있게 출처를 밝힌다.
+     *  "통화 중 언급"이라고만 적었더니, 실제로는 **AI 접수 단계에서 고객이 말한** 용어인데
+     *  상담원과 통화하기 전부터 칩이 떠 있어 오해를 샀다. 기준은 아래 regSuggests 참조. */
+    regSuggestSource: (backendRegSuggests && backendRegSuggests.length ? "backend" : "spoken") as
+      | "backend"
+      | "spoken",
+    /**
+     * 추천 검색어 기준 — 두 단계로만 정한다. 추측으로 채우지 않는다.
+     *  1) 백엔드 RAG가 고른 용어가 있으면 그것을 그대로 쓴다(무엇이 관련 규정인지는 백엔드 몫).
+     *  2) 없으면(백엔드 off) **고객이 실제로 말한 문장에 등장한 용어만** 처음 나온 순서대로.
+     *     여기서 '말한 문장'은 AI 접수 발화 + 상담원 통화 발화를 모두 포함한다 — 접수에서 이미
+     *     말한 용어를 통화에 들어와서 지우면 상담사가 근거를 잃는다.
+     *  3) 둘 다 비면 줄 자체를 그리지 않는다(빈 칩이나 기본값을 만들지 않는다).
+     */
     regSuggests: (() => {
       // 1순위: 백엔드 RAG가 고른 관련 규정(연결 시). 어떤 용어인지는 백엔드가 결정한다.
       if (backendRegSuggests && backendRegSuggests.length) return backendRegSuggests;
@@ -2828,16 +2898,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       remove: () => removeFollowup(i),
     })),
     noFollowups: followups.length === 0,
-    // 이미 추가된 추천은 숨긴다 — x로 빼면 다시 나타난다
+    // 되살릴 수 있는 후보 = (기본 조치 ∪ 추천 조치) − 지금 붙어 있는 것.
+    // 기본 조치까지 후보에 넣는 게 핵심이다: 추천만 후보로 두면 x로 지운 기본 조치는
+    // 영영 되살릴 길이 없어 실수 한 번이 복구 불가가 된다. 라벨로 중복을 걸러 기본 → 추천
+    // 순서를 유지하므로, 지웠다 되살려도 칩이 튀지 않고 늘 같은 자리에 나타난다.
     recoFollowups: EXPLICIT_LIVE_CALL_ID
       ? []
-      : WRAP_DEFAULTS[incoming].recommended.filter(
-          (f) => !followups.some((x) => x.label === f.label)
-        ).map((f) => ({
-          icon: f.icon,
-          label: f.label,
-          add: () => addFollowup(f),
-        })),
+      : (() => {
+          const preset = WRAP_DEFAULTS[incoming];
+          const pool: Followup[] = [];
+          preset.followups.concat(preset.recommended).forEach((f) => {
+            if (!pool.some((x) => x.label === f.label)) pool.push(f);
+          });
+          return pool
+            .filter((f) => !followups.some((x) => x.label === f.label))
+            .map((f) => ({
+              icon: f.icon,
+              label: f.label,
+              add: () => addFollowup(f),
+            }));
+        })(),
     onSummary: (e: React.FormEvent<HTMLDivElement>) => {
       summaryText.current = (e.target as HTMLElement).innerText;
     },

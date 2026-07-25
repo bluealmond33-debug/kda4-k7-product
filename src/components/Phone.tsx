@@ -22,29 +22,38 @@ import { useMic } from "../lib/mic";
  *  끝나지만(시연 중 오조작 방지), 안내 문구는 ARS 관례대로 우물정자를 권한다. */
 const END_CALL_DIGIT = "#";
 
-/* ── iOS 26(Liquid Glass) 라이트 모드 톤 — 폰 세 화면이 같은 재질을 공유한다 ───────────────
-   유리는 '반투명 흰색 + 배경 블러 + 위쪽 하이라이트 + 부드러운 그림자' 네 겹으로 만든다.
-   중요: 배경에 옅은 색 얼룩이 있어야 유리가 유리로 보인다 — 완전한 단색 위에선 블러할 것이
-   없어 그냥 흰 반투명 원처럼 보인다. 그래서 통화/키패드 배경에 아주 옅은 브랜드 블루를 깐다. */
+/* ── 화면별 톤 — 실기기를 그대로 따른다 ─────────────────────────────────────────────
+   · 다이얼·문자 = 라이트(흰 배경 + 검은 글씨)
+   · 통화·키패드 = 웜 그라데이션(연락처 배경) + 흰 글씨 + 유리 버튼
+   실기기가 이렇게 나뉘어 있다. 통화 화면까지 라이트로 바꿔 봤더니 유리가 비칠 색이 없어
+   유리가 유리로 보이지 않았다 — 유리는 뒤에 색이 있을 때만 유리다. */
 const INK = "#1c1c1e";
 const INK_SUB = "#71757f";
 const RED_END = "#f0453a";
 
-/** 통화·키패드 배경 — 라이트 그라데이션 + 옅은 브랜드 블루 얼룩(유리가 비칠 재료) */
-const GLASS_BG =
-  "background:" +
-  "radial-gradient(115% 68% at 80% 4%,rgba(47,95,196,.20),transparent 58%)," +
-  "radial-gradient(95% 58% at 8% 96%,rgba(47,95,196,.13),transparent 60%)," +
-  "linear-gradient(168deg,#f9fafc 0%,#f0f3f8 40%,#e6ecf6 72%,#dde5f2 100%)";
+/** 통화·키패드 화면의 잉크 — 웜 배경 위라 흰 글씨다 */
+const ON_WARM = "#fff";
+const ON_WARM_SUB = "rgba(255,255,255,.62)";
 
-/** 유리 원/판 — pressed면 더 하얗게(누른 게 보이도록) */
+/**
+ * 통화·키패드 배경 — 실기기와 같은 웜 그라데이션.
+ *
+ * 실기기는 통화가 붙으면 연락처 배경(포스터/월페이퍼)을 흐려서 깔고, 그 위에 유리 버튼을
+ * 얹는다. 다이얼 화면만 라이트 UI다 — 그래서 여기 둘만 웜이고 다이얼·문자는 라이트로 둔다.
+ * 한때 이 둘도 라이트로 바꿨는데, 유리가 비칠 색이 없어 그냥 흰 반투명 원처럼 보였다.
+ */
+const GLASS_BG =
+  "background:linear-gradient(168deg,#63503f 0%,#5d4536 26%,#6e4531 52%,#8a3b28 76%,#792d20 100%)";
+
+/** 유리 원/판(웜 배경 위) — 배경이 비쳐 보이는 반투명 흰색. pressed면 밝아진다.
+ *  테두리는 위쪽만 살짝 밝게 — 유리 두께가 생겨 배경에서 떠 보인다(발광은 쓰지 않는다). */
 function glassSkin(pressed = false) {
   return (
     "background:rgba(255,255,255,." +
-    (pressed ? "90" : "52") +
-    ");backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)" +
-    ";border:1px solid rgba(255,255,255,.72)" +
-    ";box-shadow:inset 0 1px 1.5px rgba(255,255,255,.9),0 8px 20px rgba(26,38,64,.10)"
+    (pressed ? "38" : "17") +
+    ");backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%)" +
+    ";border:1px solid rgba(255,255,255,.20)" +
+    ";box-shadow:inset 0 1px 1px rgba(255,255,255,.28)"
   );
 }
 
@@ -87,6 +96,10 @@ function KeyButton({
   const [pressed, setPressed] = useState(false);
   const symbol = k.d === "*" || k.d === "#";
   const sub = k.sub.trim();
+  // 다이얼(흰 원)은 검은 글씨, 인콜 유리(웜 배경)는 흰 글씨
+  const glass = variant === "glass";
+  const digitInk = glass ? ON_WARM : INK;
+  const subInk = glass ? "rgba(255,255,255,.72)" : INK_SUB;
   return (
     <div
       onPointerDown={() => setPressed(true)}
@@ -99,13 +112,13 @@ function KeyButton({
           "px;height:" +
           size +
           "px;" +
-          (variant === "glass" ? glassSkin(pressed) : dialSkin(pressed))
+          (glass ? glassSkin(pressed) : dialSkin(pressed))
       )}
     >
       <span
         style={css(
           "position:absolute;left:0;right:0;text-align:center;font-weight:400;line-height:1;transform:translateY(-50%);color:" +
-            INK +
+            digitInk +
             ";font-size:" +
             Math.round(size * 0.465) +
             "px;top:" +
@@ -118,7 +131,7 @@ function KeyButton({
         <span
           style={css(
             "position:absolute;left:0;right:0;text-align:center;font-weight:700;letter-spacing:2px;text-indent:2px;color:" +
-              INK_SUB +
+              subInk +
               ";font-size:" +
               (size >= 80 ? "10.5" : "9.5") +
               "px;bottom:" +
@@ -320,8 +333,14 @@ function SmsScreen({ vm }: { vm: CallFlowVM }) {
             {CUSTOMER.name}님, 방금 상담해 주셔서 감사합니다.
             {"\n\n접수번호 9F2A\n담당 부서 "}
             {vm.prepRoutingTitle}
-            {"\n업무 "}
-            {vm.prepBusinessCodeLabel} ({vm.prepBusinessCode})
+            {/* 업무는 분류가 됐을 때만 적는다 — 고객 문자에 '미분류'를 보낼 수는 없다.
+                내부 진단은 상담사 화면의 몫이고, 여기선 줄을 통째로 뺀다. */}
+            {vm.prepBusinessCode && (
+              <>
+                {"\n업무 "}
+                {vm.prepBusinessCodeLabel} ({vm.prepBusinessCode})
+              </>
+            )}
             {"\n\n상담 내용·처리 결과 확인\n"}
             <span style={css(LINK)}>https://k7.kiwoom.com/c/9F2A</span>
             <BubbleTail />
@@ -493,31 +512,17 @@ const CALL_CONTROLS: {
   { icon: "keypad", label: "키패드" },
 ];
 
-/** FaceTime 버튼 글리프 — 실기기(IMG_7571): 카메라 본체 + 오른쪽 렌즈 + 본체에 '?' 녹아웃.
- *  (iOS가 FaceTime 미지원 번호에 표시하는 아이콘). mask로 '?'를 뚫어 배경이 비치게 한다. */
+/** FaceTime 버튼 글리프 — 비디오 카메라(본체 + 오른쪽 렌즈).
+ *
+ *  실기기는 FaceTime을 못 쓰는 번호에 본체에 '?'를 뚫은 아이콘을 쓰는데, 그대로 옮겨 보니
+ *  버튼 안에서 '물음표 달린 검은 덩어리'로 보여 무슨 기능인지 오히려 안 읽혔다. 시연에서
+ *  중요한 건 "여기가 FaceTime 자리"이므로 통상의 비디오 카메라 글리프로 바꿨다. */
 function FaceTimeGlyph({ size = 38, color = "#fff" }: { size?: number; color?: string }) {
-  const mid = "ftcam"; // 단일 인스턴스라 고정 id로 충분
   return (
-    <svg width={size} height={size} viewBox="0 0 56 56" aria-hidden>
-      <defs>
-        <mask id={mid}>
-          <rect width="56" height="56" fill="black" />
-          <rect x="8" y="18" width="29" height="21" rx="6.5" fill="white" />
-          <polygon points="39,24 49,18 49,38 39,32" fill="white" />
-          <text
-            x="21.5"
-            y="34.5"
-            fontSize="17"
-            fontWeight="800"
-            textAnchor="middle"
-            fill="black"
-            fontFamily="'Avenir Next','Pretendard',system-ui,sans-serif"
-          >
-            ?
-          </text>
-        </mask>
-      </defs>
-      <rect width="56" height="56" fill={color} mask={`url(#${mid})`} />
+    <svg width={size} height={size} viewBox="0 0 56 56" fill={color} aria-hidden>
+      <rect x="7" y="17" width="30" height="22" rx="7" />
+      {/* 렌즈 — 본체와 살짝 띄워 두 덩이로 읽히게(붙이면 화살표처럼 보인다) */}
+      <path d="M40 24.6 L49.2 18.6 A1.6 1.6 0 0 1 51.5 20 v16 a1.6 1.6 0 0 1 -2.3 1.4 L40 31.4 Z" />
     </svg>
   );
 }
@@ -538,14 +543,14 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
   }
 
   return (
-    <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;color:" + INK + ";" + GLASS_BG)}>
-      <StatusBar />
+    <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;color:" + ON_WARM + ";" + GLASS_BG)}>
+      <StatusBar light={false} />
       <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;padding:0 24px 30px;min-height:0")}>
         {/* 타이머 → 이름 — 실기기 순서. 타이머는 통화 누르자마자 00:01부터 */}
-        <div style={css("margin-top:56px;font-size:23px;font-weight:400;letter-spacing:.5px;color:" + INK_SUB)}>
+        <div style={css("margin-top:56px;font-size:23px;font-weight:400;letter-spacing:.5px;color:" + ON_WARM_SUB)}>
           {vm.phEnded ? "통화 종료" : vm.phoneClockStr}
         </div>
-        <div style={css("font-size:32px;font-weight:700;letter-spacing:-.4px;margin-top:5px;color:" + INK)}>
+        <div style={css("font-size:32px;font-weight:700;letter-spacing:-.4px;margin-top:5px;color:" + ON_WARM)}>
           키움은행 고객센터
         </div>
 
@@ -554,7 +559,7 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
         {!clean && (
           <div style={css("display:flex;align-items:center;gap:7px;margin-top:11px")}>
             <span style={css("font-size:10.5px;font-weight:700;letter-spacing:.4px;border-radius:9999px;padding:2px 8px;color:#3f5aa6;border:1px solid rgba(47,95,196,.3);background:rgba(255,255,255,.55)")}>시연 표기</span>
-            <span style={css("display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:" + INK_SUB)}>
+            <span style={css("display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:" + ON_WARM_SUB)}>
               {vm.showRecDot && (
                 <span style={css("width:8px;height:8px;border-radius:9999px;background:#ff453a;animation:recBlink 1.1s infinite")} />
               )}
@@ -577,7 +582,7 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
         )}
 
         {vm.phEnded && (
-          <div style={css("display:inline-flex;align-items:center;gap:7px;font-size:14px;margin-bottom:14px;color:" + INK_SUB)}>
+          <div style={css("display:inline-flex;align-items:center;gap:7px;font-size:14px;margin-bottom:14px;color:" + ON_WARM_SUB)}>
             <span className="mi" style={css("font-size:20px")}>check_circle</span>
             통화가 종료되었습니다
           </div>
@@ -615,17 +620,17 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
                   )}
                 >
                   {c.icon === "facetime" ? (
-                    <FaceTimeGlyph size={c.size ?? 38} color={INK} />
+                    <FaceTimeGlyph size={c.size ?? 38} color={ON_WARM} />
                   ) : (
                     <AppleIcon
                       name={c.icon}
                       size={c.size ?? 36}
-                      color={c.end ? "#fff" : INK}
+                      color={c.end ? "#fff" : ON_WARM}
                       style={c.dy ? { transform: `translateY(${c.dy}px)` } : undefined}
                     />
                   )}
                 </span>
-                <span style={css("font-size:13px;font-weight:500;color:" + INK)}>{c.label}</span>
+                <span style={css("font-size:13px;font-weight:500;color:" + ON_WARM)}>{c.label}</span>
               </div>
             ))}
           </div>
@@ -637,7 +642,7 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
           </div>
         )}
       </div>
-      <HomeIndicator />
+      <HomeIndicator light={false} />
     </div>
   );
 }
@@ -670,20 +675,24 @@ function CustomerKeypadScreen({
   return (
     // 배경을 통화 화면과 똑같이 깐다 — 전엔 배경이 없어 폰의 검은 스크린이 그대로 비쳐
     // 어두운 바탕에 어두운 제목이 얹혀 글씨가 안 보였다(그게 '디자인이 이상한' 원인).
-    <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;color:" + INK + ";" + GLASS_BG)}>
-      <StatusBar />
+    <div style={css("position:absolute;inset:0;display:flex;flex-direction:column;color:" + ON_WARM + ";" + GLASS_BG)}>
+      <StatusBar light={false} />
       {/* 상대 정보 — 실기기는 키패드를 열어도 상단 상대 정보가 그대로 남는다(닫기 X는 없다).
           닫기는 아래 '숨기기'가 맡는다. */}
       <div style={css("text-align:center;margin-top:52px;padding:0 24px")}>
-        <div style={css("font-size:23px;font-weight:400;letter-spacing:.5px;color:" + INK_SUB)}>{vm.phoneClockStr}</div>
-        <div style={css("font-size:27px;font-weight:700;letter-spacing:-.4px;margin-top:4px;color:" + INK)}>키움은행 고객센터</div>
-        <div style={css("font-size:13.5px;margin-top:7px;color:" + INK_SUB)}>{prompt}</div>
+        <div style={css("font-size:23px;font-weight:400;letter-spacing:.5px;color:" + ON_WARM_SUB)}>{vm.phoneClockStr}</div>
+        <div style={css("font-size:27px;font-weight:700;letter-spacing:-.4px;margin-top:4px;color:" + ON_WARM)}>키움은행 고객센터</div>
+        <div style={css("font-size:13.5px;margin-top:7px;color:" + ON_WARM_SUB)}>{prompt}</div>
       </div>
       {/* 누른 번호 — 실기기는 상대 정보 자리에 입력이 크게 쌓인다 */}
-      <div style={css("height:46px;display:flex;align-items:center;justify-content:center;font-size:29px;font-weight:400;letter-spacing:8px;text-indent:8px;color:" + INK)}>
+      <div style={css("height:46px;display:flex;align-items:center;justify-content:center;font-size:29px;font-weight:400;letter-spacing:8px;text-indent:8px;color:" + ON_WARM)}>
         {vm.arsDigits || " "}
       </div>
-      <div style={css("display:grid;grid-template-columns:repeat(3,78px);justify-content:center;column-gap:26px;row-gap:15px;opacity:" + (vm.customerKeypadEnabled ? "1" : ".45"))}>
+      {/* 키패드는 화면 중간보다 조금 아래에 앉는다 — 실기기 비율은 상대 정보와 키패드 사이가
+          키패드와 종료 버튼 사이보다 두 배쯤 넓다(2:1). 위쪽에 붙여 두면 화면 아래가 텅 빈
+          것처럼 보이고 엄지가 닿는 자리와도 어긋난다. */}
+      <div style={css("flex:2")} />
+      <div style={css("display:grid;grid-template-columns:repeat(3,78px);justify-content:center;column-gap:26px;row-gap:15px;flex:none;opacity:" + (vm.customerKeypadEnabled ? "1" : ".45"))}>
         {KEYS.map((key) => (
           <KeyButton
             key={key.d}
@@ -694,8 +703,9 @@ function CustomerKeypadScreen({
           />
         ))}
       </div>
+      <div style={css("flex:1")} />
       {/* 하단 — 빨간 종료가 가운데, 오른쪽에 '숨기기'(실기기의 Hide Keypad) */}
-      <div style={css("margin-top:auto;padding-bottom:38px;display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center")}>
+      <div style={css("flex:none;padding-bottom:38px;display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;align-items:center")}>
         <span />
         <div
           onClick={vm.endCall}
@@ -705,12 +715,12 @@ function CustomerKeypadScreen({
         </div>
         <span
           onClick={close}
-          style={css("justify-self:center;font-size:14.5px;font-weight:500;cursor:pointer;color:" + INK)}
+          style={css("justify-self:center;font-size:14.5px;font-weight:500;cursor:pointer;color:" + ON_WARM)}
         >
           숨기기
         </span>
       </div>
-      <HomeIndicator />
+      <HomeIndicator light={false} />
     </div>
   );
 }
