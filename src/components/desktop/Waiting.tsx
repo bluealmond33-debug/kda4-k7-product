@@ -2,6 +2,7 @@ import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import Standby from "./Standby";
 import Spinner from "../Spinner";
+import EmotionBar from "./EmotionBar";
 
 const FONT = "'Avenir Next','Pretendard',system-ui,sans-serif";
 
@@ -61,27 +62,32 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
           })}
         </div>
 
-        {/* 상태 — 감정온도 · 무음/수신 */}
-        <div style={css("display:flex;align-items:center;gap:12px;padding-top:11px;border-top:1px solid var(--gray-200)")}>
-          <span style={css("display:flex;align-items:center;gap:7px")} title="실시간 감정온도">
+        {/* 상태 — 감정온도(그라데이션 축) · 무음/수신.
+            신호등(점 3개)을 축 하나로 바꿨다: 점은 세 상태 중 하나만 말하는데, 감정은 계단이
+            아니라 눈금 위를 오가는 값이고 상담사가 알아야 하는 건 '지금 어디쯤이며 평소보다
+            얼마나 올라왔는가'다. 준비 카드의 온도계와 같은 축·같은 마커를 쓴다(EmotionBar). */}
+        <div style={css("display:flex;flex-direction:column;gap:7px;padding-top:11px;border-top:1px solid var(--gray-200)")}>
+          <div style={css("display:flex;align-items:center;gap:7px")}>
             <span style={css("font:600 10.5px " + FONT + ";color:var(--gray-600)")}>감정온도</span>
-            <span className="lampdots">
-              <i className={"g" + (vm.emo === 1 ? " lit" : "")} />
-              <i className={"a" + (vm.emo === 2 ? " lit" : "")} />
-              <i className={"r" + (vm.emo >= 3 ? " lit" : "")} />
-            </span>
-            <span style={css("font:600 11px " + FONT + ";color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--gray-700)"))}>
+            <span style={css("font:700 11px " + FONT + ";color:" + (vm.emo >= 3 ? "var(--red-900)" : vm.emo >= 1 ? "var(--amber-900)" : "var(--green-900)"))}>
               {vm.emo >= 3 ? "고조" : vm.emo >= 1 ? "상승" : "안정"}
             </span>
-          </span>
-          <span style={css("flex:1")} />
-          <span style={css("font:600 11px " + FONT + ";color:var(--gray-600)")}>
-            {vm.silenceLeft > 0 ? (
-              <>무음 <span style={css("color:var(--gray-1000);font-variant-numeric:tabular-nums")}>{vm.silenceLeft}s</span></>
-            ) : (
-              "수신 중"
-            )}
-          </span>
+            <span style={css("flex:1")} />
+            <span style={css("font:600 11px " + FONT + ";color:var(--gray-600)")}>
+              {vm.silenceLeft > 0 ? (
+                <>무음 <span style={css("color:var(--gray-1000);font-variant-numeric:tabular-nums")}>{vm.silenceLeft}s</span></>
+              ) : (
+                "수신 중"
+              )}
+            </span>
+          </div>
+          <EmotionBar
+            title="실시간 감정온도 — 흰 눈금은 평소 기준선"
+            height={7}
+            pct={vm.prepTempC != null ? vm.prepTempPct : vm.prepTempBasePct}
+            basePct={vm.prepTempBasePct}
+            color={vm.prepEmotionBar}
+          />
         </div>
       </div>
     </div>

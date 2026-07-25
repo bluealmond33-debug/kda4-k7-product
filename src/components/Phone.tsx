@@ -290,19 +290,24 @@ function SmsScreen({ vm }: { vm: CallFlowVM }) {
       {/* 상태바와 붙지 않게 위를 띄우고, ‹ 알약은 아바타와 세로 중앙을 맞춘다(실기기 배치).
           left도 상태바 시계(34px)와 비슷한 눈금으로 물려 모서리에 붙지 않게 한다. */}
       <div style={css("position:relative;display:flex;flex-direction:column;align-items:center;padding:18px 0 12px")}>
+        {/* ‹ + 안읽음 배지 — 실기기처럼 손가락으로 누를 만한 두께(높이 38)를 준다.
+            padding만 키우면 배지가 알약 안에서 위아래로 끼여 얇아 보이므로 높이를 직접 잡고
+            배지도 같이 키운다(알약 높이의 절반쯤). */}
         <div
           onClick={vm.startCall}
-          style={css("position:absolute;left:24px;top:27px;display:flex;align-items:center;gap:5px;background:#eeeef0;border-radius:9999px;padding:6px 10px 6px 8px;cursor:pointer")}
+          style={css("position:absolute;left:22px;top:24px;height:38px;box-sizing:border-box;display:flex;align-items:center;gap:4px;background:#eeeef0;border-radius:9999px;padding:0 11px 0 7px;cursor:pointer")}
         >
-          <span className="mi" style={css("font-size:22px;color:#000;margin:-4px 0")}>chevron_left</span>
-          <span style={css("background:#1c1c1e;color:#fff;border-radius:9999px;padding:2px 7px;font-size:11.5px;font-weight:600")}>12</span>
+          <span className="mi" style={css("font-size:25px;color:#000;line-height:1")}>chevron_left</span>
+          <span style={css("display:flex;align-items:center;justify-content:center;min-width:26px;height:21px;box-sizing:border-box;background:#1c1c1e;color:#fff;border-radius:9999px;padding:0 7px;font-size:13px;font-weight:600;letter-spacing:-.2px")}>12</span>
         </div>
         {/* 발신자 아바타 — 키움/KARI-NA 마크 */}
         <div style={css("width:52px;height:52px;border-radius:9999px;background:#f2f2f5;display:flex;align-items:center;justify-content:center")}>
           <BrandSymbol size={30} />
         </div>
+        {/* 발신자명 — RCS 브랜드 메시지는 번호가 아니라 브랜드를 표시한다. 은행명만 두면
+            "무슨 문자인지"가 안 드러나므로 서비스명을 함께 적는다(KARI-NA가 보낸 접수 결과). */}
         <span style={css("margin-top:7px;display:flex;align-items:center;gap:1px;background:#eeeef0;border-radius:9999px;padding:4px 9px 4px 12px")}>
-          <span style={css("font-size:14.5px;font-weight:600;letter-spacing:-.2px")}>키움은행</span>
+          <span style={css("font-size:14.5px;font-weight:600;letter-spacing:-.2px")}>키움은행 KARI-NA</span>
           <span className="mi" style={css("font-size:16px;color:#7c7c80;margin:-3px -2px -3px 0")}>chevron_right</span>
         </span>
       </div>
