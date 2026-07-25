@@ -35,11 +35,12 @@ export default function BriefingCardBody({
         {/* 공식 아트워크 락업 — 배경 투명 원본 그대로(심볼 + 워드마크 + Response Innovation).
             CSS로 조판한 글자가 아니라 실제 로고라 자간·자형이 원본과 같다.
             자산에서 투명 여백을 잘라 뒀으므로 이 height가 곧 보이는 로고 높이다.
-            30px: 워드마크 대문자가 약 13px로 또렷하고 태그라인도 한 줄로 살아 있다. */}
+            38px: 이 아래로 내리면 "Response Innovation"이 4px 얼룩이 된다(대문자 22px·
+            태그라인 5.5px). 원본을 자르지 않고 쓰기로 했으니 태그라인이 읽히는 크기가 하한이다. */}
         <img
           src={BRAND_LOCKUP_PNG}
           alt="KARI-NA · Response Innovation"
-          style={{ display: "block", flex: "none", height: 30, width: 30 * BRAND_LOCKUP_RATIO }}
+          style={{ display: "block", flex: "none", height: 38, width: 38 * BRAND_LOCKUP_RATIO }}
         />
         {/* 워드마크 오른쪽에 가는 선 하나 두고 설명을 잇는다 — 한 줄로 눕히면 헤더가 훨씬 얇아진다 */}
         <span style={css("flex:none;width:1px;height:17px;background:var(--gray-300)")} />

@@ -5,7 +5,6 @@ import type { CallFlowVM } from "../../hooks/useCallFlow";
 import Spinner from "../Spinner";
 import BriefingCardBody from "./BriefingCardBody";
 import ScriptTimeline from "./ScriptTimeline";
-import EmotionBar from "./EmotionBar";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
@@ -166,34 +165,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           {vm.isUrgent && (
             <span style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:#fff;background:var(--red-800);border-radius:9999px;padding:3px 9px")}>긴급</span>
           )}
-          <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          <span style={css("display:flex;align-items:center;gap:6px")}>
-            <span className="mi" style={css("font-size:15px;color:var(--blue-700)")}>auto_awesome</span>
-            {/* 라벨-값 분리: 라벨은 500, 값은 600 14px — 흘끗 보기에 값만 뜨도록 */}
-            <span style={css("font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>AI 배정</span>
-            <span style={css("font:600 14px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{vm.prepRoutingTitle}</span>
-          </span>
-          <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
-          {/* 감정온도 — 카드와 같은 언어로 맞춘다. 신호등(점 3개)은 카드·접수 화면에서 이미
-              그라데이션 축(EmotionBar)으로 바꿨는데 알약만 점으로 남아 있어, 같은 값이 화면마다
-              다른 그림으로 보였다. 여기는 자리가 좁으니 축을 짧게(56px) 두고 °값을 함께 세운다. */}
-          <span style={css("display:flex;align-items:center;gap:8px")} title="고객 감정온도 — 눈금은 평소 기준선">
-            <span style={css("font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>감정온도</span>
-            <span style={css("width:56px;flex:none")}>
-              <EmotionBar
-                height={6}
-                pct={vm.prepTempC != null ? vm.prepTempPct : vm.prepTempBasePct}
-                basePct={vm.prepTempBasePct}
-                color={vm.prepEmotionBar}
-              />
-            </span>
-            <span style={css("font:600 14px 'Avenir Next','Pretendard',sans-serif;font-variant-numeric:tabular-nums;color:" + vm.prepEmotionFg)}>
-              {vm.prepTempC != null ? vm.prepTempC.toFixed(1) + "°" : "--"}
-            </span>
-            <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif;color:" + vm.prepEmotionFg)}>{vm.prepEmotionLabel}</span>
-          </span>
-          {/* 사고 징후는 뺐다 — 카드에서 이미 없앤 항목이라(사용자 지시) 알약에만 남으면
-              "카드엔 없는데 알약엔 있는" 상태가 된다. 위험도는 긴급 배지가 대신 말한다. */}
+          {/* AI 배정(부서)·감정온도는 알약에서 뺐다 — 바로 아래 카드가 같은 값을 더 많은
+              정보로 보여준다(부서 + 업무코드, 감정온도 + 표정 + 눈금 축). 같은 값을 두 군데
+              두면 눈이 어디를 볼지 고르느라 흔들리고, 알약이 길어져 통화 컨트롤이 밀린다.
+              알약은 '카드가 말하지 않는 것'만 갖는다: 녹취 상태 · 통화 시간 · 조작 버튼. */}
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
           <span style={css("font:500 15px 'Avenir Next','Pretendard',sans-serif;font-variant-numeric:tabular-nums")}>{vm.clockStr}</span>
           <span style={css("width:1.3px;height:22px;background:var(--gray-200)")} />
