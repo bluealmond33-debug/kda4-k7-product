@@ -79,6 +79,9 @@ export default function LiveDemo({
   // 한 화면에서 이어져 읽힌다. 안내 음성은 고객 폰 화면에서만 재생해 창이 여러 개 열려도
   // 같은 안내가 겹쳐 들리지 않는다.
   const phoneLines = useConversationStream(vm, spokenLines, view === "phone");
+  // 고객 창의 전사 패널은 상담사 연결 시점부터 비운다(종료 화면에서도 계속 비어 있다) —
+  // 연결 뒤 대화를 두 창에 겹쳐 두면 어디를 봐야 할지 흩어지고, 직원 화면이 메인이다.
+  const custPanelOff = view === "phone" && (vm.phase === "active" || vm.phEnded);
 
   // 직원 분할 뷰 — 통화 연결(active 진입)의 상승엣지에 자동 on. 리셋(idle)이면 off.
   // 상승엣지로만 켜므로, 통화 중 알약 토글로 끈 뒤 다시 켜지지 않는다(발표자 제어 유지).
@@ -305,13 +308,24 @@ export default function LiveDemo({
                 직원 콘솔은 상담원 발화만(왼쪽 정렬) — 나란히 두면 서로 마주 보는 거울.
                 높이는 옆의 폰(clean=886)에 맞춘다 */}
             {view === "phone" && (
-              <LiveTranscriptPanel
-                stream={phoneLines}
-                active={phoneActive}
-                self="customer"
-                height={compactCustomer ? 532 : 820}
-                width={400}
-              />
+              // 상담사가 연결되면(active) 고객 창의 파동·말풍선은 사라진다 — 그 뒤 대화는 직원
+              // 화면이 단독으로 보여준다(직원 화면이 메인). 자리는 그대로 비워 두어 폰이
+              // 커지거나 옆으로 밀리지 않게 한다 — 오른쪽만 조용히 비는 그림이 된다.
+              <div
+                style={{
+                  opacity: custPanelOff ? 0 : 1,
+                  pointerEvents: custPanelOff ? "none" : "auto",
+                  transition: "opacity .45s ease-out",
+                }}
+              >
+                <LiveTranscriptPanel
+                  stream={phoneLines}
+                  active={phoneActive}
+                  self="customer"
+                  height={compactCustomer ? 532 : 820}
+                  width={400}
+                />
+              </div>
             )}
             {/* 직원 분할 뷰 — 통화 연결 시 본체 왼쪽에 실시간 전사 패널.
                 항상 마운트해 두고 max-width·이동·투명도를 본체와 같은 커브로 접었다 편다 —
