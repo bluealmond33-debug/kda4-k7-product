@@ -67,12 +67,26 @@ function tick(t: number) {
   raf = requestAnimationFrame(tick);
 }
 
+/**
+ * 세대 번호 — stop()마다 증가한다.
+ *
+ * getUserMedia는 비동기라 '기다리는 동안 상태가 뒤집히는' 창이 열린다. refCount만 보면
+ * 다음 경우를 놓친다: 대기 중 refCount가 1→0→1로 튀면 stop()이 starting을 비우고,
+ * 새 acquire가 start()를 한 번 더 부른다. 그러면 **스트림 두 개가 열리고 먼저 온 것이
+ * stream 변수에서 밀려나 영영 정지되지 않는다** — 마이크가 계속 켜져 있는 상태(F2).
+ * 특히 React StrictMode(개발)는 이펙트를 mount→cleanup→mount로 돌려 이 경로를 바로 탄다.
+ * 그래서 refCount가 아니라 '내가 시작한 그 세대가 아직 유효한가'로 판정한다.
+ */
+let generation = 0;
+
 async function start() {
   if (!navigator.mediaDevices?.getUserMedia) return;
+  const myGen = generation;
   try {
     const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-    // 기다리는 사이 마지막 사용자가 놓았으면 즉시 정리한다
-    if (refCount === 0) {
+    // 기다리는 사이 마지막 사용자가 놓았거나(refCount 0), 그 사이 stop()이 한 번 돌아
+    // 세대가 바뀌었으면(=이 스트림은 이미 남의 자리) 즉시 정리한다.
+    if (refCount === 0 || myGen !== generation) {
       s.getTracks().forEach((t) => t.stop());
       return;
     }
@@ -103,6 +117,8 @@ async function start() {
 }
 
 function stop() {
+  // 진행 중이던 start()가 있으면 그 결과를 무효화한다(위 generation 주석 참고)
+  generation++;
   cancelAnimationFrame(raf);
   raf = 0;
   stream?.getTracks().forEach((t) => t.stop());
