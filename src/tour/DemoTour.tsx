@@ -307,7 +307,7 @@ export default function DemoTour({
             <span onClick={onExit} style={css("font:600 11.5px " + FONT + ";color:var(--gray-500);cursor:pointer")} title="Esc로도 종료됩니다">
               투어 종료
             </span>
-            <div style={css("flex:1;text-align:center;font:600 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-500)")}>
+            <div style={css("flex:1;text-align:center;font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-500)")}>
               {globalNo} / {TOUR_TOTAL}
             </div>
             {step.act ? (

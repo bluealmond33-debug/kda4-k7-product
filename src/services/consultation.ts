@@ -42,6 +42,16 @@ export function getDemoConsultationCard(): ConsultationCardResponse {
     level: "stable",
     reason: "[SOURCE=STUB] 차분한 정보 문의 — 특이 감정 신호 없음",
   };
+  // 계약 예시 JSON은 routing이 null이다(분류 미수행 샘플). 화면은 이제 routing에서 업무코드를
+  // 읽으므로, 그대로 두면 일반 콜 데모가 늘 '미분류'로 보인다 — 데모의 기본 시나리오는
+  // 분류가 성공한 상태여야 하므로 여기서만 채운다. 감정 스텁과 같은 자리·같은 이유다.
+  // 실연동(useReal.data)에서는 이 함수를 타지 않으므로 실제 분류 결과가 그대로 나온다.
+  card.consultation_card.routing = {
+    task_code: "G002",
+    task_name: "주택담보대출 만기 연장",
+    classification: "GENERAL",
+    handler: "HUMAN",
+  };
   return card;
 }
 

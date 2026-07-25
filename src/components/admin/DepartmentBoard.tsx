@@ -102,7 +102,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                       >
                         {/* 값 라벨 — 막대 바로 위 */}
                         <div style={css("flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px")}>
-                          <span style={css("font:600 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;white-space:nowrap;color:var(--gray-800)")}>
+                          <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;white-space:nowrap;color:var(--gray-800)")}>
                             {r.c.e > 0 && <span style={css("color:var(--red-900)")}>E{r.c.e}</span>}
                             {r.c.e > 0 && r.c.g > 0 && "·"}
                             {r.c.g > 0 && <span style={css("color:var(--blue-900)")}>G{r.c.g}</span>}
@@ -199,13 +199,13 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                         <span style={css("flex:none;width:8px;height:8px;border-radius:9999px;background:" + meta.bar)} />
                         {/* 3층 업무코드 — taxonomy의 ARS 코드 (미정의 부서는 생략) */}
                         {it.code && (
-                          <span style={css("flex:none;font:600 9px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:.3px;color:var(--gray-700)")}>{it.code}</span>
+                          <span style={css("flex:none;font:600 9px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.3px;color:var(--gray-700)")}>{it.code}</span>
                         )}
                         <span style={css("flex:1;min-width:0;font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
                           {it.label}
                         </span>
                         {it.callId && (
-                          <span style={css("flex:none;font:700 8.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:.4px;color:var(--blue-900)")}>LIVE</span>
+                          <span style={css("flex:none;font:700 8.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.4px;color:var(--blue-900)")}>LIVE</span>
                         )}
                         {/* 액션 — 행에 올렸을 때만 (연결 · 이관) */}
                         <span className="memoact" style={css("flex:none;display:inline-flex;gap:4px")}>
@@ -262,7 +262,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                       <span
                         key={k}
                         style={css(
-                          "display:inline-flex;align-items:center;gap:5px;font:700 12.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;transition:opacity .3s;" +
+                          "display:inline-flex;align-items:center;gap:5px;font:700 12.5px 'Avenir Next','Pretendard',sans-serif;transition:opacity .3s;" +
                             (n > 0 ? "color:" + meta.fg : "color:var(--gray-500)")
                         )}
                       >

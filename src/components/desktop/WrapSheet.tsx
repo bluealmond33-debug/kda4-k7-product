@@ -14,7 +14,7 @@ const FONT = "'Avenir Next','Pretendard',sans-serif";
  *  접으면 헤더 바만 하단에 남아 방금 통화 내용을 다시 볼 수 있다.
  *  승강 커브 = --ease-drawer (iOS 드로어), transform만 애니메이션(GPU). */
 export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
-  // 재료(녹취·메모)는 기본 접힘 — 초안이 주인공. 둘은 같은 '재료'라 한 번에 함께 여닫는다
+  // 재료(녹취·메모)는 기본 접힘 — 후처리 결과가 주인공. 둘은 같은 '재료'라 한 번에 함께 여닫는다
   const [matsOpen, setMatsOpen] = useState(false);
   const open = vm.wrapSheetOpen;
   // 시트 전체 높이 700px(1440 좌표계 — 콘텐츠에 맞게, 휑하지 않게), 접힌 상태 = 헤더 56px만
@@ -69,10 +69,10 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 </span>
               </div>
             </div>
-            <span style={css("font:500 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:5px 11px")}>통화 {vm.clockStr}</span>
+            <span style={css("font:500 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);background:var(--gray-100);border-radius:9999px;padding:5px 11px")}>통화 {vm.clockStr}</span>
             <span style={css("display:inline-flex;align-items:baseline;gap:5px;background:var(--gray-100);border-radius:9999px;padding:5px 11px")}>
               <span className="lbl">오늘 후처리</span>
-              <span style={css("font:700 12.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--blue-700)")}>{vm.isExplicitLiveCall ? "로컬 초안 · 미저장" : "12→13"}</span>
+              <span style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-700)")}>{vm.isExplicitLiveCall ? "로컬 결과 · 미저장" : "12→13"}</span>
             </span>
             <span className="mi" style={css("font-size:22px;color:var(--gray-500);transition:transform .3s var(--ease-drawer);transform:rotate(" + (open ? 0 : 180) + "deg)")}>expand_more</span>
           </div>
@@ -83,13 +83,13 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
           <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px")}>
             <Spinner size={46} mark />
             <div style={css("font:600 18px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>통화 내용을 요약하고 있습니다…</div>
-            <div style={css("font:400 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>녹취와 상담원 메모를 바탕으로 후처리 초안을 작성 중입니다</div>
+            <div style={css("font:400 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>녹취와 상담원 메모를 바탕으로 후처리 결과를 작성 중입니다</div>
           </div>
         ) : (
           <>
             <div style={css("flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 22px;min-height:0")}>
-              {/* 재료(녹취·메모) — 아코디언 토글 하나로 함께 여닫는다. 기본 접힘(초안이 주인공).
-                  헤더 한 줄만 남아 접히면 초안 상자가 그만큼 커진다. */}
+              {/* 재료(녹취·메모) — 아코디언 토글 하나로 함께 여닫는다. 기본 접힘(후처리 결과가 주인공).
+                  헤더 한 줄만 남아 접히면 결과 상자가 그만큼 커진다. */}
               <div style={css("flex:none;display:flex;flex-direction:column;gap:8px")}>
                 <div onClick={() => setMatsOpen((v) => !v)} style={css("display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:2px 2px")}>
                   <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
@@ -126,7 +126,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                 )}
               </div>
 
-              {/* 상담 정보(자동 채움) 바로 오른쪽에 후처리 초안 — 채워진 값과 초안을 나란히 대조한다 */}
+              {/* 상담 정보(자동 채움) 바로 오른쪽에 후처리 결과 — 채워진 값과 결과를 나란히 대조한다 */}
               <div style={css("flex:1;display:flex;gap:12px;min-height:0")}>
                 <div style={css("width:248px;flex:none;display:flex;flex-direction:column;gap:9px;overflow:visible")}>
                   <div className="lbl">상담 정보 · 자동 채움 — ✎로 수정</div>
@@ -143,7 +143,7 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
                   <div style={css("display:flex;justify-content:space-between;align-items:center;margin-bottom:6px")}>
                     <span style={css("font:700 13px " + FONT + ";color:var(--gray-1000)")}>
                       <span className="mi" style={css("font-size:15px;color:var(--blue-700);vertical-align:-2px;margin-right:4px")}>auto_awesome</span>
-                      후처리 초안 <span style={css("font-weight:400;font-size:12px;color:var(--gray-600)")}>· 클릭해 편집</span>
+                      후처리 결과 <span style={css("font-weight:400;font-size:12px;color:var(--gray-600)")}>· 클릭해 편집</span>
                     </span>
                     <span style={css("font:500 11.5px " + FONT + ";color:var(--gray-600)")}>자동 저장·재생성 미연동</span>
                   </div>
@@ -182,14 +182,14 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--gray-200)")}>
               <span style={css("font:400 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>시트를 접으면 방금 통화 화면을 다시 볼 수 있습니다</span>
               <div style={css("flex:1")} />
-              {/* 초안 품질 — 저장 누르기 직전 자리. 엄지 둘만 */}
+              {/* 후처리 결과 품질 — 저장 누르기 직전 자리. 엄지 둘만 */}
               <ClassifierFeedback vm={vm} />
               <span style={css("width:1px;height:22px;background:var(--gray-300);flex:none")} />
               {/* 후처리는 어느 쪽이든 저장된다 — 갈리는 건 '다음에 무엇을 할지'뿐 */}
-              <span onClick={vm.reset} title="후처리를 저장하고 대기 화면으로 돌아갑니다" style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-400);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-800);cursor:pointer;background:var(--onair-surface);white-space:nowrap")}>
+              <span onClick={vm.saveWrap} title="후처리를 저장하고 대기 화면으로 돌아갑니다" style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-400);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-800);cursor:pointer;background:var(--onair-surface);white-space:nowrap")}>
                 <Coffee size={17} strokeWidth={2} absoluteStrokeWidth style={{ display: "block" }} /> 저장 후 휴식
               </span>
-              <span data-tour="wrap-save" onClick={vm.reset} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
+              <span data-tour="wrap-save" onClick={vm.saveWrap} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
                 <Phone size={17} strokeWidth={2} absoluteStrokeWidth style={{ display: "block" }} /> 저장 후 다음 콜
               </span>
             </div>

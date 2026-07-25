@@ -152,7 +152,7 @@ export default function RegulationUploadModal({
               <div style={css("display:flex;flex-direction:column;gap:6px;background:var(--background-200);border-radius:10px;padding:12px 14px")}>
                 {STEPS.map((s, i) => (
                   <div key={i} style={css("display:flex;gap:8px;align-items:baseline")}>
-                    <span style={css("font:700 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--blue-900);flex:none")}>{i + 1}</span>
+                    <span style={css("font:700 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-900);flex:none")}>{i + 1}</span>
                     <span style={css("font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{s}</span>
                   </div>
                 ))}
@@ -220,7 +220,7 @@ function DoneView({
           <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:var(--gray-100);border-radius:9999px;padding:3px 10px")}>
             {dept} · {result.suggestion.business_code}
           </span>
-          <span style={css("font:600 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--blue-900)")}>
+          <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-900)")}>
             확신 {Math.round(result.suggestion.confidence * 100)}%
           </span>
         </div>

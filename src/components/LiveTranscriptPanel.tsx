@@ -347,7 +347,7 @@ function BubbleLine({
       style={css(
         "flex:none;color:#565b66;font-variant-numeric:tabular-nums;font:400 " +
           timePx +
-          "px ui-monospace,'SF Mono',Menlo,Consolas,monospace"
+          "px 'Avenir Next','Pretendard',sans-serif"
       )}
     >
       {time}

@@ -12,6 +12,7 @@ import WrapSheet from "./desktop/WrapSheet";
 import AdminQueueSheet from "./desktop/AdminQueueSheet";
 import DemoTour, { TourChooser } from "../tour/DemoTour";
 import { SCREEN_ORDER } from "../tour/steps";
+import DiagPanel from "./DiagPanel";
 
 /**
  * K7 라이브 상담 시연 — 왼쪽 아이폰(자연어 접수) + 오른쪽 상담사 데스크톱.
@@ -192,7 +193,7 @@ export default function LiveDemo({
                     >
                       <span
                         style={css(
-                          "width:21px;height:21px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;" +
+                          "width:21px;height:21px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px 'Avenir Next','Pretendard',sans-serif;" +
                             (active
                               ? "background:var(--blue-700);color:#fff"
                               : done
@@ -388,6 +389,10 @@ export default function LiveDemo({
           실제 제품에선 이 두 줄과 src/tour 폴더만 지우면 투어가 완전히 사라진다. (src/tour/README.md) */}
       {tourMode === "pending" && <TourChooser onPick={(t) => setTourMode(t ? "on" : "off")} />}
       {tourMode === "on" && <DemoTour key={tourRun} vm={vm} screen={screenKey} onExit={() => setTourMode("off")} />}
+
+      {/* 시연 현장 진단 패널 — 기본은 숨김. ?diag=1 또는 Ctrl+Shift+D 로만 열린다.
+          실제 백엔드 통화에서만 나오는 마이크·메모 문제를 그 자리에서 판정하기 위한 도구다. */}
+      <DiagPanel vm={vm} />
     </div>
   );
 }

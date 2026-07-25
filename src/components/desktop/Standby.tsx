@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CalendarClock, GraduationCap, History } from "lucide-react";
 import { css } from "../../lib/css";
+import { useCallLog } from "../../lib/callLog";
 import LedClock from "./LedClock";
 import { highlight } from "../../lib/highlight";
 import { AGENT, SHEETS } from "../../data/demoContent";
@@ -184,6 +185,32 @@ export default function Standby() {
   const dateStr = `${now.getMonth() + 1}월 ${now.getDate()}일 (${DAYS[now.getDay()]})`;
   const back = () => setView(null);
 
+  // 오늘 저장한 후처리 — 픽스처(TODAY.rows) 위에 쌓인다. 방금 저장한 콜이 맨 위에 보여야
+  // '저장됐다'가 눈으로 확인된다. 미상담 종료는 처리 건수·후처리 완료 수에는 넣지 않는다.
+  const logged = useCallLog();
+  const doneCount = logged.filter((e) => e.status !== "미상담 종료").length;
+  const wrapDoneCount = logged.filter((e) => e.status === "후처리 완료").length;
+  const rows = [
+    ...logged.map((e) => ({
+      time: e.time,
+      type: e.type,
+      status: e.status as string,
+      result: e.result,
+      talk: e.talk,
+      followups: e.followups ?? [],
+      live: true,
+    })),
+    ...TODAY.rows.map((r) => ({
+      time: r.time,
+      type: r.type,
+      status: r.status as string,
+      result: undefined as string | undefined,
+      talk: undefined as string | undefined,
+      followups: [] as { icon: string; label: string }[],
+      live: false,
+    })),
+  ];
+
   return (
     <div
       style={css(
@@ -246,8 +273,8 @@ export default function Standby() {
           {/* 요약 스탯 3장 — 아이콘 + bignum 타일 */}
           <div style={css("display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px")}>
             {[
-              { icon: <History size={17} color="var(--blue-700)" strokeWidth={2} />, label: "처리", value: `${TODAY.count}`, unit: "건" },
-              { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>task_alt</span>, label: "후처리 완료", value: `${TODAY.wrapDone}`, unit: "건" },
+              { icon: <History size={17} color="var(--blue-700)" strokeWidth={2} />, label: "처리", value: `${TODAY.count + doneCount}`, unit: "건" },
+              { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>task_alt</span>, label: "후처리 완료", value: `${TODAY.wrapDone + wrapDoneCount}`, unit: "건" },
               { icon: <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>timer</span>, label: "평균 통화", value: TODAY.avgTalk, unit: "" },
             ].map((s) => (
               <div key={s.label} className="card" style={css("padding:13px 16px;box-shadow:var(--sh-near)")}>
@@ -261,21 +288,41 @@ export default function Standby() {
           </div>
           {/* 시간축 타임라인 — 좌측 레일(점+선), 최근 콜이 위 */}
           <div style={css("flex:1;min-height:0;overflow:auto")}>
-            {TODAY.rows.map((r, i) => {
-              const last = i === TODAY.rows.length - 1;
+            {rows.map((r, i) => {
+              const last = i === rows.length - 1;
               const cb = r.status === "콜백 예약";
+              // 미상담 종료 — 상담이 없었던 콜. 완료와 같은 초록으로 보이면 안 된다(회색으로 물러남).
+              const noTalk = r.status === "미상담 종료";
+              const dot = noTalk ? "var(--gray-500)" : cb ? "var(--amber-700)" : "var(--gray-400)";
+              const chip = noTalk
+                ? "color:var(--gray-800);background:var(--gray-100)"
+                : cb
+                ? "color:var(--amber-900);background:rgba(178,116,0,.10)"
+                : "color:var(--green-900);background:rgba(29,122,72,.10)";
+              const icon = noTalk ? "call_end" : cb ? "event" : "check";
               return (
                 <div key={i} className="ptile" style={css("display:flex;gap:14px;padding:2px 4px;border-radius:8px")}>
                   {/* 레일 */}
                   <div style={css("display:flex;flex-direction:column;align-items:center;flex:none;width:10px")}>
-                    <span style={css("width:9px;height:9px;border-radius:9999px;margin-top:15px;flex:none;background:" + (cb ? "var(--amber-700)" : "var(--gray-400)"))} />
+                    <span style={css("width:9px;height:9px;border-radius:9999px;margin-top:15px;flex:none;background:" + dot)} />
                     {!last && <span style={css("flex:1;width:1.5px;background:var(--gray-200)")} />}
                   </div>
                   <div style={css("flex:1;display:flex;align-items:center;gap:14px;padding:12px 4px" + (last ? "" : ";border-bottom:1px solid var(--gray-200)"))}>
-                    <span style={css("font:600 12.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600);width:44px;flex:none")}>{r.time}</span>
-                    <span style={css("flex:1;font:600 13.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.type}</span>
-                    <span style={css("display:inline-flex;align-items:center;gap:4px;font:600 11px 'Avenir Next','Pretendard',sans-serif;border-radius:9999px;padding:4px 10px;" + (cb ? "color:var(--amber-900);background:rgba(178,116,0,.10)" : "color:var(--green-900);background:rgba(29,122,72,.10)"))}>
-                      <span className="mi" style={css("font-size:13px")}>{cb ? "event" : "check"}</span>{r.status}
+                    <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);width:44px;flex:none")}>{r.time}</span>
+                    <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:2px")}>
+                      <span style={css("font:600 13.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.type}</span>
+                      {/* 방금 저장한 콜만 상세를 한 줄 더 — 결과·통화시간·후속 조치 수.
+                          '저장 후 다음 콜'이 실제로 무엇을 남겼는지 여기서 확인된다. */}
+                      {r.live && (r.result || r.talk || r.followups.length > 0) && (
+                        <span style={css("font:400 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
+                          {[r.result, r.talk && "통화 " + r.talk, r.followups.length > 0 && "후속 조치 " + r.followups.length + "건"]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      )}
+                    </div>
+                    <span style={css("display:inline-flex;align-items:center;gap:4px;font:600 11px 'Avenir Next','Pretendard',sans-serif;border-radius:9999px;padding:4px 10px;flex:none;" + chip)}>
+                      <span className="mi" style={css("font-size:13px")}>{icon}</span>{r.status}
                     </span>
                   </div>
                 </div>
@@ -351,7 +398,7 @@ export default function Standby() {
                               {a.action}
                             </span>
                           )}
-                          <span style={css("font:600 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600);flex:none;margin-top:2px")}>{a.time}</span>
+                          <span style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);flex:none;margin-top:2px")}>{a.time}</span>
                         </div>
                       );
                     })}
@@ -453,7 +500,7 @@ export default function Standby() {
                   <div key={i} className="hoverraise" style={css("background:var(--background-200);border-radius:8px;padding:11px 13px;cursor:pointer;transition:box-shadow .28s")}>
                     <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:4px")}>
                       <span style={css("font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{r.task}</span>
-                      <span style={css("font:600 10px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>{r.code}</span>
+                      <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{r.code}</span>
                       <span style={css("margin-left:auto;display:inline-flex;align-items:center;gap:4px;font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>
                         {r.result}<span className="mi" style={css("font-size:15px;color:var(--gray-500)")}>chevron_right</span>
                       </span>
@@ -477,7 +524,7 @@ export default function Standby() {
                         <span key={i} style={css("width:20px;height:5px;border-radius:2px;transition:background .25s;background:" + (warmDone.has(i) ? "var(--green-700)" : "var(--gray-200)"))} />
                       ))}
                     </span>
-                    <span style={css("font:600 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{warmDone.size}/{COACH.missions.length}</span>
+                    <span style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{warmDone.size}/{COACH.missions.length}</span>
                   </span>
                 </div>
                 {COACH.missions.map((w, i) => {
@@ -508,7 +555,7 @@ export default function Standby() {
                         {on && <span className="mi" style={css("font-size:13px")}>check</span>}
                       </span>
                       <span style={css("flex:1;font:500 12.5px/1.45 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)" + (on ? ";text-decoration:line-through;opacity:.6" : ""))}>{w.label}</span>
-                      <span style={css("font:600 11.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{w.meta}</span>
+                      <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{w.meta}</span>
                     </div>
                   );
                 })}
@@ -577,7 +624,7 @@ export default function Standby() {
               <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--excel-green);color:#fff;flex:none")}>
                 <span className="mi" style={css("font-size:17px")}>grid_on</span>
                 <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif")}>{SHEETS.manual.file}</span>
-                <span style={css("font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;opacity:.8")}>· {SHEETS.manual.sheet} 시트</span>
+                <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;opacity:.8")}>· {SHEETS.manual.sheet} 시트</span>
               </div>
               <div style={css("flex:1;min-height:0;overflow:auto;background:#fff")}>
                 <div style={css("display:flex;flex-direction:column;min-width:max-content")}>
@@ -595,7 +642,7 @@ export default function Standby() {
                     )
                     .map(([row, ri]) => (
                     <div key={ri} style={css("display:flex")}>
-                      <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>{ri + 1}</span>
+                      <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{ri + 1}</span>
                       {row.map((cell, ci) => (
                         <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(cell, manualSearch)}</span>
                       ))}
@@ -638,7 +685,7 @@ export default function Standby() {
             <div style={css("position:absolute;left:0;right:0;bottom:16px;display:flex;align-items:center;justify-content:center;gap:2px")}>
               <span onClick={() => setView("today")} className="ghosttile">
                 <History size={15} strokeWidth={2} />처리 내역
-                <span className="bignum" style={css("font-size:11.5px;color:var(--gray-500)")}>{TODAY.count}</span>
+                <span className="bignum" style={css("font-size:11.5px;color:var(--gray-500)")}>{TODAY.count + doneCount}</span>
               </span>
               <span onClick={() => setView("manual")} className="ghosttile">
                 <span className="mi" style={css("font-size:16px")}>menu_book</span>매뉴얼

@@ -354,6 +354,64 @@ a:hover {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+/* ── AI 요약 카드 등장 (F1) ──────────────────────────────────────────
+   "라우팅돼서 날아왔다"를 몸으로 느끼게 하는 연출. 카드가 좌하단(대기열이 있는 쪽)에서
+   작게 시작해 화면 중앙으로 커지며 이동하고, 잠깐 멈췄다가 제자리에 안착한다.
+   바운스는 쓰지 않는다(ONAIR) — 되돌아 튀지 않고 1.03에서 1.00으로 한 번만 가라앉는다. */
+@keyframes cardArrive {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(-34vw, 32vh) scale(0.34);
+  }
+  14% {
+    opacity: 1;
+  }
+  58% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1.03);
+  }
+  72% {
+    /* 잠깐 정지 — 도착했다는 걸 눈이 인지할 시간 */
+    transform: translate(-50%, -50%) translate(0, 0) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+  }
+}
+
+/* 안착 링 — 카드 테두리에서 한 번 퍼지는 가는 선. blur 0이라 글로우가 아니라 '선'이다
+   (빛은 칠하지 않는다 — 원칙을 지키면서 도착을 알리는 방법). */
+@keyframes ringSettle {
+  0% {
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(47, 95, 196, 0.5);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 0 16px rgba(47, 95, 196, 0);
+  }
+}
+
+/* 라우팅 체인 점등 — 부서 → 업무코드가 순서대로 켜진다.
+   파랑으로 켜졌다가 잉크로 식는다: '방금 결정됐다'가 색의 온도로 읽힌다. */
+@keyframes chainLight {
+  0% {
+    opacity: 0.15;
+    color: var(--blue-700);
+  }
+  45% {
+    opacity: 1;
+    color: var(--blue-700);
+  }
+  100% {
+    opacity: 1;
+    color: var(--gray-1000);
+  }
+}
+
 /* 관제 LIVE 심장박동 — 전 시스템 정상일 때 초록 점이 잔잔하게 숨쉰다 (안심 신호) */
 @keyframes livePulse {
   0%,
@@ -466,6 +524,32 @@ a:hover {
     to {
       opacity: 1;
       transform: translate(-50%, -50%);
+    }
+  }
+  /* 이동·스케일을 모두 빼고 페이드만 — 카드가 '나타난다'는 사실만 남긴다 */
+  @keyframes cardArrive {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+  @keyframes ringSettle {
+    from,
+    to {
+      opacity: 0;
+      box-shadow: none;
+    }
+  }
+  @keyframes chainLight {
+    from {
+      opacity: 0.4;
+    }
+    to {
+      opacity: 1;
     }
   }
   @keyframes guideSlideFwd {

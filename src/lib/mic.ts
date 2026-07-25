@@ -93,8 +93,10 @@ async function start() {
     lastT = 0;
     raf = requestAnimationFrame(tick);
     notify();
-  } catch {
-    // 권한 거부·미지원·비보안 컨텍스트 — 조용히 포기하고 시뮬레이션에 맡긴다
+  } catch (e) {
+    // 권한 거부·미지원·비보안 컨텍스트 — 조용히 포기하고 시뮬레이션에 맡긴다.
+    // 사유는 남긴다: 시연 현장에서 '권한 거부'와 'http라서 차단'을 구분해야 조치가 갈린다.
+    lastError = e instanceof Error ? e.name + ": " + e.message : String(e);
     live = false;
     notify();
   }
@@ -131,6 +133,30 @@ export function acquireMic(): () => void {
 /** 지금 입력 레벨(0~1). 마이크가 안 살아 있으면 null — 호출부는 시뮬레이션으로 대체한다. */
 export function getMicLevel(): number | null {
   return live ? level : null;
+}
+
+/** 마지막 getUserMedia 실패 사유 — 진단 패널이 읽는다(권한 거부/비보안 컨텍스트 구분용) */
+let lastError = "";
+
+/**
+ * 시연 현장 진단용 스냅샷.
+ *
+ * "마이크가 안 꺼진다"(F2)는 로컬 데모로 재현이 안 된다 — refCount가 0이 되는지를
+ * **실제 통화 중에 눈으로 봐야** 잡힌다. 그래서 내부 상태를 그대로 노출한다.
+ * refCount가 0인데 live가 true면 release 누락, 반대면 소유권이 잘못 넘어간 것이다.
+ */
+export function micDiag() {
+  return {
+    refCount,
+    live,
+    level: live ? level : 0,
+    hasTrack: !!stream?.getAudioTracks().length,
+    trackState: stream?.getAudioTracks()[0]?.readyState ?? "-",
+    ctxState: audioCtx?.state ?? "-",
+    secure: typeof window !== "undefined" ? window.isSecureContext : false,
+    supported: typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia,
+    lastError,
+  };
 }
 
 /** 마이크가 실제로 켜져 있는 동안 true (권한 허용 + 스트림 활성) */

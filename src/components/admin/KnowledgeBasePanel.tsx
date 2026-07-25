@@ -59,7 +59,7 @@ export default function KnowledgeBasePanel({
             {rag ? "pgvector 하이브리드 가동" : rag === false ? "임베딩 미적재 — 폴백" : "RAG 실측 대기 (데모)"}
           </span>
         </span>
-        <span style={css("font:400 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700);white-space:nowrap")}>
+        <span style={css("font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>
           dense .65 + kw .35 · bge-m3 · HNSW
         </span>
       </span>

@@ -190,21 +190,6 @@ export const REG_SUGGEST: Record<IncomingKind, RegSuggest[]> = {
   ],
 };
 
-/* 3층 업무코드 — backend/app/routing/taxonomy.py의 BUSINESS_CODES와 같은 축.
-   1층 SGE(deriveSge) → 2층 부서(card.department) → 3층 업무코드(여기). 라우팅 체인 표시용. */
-export const PREP_BUSINESS_CODE: Record<IncomingKind, string> = {
-  normal: "G002", // 대출 — 주담대 만기 연장
-  urgent: "G001", // 사고·신고 — 명의도용 지급정지
-  transfer: "G002", // 대출 — 이관 인계
-};
-
-/* 업무코드가 무슨 업무인지 — 코드만 보면 모른다. 라우팅 단계에 함께 띄운다. */
-export const PREP_BUSINESS_CODE_LABEL: Record<IncomingKind, string> = {
-  normal: "대출",
-  urgent: "사고·신고",
-  transfer: "대출",
-};
-
 /* 핵심 니즈 태그 — 고객이 무엇을 원하는지 한눈에. 준비 카드 감정온도 옆 항목. */
 export const PREP_NEED_TAGS: Record<IncomingKind, string[]> = {
   normal: ["만기 연장", "필요 서류", "비대면 가능"],

@@ -1,6 +1,6 @@
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
-import BrandLogo from "../BrandLogo";
+import { BRAND_LOCKUP_PNG, BRAND_LOCKUP_RATIO } from "../../assets/brandLockup";
 import EmotionBar from "./EmotionBar";
 
 const FONT = "'Avenir Next','Pretendard',sans-serif";
@@ -9,7 +9,20 @@ const FONT = "'Avenir Next','Pretendard',sans-serif";
  *  상단: 로고(좌) · 이번 상담 유의 칩(우). 좌: 감정온도 → 부서/업무코드(클릭=이관 예약) → 확신도+인증.
  *  우: 전화 요약(가장 큰 비중) — 한 줄 요약 → 근거 발화 → STT 불릿 → 핵심 니즈.
  *  카드 겉면(.card border/radius/overflow)은 부모가 씌운다 — 여기는 헤더+본문만. */
-export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlowVM; showAuth?: boolean }) {
+export default function BriefingCardBody({
+  vm,
+  showAuth = true,
+  arriving = false,
+}: {
+  vm: CallFlowVM;
+  showAuth?: boolean;
+  /** 카드가 막 날아와 안착하는 중(접수 화면). 라우팅 체인이 순서대로 점등된다.
+   *  통화 화면에서는 카드가 이미 자리에 있으므로 켜지 않는다 — 매번 깜빡이면 잔소리가 된다. */
+  arriving?: boolean;
+}) {
+  // 부서 → 업무코드 순으로 켜진다. 카드 이동이 끝나갈 무렵(0.5s)부터 차례로.
+  const chain = (order: number) =>
+    arriving ? ";animation:chainLight .5s ease-out " + (0.5 + order * 0.16) + "s both" : "";
   const reservedDept = vm.transferReserved ? vm.transferTarget ?? vm.suggestedDept : null;
   const confPct = vm.prepConfidencePct ?? 0;
 
@@ -18,18 +31,23 @@ export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlow
       {/* ── 상단 ── 로고+설명(좌) / AI 정확도(우).
           카드의 '표지'다 — 본문보다 두껍게 두고 로고를 크게 세워 어떤 카드인지 먼저 읽히게 한다. */}
       <div style={css("flex:none;padding:10px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:11px")}>
-        <BrandLogo size={21} symbolColor="var(--blue-700)" color="var(--gray-1000)" />
+        {/* 공식 아트워크 락업 — CSS로 조판한 글자가 아니라 실제 로고 이미지다(자간·자형 그대로) */}
+        <img
+          src={BRAND_LOCKUP_PNG}
+          alt="KARI-NA"
+          style={{ display: "block", flex: "none", height: 19, width: 19 * BRAND_LOCKUP_RATIO }}
+        />
         {/* 워드마크 오른쪽에 가는 선 하나 두고 설명을 잇는다 — 한 줄로 눕히면 헤더가 훨씬 얇아진다 */}
         <span style={css("flex:none;width:1px;height:14px;background:var(--gray-300)")} />
         <span style={css("font:600 10.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>카드 브리핑 요약</span>
         <div style={css("flex:1")} />
-        {/* AI 정확도 — 카드 전체가 얼마나 믿을 만한지라 표지(헤더) 우측에 둔다.
-            숫자는 도넛 안이 아니라 오른쪽에 세운다 — 고리는 작게 줄일 수 있고 숫자는 더 크게 읽힌다. */}
-        <div title={vm.prepConfidence} style={css("flex:none;display:flex;align-items:center;gap:7px")}>
+        {/* AI 정확도 — 도넛을 뺐다. 22px 고리는 94라는 값을 더 잘 읽히게 하지 못하면서
+            헤더에 원 하나를 더 얹을 뿐이었다. %를 붙이면 '100점 만점 중 94'가 기호로 끝난다. */}
+        <div title={vm.prepConfidence} style={css("flex:none;display:flex;align-items:baseline;gap:7px")}>
           <span style={css("font:600 10.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>AI 정확도</span>
-          <ConfidenceDonut pct={confPct} known={vm.prepConfidencePct != null} size={22} showValue={false} />
-          <span style={css("font:800 17px/1 " + FONT + ";letter-spacing:-.5px;color:var(--gray-1000)")}>
+          <span style={css("font:800 17px/1 " + FONT + ";letter-spacing:-.4px;font-variant-numeric:tabular-nums;color:var(--gray-1000)")}>
             {vm.prepConfidencePct != null ? confPct : "--"}
+            <span style={css("font:700 11.5px " + FONT + ";margin-left:1px;color:var(--gray-700)")}>%</span>
           </span>
         </div>
       </div>
@@ -64,14 +82,12 @@ export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlow
             <div style={css("border:1px solid var(--gray-300);border-radius:10px;padding:13px 14px;display:flex;flex-direction:column;gap:10px")}>
               <div style={css("display:flex;align-items:center;gap:5px")}>
                 <span style={css("font:600 10px " + FONT + ";letter-spacing:.2px;color:var(--gray-600)")}>고객 감정온도</span>
-                <div style={css("flex:1")} />
-                <span title={vm.prepEmotionSourceBadge.isReal ? "실제 AI 감정 모델 판정" : "데모용 값"} style={css("font:600 8px ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:.3px;padding:1.5px 5px;border-radius:9999px;border:1px solid var(--gray-300);color:var(--gray-600)")}>{vm.prepEmotionSourceBadge.label}</span>
               </div>
               <div style={css("display:flex;align-items:center;gap:9px")}>
                 {/* 표정 — 숫자보다 얼굴이 먼저 읽힌다 */}
                 <span className="mi" style={css("font-size:34px;line-height:1;color:" + vm.prepEmotionBar)}>{vm.prepEmotionFace}</span>
                 <span style={css("display:flex;align-items:baseline;gap:6px")}>
-                  <span style={css("font:800 28px/1 " + FONT + ";letter-spacing:-1.2px;color:" + vm.prepEmotionBar)}>{vm.prepTempC != null ? vm.prepTempC.toFixed(1) : "--"}<span style={css("font:800 17px " + FONT)}>°</span></span>
+                  <span style={css("font:600 32px/1 " + FONT + ";letter-spacing:-1.4px;font-variant-numeric:tabular-nums;color:" + vm.prepEmotionBar)}>{vm.prepTempC != null ? vm.prepTempC.toFixed(1) : "--"}<span style={css("font:500 18px " + FONT + ";margin-left:1px")}>°</span></span>
                   <span style={css("font:700 12.5px " + FONT + ";color:" + vm.prepEmotionBar)}>{vm.prepEmotionLabel}</span>
                 </span>
               </div>
@@ -80,7 +96,6 @@ export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlow
               <EmotionBar
                 height={7}
                 pct={vm.prepTempC != null ? vm.prepTempPct : vm.prepTempBasePct}
-                basePct={vm.prepTempBasePct}
                 color={vm.prepEmotionBar}
               />
             </div>
@@ -93,12 +108,19 @@ export default function BriefingCardBody({ vm, showAuth = true }: { vm: CallFlow
                 <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:4px")}>
                   <div style={css("display:flex;align-items:baseline;gap:7px")}>
                     <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>부서</span>
-                    <span style={css("font:700 12px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "#fff" : "var(--gray-1000)"))}>{reservedDept ?? vm.prepRoutingTitle}</span>
+                    <span style={css("font:700 12px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "#fff" : "var(--gray-1000)") + chain(0))}>{reservedDept ?? vm.prepRoutingTitle}</span>
                   </div>
                   <div style={css("display:flex;align-items:baseline;gap:7px;min-width:0")}>
                     <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>업무</span>
-                    <span style={css("font:800 12px " + FONT + ";letter-spacing:.3px;flex:none;color:" + (reservedDept ? "#fff" : "var(--gray-1000)"))}>{vm.prepBusinessCode}</span>
-                    <span style={css("font:600 10.5px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>{vm.prepBusinessCodeLabel}</span>
+                    {/* 분류 실패(routing=null)는 숨기지 않는다 — 코드 자리를 '미분류'로 비워 두면
+                        상담사가 스스로 업무를 판단해야 한다는 걸 알 수 있다. 예전처럼 기본값을
+                        찍으면 틀린 코드를 맞는 코드로 착각한다. */}
+                    <span style={css("font:800 12px " + FONT + ";letter-spacing:.3px;flex:none;color:" + (reservedDept ? "#fff" : vm.prepBusinessCode ? "var(--gray-1000)" : "var(--gray-600)") + chain(1))}>
+                      {vm.prepBusinessCode ?? "미분류"}
+                    </span>
+                    <span style={css("font:600 10.5px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
+                      {vm.prepBusinessCodeLabel ?? "자동 분류 실패 · 직접 확인"}
+                    </span>
                   </div>
                 </div>
                 {reservedDept && <span className="mi" style={css("font-size:16px;flex:none;color:#fff")}>sync_alt</span>}

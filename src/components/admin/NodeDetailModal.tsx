@@ -45,7 +45,7 @@ export default function NodeDetailModal({
           </span>
           <span>
             <span style={css("display:block;font:700 14.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.2px")}>{node.label}</span>
-            <span style={css("display:block;font:500 10px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{node.tech}</span>
+            <span style={css("display:block;font:500 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{node.tech}</span>
           </span>
           <div style={css("flex:1")} />
           <span style={css("display:inline-flex;align-items:center;gap:5px")}>
@@ -75,7 +75,7 @@ export default function NodeDetailModal({
             ))}
           </div>
 
-          <div style={css("font:400 10px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-600)")}>
+          <div style={css("font:400 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>
             근거: backend/app · database/rag · hippo 07 Outputs 라우팅/RAG 문서
           </div>
         </div>

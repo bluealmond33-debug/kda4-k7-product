@@ -81,7 +81,7 @@ export default function PipelineFlowPanel({
             <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>
               {flowCall.endedAt === null ? "처리 중" : "최근 처리"} · {KIND_LABEL[flowCall.kind]} 콜
             </span>
-            <span style={css("font:500 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{flowCall.callId}</span>
+            <span style={css("font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{flowCall.callId}</span>
           </span>
         ) : (
           <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);background:var(--gray-100);border-radius:9999px;padding:5px 12px")}>
@@ -175,7 +175,7 @@ export default function PipelineFlowPanel({
                 })()}
                 {/* 기술 캡션(어떤 AI·기술인지) — 설명 모드에서만. 평소 관제 화면은 조용하게 */}
                 {explain && (
-                  <span style={css("font:500 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700);line-height:1.45;animation:dockDown .25s var(--ease-out)")}>
+                  <span style={css("font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);line-height:1.45;animation:dockDown .25s var(--ease-out)")}>
                     {node.tech.split(" · ").map((seg) => (
                       <span key={seg} style={css("display:block;white-space:nowrap")}>{seg}</span>
                     ))}

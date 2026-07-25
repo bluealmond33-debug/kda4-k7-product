@@ -2428,6 +2428,41 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setMic,
     submitAudio,
     reset: requestReset,
+    /**
+     * 시연 현장 진단 스냅샷 (DiagPanel이 주기적으로 읽는다).
+     *
+     * F2(마이크 미해제)·F4(메모 미동작)는 로컬 데모로 재현되지 않는다 — 실제 백엔드 통화에서
+     * 무슨 값이 어떻게 흐르는지 봐야 잡힌다. 그래서 판단에 필요한 원시 상태를 그대로 노출한다.
+     * ref에서 읽으므로 호출 시점의 진짜 값이다(렌더 시점의 오래된 state가 아니라).
+     */
+    diagSnapshot: () => {
+      const finals = transcript.current.filter(
+        (c) => c.isFinal && c.text.trim().length > 0
+      );
+      const labeled = finals.filter((c) => c.speaker);
+      const hasAgent = labeled.some((c) => c.speaker === "agent");
+      const hasCustomer = labeled.some((c) => c.speaker === "customer");
+      const agentConnected = phaseRef.current === "active";
+      // 라벨이 없으면 발화 존재로 대체 판단 — finishCallAfterDrain의 게이트와 같은 규칙
+      const hadConversation = labeled.length ? hasAgent && hasCustomer : finals.length > 0;
+      return {
+        phase: phaseRef.current,
+        clock: fmt(clockRef.current),
+        liveCall: realCallActiveRef.current,
+        transcriptFinals: finals.length,
+        labeledChunks: labeled.length,
+        hasAgent,
+        hasCustomer,
+        memoCount: memoItems.length,
+        lastMemo: memoItems.length ? memoItems[memoItems.length - 1] : "",
+        // 후처리가 열릴지 미리 보여준다 — "왜 후처리가 안 떴나"를 현장에서 바로 답할 수 있게
+        wrapGate: { agentConnected, hadConversation, willOpen: agentConnected && hadConversation },
+        businessCode: card.routing?.task_code ?? null,
+        businessName: card.routing?.task_name ?? null,
+        department: card.department,
+        confidence: card.routing_confidence,
+      };
+    },
     /** 후처리 저장 — 처리 내역에 한 줄 남기고 대기 화면으로. '저장' 버튼이 실제로 저장한다.
      *  콜백 예약 후속 조치가 붙어 있으면 상태를 '콜백 예약'으로 잡는다(내역 타임라인이 색으로 구분). */
     saveWrap: () => {

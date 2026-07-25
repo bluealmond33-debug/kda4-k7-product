@@ -11,7 +11,7 @@ import {
 } from "../../services/classifierFeedback";
 
 /**
- * 초안 품질 평가 — 저장 직전에 누르는 엄지 두 개.
+ * 후처리 결과 품질 평가 — 저장 직전에 누르는 엄지 두 개.
  *
  * 검수 폼(맞음/수정 필요·업무코드 교정)은 걷어냈다. 상담사에게 통화 끝의 마지막 1초는
  * '판정'이 아니라 '저장'이고, 판정 UI가 그 앞을 막으면 아무도 누르지 않는다.
@@ -103,13 +103,13 @@ export default function ClassifierFeedback({ vm }: { vm: CallFlowVM }) {
   return (
     <span style={css("display:inline-flex;align-items:center;gap:7px;flex:none")}>
       <span style={css("font:600 11.5px " + FONT + ";color:var(--gray-700);white-space:nowrap")}>
-        {sent ? "평가 감사합니다" : "초안 품질"}
+        {sent ? "평가 감사합니다" : "결과 품질"}
       </span>
       <button
         type="button"
         aria-pressed={sat === "up"}
-        aria-label="초안 만족"
-        title="초안이 쓸 만했어요"
+        aria-label="후처리 결과 만족"
+        title="후처리 결과가 쓸 만했어요"
         onClick={() => {
           setSat("up");
           setOpen(false);
@@ -123,7 +123,7 @@ export default function ClassifierFeedback({ vm }: { vm: CallFlowVM }) {
         <button
           type="button"
           aria-pressed={sat === "down"}
-          aria-label="초안 불만족"
+          aria-label="후처리 결과 불만족"
           title="아쉬운 점을 알려주세요"
           onClick={() => {
             setSat("down");

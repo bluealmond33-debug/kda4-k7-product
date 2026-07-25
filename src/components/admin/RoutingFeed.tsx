@@ -171,7 +171,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
           <Spinner size={16} speedMs={800} />
           <span style={css("font:700 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>분류 중…</span>
           <div style={css("flex:1")} />
-          <span style={css("font:500 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
+          <span style={css("font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
         </div>
         <div style={css("margin-top:8px;font:400 12px/1.55 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
           {r.utterances[r.utterances.length - 1] ?? "발화 수신 대기 중"}
@@ -193,7 +193,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
           {r.card.businessType}
         </span>
         <div style={css("flex:1")} />
-        <span style={css("flex:none;font:500 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
+        <span style={css("flex:none;font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
       </div>
       <div style={css("margin-top:7px;font:400 12.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>
         {r.card.summary}
@@ -205,7 +205,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
           {r.department ?? r.card.department}
         </span>
         {r.confidence != null && (
-          <span style={css("font:600 10.5px ui-monospace,'SF Mono',Menlo,Consolas,monospace;background:var(--gray-100);color:var(--gray-800);border-radius:9999px;padding:3px 9px")}>
+          <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);color:var(--gray-800);border-radius:9999px;padding:3px 9px")}>
             확신 {Math.round(r.confidence * 100)}%
           </span>
         )}
@@ -242,7 +242,7 @@ function TimelineRow({ r, onOpen }: { r: AdminCallRecord; onOpen: () => void }) 
       onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--gray-100)")}
       onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
     >
-      <span style={css("flex:none;width:40px;text-align:right;font:500 10px ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--gray-700)")}>
+      <span style={css("flex:none;width:40px;text-align:right;font:500 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>
         {fmtTime(r.startedAt)}
       </span>
       {/* 축 위의 점 — z-index로 헤어라인 위에 올라앉고, 흰 테두리가 선을 살짝 끊는다 */}
