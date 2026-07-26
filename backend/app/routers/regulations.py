@@ -52,6 +52,10 @@ def _hit(doc, meta: dict | None) -> dict:
         # 여기에 실제 키워드 점수가 실린다(0.65/0.35 가중, ADR-0010).
         "score_dense": doc.score,
         "score_keyword": 0.0,
+        # 조항/항목/내용/안내멘트 — 화면이 정리된 표로 보여 주려면 여기 실려야 한다.
+        # 없는 청크(시드 더미·구버전 적재분)도 있으므로 **선택 필드**다: 값이 없으면
+        # None으로 나가고 화면은 excerpt로 폴백한다 — 재적재 없이도 검색은 계속 돈다.
+        "structured": meta.get("structured"),
     }
 
 
@@ -108,25 +112,37 @@ def read_regulation_document(doc_id: str) -> dict:
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 def upload_regulation(pdf: UploadFile = File(...)) -> dict:
-    """규정 PDF 적재 — 업로드 한 번으로 추출→청킹→카테고리 추천→임베딩→검색 반영.
+    """규정 적재 — 업로드 한 번으로 추출→청킹→구조화→카테고리 추천→임베딩→검색 반영.
+
+    PDF뿐 아니라 **xlsx·csv 업무매뉴얼**도 받는다. 어떤 형식이든 app.rag.ingest의 같은
+    경로를 지나므로 청크 스키마와 조항/항목/내용/안내멘트 구조화가 동일하게 붙는다.
+
+    필드 이름이 `pdf`인 것은 기존 API 계약이라 유지한다 — 프런트(regulationAdmin.ts)가
+    그 이름으로 보내고 있어 바꾸면 배포 순서에 따라 업로드가 깨진다.
 
     적재된 청크는 `rag_data/regulation_chunks.jsonl`에 append되어 재시작 후에도
     남고, 인메모리 코퍼스와 FAISS 인덱스에도 즉시 반영돼 바로 검색된다.
     """
-    filename = Path(pdf.filename or "").name
-    if not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=415, detail="PDF 파일만 업로드할 수 있습니다")
+    from app.rag.readers import supported_suffixes
 
-    from app.services import regulation_ingest  # pdfplumber — 요청 시에만 로드
+    filename = Path(pdf.filename or "").name
+    allowed = supported_suffixes()
+    if not filename.lower().endswith(allowed):
+        raise HTTPException(
+            status_code=415,
+            detail=f"지원하는 형식이 아닙니다. 업로드 가능: {', '.join(allowed)}",
+        )
+
+    from app.services import regulation_ingest  # pdfplumber/openpyxl — 요청 시에만 로드
 
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / filename
         with path.open("wb") as out:
             shutil.copyfileobj(pdf.file, out)
         try:
-            return regulation_ingest.ingest_pdf(settings, path)
+            return regulation_ingest.ingest_document(settings, path)
         except regulation_ingest.IngestError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except Exception as exc:
-            logger.exception("규정 PDF 적재 실패")
+            logger.exception("규정 적재 실패")
             raise HTTPException(status_code=500, detail=f"적재 실패: {exc}") from exc

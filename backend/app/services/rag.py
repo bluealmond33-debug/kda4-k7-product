@@ -445,6 +445,9 @@ def get_document(doc_id: str) -> dict | None:
                 "kind": c.get("kind") or "text",
                 "section": c.get("section") or c.get("subcategory"),
                 "text": c["text"],
+                # 원문 열람에서도 조항/항목/내용/안내멘트를 그대로 쓴다.
+                # 선택 필드 — 구버전 적재분에는 없으므로 화면은 text로 폴백한다.
+                "structured": c.get("structured"),
             }
             for c in ordered
         ],

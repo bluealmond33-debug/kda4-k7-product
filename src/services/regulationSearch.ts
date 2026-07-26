@@ -7,6 +7,24 @@
 
 import { API_BASE_URL, DATA_API_PREFIX } from "./config";
 
+/** 전처리로 뽑아낸 정리본 — 조항/항목/내용/안내 멘트 + 사고 방지 신호.
+ *
+ *  **선택 필드다.** 시드 더미와 구버전 적재분에는 없으므로, 없으면 화면이 excerpt로
+ *  폴백해야 한다 — 그래야 코퍼스를 다시 넣지 않아도 검색이 계속 돈다. */
+export interface RegulationStructured {
+  clause: string | null;
+  item: string | null;
+  content: string | null;
+  /** 고객에게 그대로 읽는 문장. 통화 중 가장 먼저 봐야 하는 값이라 표에서도 맨 앞 열이다 */
+  scripts: string[];
+  /** "확정적 표현 사용 금지" — 하면 안 되는 것 */
+  prohibitions: string[];
+  /** "반환 접수 전 본인확인 필수" — 먼저 해야 하는 것 */
+  requirements: string[];
+  note: string | null;
+  row: number | null;
+}
+
 export interface RegulationHit {
   chunk_id: string;
   doc_id: string;
@@ -21,6 +39,8 @@ export interface RegulationHit {
   score: number;
   score_dense: number;
   score_keyword: number;
+  /** 없을 수 있다 — 위 주석 참고 */
+  structured?: RegulationStructured | null;
 }
 
 export interface RegulationSearchResponse {
