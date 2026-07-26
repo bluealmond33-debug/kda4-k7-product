@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
+import { KEYS, KeyHint, isTypingTarget, useShortcuts } from "../../lib/shortcuts";
 import { highlight } from "../../lib/highlight";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import Spinner from "../Spinner";
@@ -94,6 +95,23 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   // (검색어에 묶으면 첫 글자에 접힘→확장으로 input이 remount되며 한글 조합이 깨지고, 다 지우면 접혔다)
   const regWide = vm.regExpanded || !!vm.regDoc || vm.regDocLoading;
 
+  /* 규정 시트 3컬럼 리플로우의 열 배치 — 열 순서가 아니라 **역할**로 고른다.
+     · content = 읽어야 할 본문. 안내 멘트를 뺀 나머지 중 가장 넓은 칸(매뉴얼=내용, RAG=근거 내용).
+     · quote   = 본문 아래 세리프 인용 줄. 안내 멘트가 있으면 그것, 없으면 남는 칸(RAG=관련도).
+     · lead    = 왼쪽 좁은 두 칸.
+     시트마다 열 순서가 다르고 업로드본은 더 다르다 — 인덱스로 잡으면 조용히 어긋난다. */
+  const regPlan = (() => {
+    const cols = vm.regCols;
+    const norm = (s: string) => s.replace(/\s+/g, "");
+    const guide = cols.findIndex((c) => norm(c.l) === "안내멘트");
+    const pool = cols.map((_, i) => i).filter((i) => i !== guide);
+    const content = pool.length
+      ? pool.reduce((best, i) => (cols[i].w > cols[best].w ? i : best), pool[0])
+      : 0;
+    const rest = pool.filter((i) => i !== content);
+    return { lead: rest.slice(0, 2), content, quote: guide >= 0 ? guide : rest[2] ?? -1 };
+  })();
+
   // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
   const leftColRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -108,34 +126,35 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, [showHistory, showAccounts]);
 
-  // 키보드 단축키 — 입력 중에는 무시(Esc 제외). M 음소거 / H 보류 / R 규정집 / N 메모
+  /* Esc — 단축키 레지스트리 밖에서 따로 본다. 입력 중에도 동작해야 하기 때문이다
+     (메모를 쓰다 Esc로 빠져나오는 건 당연한 동작). */
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
       const el = e.target as HTMLElement;
-      const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
-      if (e.key === "Escape") {
-        setEndConfirm(false);
-        setEditIdx(null);
-        if (typing) el.blur();
-        return;
-      }
-      if (typing) return;
-      if (vm.showWrap) return; // 종료 후 배경 화면에선 통화 단축키 비활성
-      const k = e.key.toLowerCase();
-      // 실제 연동 모드의 음소거·보류는 아직 엣지 송신기/통화 음원 제어 계약이 없다.
-      // 화면 상태만 바뀌어 고객 음성이 제어된 것처럼 보이지 않도록 데모 모드에서만 허용한다.
-      if (k === "m" && !vm.isExplicitLiveCall) setMuted((v) => !v);
-      else if (k === "h" && !vm.isExplicitLiveCall) setHeld((v) => !v);
-      else if (k === "r") (vm.regCollapsed ? vm.openManual : vm.closeReg)();
-      else if (k === "n") {
-        e.preventDefault();
-        memoInputRef.current?.focus();
-      }
+      setEndConfirm(false);
+      setEditIdx(null);
+      if (isTypingTarget(el)) el.blur();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [vm]);
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, []);
+
+  /* 통화 화면 단축키 — 전부 한 글자, 버튼 옆 배지와 같은 출처(lib/shortcuts)를 읽는다.
+     종료 후 배경으로 물러난 상태(showWrap)에서는 듣지 않는다.
+     음소거·보류는 실연동에서 막는다: 엣지 송신기 음원 제어 계약이 아직 없어 화면만
+     바뀌면 "고객 음성이 제어된 것처럼" 보인다. */
+  useShortcuts(
+    {
+      [KEYS.mute]: vm.isExplicitLiveCall ? undefined : () => setMuted((v) => !v),
+      [KEYS.hold]: vm.isExplicitLiveCall ? undefined : () => setHeld((v) => !v),
+      [KEYS.reg]: () => (vm.regCollapsed ? vm.openManual : vm.closeReg)(),
+      [KEYS.memo]: () => memoInputRef.current?.focus(),
+      [KEYS.transfer]: () => setTransferMenu((v) => !v),
+      [KEYS.endCall]: () => setEndConfirm(true),
+    },
+    !vm.showWrap
+  );
 
   const copyWrapSummary = async () => {
     try {
@@ -201,7 +220,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </span>
             </span>
           ) : (
-          <span style={css("display:flex;gap:5px")}>
+          <span style={css("display:flex;gap:21px")}>
+            {/* 간격 21px — 배지가 버튼 오른쪽 가운데에 붙으므로, 5px면 옆 버튼과 겹쳐
+                배지가 어느 버튼 것인지 안 읽힌다 */}
             {/* 이관 — 음소거 왼쪽. 예전처럼 통화 컨트롤과 같은 원형 버튼(cbtn). 클릭 시 부서 드롭다운 */}
             <span style={css("position:relative;display:inline-flex")}>
               <span
@@ -212,6 +233,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               >
                 <span className="mi" style={css("font-size:19px")}>sync_alt</span>
               </span>
+              <KeyHint k={KEYS.transfer} style="position:absolute;right:-19px;top:50%;transform:translateY(-50%)" />
               {transferMenu && (
                 <>
                   <span onClick={() => setTransferMenu(false)} style={css("position:fixed;inset:0;z-index:40")} />
@@ -240,35 +262,43 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </>
               )}
             </span>
-            <span
-              className="cbtn"
-              aria-disabled={vm.isExplicitLiveCall}
-              title={vm.isExplicitLiveCall ? "음소거는 엣지 송신기 제어 연결 후 사용할 수 있습니다" : (muted ? "음소거 해제" : "음소거") + " · 단축키 M"}
-              onClick={vm.isExplicitLiveCall ? undefined : () => setMuted((v) => !v)}
-              style={vm.isExplicitLiveCall ? { cursor: "not-allowed", opacity: 0.42 } : muted ? { background: "var(--gray-1000)", color: "#fff", borderColor: "var(--gray-1000)" } : undefined}
-            >
-              <span className="mi" style={css("font-size:19px")}>{muted ? "mic_off" : "mic"}</span>
+            <span style={css("position:relative;display:inline-flex")}>
+              <span
+                className="cbtn"
+                aria-disabled={vm.isExplicitLiveCall}
+                title={vm.isExplicitLiveCall ? "음소거는 엣지 송신기 제어 연결 후 사용할 수 있습니다" : (muted ? "음소거 해제" : "음소거") + " · 단축키 " + KEYS.mute}
+                onClick={vm.isExplicitLiveCall ? undefined : () => setMuted((v) => !v)}
+                style={vm.isExplicitLiveCall ? { cursor: "not-allowed", opacity: 0.42 } : muted ? { background: "var(--gray-1000)", color: "#fff", borderColor: "var(--gray-1000)" } : undefined}
+              >
+                <span className="mi" style={css("font-size:19px")}>{muted ? "mic_off" : "mic"}</span>
+              </span>
+              {/* 실연동에선 키가 안 먹으므로 배지도 달지 않는다 — 표시와 동작은 늘 같아야 한다 */}
+              {!vm.isExplicitLiveCall && <KeyHint k={KEYS.mute} style="position:absolute;right:-19px;top:50%;transform:translateY(-50%)" />}
             </span>
-            <span
-              className="cbtn"
-              aria-disabled={vm.isExplicitLiveCall}
-              title={vm.isExplicitLiveCall ? "보류·대기 음원은 통화 오디오 제어 연결 후 사용할 수 있습니다" : (held ? "보류 해제" : "보류 — 고객에게 대기 멘트") + " · 단축키 H"}
-              onClick={vm.isExplicitLiveCall ? undefined : () => setHeld((v) => !v)}
-              style={vm.isExplicitLiveCall ? { cursor: "not-allowed", opacity: 0.42 } : held ? { background: "var(--amber-700)", color: "#fff", borderColor: "var(--amber-700)" } : undefined}
-            >
-              <span className="mi" style={css("font-size:19px")}>{held ? "play_arrow" : "pause"}</span>
+            <span style={css("position:relative;display:inline-flex")}>
+              <span
+                className="cbtn"
+                aria-disabled={vm.isExplicitLiveCall}
+                title={vm.isExplicitLiveCall ? "보류·대기 음원은 통화 오디오 제어 연결 후 사용할 수 있습니다" : (held ? "보류 해제" : "보류 — 고객에게 대기 멘트") + " · 단축키 " + KEYS.hold}
+                onClick={vm.isExplicitLiveCall ? undefined : () => setHeld((v) => !v)}
+                style={vm.isExplicitLiveCall ? { cursor: "not-allowed", opacity: 0.42 } : held ? { background: "var(--amber-700)", color: "#fff", borderColor: "var(--amber-700)" } : undefined}
+              >
+                <span className="mi" style={css("font-size:19px")}>{held ? "play_arrow" : "pause"}</span>
+              </span>
+              {!vm.isExplicitLiveCall && <KeyHint k={KEYS.hold} style="position:absolute;right:-19px;top:50%;transform:translateY(-50%)" />}
             </span>
           </span>
           )}
           {!vm.showWrap && (
           <span data-tour="call-end" style={css("position:relative")}>
             <span
-              title="통화 종료"
+              title={"통화 종료 · 단축키 " + KEYS.endCall}
               onClick={() => setEndConfirm((v) => !v)}
               style={css("width:38px;height:38px;border-radius:9999px;background:var(--red-800);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer")}
             >
               <span className="mi" style={css("font-size:20px")}>call_end</span>
             </span>
+            <KeyHint k={KEYS.endCall} style="position:absolute;right:-19px;top:50%;transform:translateY(-50%)" />
             {/* 오클릭 방지 — 종료는 한 번 더 묻는다 */}
             {endConfirm && (
               <div style={css("position:absolute;top:48px;right:0;width:220px;background:var(--onair-surface);border-radius:12px;box-shadow:var(--sh-modal);padding:13px 14px;z-index:40;animation:dockDown .15s cubic-bezier(0.2,0.8,0.2,1)")}>
@@ -819,30 +849,38 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   </span>
                 </div>
                 {/* 3컬럼 리플로우 — 안내 멘트는 별도 컬럼이 아니라 내용 아래 인용 줄로.
-                    가로 스크롤 없이 패널 폭에 맞는다 */}
+                    가로 스크롤 없이 패널 폭에 맞는다.
+                    어느 칸이 어느 역할인지는 **라벨과 폭으로 고른다** — 인덱스를 박아 두면
+                    시트 열 순서가 바뀔 때 조항이 안내 멘트 자리에 인용되는 식으로 어긋난다
+                    (실제로 이 시트는 안내 멘트를 맨 앞으로 옮기며 한 번 어긋났다). */}
                 <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
                   <div style={css("display:flex;flex-direction:column")}>
                     <div style={css("display:flex;position:sticky;top:0;z-index:1")}>
                       <span style={css("width:36px;flex:none;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300)")} />
-                      {vm.regCols.slice(0, 3).map((c, i) => (
-                        <span key={i} style={css((i === 2 ? "flex:1;min-width:0" : "width:" + c.w + "px;flex:none") + ";padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}{i === 2 ? " · 안내 멘트" : ""}</span>
+                      {regPlan.lead.map((i) => (
+                        <span key={i} style={css("width:" + vm.regCols[i].w + "px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{vm.regCols[i].l}</span>
                       ))}
+                      <span style={css("flex:1;min-width:0;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>
+                        {vm.regCols[regPlan.content]?.l}
+                        {regPlan.quote >= 0 ? " · " + vm.regCols[regPlan.quote].l : ""}
+                      </span>
                     </div>
                     {vm.regRows.map((r) => {
                       /* '열기'로 진입한 조항은 행 전체가 강조된다 */
                       const hit = vm.regTargetRow != null && r.n === vm.regTargetRow + 1;
-                      const ment = r.cells[3] && r.cells[3].text !== "—" ? r.cells[3].text : null;
+                      const q = regPlan.quote >= 0 ? r.cells[regPlan.quote] : undefined;
+                      const ment = q && q.text !== "—" ? q.text : null;
                       return (
                         <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--gray-1000);position:relative;z-index:1" : ""))}>
                           <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Avenir Next','Pretendard',sans-serif;color:" + (hit ? "var(--gray-1000)" : "var(--gray-600)") + ";background:" + (hit ? "var(--gray-100)" : "var(--gray-100)"))}>{r.n}</span>
-                          {r.cells.slice(0, 2).map((cell, ci) => (
-                            <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--gray-100)" : "transparent"))}>{highlight(cell.text, vm.regSearch)}</span>
+                          {regPlan.lead.map((i) => (
+                            <span key={i} style={css("width:" + (r.cells[i]?.w ?? vm.regCols[i].w) + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--gray-100)" : "transparent"))}>{highlight(r.cells[i]?.text ?? "", vm.regSearch)}</span>
                           ))}
                           <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);background:" + (hit ? "var(--gray-100)" : "transparent"))}>
                             {/* 사고 방지 표식 — 대기 화면 매뉴얼과 같은 것. 통화 중에 놓치면 가장 비싼 실수라 여기가 본자리다 */}
                             <span style={css("display:block;font:" + (hit ? "600" : "400") + " 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>
                               {r.signal && <SignalMark sig={r.signal} />}
-                              {highlight(r.cells[2].text, vm.regSearch)}
+                              {highlight(r.cells[regPlan.content]?.text ?? "", vm.regSearch)}
                             </span>
                             {ment && (
                               <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
