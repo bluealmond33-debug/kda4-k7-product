@@ -1,7 +1,7 @@
 import { css } from "../../lib/css";
 import TypingAnimation from "../ui/TypingAnimation";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
-import { BRAND_LOCKUP_PNG, BRAND_LOCKUP_RATIO } from "../../assets/brandLockup";
+import { BRAND_LOCKUP_COMPACT_PNG, BRAND_LOCKUP_COMPACT_RATIO } from "../../assets/brandLockup";
 import EmotionBar from "./EmotionBar";
 import { maskPii } from "../../lib/maskPii";
 
@@ -37,22 +37,21 @@ export default function BriefingCardBody({
       {/* ── 상단 ── 로고+설명(좌) / AI 정확도(우).
           카드의 '표지'다 — 본문보다 두껍게 두고 로고를 크게 세워 어떤 카드인지 먼저 읽히게 한다. */}
       <div style={css("flex:none;padding:12px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:15px")}>
-        {/* 공식 아트워크 락업 — 배경 투명 원본 그대로(심볼 + 워드마크 + Response Innovation).
-            CSS로 조판한 글자가 아니라 실제 로고라 자간·자형이 원본과 같다.
-            자산에서 투명 여백을 잘라 뒀으므로 이 height가 곧 보이는 로고 높이다.
-            46px — 원본 그대로 넣되 원본처럼 보이려면 이 크기가 필요하다. 자산은 사용자가 준
-            파일과 픽셀 단위로 동일함을 확인했고(같은 높이로 렌더해 diff = 0), 남은 문제는
-            표시 크기뿐이었다. 46px에서 대문자 26px · 태그라인 6.7px로 "Response Innovation"이
-            글자로 읽힌다. 30~38px에서는 태그라인이 얼룩으로, 심볼 곡선이 뭉개져 보였다. */}
+        {/* 축약 락업(심볼 + 워드마크) — 태그라인은 뺀다.
+            전체 락업은 "Response Innovation"이 읽히려면 46px가 필요하고 그러면 폭이 230px가
+            되어, 규정 패널이 펼쳐져 카드가 좁아지면 **오른쪽 AI 정확도를 밀어내 사라지게**
+            했다. 태그라인을 작게 줄이면 얼룩이 되므로 좁은 자리에서는 빼는 게 정답이다.
+            24px면 워드마크가 또렷하고 폭은 131px로 줄어 좁아져도 자리가 남는다. */}
         <img
-          src={BRAND_LOCKUP_PNG}
-          alt="KARI-NA · Response Innovation"
-          style={{ display: "block", flex: "none", height: 46, width: 46 * BRAND_LOCKUP_RATIO }}
+          src={BRAND_LOCKUP_COMPACT_PNG}
+          alt="KARI-NA"
+          style={{ display: "block", flex: "none", height: 24, width: 24 * BRAND_LOCKUP_COMPACT_RATIO }}
         />
         {/* 워드마크 오른쪽에 가는 선 하나 두고 설명을 잇는다 — 한 줄로 눕히면 헤더가 훨씬 얇아진다 */}
-        <span style={css("flex:none;width:1px;height:20px;background:var(--gray-300)")} />
-        <span style={css("font:600 11.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>카드 브리핑 요약</span>
-        <div style={css("flex:1")} />
+        <span style={css("flex:none;width:1px;height:16px;background:var(--gray-300)")} />
+        {/* 좁아지면 **이 설명이 먼저 줄어든다**(min-width:0 + ellipsis). AI 정확도는 flex:none이라
+            자리를 지킨다 — 전에는 셋 다 안 줄어들어 오른쪽이 통째로 밀려 나갔다. */}
+        <span style={css("flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font:600 11.5px " + FONT + ";letter-spacing:.2px;color:var(--gray-600);white-space:nowrap")}>카드 브리핑 요약</span>
         {/* AI 정확도 — 도넛을 뺐다. 22px 고리는 94라는 값을 더 잘 읽히게 하지 못하면서
             헤더에 원 하나를 더 얹을 뿐이었다. %를 붙이면 '100점 만점 중 94'가 기호로 끝난다. */}
         <div title={vm.prepConfidence} style={css("flex:none;display:flex;align-items:baseline;gap:7px")}>

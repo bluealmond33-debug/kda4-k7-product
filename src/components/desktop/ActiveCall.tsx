@@ -920,11 +920,14 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <RegCorpusSearchSheet vm={vm} />
             ) : (
               <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
-                {/* 시트 크롬 — 중립 그레이(틴트 금지). 검색·파일 업로드가 여기 산다 */}
-                <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
+                {/* 시트 크롬 — 엑셀 초록. 대기화면 매뉴얼 시트와 **같은 문법**이라 두 화면에서
+                    같은 것으로 읽힌다(예전엔 여기만 중립 그레이라 따로 놀았다).
+                    ONAIR는 틴트 배경을 금하지만 이건 틴트가 아니라 **실물 메타포**다 —
+                    엑셀 크롬은 엑셀의 색을 쓴다(--excel-green, 2026-07-19 사용자 지정). */}
+                <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--excel-green);color:#fff;border-bottom:1px solid var(--excel-green)")}>
                   <span className="mi" style={css("font-size:18px")}>grid_on</span>
                   <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif")}>{vm.regFile}</span>
-                  <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>· {vm.regSheet} 시트</span>
+                  <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;opacity:.8")}>· {vm.regSheet} 시트</span>
                   <span style={css("margin-left:auto;display:flex;align-items:center;gap:6px")}>
                     <label title="실제 규정 파일 열기 (CSV·XLSX)" style={css("display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;padding:4px 10px;font:600 11px 'Avenir Next','Pretendard',sans-serif")}>
                       <span className="mi" style={css("font-size:14px")}>folder_open</span>파일 열기
