@@ -23,7 +23,9 @@ const AUTO_CONNECT_SEC = 15;
  *  answerCall이 조용히 무시돼 '자동 연결됐다고 착각하는' 더 나쁜 사고가 된다. */
 function useAutoConnect(vm: CallFlowVM) {
   const [left, setLeft] = useState(AUTO_CONNECT_SEC);
-  const canConnect = vm.canConnect;
+  /* 고객이 이미 끊었으면 세지 않는다 — 세어 봐야 없는 사람에게 거는 것이고,
+     시연에서는 폰이 종료 화면인데 콘솔이 통화로 넘어가는 최악의 그림이 된다. */
+  const canConnect = vm.canConnect && !vm.customerEnded;
 
   /* answerCall을 ref로 들고 있는다 — 이 훅의 의존성에 vm을 넣으면 안 된다.
      vm은 useCallFlow가 매 렌더 새로 만드는 객체라, 의존성에 두면 **렌더마다 effect가 다시
@@ -97,9 +99,18 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
 
           {/* ── 하단 액션 ── */}
           <div style={css("flex:none;display:flex;align-items:center;gap:12px;padding:11px 22px;border-top:1px solid var(--gray-200)")}>
-            <span style={css("display:flex;align-items:center;gap:5px;font:400 12px " + FONT + ";color:var(--gray-700)")}>
-              <span className="mi" style={css("font-size:16px")}>info</span> {vm.prepHint}
-            </span>
+            {vm.customerEnded ? (
+              /* 고객이 먼저 끊은 카드 — 지우지 않는다. 접수는 끝났고 담당자가 콜백할 건이라,
+                 카드를 지우면 그 사실까지 지워진다. 지금 무엇을 해야 하는지만 바꿔 말한다. */
+              <span style={css("display:flex;align-items:center;gap:6px;font:600 12.5px " + FONT + ";color:var(--red-900)")}>
+                <span className="mi" style={css("font-size:17px")}>call_end</span>
+                고객이 통화를 종료했습니다 · 콜백 대상
+              </span>
+            ) : (
+              <span style={css("display:flex;align-items:center;gap:5px;font:400 12px " + FONT + ";color:var(--gray-700)")}>
+                <span className="mi" style={css("font-size:16px")}>info</span> {vm.prepHint}
+              </span>
+            )}
             <div style={css("flex:1")} />
 
             {/* 이관 — 통화 연결 왼쪽의 독립 버튼. 통화 화면(ActiveCall)에서 음소거 왼쪽에 두는
@@ -177,7 +188,8 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               )}
             >
               <span style={css("display:flex;align-items:center;gap:6px")}>
-                <span className="mi" style={css("font-size:18px")}>call</span> 통화 연결
+                <span className="mi" style={css("font-size:18px")}>{vm.customerEnded ? "phone_callback" : "call"}</span>{" "}
+                {vm.customerEnded ? "콜백 걸기" : "통화 연결"}
               </span>
               {/* 단축키 배지 — 연결 가능할 때만. 못 누르는 상태에서 키를 알려 주면
                   눌러 보고 아무 일도 안 일어나 더 헷갈린다. */}

@@ -80,10 +80,18 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
           <Spinner size={52} mark speedMs={stage >= 2 ? 620 : 1050} />
           <div style={css("display:flex;flex-direction:column;gap:4px;min-width:0")}>
             <span style={css("font:700 15.5px " + FONT + ";color:var(--gray-1000);letter-spacing:-.3px")}>
-              {stage >= 2 ? "상담 카드 만드는 중" : "AI가 접수·요약 중"}
+              {vm.customerEnded ? "고객이 통화를 종료했습니다" : stage >= 2 ? "상담 카드 만드는 중" : "AI가 접수·요약 중"}
             </span>
-            <span style={css("font:600 13px " + FONT + ";color:var(--gray-600)")}>
-              접수 경과 <span style={css("color:var(--gray-1000);font-variant-numeric:tabular-nums")}>{vm.clockStr}</span>
+            {/* 고객이 먼저 끊었으면 그 사실을 접수 패널이 바로 말한다 — 여기서 안 말하면
+                상담사는 아직 듣고 있는 줄 알고 기다린다. 접수분은 사라지지 않는다(콜백 대상). */}
+            <span style={css("font:600 13px " + FONT + ";color:" + (vm.customerEnded ? "var(--red-900)" : "var(--gray-600)"))}>
+              {vm.customerEnded ? (
+                "접수분은 콜백 대상으로 남습니다"
+              ) : (
+                <>
+                  접수 경과 <span style={css("color:var(--gray-1000);font-variant-numeric:tabular-nums")}>{vm.clockStr}</span>
+                </>
+              )}
             </span>
           </div>
         </div>

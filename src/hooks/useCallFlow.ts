@@ -364,6 +364,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 감정온도는 고정값이 아니라 실시간 신호 — 데모에선 통화 20초 후 안정으로 하강(상담 효과 연출)
   const [emoDrift, setEmoDrift] = useState<{ score: number; level: "stable" | "caution" | "elevated"; reason: string } | null>(null);
   const [clock, setClock] = useState(0);
+  /** 고객이 먼저 끊었다 — 상담사 화면에서 자동 연결을 멈추고 '콜백 대상'으로 바꾼다 */
+  const [customerEnded, setCustomerEnded] = useState(false);
   const [callStartedAt, setCallStartedAt] = useState("");
   const [emo, setEmo] = useState(0);
   const [silenceLeft, setSilenceLeft] = useState(0);
@@ -501,7 +503,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const joiningRef = useRef(false);
   /** 이 통화를 내가 걸었나 — 칠판을 살려 두는 건 건 쪽 하나면 된다(합류한 창까지 적을 이유가 없다) */
   const ownsCallRef = useRef(false);
+  /** 내가 방금 낸 종료 이벤트 — 버스 루프백을 '남이 끊었다'로 오해하지 않게 */
+  const selfEndRef = useRef(false);
   const startCallRef = useRef<() => void>(() => undefined);
+  const endCallRef = useRef<() => void>(() => undefined);
+  const resetRef = useRef<() => void>(() => undefined);
   const silT = useRef<number | null>(null);
   /** 카드 생성 창 타이머 — 리셋 때 반드시 끊는다(안 끊으면 초기화한 뒤에 prep으로 튄다) */
   const buildT = useRef<number | null>(null);
@@ -622,11 +628,38 @@ export function useCallFlow(config: CallFlowConfig = {}) {
            · 내가 건 전화(루프백)는 무시 · 이미 통화 중이면 무시
            · 고객 화면은 합류하지 않는다 — 전화를 거는 쪽이지 받는 쪽이 아니다 */
         if (selfStartRef.current || isCustomerSurface) return;
-        if (phaseRef.current !== "idle") return;
+        /* 이미 통화 중인데 다른 창에서 새 통화가 시작됐다 — 시연에서 실제로 밟는 순서다
+           (발표자가 테스트 콜을 먼저 누른 뒤 고객이 전화). 그대로 무시하면 두 화면이 서로
+           **다른 통화**를 보여준다: 왼쪽은 고객의 새 통화, 오른쪽은 아까의 테스트 콜.
+           데모에는 통화가 하나뿐이므로 **나중에 시작된 쪽이 진실**이다 — 접고 새로 붙는다. */
+        if (phaseRef.current !== "idle") resetRef.current();
         joiningRef.current = true;
+        clockOrigin.current = typeof p.startedAtMs === "number" ? p.startedAtMs : null;
         startCallRef.current();
+        if (typeof p.startedAtMs === "number") clockOrigin.current = p.startedAtMs;
       }),
     []
+  );
+
+  /* 고객이 먼저 끊었다 — 상담사 화면이 그걸 모르면 시연에서 가장 나쁜 그림이 된다:
+     왼쪽 폰은 종료 화면인데 오른쪽 콘솔은 계속 "통화 중"이고, 15초 카운트다운은 그대로
+     흘러 **끊은 고객에게 자동 연결**된다.
+
+     · 통화 중(active)이었으면 이쪽도 종료로 넘긴다 — 이미 끊긴 통화를 붙들고 있을 이유가 없다.
+     · 아직 연결 전(접수·준비)이면 **카드는 남긴다.** 접수는 끝났고 담당자가 콜백할 건이라,
+       카드를 지우면 그 사실까지 지워진다. 대신 자동 연결만 멈추고 '콜백 대상'으로 표시한다. */
+  useEffect(
+    () =>
+      sharedDemoBus.on("call.ended", (p) => {
+        if (isCustomerSurface) return; // 고객 창은 제 폰이 진실이다
+        if (selfEndRef.current) return; // 내가 낸 종료(루프백)
+        if (p.endedBy === "agent") return; // 상담사가 끊은 건 이 창이 이미 안다
+        const ph = phaseRef.current;
+        if (ph === "idle" || ph === "wrap" || ph === "summarizing") return;
+        setCustomerEnded(true);
+        if (ph === "active") endCallRef.current();
+      }),
+    [isCustomerSurface]
   );
 
   /* 통화 중인 창이 칠판을 살려 둔다 — 갱신이 멈추면 다른 창이 '끝난 통화'로 보고 무시한다.
@@ -1200,6 +1233,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // ── public actions ──
   const startCall = useCallback(() => {
     ownsCallRef.current = !joiningRef.current;
+    /* 원점은 **알리기 전에** 정한다. 예전엔 emit 뒤에 정해서, 전에 다른 창이 흘린 시작 시각이
+       남아 있으면 그 낡은 값을 '내 통화 시작'이라고 실어 보냈다 —
+       받는 쪽은 9초 전에 시작한 통화로 알아듣는다(실측으로 잡힌 증상). */
+    if (!joiningRef.current) clockOrigin.current = Date.now();
+    setCustomerEnded(false);
     selfStartRef.current = true;
     window.setTimeout(() => {
       selfStartRef.current = false;
@@ -1283,9 +1321,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setRagRefs([]); // 지난 통화의 규정이 다음 통화 유의사항에 남지 않게
     setGuideSteps([]); // 지난 통화의 스크립트도 마찬가지 — 픽스처로 시작해 분석 도착 시 교체
     transitionPhase("connecting");
-    /* 합류로 시작한 경우엔 원점을 덮지 않는다 — 이미 다른 창이 건 통화의 시작 시각을 받아 뒀다.
-       덮어쓰면 늦게 합류한 창이 0부터 다시 세어, 고치려던 어긋남이 그대로 돌아온다. */
-    if (!joiningRef.current) clockOrigin.current = Date.now();
     setClock(0);
     setCallStartedAt(fmtCallTimestamp(new Date()));
     setEmo(0);
@@ -1568,11 +1603,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             setMobileIntakePending(false);
             setMobileIntakeComplete(false);
             setMobileAgentConnected(false);
-            demoBus.emit("call.ended", {
+            selfEndRef.current = true;
+            window.setTimeout(() => {
+              selfEndRef.current = false;
+            }, 0);
+            sharedDemoBus.emit("call.ended", {
               callId: LIVE_CALL_ID,
               ...(generation ? { generation } : {}),
               endReason: event.endReason,
-              endedBy: event.endedBy,
+              endedBy: event.endedBy ?? (isCustomerSurface ? "customer" : "agent"),
             });
             return;
           }
@@ -1605,11 +1644,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           if (!agentConnected || !hadConversation) {
             // A LAN counselor event must close the admin record explicitly;
             // counselor demo.reset is intentionally not relay-authorized.
-            demoBus.emit("call.ended", {
+            selfEndRef.current = true;
+            window.setTimeout(() => {
+              selfEndRef.current = false;
+            }, 0);
+            sharedDemoBus.emit("call.ended", {
               callId: LIVE_CALL_ID,
               ...(generation ? { generation } : {}),
               endReason: event.endReason ?? "ended_before_transcript",
-              endedBy: event.endedBy,
+              endedBy: event.endedBy ?? (isCustomerSurface ? "customer" : "agent"),
             });
             // 대기(idle) 같은 비통화 상태에서 들어온 종료 이벤트는 콜이 아니므로 남기지 않는다
             if (endedBeforeAgent || agentConnected) {
@@ -1647,13 +1690,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
                 status: "done",
                 detail: "고객·상담원 전체 대화 후처리 결과",
               });
-              demoBus.emit("call.ended", {
+              selfEndRef.current = true;
+            window.setTimeout(() => {
+              selfEndRef.current = false;
+            }, 0);
+            sharedDemoBus.emit("call.ended", {
                 callId: LIVE_CALL_ID,
                 wrapType: wrapRef.current.type,
                 wrapResult: wrapRef.current.result,
                 ...(generation ? { generation } : {}),
                 endReason: event.endReason,
-                endedBy: event.endedBy,
+                endedBy: event.endedBy ?? (isCustomerSurface ? "customer" : "agent"),
               });
               if (transferRef.current.reserved) {
                 demoBus.emit("transfer.completed", {
@@ -1967,6 +2014,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }
     finishCallAfterDrain({ finalSeq: 0, drained: true }, false);
   }, [finishCallAfterDrain, isCustomerSurface, reset]);
+
+  endCallRef.current = endCall;
+  resetRef.current = reset;
 
   const setSim = useCallback(() => {
     if (phaseRef.current === "idle") {
@@ -2699,6 +2749,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     phInCall: inCall || ended,
     phEnded: ended,
     clockStr: fmt(clock),
+    /** 고객이 먼저 끊었다 — 준비 카드는 남기되 자동 연결을 멈추고 콜백 대상으로 표시한다 */
+    customerEnded,
     callStartedAt: callStartedAt || "시작 시각 미기록",
     showTimer: inCall && p !== "connecting",
     // 통화 누르자마자 00:01 — 실기기처럼 연결음 단계부터 타이머가 붙는다
