@@ -1137,7 +1137,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setPrepChecks(Array(PREP_LEN).fill(false));
     setSummary(null);
     setVerified(false);
-    setAuthMethod("phone");
+    // 초기값(birth)과 같게 되돌린다 — 예전엔 "phone"으로 떨어져 리셋 후에는
+    // 안내는 "생년월일 8자리"인데 칸은 4개가 되는 어긋남이 났다.
+    setAuthMethod("birth");
     setAuthInput("");
     setAuthErr(false);
     setAuthErrMsg("");
@@ -1292,7 +1294,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     respRef.current = demo;
     setPrepChecks(Array(PREP_LEN).fill(false));
     setVerified(false);
-    setAuthMethod("phone");
+    // 초기값(birth)과 같게 되돌린다 — 예전엔 "phone"으로 떨어져 리셋 후에는
+    // 안내는 "생년월일 8자리"인데 칸은 4개가 되는 어긋남이 났다.
+    setAuthMethod("birth");
     setAuthInput("");
     setAuthErr(false);
     setAuthErrMsg("");
@@ -2797,6 +2801,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     canApplyDtmfToAuth: arsDigits.replace(/\D/g, "").length > 0,
     // 자릿수 = 입력 상자 개수 — 마스킹된 전체 번호는 보여주지 않는다(최소 표시 원칙, 필요한 칸만)
     authMaxLen: authMethod === "birth" ? 8 : 4,
+    /* 입력 안내 — **authMethod에서 파생한다.** 화면에 문구를 하드코딩해 두면
+       인증 수단이 바뀌었을 때 칸 수와 설명이 어긋난다(실제로 났던 버그). */
+    authPrompt:
+      authMethod === "birth"
+        ? { what: "생년월일 8자리", hint: "(YYYYMMDD)" }
+        : authMethod === "phone"
+        ? { what: "연락처 뒤 4자리", hint: "" }
+        : { what: "계좌 뒤 4자리", hint: "" },
     // 지금 물어야 할 값 — 안내 문구가 대조 방식을 따라간다
     authAskLabel:
       authMethod === "birth" ? "생년월일 8자리 (YYYYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",

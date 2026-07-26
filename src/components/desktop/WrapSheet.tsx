@@ -101,17 +101,28 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
             <div style={css("flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 22px;min-height:0")}>
               {/* 재료(녹취·메모) — 아코디언 토글 하나로 함께 여닫는다. 기본 접힘(후처리 결과가 주인공).
                   헤더 한 줄만 남아 접히면 결과 상자가 그만큼 커진다. */}
-              <div style={css("flex:none;display:flex;flex-direction:column;gap:8px")}>
-                <div onClick={() => setMatsOpen((v) => !v)} style={css("display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:2px 2px")}>
-                  <span className="mi" style={css("font-size:16px;color:var(--blue-700)")}>graphic_eq</span>
-                  <span style={css("font:700 12px " + FONT + ";color:var(--gray-800)")}>음성 녹취 · 상담원 메모</span>
+              <div style={css("flex:none;display:flex;flex-direction:column;gap:0")}>
+                {/* 재료(녹취·메모) 여닫기 — 맨 텍스트 줄이라 누를 수 있는 것으로 안 보였다.
+                    면과 테두리를 줘서 '접힌 서랍'으로 읽히게 한다. 열려 있을 때는 아래 내용과
+                    이어지도록 아래 모서리를 각지게 해 한 덩어리로 보이게 한다. */}
+                <div
+                  onClick={() => setMatsOpen((v) => !v)}
+                  className="hoverraise"
+                  style={css(
+                    "display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;padding:9px 13px;" +
+                      "background:var(--onair-surface);border:1px solid var(--gray-300);box-shadow:var(--sh-near);" +
+                      (matsOpen ? "border-radius:9px 9px 0 0;border-bottom-color:var(--gray-200)" : "border-radius:9px")
+                  )}
+                >
+                  <span className="mi" style={css("font-size:17px;color:var(--blue-700)")}>graphic_eq</span>
+                  <span style={css("font:700 12.5px " + FONT + ";color:var(--gray-1000)")}>음성 녹취 · 상담원 메모</span>
                   <span style={css("font:400 11px " + FONT + ";color:var(--gray-600)")}>· 통화 {vm.clockStr} · 메모 {vm.memoItems.length}건</span>
                   <div style={css("flex:1")} />
-                  <span style={css("font:600 11px " + FONT + ";color:var(--gray-600)")}>{matsOpen ? "접기" : "펼쳐 보기"}</span>
-                  <span className="mi" style={css("font-size:18px;color:var(--gray-600);transition:transform .2s;transform:rotate(" + (matsOpen ? 180 : 0) + "deg)")}>expand_more</span>
+                  <span style={css("font:700 11.5px " + FONT + ";color:var(--gray-900)")}>{matsOpen ? "접기" : "펼쳐 보기"}</span>
+                  <span className="mi" style={css("font-size:19px;color:var(--gray-800);transition:transform .2s;transform:rotate(" + (matsOpen ? 180 : 0) + "deg)")}>expand_more</span>
                 </div>
                 {matsOpen && (
-                  <div style={css("display:flex;gap:10px;align-items:flex-start")}>
+                  <div style={css("display:flex;gap:10px;align-items:flex-start;background:var(--onair-surface);border:1px solid var(--gray-300);border-top:none;border-radius:0 0 9px 9px;padding:11px 13px")}>
                     <div style={css("flex:1.4;min-width:0;background:var(--gray-100);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:8px")}>
                       <span style={css("font:700 11px " + FONT + ";color:var(--gray-700)")}>음성 녹취</span>
                       <audio controls preload="none" src="/demo/recording.mp3" style={{ width: "100%", height: 34 }} />

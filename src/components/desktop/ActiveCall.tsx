@@ -71,6 +71,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [transferMenu, setTransferMenu] = useState(false); // 이관 부서 선택 드롭다운
   /* 펼친 조항 — 표의 칸은 좁아 긴 조항이 잘린다. 행을 누르면 그 조항만 전문으로 편다.
      데이터는 이미 cells에 다 들어 있다(화면에서만 잘렸다) — 새로 받아올 게 없다. */
+  const regSearchRef = useRef<HTMLInputElement | null>(null);
   const [openRow, setOpenRow] = useState<number | null>(null);
   /* 키보드 커서 — ↑↓로 행을 옮기고 Enter로 편다. 규정 확인은 통화 중에 하므로
      손이 마우스로 가지 않는 길이 있어야 한다. */
@@ -144,6 +145,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       setEditIdx(null);
       setOpenRow(null);
       if (isTypingTarget(el)) el.blur();
+      else if (!vm.regCollapsed) vm.closeReg(); // 입력에서 빠져나온 뒤 한 번 더 누르면 패널이 접힌다
     };
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
@@ -157,7 +159,14 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     {
       [KEYS.mute]: vm.isExplicitLiveCall ? undefined : () => setMuted((v) => !v),
       [KEYS.hold]: vm.isExplicitLiveCall ? undefined : () => setHeld((v) => !v),
-      [KEYS.reg]: () => (vm.regCollapsed ? vm.openManual : vm.closeReg)(),
+      /* R — 패널을 열고 **검색창에 커서까지** 놓는다. 예전엔 패널만 여닫아서
+         "규정을 찾겠다"는 의도의 절반만 처리됐다(커서는 여전히 마우스로 옮겨야 했다).
+         N(메모 입력으로 이동)과 같은 문법이다. 접기는 Esc가 맡는다 — 검색창에
+         커서가 있으면 R은 글자로 들어가야 하므로 토글로 쓸 수 없다. */
+      [KEYS.reg]: () => {
+        vm.openManual();
+        window.setTimeout(() => regSearchRef.current?.focus(), 0);
+      },
       [KEYS.memo]: () => memoInputRef.current?.focus(),
       [KEYS.transfer]: () => setTransferMenu((v) => !v),
       [KEYS.endCall]: () => setEndConfirm(true),
@@ -220,7 +229,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       {/* 상단 알약 */}
       <div style={css("height:74px;flex:none;position:relative;z-index:5")}>
         {/* 알약 폭 = 콘텐츠 폭(빈 공간 없음). 이관 패널은 grid 0fr→1fr 트릭으로 알약이 부드럽게 길어진다 */}
-        <div className="pill" style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);animation:fadeIn .7s ease-out .35s both")}>
+        <div
+          className="pill"
+          /* 오른쪽 여백 — 마지막 버튼(종료) 배지가 알약 밖으로 삐져나가 잘렸다.
+             .pill 기본 padding-right(8px)로는 배지 자리(19px+폭)가 안 나온다. */
+          style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding-right:34px;animation:fadeIn .7s ease-out .35s both")}
+        >
           {vm.showWrap ? (
             /* 통화 종료 — 온에어 소등, 배경으로 남은 화면임을 알약이 말해준다 */
             <span style={css("display:flex;align-items:center;gap:7px;font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800)")} title="통화 종료 — 온에어 소등">
@@ -340,7 +354,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           </span>
           )}
           {!vm.showWrap && (
-          <span data-tour="call-end" style={css("position:relative")}>
+          <span
+            data-tour="call-end"
+            /* margin-left — 앞 그룹의 마지막 배지(H)가 이 버튼에 가리지 않게 벌린다.
+               .pill 기본 gap(14px)은 배지 자리(19px)보다 좁다. */
+            style={css("position:relative;margin-left:14px")}
+          >
             <span
               title={"통화 종료 · 단축키 " + KEYS.endCall}
               onClick={() => setEndConfirm((v) => !v)}
@@ -458,7 +477,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   본인확인 · 미완료
                 </div>
                 <div style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:11px")}>
-                  고객이 말한 <span style={css("font-weight:700;color:var(--blue-900)")}>생년월일 8자리</span>(YYYYMMDD)를 빈칸에 입력하면 자동 대조됩니다
+                  고객이 말한 <span style={css("font-weight:700;color:var(--blue-900)")}>{vm.authPrompt.what}</span>{vm.authPrompt.hint}를 빈칸에 입력하면 자동 대조됩니다
                 </div>
                 {/* 8칸이라 가로가 넓다 — 세로로 쌓아 대조 버튼이 오른쪽으로 잘리지 않게 한다 */}
                 <div style={css("display:flex;flex-direction:column;gap:10px;align-items:stretch")}>
@@ -737,6 +756,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <span style={css("flex:1;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--gray-400);border-radius:9999px;padding:6px 11px;background:var(--onair-surface)")}>
                 <span className="mi" style={css("font-size:16px;color:var(--gray-600)")}>search</span>
                 <input
+                  ref={regSearchRef}
                   value={vm.regSearch}
                   onChange={vm.onRegSearch}
                   onFocus={vm.openManual}

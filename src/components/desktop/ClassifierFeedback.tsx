@@ -77,16 +77,23 @@ export default function ClassifierFeedback({ vm }: { vm: CallFlowVM }) {
     setSent(true);
   };
 
-  const thumb = (active: boolean, tone: "up" | "down") =>
-    btn(
-      "display:flex;align-items:center;justify-content:center;width:36px;height:32px;border-radius:9px;transition:background .12s;" +
+  /* 고른 상태는 **색으로만** 말한다.
+     예전엔 면을 통째로 칠하고 아이콘까지 채워서(fill) 엄지가 덩어리로 뭉갰다 — 손 모양이
+     갑자기 뚱뚱해 보이던 이유다. 그리고 테두리가 활성일 때만 사라져 버튼이 2px 튀었다.
+     이제 테두리는 항상 있고 색만 바뀐다. */
+  const thumb = (active: boolean, tone: "up" | "down") => {
+    const c = tone === "up" ? "var(--green-700)" : "var(--red-800)";
+    return btn(
+      "display:flex;align-items:center;justify-content:center;width:36px;height:32px;border-radius:9px;box-sizing:border-box;" +
+        "transition:color .12s,border-color .12s;outline:none;" +
         (active
-          ? "background:" + (tone === "up" ? "var(--green-700)" : "var(--red-800)") + ";color:#fff"
-          : "background:var(--onair-surface);color:var(--gray-700);border:1px solid var(--gray-300)")
+          ? "background:var(--onair-surface);color:" + c + ";border:1.5px solid " + c
+          : "background:var(--onair-surface);color:var(--gray-600);border:1.5px solid var(--gray-300)")
     );
+  };
 
   /** 엄지 아이콘 — lucide(둥근 라인캡·라운드 조인). 머티리얼 심볼의 각진 엄지 대신 부드러운 형태.
-   *  고르면 같은 색으로 채워 선택 상태를 굵기가 아니라 면으로 말한다. */
+   *  고른 상태는 선 색으로만 말한다 — 채우면 손 모양이 뭉개진다. */
   const Thumb = ({ dir, active }: { dir: "up" | "down"; active: boolean }) => {
     const Icon = dir === "up" ? ThumbsUp : ThumbsDown;
     return (
@@ -94,7 +101,8 @@ export default function ClassifierFeedback({ vm }: { vm: CallFlowVM }) {
         size={17}
         strokeWidth={2}
         absoluteStrokeWidth
-        fill={active ? "currentColor" : "none"}
+        /* 채우지 않는다 — 채우면 엄지가 실루엣 덩어리가 된다. 선 그대로 두고 색만 바뀐다 */
+        fill="none"
         style={{ display: "block" }}
       />
     );
