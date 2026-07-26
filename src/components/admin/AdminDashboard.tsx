@@ -4,6 +4,7 @@ import { demoBus } from "../../services";
 import { useAdminFeed } from "../../hooks/useAdminFeed";
 import { useAdminStatus } from "../../hooks/useAdminStatus";
 import DesktopShell from "../desktop/DesktopShell";
+import DotPattern from "../ui/DotPattern";
 import SystemStatusBar from "./SystemStatusBar";
 import PipelineFlowPanel from "./PipelineFlowPanel";
 import RoutingFeed from "./RoutingFeed";
@@ -83,9 +84,12 @@ export default function AdminDashboard() {
     <div
       ref={rootRef}
       style={css(
-        "min-height:100vh;padding:12px;display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box"
+        "position:relative;min-height:100vh;padding:12px;display:flex;justify-content:center;align-items:center;background:#060607;box-sizing:border-box"
       )}
     >
+      {/* 검은 바닥의 결 — 관제가 '떠 있는 화면'이 아니라 '깔린 판 위'로 읽히게.
+          아주 흐리게(빛 없음 문법): 점이 보이는 순간 배경이 요소가 된다 */}
+      <DotPattern gap={22} r={1} color="#ffffff" opacity={0.1} fade />
       <div style={{ width: STAGE_W * scale, height: natH ? natH * scale : "auto" }}>
         <div
           ref={stageRef}

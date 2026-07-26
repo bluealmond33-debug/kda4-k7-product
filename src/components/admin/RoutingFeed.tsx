@@ -3,6 +3,7 @@ import Spinner from "../Spinner";
 import { SGE_META } from "../../services";
 import { playTestCall } from "../../services/adminScenario";
 import { PIPELINE_NODES } from "../../data/adminContent";
+import AnimatedList from "../ui/AnimatedList";
 import type { AdminCallRecord } from "../../hooks/useAdminFeed";
 
 const fmtTime = (ts: number) => {
@@ -147,9 +148,12 @@ export default function RoutingFeed({
             <div style={css("position:relative")}>
               {/* 타임라인 축 — 점들이 이 선 위에 앉는다 */}
               <div style={css("position:absolute;left:57px;top:7px;bottom:7px;width:1px;background:var(--gray-300)")} />
-              {strips.map((r) => (
-                <TimelineRow key={r.callId} r={r} onOpen={() => onOpenCard(r)} />
-              ))}
+              {/* 새 처리 건이 위에서 내려앉는다 — 관제는 목록이 '변했다'는 걸 숫자보다 먼저 봐야 한다 */}
+              <AnimatedList>
+                {strips.map((r) => (
+                  <TimelineRow key={r.callId} r={r} onOpen={() => onOpenCard(r)} />
+                ))}
+              </AnimatedList>
             </div>
           </div>
         )}

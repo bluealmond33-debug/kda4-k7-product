@@ -5,6 +5,7 @@ import DesktopShell from "./DesktopShell";
 import BriefingCardBody from "./BriefingCardBody";
 import ScriptTimeline from "./ScriptTimeline";
 import { KEYS, KeyHint, useShortcuts } from "../../lib/shortcuts";
+import AnimatedCircularProgress from "../ui/AnimatedCircularProgress";
 
 const FONT = "'Avenir Next','Pretendard',sans-serif";
 
@@ -179,19 +180,33 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               {/* 단축키 배지 — 연결 가능할 때만. 못 누르는 상태에서 키를 알려 주면
                   눌러 보고 아무 일도 안 일어나 더 헷갈린다. */}
               {vm.canConnect && <KeyHint k={KEYS.connect} tone="on" />}
-              {/* 남은 초 — 숫자만 줄어든다. 바닥 띠·숫자 배경을 뺐다: 버튼 안에 띠와 알약까지
-                  들어가면 장식이 셋이라 정작 읽어야 하는 숫자가 묻히고, 줄어드는 선은 오류
-                  표시로 오해되기도 했다. 마지막 5초만 숫자가 굵고 밝아진다. */}
-              <span
-                style={css(
-                  "font-variant-numeric:tabular-nums;letter-spacing:-.2px;transition:opacity .3s,font-size .3s;font-size:" +
-                    (auto.urgent ? "16px" : "14px") +
-                    ";opacity:" +
-                    (auto.counting ? (auto.urgent ? "1" : ".72") : ".45")
-                )}
+              {/* 남은 시간 — 숫자를 원형 게이지가 감싼다. 숫자는 "몇 초"를, 호는 "얼마나 남았나"를
+                  말한다: 급할 때 사람은 숫자를 읽기 전에 줄어드는 호를 먼저 본다.
+                  게이지는 **버튼 안**에 있다 — 밖에 링을 두면 눈이 버튼과 링으로 갈린다.
+                  바닥 띠를 다시 두지 않는 이유도 같다(장식이 둘이면 숫자가 묻힌다).
+                  마지막 5초만 숫자가 굵고 밝아진다. */}
+              <AnimatedCircularProgress
+                value={auto.left}
+                max={AUTO_CONNECT_SEC}
+                size={26}
+                stroke={2.6}
+                primary={vm.connectFg}
+                secondary="rgba(255,255,255,.26)"
+                transitionMs={auto.counting ? 950 : 200}
               >
-                {auto.left}
-              </span>
+                <span
+                  style={css(
+                    "font-variant-numeric:tabular-nums;letter-spacing:-.2px;transition:opacity .3s,font-size .3s;font-size:" +
+                      (auto.urgent ? "13px" : "11.5px") +
+                      ";font-weight:" +
+                      (auto.urgent ? "700" : "600") +
+                      ";opacity:" +
+                      (auto.counting ? (auto.urgent ? "1" : ".78") : ".45")
+                  )}
+                >
+                  {auto.left}
+                </span>
+              </AnimatedCircularProgress>
             </span>
           </div>
           </div>

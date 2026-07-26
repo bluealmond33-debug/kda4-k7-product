@@ -203,6 +203,58 @@ export function normalizeDeptLabel(label: string): string {
   return DEPT_ALIAS[t] ?? t;
 }
 
+/** 부서 상담사 명단 — 부서 카드 헤더의 아바타 원(AvatarCircles) 원본.
+ *  관제가 대기 건수 옆에서 곧바로 답해야 하는 질문은 "이 줄을 받을 사람이 지금 있나"다.
+ *  그래서 인원 총계가 아니라 **상태별**로 둔다: 대기(받을 수 있음)·통화(받는 중)·휴식.
+ *  이름만 쓰고 사번·연락처는 두지 않는다 — 관제 화면이 인사 조회 화면이 되면 안 된다.
+ *  실연동 시 이 픽스처 자리에 상담사 상태 API가 들어온다. */
+export interface DeptAgent {
+  name: string;
+  state: "대기" | "통화" | "휴식";
+}
+export const DEPT_AGENTS: Record<string, DeptAgent[]> = {
+  "수신·예적금": [
+    { name: "김하나", state: "대기" },
+    { name: "박서준", state: "통화" },
+    { name: "이도윤", state: "대기" },
+    { name: "최유진", state: "휴식" },
+  ],
+  "여신·대출": [
+    { name: "김키움", state: "통화" },
+    { name: "이수진", state: "대기" },
+    { name: "정해원", state: "통화" },
+    { name: "박민지", state: "대기" },
+    { name: "오세훈", state: "휴식" },
+    { name: "한지우", state: "대기" },
+  ],
+  "카드·결제": [
+    { name: "윤가온", state: "대기" },
+    { name: "장예린", state: "통화" },
+    { name: "서태현", state: "휴식" },
+  ],
+  "외환·수출입": [
+    { name: "문채원", state: "대기" },
+    { name: "강민호", state: "대기" },
+  ],
+  "전자금융·디지털": [
+    { name: "임세아", state: "대기" },
+    { name: "노준영", state: "대기" },
+    { name: "백서현", state: "통화" },
+    { name: "구본길", state: "대기" },
+  ],
+  "연금·신탁·투자": [
+    { name: "송지호", state: "대기" },
+    { name: "황수빈", state: "휴식" },
+  ],
+  "사고·신고": [
+    { name: "권도현", state: "통화" },
+    { name: "신아라", state: "통화" },
+    { name: "조은결", state: "대기" },
+    { name: "유하람", state: "대기" },
+    { name: "배진우", state: "휴식" },
+  ],
+};
+
 /** 부서별 시드 대기열 — 대시보드가 비어 보이지 않게 하는 가상 현황.
  *  키는 rules.ts의 7부서 taxonomy. 라이브 이벤트(routing.assigned)가 이 위에 쌓인다.
  *  S(단순)는 상담사 대기열에 들어가지 않는다 — ARS·AI가 즉시 응대(별도 카운터). 그래서 G/E만. */

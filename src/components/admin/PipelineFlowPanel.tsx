@@ -1,4 +1,7 @@
+import { useMemo, useRef } from "react";
 import { css } from "../../lib/css";
+import AnimatedBeam from "../ui/AnimatedBeam";
+import DotPattern from "../ui/DotPattern";
 import { PIPELINE_NODES, type PipelineNodeDef } from "../../data/adminContent";
 import type { AdminStatus } from "../../services";
 import type { AdminCallRecord } from "../../hooks/useAdminFeed";
@@ -23,6 +26,22 @@ export default function PipelineFlowPanel({
   onNodeClick: (node: PipelineNodeDef) => void;
 }) {
   const stages = flowCall?.stages ?? {};
+
+  // 빔이 이을 두 끝 — 노드 아이콘 원의 DOM
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const nodeRefs = useRef<(HTMLElement | null)[]>([]);
+  /* 빔에 넘길 ref 객체는 **한 번 만들고 계속 쓴다**. 렌더마다 `{current: ...}`를 새로 만들면
+     빔의 측정 effect가 매 렌더 다시 돌고, 그 안의 setState가 또 렌더를 부른다(무한 루프).
+     getter로 감싸 두면 객체는 그대로면서 항상 지금 DOM을 가리킨다. */
+  const beamRefs = useMemo(
+    () =>
+      PIPELINE_NODES.map((_, i) => ({
+        get current() {
+          return nodeRefs.current[i];
+        },
+      })),
+    []
+  );
 
   // 노드별 live 램프 — "무엇이 어디서 실제로 살아있는지"를 해당 노드 자리에서 말한다(실측 폴링).
   // 초록(숨쉼)=실가동 · 앰버=데모값/데모 대체 · 빨강=끊김 · 회색=미확인
@@ -90,25 +109,19 @@ export default function PipelineFlowPanel({
         )}
       </div>
 
-      {/* 노드 행 — 각 노드가 제 자리에서 live 여부를 말한다 (라벨 옆 실측 램프) */}
-      <div style={css("display:flex;align-items:flex-start")}>
+      {/* 노드 행 — 각 노드가 제 자리에서 live 여부를 말한다 (라벨 옆 실측 램프).
+          노드 사이는 화살표 글리프 대신 **빔**이 잇는다: 지나간 구간은 조용한 선,
+          지금 흐르는 구간은 빛이 실제로 건너간다 — 어디까지 왔는지가 한 눈에 읽힌다.
+          화살표가 있던 자리는 같은 폭의 빈칸으로 남겨 레이아웃을 그대로 둔다. */}
+      <div ref={rowRef} style={css("position:relative;display:flex;align-items:flex-start")}>
+        <DotPattern gap={14} r={0.9} opacity={0.16} />
         {PIPELINE_NODES.map((node, i) => {
           const st = stages[node.id];
           const on = st === "start";
           const done = st === "done";
           return (
             <span key={node.id} style={css("display:flex;flex:1;align-items:flex-start;min-width:0")}>
-              {i > 0 && (
-                <span
-                  className="mi"
-                  style={css(
-                    "flex:none;font-size:17px;margin:13px 2px 0;transition:color .3s;color:" +
-                      (done || on ? "var(--gray-800)" : "var(--gray-400)")
-                  )}
-                >
-                  arrow_forward
-                </span>
-              )}
+              {i > 0 && <span style={css("flex:none;width:21px")} />}
               <span
                 onClick={explain ? () => onNodeClick(node) : undefined}
                 title={explain ? node.label + " — 클릭하면 실사용 모델 상세" : undefined}
@@ -119,8 +132,11 @@ export default function PipelineFlowPanel({
               >
                 {/* 아이콘 원 — idle 회색 · 처리 중 파랑 · 완료 진초록 체크 오버레이 */}
                 <span
+                  ref={(el) => {
+                    nodeRefs.current[i] = el;
+                  }}
                   style={css(
-                    "position:relative;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;transition:background .3s,box-shadow .3s;" +
+                    "position:relative;z-index:1;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;transition:background .3s,box-shadow .3s;" +
                       (on
                         ? "background:var(--blue-700);box-shadow:0 4px 14px -4px rgba(47,95,196,.55)"
                         : "background:var(--gray-100)")
@@ -191,6 +207,28 @@ export default function PipelineFlowPanel({
                 )}
               </span>
             </span>
+          );
+        })}
+        {/* 노드를 잇는 빔 — 노드가 다 자리 잡은 뒤 그 위에 얹힌다.
+            흐르는 중(앞 단계 완료 + 이 단계 처리 중)만 빛이 건너가고,
+            이미 지나간 구간은 조용한 파란 선, 아직 안 온 구간은 회색 선으로 남는다. */}
+        {PIPELINE_NODES.slice(1).map((node, k) => {
+          const prevDone = stages[PIPELINE_NODES[k].id] === "done";
+          const here = stages[node.id];
+          const flowing = prevDone && here === "start";
+          const passed = prevDone && here === "done";
+          return (
+            <AnimatedBeam
+              key={node.id}
+              containerRef={rowRef}
+              fromRef={beamRefs[k]}
+              toRef={beamRefs[k + 1]}
+              active={flowing}
+              duration={1.6}
+              pathWidth={flowing ? 2 : 1.6}
+              pathColor={passed || flowing ? "var(--blue-500)" : "var(--gray-400)"}
+              pathOpacity={passed || flowing ? 0.9 : 0.5}
+            />
           );
         })}
       </div>

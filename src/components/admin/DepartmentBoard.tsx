@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { css } from "../../lib/css";
-import { DEPARTMENTS } from "../../data/adminContent";
+import { DEPARTMENTS, DEPT_AGENTS } from "../../data/adminContent";
+import AvatarCircles from "../ui/AvatarCircles";
+import AnimatedList from "../ui/AnimatedList";
 import { SGE_META, demoBus } from "../../services";
 import type { AdminFeed } from "../../hooks/useAdminFeed";
 
 /** [D] 부서 현황 보드 — 8개 라우팅 부서 × G/E 대기열 (S는 AI 즉시 응대라 큐에 없다).
  *  대기 목록은 클릭 없이 항상 보인다 — 관제는 펼침 조작 없이 읽혀야 한다.
  *  연결·이관 액션은 행에 올렸을 때만 드러난다(.memorow 문법). 이관도 demoBus를 탄다. */
+/** 아바타 정렬 순서 — 지금 콜을 받을 수 있는 사람이 맨 앞 */
+const ORDER = { 대기: 0, 통화: 1, 휴식: 2 } as const;
+
 export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; explain: boolean }) {
   const [transferFrom, setTransferFrom] = useState<{ dept: string; id: string } | null>(null);
   // 보기 전환 — grid: 부서 카드(목록·조작) · load: 대기 부하 막대(한눈 비교)
@@ -191,6 +196,11 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
             const items = feed.state.queues[dept.name] ?? [];
             const counts = feed.queueCounts[dept.name] ?? { s: 0, g: 0, e: 0 };
             const urgent = counts.e > 0;
+            // 상담사 원 — 수신 가능한 사람이 앞에 서도록 대기 → 통화 → 휴식 순
+            const agents = [...(DEPT_AGENTS[dept.name] ?? [])].sort(
+              (a, b) => ORDER[a.state] - ORDER[b.state]
+            );
+            const free = agents.filter((a) => a.state === "대기").length;
             const isIncident = dept.name === "사고·신고"; // SG — 긴급 라우팅 직결 부서
             return (
               <div
@@ -216,11 +226,21 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                   </span>
                 </div>
 
+                {/* 상담사 — 대기 건수 바로 아래. "몇 건이 밀렸나" 다음 질문이 "받을 사람이 있나"라
+                    두 숫자는 붙어 있어야 한다. 수신 가능 0명이면 대기 건수가 같아도 다른 상황이다. */}
+                <div style={css("display:flex;align-items:center;gap:6px;margin-top:7px")}>
+                  <AvatarCircles people={agents} max={4} size={20} />
+                  <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:" + (free === 0 ? "var(--red-900)" : "var(--gray-700)"))}>
+                    {free === 0 ? "수신 가능 없음" : "수신 가능 " + free + "명"}
+                  </span>
+                </div>
+
                 {/* 대기 목록 — 항상 보인다. 넘치면 카드 안에서 스크롤 */}
                 <div style={css("flex:1;min-height:0;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:4px")}>
                   {items.length === 0 && (
                     <div style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);padding:2px 1px")}>대기 없음</div>
                   )}
+                  <AnimatedList>
                   {items.map((it) => {
                     const meta = SGE_META[it.sge];
                     const pickerOpen = transferFrom?.id === it.id;
@@ -284,6 +304,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
                       </div>
                     );
                   })}
+                  </AnimatedList>
                 </div>
 
                 {/* 분해 램프 — E는 taxonomy상 사고·신고에만 존재(E→SG 강제)하므로 다른 부서엔 G만 */}
