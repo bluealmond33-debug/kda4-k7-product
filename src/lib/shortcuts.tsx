@@ -36,6 +36,8 @@ export const KEYS = {
   memo: "N",
   transfer: "T",
   endCall: "E",
+  verify: "V",
+  detail: "D",
   // 준비 카드
   connect: "C",
   // 후처리
@@ -130,6 +132,8 @@ export const SHORTCUT_GUIDE: { screen: string; items: { k: string; label: string
       { k: KEYS.hold, label: "보류" },
       { k: KEYS.memo, label: "메모 입력으로 이동" },
       { k: KEYS.reg, label: "관련 규정 펼치기·접기" },
+      { k: KEYS.verify, label: "본인확인 대조" },
+      { k: KEYS.detail, label: "고객 상세 조회 펼치기" },
       { k: KEYS.transfer, label: "이관 부서 선택" },
       { k: KEYS.endCall, label: "통화 종료" },
     ],

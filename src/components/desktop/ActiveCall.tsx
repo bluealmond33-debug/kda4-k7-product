@@ -152,6 +152,18 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       [KEYS.memo]: () => memoInputRef.current?.focus(),
       [KEYS.transfer]: () => setTransferMenu((v) => !v),
       [KEYS.endCall]: () => setEndConfirm(true),
+      /* 본인확인 — 인증 전에만 의미가 있다. 이미 인증됐으면 배선하지 않는다:
+         눌러도 아무 일이 없으면 "고장난 키"로 기억된다. */
+      [KEYS.verify]: vm.verified ? undefined : vm.runVerify,
+      /* 고객 상세 — 인증 후에만 열린다. 두 목록(이력·계좌)을 한 키로 함께 여닫는다:
+         따로 키를 주면 D와 F를 외워야 하고, 실무에선 둘을 같이 본다. */
+      [KEYS.detail]: vm.verified
+        ? () => {
+            const open = showHistory || showAccounts;
+            setShowHistory(!open);
+            setShowAccounts(!open);
+          }
+        : undefined,
     },
     !vm.showWrap
   );
@@ -439,7 +451,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       style={css("position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;outline:none;padding:0;cursor:text;caret-color:transparent")}
                     />
                   </label>
-                  <span onClick={vm.runVerify} style={css("display:flex;align-items:center;justify-content:center;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Avenir Next','Pretendard',sans-serif;cursor:pointer")}>대조</span>
+                  <span onClick={vm.runVerify} style={css("display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Avenir Next','Pretendard',sans-serif;cursor:pointer")}>대조<KeyHint k={KEYS.verify} tone="on" /></span>
                 </div>
                 {vm.authErr && (
                   <div style={css("margin-top:7px;display:flex;align-items:center;gap:4px;font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--red-800)")}>
@@ -456,6 +468,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             <div style={css("margin-top:12px")}>
               <div style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
                 고객 상세 조회 <span style={css("font-weight:400;color:var(--gray-600)")}>· 본인인증 후 열람</span>
+                {vm.verified && <KeyHint k={KEYS.detail} style="margin-left:6px;vertical-align:-3px" />}
               </div>
               {vm.verified ? (
                 <div style={css("display:flex;flex-direction:column;gap:7px")}>
