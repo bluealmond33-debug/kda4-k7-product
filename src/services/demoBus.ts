@@ -62,6 +62,10 @@ export interface DemoEventMap {
     confidence: number | null;
     risk: MvpIncidentRisk;
   };
+  /** 상담사가 통화를 받았다 — 고객 창이 "내 말이 상담사에게 넘어갔다"를 아는 유일한 신호.
+   *  이게 없으면 두 창이 각자 시계로 돌아 인계 연출이 어긋난다(고객 쪽은 자기 대본대로
+   *  넘어가고 직원 쪽은 사람이 누른 시점에 넘어간다). */
+  "agent.connected": { callId: string | null };
   "transfer.requested": { callId: string | null; toDept: string; mode: "reserve" | "immediate" };
   "transfer.completed": { callId: string | null; toDept: string };
   "call.ended": {
@@ -106,6 +110,7 @@ const DEMO_EVENT_TYPES = new Set<DemoEventType>([
   "pipeline.stage",
   "card.created",
   "routing.assigned",
+  "agent.connected",
   "transfer.requested",
   "transfer.completed",
   "call.ended",

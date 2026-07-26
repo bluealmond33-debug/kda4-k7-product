@@ -1214,6 +1214,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         return;
       }
       transitionPhase("active");
+      /* 다른 창에 "상담사가 받았다"를 알린다 — 고객 창은 이 신호로 대화 인계 연출을 시작한다.
+         두 창이 같은 순간에 움직여야 "말이 저쪽으로 건너갔다"로 읽힌다. */
+      demoBus.emit("agent.connected", { callId: respRef.current.call_id });
       // 로컬 데모 — 통화 연결 후 고객↔상담원 대화를 스크립트로 재생.
       // 양쪽 전사 패널(liveTranscriptLines·demoBus)에 화자가 번갈아 표시된다.
       let td = 1100;

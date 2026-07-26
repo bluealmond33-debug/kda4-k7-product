@@ -96,6 +96,39 @@ a:hover {
   }
 }
 
+/* 대화 인계 — 고객 창에서 나가고, 직원 창에서 들어온다.
+   두 브라우저 창은 픽셀을 공유할 수 없으므로 창을 넘나드는 애니메이션은 만들 수 없다.
+   대신 **방향의 연속성**으로 이동을 만든다: 왼쪽 창은 오른쪽 끝으로 빠지고, 오른쪽 창은
+   왼쪽 끝에서 나온다. 두 창을 나란히 놓으면 관객의 눈이 경계를 넘어 이어 붙인다.
+
+   대화 덩이가 한 줄로 눌려(scaleY) 브랜드 블루 막대가 되고, 그 막대가 건너간다 —
+   "내용이 압축돼 옮겨갔다"는 은유다. 봉투·날개 같은 비유는 쓰지 않는다(관제 화면의 톤). */
+@keyframes handoffOut {
+  0% { transform: translateX(0) scaleY(1); background: transparent; opacity: 1; }
+  30% { transform: translateX(0) scaleY(0.007); background: var(--blue-700); opacity: 1; }
+  52% { transform: translateX(0) scaleY(0.007); background: var(--blue-700); opacity: 1; }
+  100% { transform: translateX(58%) scaleY(0.007); background: var(--blue-700); opacity: 0; }
+}
+/* 안쪽(파형·말풍선)은 눌리기 전에 먼저 사라진다 — 글자가 짜부라지는 게 보이면 지저분하다 */
+@keyframes handoffOutInner {
+  0% { opacity: 1; }
+  24% { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes handoffIn {
+  0% { transform: translateX(-58%) scaleY(0.007); background: var(--blue-700); opacity: 0; }
+  16% { transform: translateX(-58%) scaleY(0.007); background: var(--blue-700); opacity: 1; }
+  46% { transform: translateX(0) scaleY(0.007); background: var(--blue-700); opacity: 1; }
+  100% { transform: translateX(0) scaleY(1); background: transparent; opacity: 1; }
+}
+/* 펼쳐진 뒤에 내용이 드러난다 — **이미 다 들어 있는 채로** 펼쳐져야 '옮겨왔다'로 읽힌다.
+   빈 패널이 열리고 나서 채워지면 '새로 시작했다'가 된다 */
+@keyframes handoffInInner {
+  0% { opacity: 0; }
+  52% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
 /* 인입 리스트 항목 등장(AnimatedList) — 위에서 내려앉으며 제 크기를 찾는다.
    새로 mount된 항목만 한 번 돈다: 애니메이션은 요소 생성 시점에 걸리므로
    리렌더로는 다시 실행되지 않는다. */
