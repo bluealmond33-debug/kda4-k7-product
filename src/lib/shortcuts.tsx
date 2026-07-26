@@ -96,10 +96,13 @@ export function KeyHint({
   tone?: "off" | "on";
   style?: string;
 }) {
+  /* 면을 채우지 않는다 — 테두리와 글자만. 배지는 버튼 위에 얹히는 '표시'라
+     자기 면을 가지면 버튼 안에 작은 버튼이 하나 더 있는 것처럼 보인다.
+     특히 색이 채워진 버튼 위에서는 반투명 면이 얼룩처럼 떠 보였다. */
   const skin =
     tone === "on"
-      ? "background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.34)"
-      : "background:var(--gray-100);color:var(--gray-700);border:1px solid var(--gray-300)";
+      ? "background:transparent;color:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.42)"
+      : "background:transparent;color:var(--gray-600);border:1px solid var(--gray-400)";
   return (
     <span
       aria-hidden="true"
