@@ -85,6 +85,9 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
   // 미니맵 — 스크롤 뷰포트 추적(캔버스가 창보다 커서 넘칠 때 현재 위치 표시)
   const PAD = 20;
   const scrollRef = useRef<HTMLDivElement>(null);
+  // 미니맵 접기 — 우측 하단에 떠 있어 파이프라인 오른쪽 아래(INV 등)를 가린다.
+  // 길잡이일 뿐 본문이 아니므로 언제든 치울 수 있어야 한다.
+  const [mapOpen, setMapOpen] = useState(true);
   const [vp, setVp] = useState({ sl: 0, st: 0, cw: 0, ch: 0 });
   const syncVp = () => {
     const el = scrollRef.current;
@@ -117,7 +120,7 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
           </span>
         </div>
 
-        <div ref={scrollRef} onScroll={syncVp} style={css("flex:1;overflow:auto;padding:20px")}>
+        <div ref={scrollRef} onScroll={syncVp} style={css("flex:1;overflow:auto;padding:20px 20px 150px")}>
           {/* ── n8n 캔버스: 점 그리드 배경 + 절대배치 노드 + SVG 엣지 ── */}
           <div style={css("position:relative;width:" + CW + "px;height:" + CH + "px;margin:0 auto;background-image:radial-gradient(var(--gray-300) 1px,transparent 0);background-size:19px 19px;background-position:8px 8px")}>
             {/* 엣지 레이어 */}
@@ -211,11 +214,32 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
           </div>
         </div>
 
-        {/* ── 미니맵 (우측 하단) — 전체 그래프 축소도 + 현재 보이는 영역 ── */}
+        {/* ── 미니맵 (우측 하단) — 전체 그래프 축소도 + 현재 보이는 영역.
+            접을 수 있다: 펼친 채로는 오른쪽 아래 부서 카드를 가린다. ── */}
+        {!mapOpen && (
+          <span
+            onClick={() => setMapOpen(true)}
+            title="미니맵 펼치기"
+            style={css("position:absolute;right:14px;bottom:14px;z-index:5;display:flex;align-items:center;gap:5px;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9999px;box-shadow:var(--sh-near);padding:6px 11px;cursor:pointer")}
+          >
+            <span className="mi" style={css("font-size:13px;color:var(--gray-600)")}>map</span>
+            <span style={css("font:700 9px " + FONT + ";letter-spacing:.3px;color:var(--gray-600)")}>미니맵</span>
+          </span>
+        )}
+        {mapOpen && (
         <div style={css("position:absolute;right:14px;bottom:14px;z-index:5;background:var(--onair-surface);border:1px solid var(--gray-300);border-radius:9px;box-shadow:var(--sh-modal);padding:6px 6px 5px")}>
           <div style={css("display:flex;align-items:center;gap:4px;padding:0 2px 4px")}>
             <span className="mi" style={css("font-size:11px;color:var(--gray-500)")}>map</span>
             <span style={css("font:700 8.5px " + FONT + ";letter-spacing:.3px;color:var(--gray-500)")}>미니맵</span>
+            <div style={css("flex:1")} />
+            <span
+              onClick={() => setMapOpen(false)}
+              title="미니맵 접기"
+              className="mi"
+              style={css("font-size:13px;color:var(--gray-500);cursor:pointer;margin-right:-1px")}
+            >
+              close_fullscreen
+            </span>
           </div>
           <svg onClick={jump} width={MMW} height={MMH} viewBox={"0 0 " + CW + " " + CH}
             style={{ display: "block", borderRadius: 5, background: "var(--gray-100)", cursor: "pointer" }}>
@@ -228,6 +252,7 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
             )}
           </svg>
         </div>
+        )}
       </div>
     </>
   );

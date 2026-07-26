@@ -87,44 +87,78 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
               c: feed.queueCounts[d.name] ?? { s: 0, g: 0, e: 0 },
             }));
             const max = Math.max(1, ...rows.map((r) => r.c.e + r.c.g));
+            /* 눈금 — 대기 건수는 정수라 눈금도 정수여야 한다(2.5건은 없다).
+               최대 4칸을 넘지 않게 간격을 키운다. 눈금이 있어야 막대 높이가 뜻을 갖는다 —
+               전에는 축이 없어서 "3"과 "1"의 높이 차이를 읽을 기준이 없었다. */
+            const step = Math.max(1, Math.ceil(max / 4));
+            const top = Math.ceil(max / step) * step;
+            const ticks: number[] = [];
+            for (let t = 0; t <= top; t += step) ticks.push(t);
+            /* 평균 대기 — 어느 부서가 평소보다 밀렸는지는 절대값이 아니라 평균 대비로 읽힌다 */
+            const avg = rows.reduce((n, r) => n + r.c.e + r.c.g, 0) / (rows.length || 1);
+            const AX = 22; // y축 라벨 폭
             return (
               <>
-                {/* 차트 영역 — 바닥 정렬 컬럼 8개 */}
-                <div style={css("flex:1;min-height:0;display:flex;align-items:stretch;gap:10px")}>
+                {/* 차트 영역 — 눈금(절대배치) 위에 막대.
+                    값 라벨을 막대 위에 '쌓지' 않고 절대배치로 띄우는 게 중요하다:
+                    전에는 라벨이 같은 flex 컬럼에 있어 막대의 100%가 라벨 공간까지
+                    포함한 높이였다 — 그래서 눈금을 그려도 값과 어긋난다. */}
+                <div style={css("flex:1;min-height:0;position:relative;padding-top:14px")}>
+                  {ticks.map((t) => (
+                    <div
+                      key={t}
+                      style={css(
+                        "position:absolute;left:0;right:0;height:0;bottom:" +
+                          (t / top) * 100 + "%;display:flex;align-items:center;gap:6px;pointer-events:none"
+                      )}
+                    >
+                      <span style={css("flex:none;width:" + AX + "px;text-align:right;font:500 9px 'Avenir Next','Pretendard',sans-serif;font-variant-numeric:tabular-nums;color:var(--gray-500);transform:translateY(-1px)")}>{t}</span>
+                      <span style={css("flex:1;height:1px;background:" + (t === 0 ? "var(--gray-400)" : "var(--gray-200)"))} />
+                    </div>
+                  ))}
+                  {/* 평균선 — 눈금과 구분되게 잉크를 한 단 올리고 라벨을 붙인다 */}
+                  {avg > 0 && (
+                    <div style={css("position:absolute;left:" + (AX + 6) + "px;right:0;height:0;bottom:" + (avg / top) * 100 + "%;display:flex;align-items:center;pointer-events:none")}>
+                      <span style={css("flex:1;height:1px;background:var(--gray-500);opacity:.7")} />
+                      <span style={css("flex:none;margin-left:5px;font:600 8.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);background:var(--onair-surface);padding:0 3px")}>평균 {avg.toFixed(1)}</span>
+                    </div>
+                  )}
+                  {/* 막대 — 눈금 위에 얹는다 */}
+                  <div style={css("position:absolute;left:" + (AX + 6) + "px;right:0;top:14px;bottom:0;display:flex;align-items:flex-end;gap:10px")}>
                   {rows.map((r) => {
                     const total = r.c.e + r.c.g;
-                    const hPct = (total / max) * 100;
+                    const hPct = (total / top) * 100;
                     return (
                       <div
                         key={r.name}
                         title={r.items.length ? r.items.map((it) => (it.code ? `${it.code} ${it.label}` : it.label)).join("\n") : "대기 없음"}
-                        style={css("flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px")}
+                        style={css("flex:1;min-width:0;height:100%;position:relative;display:flex;align-items:flex-end;justify-content:center")}
                       >
-                        {/* 값 라벨 — 막대 바로 위 */}
-                        <div style={css("flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px")}>
-                          <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;white-space:nowrap;color:var(--gray-800)")}>
-                            {r.c.e > 0 && <span style={css("color:var(--red-900)")}>E{r.c.e}</span>}
-                            {r.c.e > 0 && r.c.g > 0 && "·"}
-                            {r.c.g > 0 && <span style={css("color:var(--blue-900)")}>G{r.c.g}</span>}
-                            {total === 0 && <span style={css("color:var(--gray-500)")}>0</span>}
-                          </span>
-                          {/* 스택 막대 — E(빨강)가 위, G(파랑)가 아래. 폭 26px = 가는 요소 */}
-                          {total > 0 ? (
-                            <div style={{ height: `${hPct}%`, minHeight: 10, width: 26, display: "flex", flexDirection: "column", borderRadius: 7, overflow: "hidden", transition: "height .4s var(--ease-out)" }}>
-                              {r.c.e > 0 && <span style={{ flex: r.c.e, background: "var(--red-700)" }} />}
-                              {r.c.g > 0 && <span style={{ flex: r.c.g, background: "var(--blue-700)" }} />}
-                            </div>
-                          ) : (
-                            <div style={css("width:26px;height:3px;border-radius:2px;background:var(--gray-300)")} />
-                          )}
-                        </div>
+                        {/* 값 라벨 — 막대 끝 바로 위에 절대배치(플롯 높이를 뺏지 않는다) */}
+                        <span style={css("position:absolute;left:0;right:0;text-align:center;font:600 10.5px 'Avenir Next','Pretendard',sans-serif;white-space:nowrap;color:var(--gray-800);bottom:calc(" + hPct + "% + 4px)")}>
+                          {r.c.e > 0 && <span style={css("color:var(--red-900)")}>E{r.c.e}</span>}
+                          {r.c.e > 0 && r.c.g > 0 && "·"}
+                          {r.c.g > 0 && <span style={css("color:var(--blue-900)")}>G{r.c.g}</span>}
+                          {total === 0 && <span style={css("color:var(--gray-500)")}>0</span>}
+                        </span>
+                        {/* 스택 막대 — E(빨강)가 위, G(파랑)가 아래. 폭은 슬롯을 채우지 않는다(≤24px) */}
+                        {total > 0 ? (
+                          <div style={{ height: `${hPct}%`, minHeight: 6, width: 22, display: "flex", flexDirection: "column", borderRadius: "4px 4px 0 0", overflow: "hidden", transition: "height .4s var(--ease-out)" }}>
+                            {r.c.e > 0 && <span style={{ flex: r.c.e, background: "var(--red-700)" }} />}
+                            {r.c.g > 0 && <span style={{ flex: r.c.g, background: "var(--blue-700)" }} />}
+                          </div>
+                        ) : (
+                          /* 0건은 막대를 세우지 않는다 — 토막을 세우면 '조금 있다'로 읽힌다 */
+                          <div style={css("width:22px;height:2px;background:var(--gray-300)")} />
+                        )}
                       </div>
                     );
                   })}
+                  </div>
                 </div>
                 {/* 바닥선 + 부서명 축 */}
-                <div style={css("height:1px;background:var(--gray-300);margin:6px 0 5px")} />
-                <div style={css("display:flex;gap:10px")}>
+                <div style={css("height:0;margin:6px 0 5px")} />
+                <div style={css("display:flex;gap:10px;margin-left:28px")}>
                   {rows.map((r) => (
                     <span
                       key={r.name}
