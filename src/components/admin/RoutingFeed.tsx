@@ -135,10 +135,11 @@ export default function RoutingFeed({
         {/* 진행 중 콜 전부 — 카드마다 제 프로세스(미니 파이프라인)가 돈다 */}
         {heroes.length > 0 && (
           <div style={css("display:flex;flex-direction:column;gap:8px")}>
-            {/* 들리는 건 맨 위 한 장뿐 — 여러 콜이 동시에 돌 때 전부 sh-focus를 달면
-                그림자가 겹쳐 패널 전체가 어두워진다(ONAIR: 초점은 하나) */}
-            {heroes.map((r, i) => (
-              <FrontCard key={r.callId} r={r} lifted={i === 0} />
+            {/* 들림은 **한 장뿐일 때만**. 여러 콜이 동시에 도는 중이면 어느 것도 초점이 아니라
+                전부 같은 낮은 그림자로 둔다 — 맨 위만 들리면 그 한 장이 잘못된 것처럼 어둡게 보인다.
+                (ONAIR: 초점은 하나이거나 없다) */}
+            {heroes.map((r) => (
+              <FrontCard key={r.callId} r={r} lifted={heroes.length === 1} recent={pipelineLive.length === 0} />
             ))}
           </div>
         )}
@@ -167,7 +168,16 @@ export default function RoutingFeed({
 }
 
 /** 최신 카드 — 맨 위, 분류 결과 전체. 새로 얹힐 때 위에서 '딜'되는 모션(cardDeal). */
-function FrontCard({ r, lifted = true }: { r: AdminCallRecord; lifted?: boolean }) {
+function FrontCard({
+  r,
+  lifted = true,
+  recent = false,
+}: {
+  r: AdminCallRecord;
+  lifted?: boolean;
+  /** 도는 콜이 하나도 없어서 '가장 최근 결과'로 남아 있는 카드 */
+  recent?: boolean;
+}) {
   const lift = lifted ? "var(--sh-focus)" : "var(--sh-near)";
   const sge = r.sge;
   const meta = sge ? SGE_META[sge] : null;
@@ -207,6 +217,13 @@ function FrontCard({ r, lifted = true }: { r: AdminCallRecord; lifted?: boolean 
           {r.card.businessType}
         </span>
         <div style={css("flex:1")} />
+        {/* 분류가 다 끝났는데도 이 카드가 남아 있는 이유를 카드가 스스로 말한다 —
+            없으면 "처리가 안 끝난 건이 하나 걸려 있다"로 읽힌다 */}
+        {recent && (
+          <span style={css("flex:none;font:600 9.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.3px;color:var(--gray-600);background:var(--gray-100);border-radius:9999px;padding:2.5px 8px")}>
+            최근 처리 결과
+          </span>
+        )}
         <span style={css("flex:none;font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
       </div>
       <div style={css("margin-top:7px;font:400 12.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>
