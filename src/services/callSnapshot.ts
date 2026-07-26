@@ -32,6 +32,8 @@ export interface CallSnapshot {
   startedAtMs: number;
   /** 소유 창이 마지막으로 "나 아직 통화 중"이라고 적은 시각 */
   updatedAt: number;
+  /** 지금 어느 단계인가 — 새로고침한 고객 창이 다이얼이 아니라 통화 화면으로 돌아오게 한다 */
+  phase?: string;
 }
 
 /** localStorage는 사파리 프라이빗·정책 차단에서 던진다. 시연이 그걸로 멈추면 안 된다. */

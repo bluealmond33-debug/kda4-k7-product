@@ -507,6 +507,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const selfEndRef = useRef(false);
   const startCallRef = useRef<() => void>(() => undefined);
   const endCallRef = useRef<() => void>(() => undefined);
+  const startClockRef = useRef<() => void>(() => undefined);
   const resetRef = useRef<() => void>(() => undefined);
   const silT = useRef<number | null>(null);
   /** 카드 생성 창 타이머 — 리셋 때 반드시 끊는다(안 끊으면 초기화한 뒤에 prep으로 튄다) */
@@ -673,6 +674,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         callId: respRef.current.call_id,
         kind: incomingRef.current,
         startedAtMs: clockOrigin.current,
+        phase: phaseRef.current,
       });
     };
     beat();
@@ -683,6 +685,28 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   /* 창이 열릴 때 한 번 — 이미 돌고 있는 통화가 있으면 그 통화로 들어간다.
      버스(생방송)를 못 들은 창을 위한 보험이다: 새로고침하거나 시연 도중에 창을 새로 열어도
      대기 화면에 혼자 남지 않는다. 고객 화면은 전화를 거는 쪽이라 합류하지 않는다. */
+  /* 고객 창 새로고침 복구 — **대본을 다시 돌리지 않는다.**
+     startCall을 부르면 ARS 안내가 처음부터 다시 나가고(음성까지) 접수가 리셋된다.
+     새로고침한 사람이 원하는 건 "하던 통화로 돌아가는 것"이지 새 통화가 아니다.
+     그래서 되돌리는 건 **화면 상태와 시계뿐**이다: 폰이 다이얼이 아니라 통화 화면으로,
+     경과 시간은 처음 걸었던 시각부터.
+     지난 전사는 메모리에만 있어 돌아오지 않는다 — 지금부터의 말이 이어서 쌓인다. */
+  useEffect(() => {
+    if (!isCustomerSurface) return;
+    const snap = readCallSnapshot();
+    if (!snap) return;
+    if (phaseRef.current !== "idle") return;
+    const back = snap.phase;
+    if (!back || !["recording", "confirm", "prep", "active"].includes(back)) return;
+    clockOrigin.current = snap.startedAtMs;
+    /* 칠판을 이어서 살려 둔다 — 복구한 창이 새 주인이다. 안 하면 갱신이 끊겨 15초 뒤
+       칠판이 상하고, 그때부터는 아무도(자기 자신도) 이 통화로 못 돌아온다. */
+    ownsCallRef.current = true;
+    // connecting(안내 재생 중)으로는 돌리지 않는다 — 안내는 이미 지나갔다
+    transitionPhase(back as Phase);
+    startClockRef.current();
+  }, [isCustomerSurface, transitionPhase]);
+
   useEffect(() => {
     if (isCustomerSurface) return;
     /* StrictMode(개발)는 마운트를 두 번 돌린다. "한 번만" 플래그로 막으면 **살아남는 쪽**이
@@ -713,6 +737,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 500ms로 도는 이유: 다른 창의 원점이 도착해 시계가 보정될 때 1초를 기다리지 않는다
     clockT.current = window.setInterval(tick, 500);
   }, []);
+  startClockRef.current = startClock;
 
   /* 통화 중이면 시계는 **항상** 돈다.
      clearAll이 인터벌을 지우는 자리가 여러 곳이라(effect 정리·재시작 등), 시작 경로에서 한 번
@@ -1279,7 +1304,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           ? { generation: callGenerationRef.current }
           : {}),
       });
-      writeCallSnapshot({ callId: resp.call_id, kind, startedAtMs: clockOrigin.current ?? Date.now() });
+      writeCallSnapshot({
+        callId: resp.call_id,
+        kind,
+        startedAtMs: clockOrigin.current ?? Date.now(),
+        phase: "connecting",
+      });
     }
     demoBus.emit("pipeline.stage", {
       callId: resp.call_id,
