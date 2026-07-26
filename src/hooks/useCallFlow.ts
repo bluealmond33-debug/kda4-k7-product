@@ -62,6 +62,8 @@ import {
   type LiveTranscript,
 } from "../services/liveCall";
 import { resolveCallId, resolveExplicitCallId } from "../services/callId";
+import { DEPT_UNKNOWN, normalizeDept } from "../data/taxonomy";
+import { maskPii } from "../lib/maskPii";
 import {
   startArsControl,
   type ArsControlHandle,
@@ -711,7 +713,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             ...prev.consultation_card,
             summary: headline,
             business_type: "미분류",
-            department: "일반상담팀",
+            // 발화가 없으면 부서도 없다. 예전엔 "일반상담팀"으로 자리를 채웠는데,
+            // taxonomy에 없는 이름이라 규정 필터가 조용히 풀리는 경로였다(500ad1e 참고).
+            department: DEPT_UNKNOWN,
             routing_reason: "고객 발화가 없어 자동 라우팅하지 않음",
             incident_risk: "low",
             risk_reason: null,
@@ -787,9 +791,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       const emotionLevel =
         emotionScore >= 70 ? "elevated" : emotionScore >= 40 ? "caution" : "stable";
       const highRisk = Number(data?.urgency_score ?? 0) >= 60;
-      const department = String(
-        data?.routing?.department || data?.category || "일반상담팀"
-      );
+      // 백엔드가 준 이름을 taxonomy 라벨로 정규화한다. 모르는 이름이면 지어내지 않고
+      // '미분류'로 둔다 — 가짜 부서명이 붙으면 규정 필터가 조용히 풀린다.
+      const department =
+        normalizeDept(data?.routing?.department) ??
+        normalizeDept(data?.category) ??
+        DEPT_UNKNOWN;
       const keywords: string[] = Array.isArray(data?.keywords)
         ? data.keywords.filter((item: unknown): item is string => typeof item === "string")
         : [];
@@ -2375,17 +2382,22 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   // 후처리 결과 본문 기본값 — 화면(wrapSummaryDefault)과 저장(saveWrap)이 같은 문장을 써야 하므로
   // 한 곳에서 만든다. 상담사가 직접 고쳤다면 summaryText.current가 이걸 대신한다.
-  const wrapSummaryText = [
-    // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
-    // v0 = 카드 요약 원문. 이미 "고객이…"로 시작하므로 접두사를 붙이면 "고객의 고객이" 중복이 된다
-    summaryVersion % 2 === 0
-      ? `${card.summary ?? summary?.headline ?? "상담 내용을 요약했습니다."}`
-      : `${SUMMARY_PROSE[incoming]}`,
-    `업무유형: ${card.business_type}.`,
-    `전달부서: ${card.department}.`,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  // 여기서 한 번 가린다 — 렌더가 아니라 **소스**에서. 후처리 초안은 상담사가 고쳐 쓰는
+  // contentEditable이라 그리는 쪽에서 가리면 별표가 저장 본문에 섞인다. 소스에서 가리면
+  // 화면·저장·복사가 같은(가려진) 문장을 쓴다 — 원문 PII가 DB로 새지 않는다.
+  const wrapSummaryText = maskPii(
+    [
+      // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
+      // v0 = 카드 요약 원문. 이미 "고객이…"로 시작하므로 접두사를 붙이면 "고객의 고객이" 중복이 된다
+      summaryVersion % 2 === 0
+        ? `${card.summary ?? summary?.headline ?? "상담 내용을 요약했습니다."}`
+        : `${SUMMARY_PROSE[incoming]}`,
+      `업무유형: ${card.business_type}.`,
+      `전달부서: ${card.department}.`,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
 
   return {
     // refs

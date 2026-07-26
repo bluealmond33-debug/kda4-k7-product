@@ -40,7 +40,7 @@ const TODAY = {
 
 const ALERTS = [
   {
-    title: "사고대응팀 인계 회신 도착",
+    title: "사고·신고팀 인계 회신 도착",
     sub: "명의도용 의심 건 — 지급정지 처리 완료, 고객 안내 필요",
     time: "10분 전",
     unread: true,

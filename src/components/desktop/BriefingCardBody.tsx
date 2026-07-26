@@ -175,7 +175,7 @@ export default function BriefingCardBody({
             </div>
             {/* 한 줄 요약 — 제목(크게). 근거 발화는 바로 아래 붙인다 */}
             <div style={css("font:700 17px/1.35 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>
-              <TypingAnimation text={vm.prepHeadline} enabled={typeHeadline} continuous={false} speed={22} />
+              <TypingAnimation text={maskPii(vm.prepHeadline)} enabled={typeHeadline} continuous={false} speed={22} />
             </div>
             {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선 */}
             <div style={css("font:400 11.5px/1.4 " + FONT + ";color:var(--gray-700);margin-top:2px;padding-bottom:8px;border-bottom:1px solid var(--gray-200)")}>
@@ -186,7 +186,7 @@ export default function BriefingCardBody({
               {vm.summaryPoints.map((p, i) => (
                 <div key={i} style={css("display:flex;gap:10px;align-items:baseline")}>
                   <span style={css("flex:none;width:6px;height:6px;border-radius:9999px;background:var(--blue-700);transform:translateY(-2px)")} />
-                  <span style={css("font:400 14.5px/1.6 " + FONT + ";color:var(--gray-1000)")}>{p}</span>
+                  <span style={css("font:400 14.5px/1.6 " + FONT + ";color:var(--gray-1000)")}>{maskPii(p)}</span>
                 </div>
               ))}
             </div>
