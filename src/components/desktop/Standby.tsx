@@ -694,9 +694,25 @@ export default function Standby() {
                     .map(([row, ri]) => (
                     <div key={ri} style={css("display:flex")}>
                       <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{ri + 1}</span>
-                      {row.map((cell, ci) => (
-                        <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(cell, manualSearch)}</span>
-                      ))}
+                      {row.map((cell, ci) => {
+                        // 사고 방지 신호는 열을 늘리지 않고 내용 칸 앞에 표식으로만 세운다.
+                        // 조항(마지막 열)으로 찾아 붙인다 — 금지는 빨강, 선행조건은 앰버.
+                        const sig = ci === 2 ? SHEETS.manual.signals?.[row[row.length - 1]] : undefined;
+                        return (
+                        <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>
+                          {sig && (
+                            <span
+                              title={sig.kind + " · " + sig.text}
+                              className="mi"
+                              style={css("font-size:14px;margin-right:4px;vertical-align:-2px;cursor:help;color:" + (sig.kind === "금지" ? "var(--red-700)" : "var(--amber-700)"))}
+                            >
+                              {sig.kind === "금지" ? "block" : "priority_high"}
+                            </span>
+                          )}
+                          {highlight(cell, manualSearch)}
+                        </span>
+                        );
+                      })}
                     </div>
                   ))}
                 </div>

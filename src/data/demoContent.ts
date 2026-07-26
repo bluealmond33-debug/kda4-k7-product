@@ -327,12 +327,21 @@ export interface SheetColumn {
   l: string;
   w: number;
 }
+/** 사고 방지 신호 — 백엔드 구조화의 prohibitions/requirements에 대응한다.
+ *  금지는 "하면 안 되는 것", 선행은 "먼저 해야 하는 것". */
+export interface SheetSignal {
+  kind: "금지" | "선행";
+  text: string;
+}
+
 export interface SheetData {
   title: string;
   file: string;
   sheet: string;
   cols: SheetColumn[];
   rows: string[][];
+  /** 조항 → 신호. 있는 시트에만 붙는다(과거 이력·계좌 시트에는 없다) */
+  signals?: Record<string, SheetSignal>;
 }
 
 export const SHEETS: Record<"history" | "accounts" | "manual", SheetData> = {
@@ -378,6 +387,21 @@ export const SHEETS: Record<"history" | "accounts" | "manual", SheetData> = {
     title: "전자금융거래 업무매뉴얼",
     file: "전자금융거래_업무매뉴얼_v24.xlsx",
     sheet: "착오송금 반환",
+    /* 조항별 사고 방지 신호 — 백엔드 구조화(structured.prohibitions/requirements)가
+       뽑아내는 값과 같은 것을 시연용으로 고정해 둔다.
+       표에 열로 넣지 않는 이유: 열을 하나 더 두면 정작 읽어야 할 안내 멘트가 좁아진다.
+       대신 내용 칸 앞에 표식만 세우고 자세한 문장은 올렸을 때 보여준다 —
+       "확정적 표현 사용 금지" 같은 건 통화 중 가장 비싼 실수라 놓치면 안 되지만,
+       상시 펼쳐 두면 정작 읽을 문장을 가린다. */
+    signals: {
+      "§12-1": { kind: "금지", text: "수취인 동의 없이 임의 반환 불가" },
+      "§12-2": { kind: "금지", text: "「무조건 반환」 등 확정적 표현 사용 금지" },
+      "§12-3": { kind: "선행", text: "반환 접수 전 본인확인 필수" },
+      "§13-1": { kind: "선행", text: "이상거래 징후 시 사고대응팀 연계 후 처리" },
+      "§14-1": { kind: "금지", text: "원문은 화면에 표시하지 않는다" },
+      "§14-2": { kind: "금지", text: "재차 불일치면 열람 불가 · 지점 내방 안내" },
+      "§14-3": { kind: "금지", text: "본인 동의 확인 전 대리인에게 열람·안내 불가" },
+    },
     /* 열 순서 — 안내 멘트가 맨 앞이다.
        통화 중에 조항 번호로 찾는 일은 거의 없고, 조항은 내용이 아니라 **출처 표시**다.
        상담사가 급할 때 필요한 건 '지금 뭐라고 말해야 하나' 한 줄이라 그걸 가장 넓게
