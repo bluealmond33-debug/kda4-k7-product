@@ -85,6 +85,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const memoListRef = useRef<HTMLDivElement | null>(null);
   const [memoFocused, setMemoFocused] = useState(false);
   const [authFocused, setAuthFocused] = useState(false);
+  const authInputRef = useRef<HTMLInputElement | null>(null);
 
   // 광원 상태머신 v3 — 기본은 아무 카드도 들리지 않는다(진입 직후 스크립트에 그림자가 떠 있던 v2 교정).
   // 초점은 '작업 중'일 때만: 메모 입력 > 규정집 확장 > 본인확인 입력 포커스.
@@ -171,8 +172,15 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       [KEYS.transfer]: () => setTransferMenu((v) => !v),
       [KEYS.endCall]: () => setEndConfirm(true),
       /* 본인확인 — 인증 전에만 의미가 있다. 이미 인증됐으면 배선하지 않는다:
-         눌러도 아무 일이 없으면 "고장난 키"로 기억된다. */
-      [KEYS.verify]: vm.verified ? undefined : vm.runVerify,
+         눌러도 아무 일이 없으면 "고장난 키"로 기억된다.
+         빈칸이면 **커서를 상자에 놓는다**(R·N과 같은 문법) — 예전엔 곧바로 대조를 돌려서
+         V를 누르면 늘 "자릿수가 부족합니다"부터 봤다. 다 채워진 뒤의 V는 다시 대조다. */
+      [KEYS.verify]: vm.verified
+        ? undefined
+        : () => {
+            if (vm.authInput.replace(/\D/g, "").length >= vm.authMaxLen) vm.runVerify();
+            else authInputRef.current?.focus();
+          },
       /* 고객 상세 — 인증 후에만 열린다. 두 목록(이력·계좌)을 한 키로 함께 여닫는다:
          따로 키를 주면 D와 F를 외워야 하고, 실무에선 둘을 같이 본다. */
       [KEYS.detail]: vm.verified
@@ -503,6 +511,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       );
                     })}
                     <input
+                      ref={authInputRef}
                       className="authin"
                       value={vm.authInput}
                       onChange={vm.onAuthInput}

@@ -46,7 +46,10 @@ _DEMO_CUSTOMER = {
     "phoneMasked": "010-****-4821",
     "type": "개인 고객",
     # 본인확인 대조 정답(가상). 원문은 응답으로 절대 반환하지 않는다.
-    "auth": {"phone": "4821", "birth": "880214", "account": "4821"},
+    # birth는 프론트가 **8자리(YYYYMMDD)**로 보낸다 — 화면 안내도 "생년월일 여덟 자리"다.
+    # 여기 6자리로 두면 서비스가 떠 있을 때만 대조가 실패해(꺼져 있으면 프론트 폴백이 통과)
+    # 재현이 까다로운 어긋남이 된다. src/data/demoContent.ts의 authAnswers와 같은 값을 쓴다.
+    "auth": {"phone": "4821", "birth": "19990303", "account": "4821"},
     "accounts": {
         "title": "보유 계좌 및 카드 현황",
         "file": "고객보유상품_조회.xlsx",

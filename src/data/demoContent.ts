@@ -20,8 +20,10 @@ export const CUSTOMER = {
   masked: "김*기",
   phoneMasked: "010-****-4821",
   type: "개인 고객",
-  /** 본인확인 대조 정답 — 불일치 경로를 데모하기 위한 기준값 (원문은 화면에 표시하지 않는다) */
-  authAnswers: { phone: "4821", birth: "19880214", account: "4821" },
+  /** 본인확인 대조 정답 — 불일치 경로를 데모하기 위한 기준값 (원문은 화면에 표시하지 않는다).
+   *  birth는 시연 대본에서 고객이 실제로 말하는 값과 반드시 같아야 한다
+   *  (useCallFlow.ts ACTIVE_DIALOGUE). 어긋나면 시연 중 대조가 '불일치'로 떨어진다. */
+  authAnswers: { phone: "4821", birth: "19990303", account: "4821" },
 } as const;
 
 /** 데모 인입 콜 유형 — 라우팅 기준 후보 문서(vault 07 Outputs 2026-07-18) 참조.

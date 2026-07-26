@@ -198,7 +198,8 @@ const ACTIVE_DIALOGUE: { speaker: "agent" | "customer"; text: string }[] = [
   { speaker: "agent", text: "네 고객님, 주택담보대출 만기 연장 문의 주셨죠. 제가 바로 확인해 드릴게요." },
   { speaker: "customer", text: "네, 다음 달이 만기인데 연장이 가능할까요?" },
   { speaker: "agent", text: "먼저 본인 확인부터 도와드릴게요. 생년월일 여덟 자리 말씀해 주시겠어요?" },
-  { speaker: "customer", text: "890315입니다." },
+  // 안내가 "여덟 자리"이므로 고객도 여덟 자리로 답한다(정답: CUSTOMER.authAnswers.birth).
+  { speaker: "customer", text: "19990303입니다." },
   { speaker: "agent", text: "확인되었습니다. 재약정으로 만기 연장 가능하시고, 금리는 심사 후 안내드려요." },
   { speaker: "customer", text: "필요한 서류는 어떤 게 있나요?" },
   { speaker: "agent", text: "소득증빙과 등기부등본이 필요하고, 비대면으로도 제출하실 수 있어요." },
@@ -2008,10 +2009,31 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setAuthMethodLabel(lbl);
     setAuthErr(false);
   }, [authInput, authMethod]);
+  /* 자릿수가 다 차면 스스로 대조한다.
+     화면에는 늘 "빈칸에 입력하면 **자동 대조**됩니다"라고 적혀 있었는데 실제로는 대조 버튼을
+     눌러야 했다 — 안내와 동작이 어긋나면 상담사는 안내를 믿지 않게 된다. 마지막 자리를
+     치는 순간이 곧 "다 말했다"는 신호이므로, 여기가 대조의 자연스러운 자리다.
+     같은 값으로 두 번 조회하지 않도록 직전에 대조한 값을 기억한다(불일치 후 그대로 둬도
+     매 렌더마다 재시도하지 않는다). 지우고 다시 치면 값이 달라지므로 다시 대조된다. */
+  const lastTried = useRef("");
+  useEffect(() => {
+    if (verified) return;
+    const need = authMethod === "birth" ? 8 : 4;
+    const digits = authInput.replace(/\D/g, "");
+    if (digits.length < need) {
+      lastTried.current = ""; // 지우는 중 — 다시 채우면 대조할 수 있어야 한다
+      return;
+    }
+    const key = authMethod + ":" + digits;
+    if (lastTried.current === key) return;
+    lastTried.current = key;
+    void runVerify();
+  }, [authInput, authMethod, verified, runVerify]);
   const resetAuth = useCallback(() => {
     setVerified(false);
     setAuthInput("");
     setAuthErr(false);
+    lastTried.current = "";
     setPiiAcc(null);
     setPiiHist(null);
   }, []);
@@ -2689,7 +2711,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     summaryPending,
     // 본인인증 상태 — 인수인계(transfer) 콜은 전임 상담사가 이미 인증(재인증 생략),
     // 신규·긴급은 연결 직후 상담사가 인증한다(=아직 미완료). 유의사항 첫 항목과 일치.
-    prepVerified: incoming === "transfer",
+    // 통화 중 상담사가 대조를 마치면(verified) 카드도 따라 바뀐다 — 예전엔 인입 유형만
+    // 봐서, 왼쪽 패널이 "본인인증 완료"인데 카드는 "인증 미완료"로 남는 모순이 났다.
+    prepVerified: incoming === "transfer" || verified,
     prepHeadline: summaryPending
       ? "AI가 실제 고객 발화를 요약하고 있습니다…"
       : card.summary || summary?.headline || "상담카드 생성 중",
