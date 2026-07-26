@@ -481,6 +481,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // ── imperative bookkeeping (not part of render state) ──
   const timers = useRef<number[]>([]);
   const clockT = useRef<number | null>(null);
+  /* 통화 시계의 **원점**(epoch ms). 초를 +1씩 세지 않고 이 시각과의 차이로 계산한다.
+     ① 탭이 백그라운드로 가면 setInterval이 느려져 +1 방식은 초가 밀린다.
+     ② 다른 창에서 온 call.incoming의 startedAtMs로 원점을 맞추면, 창이 몇 개든
+        '접수 경과'가 고객이 전화를 건 그 시각부터 같은 초를 찍는다. */
+  const clockOrigin = useRef<number | null>(null);
   const silT = useRef<number | null>(null);
   /** 카드 생성 창 타이머 — 리셋 때 반드시 끊는다(안 끊으면 초기화한 뒤에 prep으로 튄다) */
   const buildT = useRef<number | null>(null);
@@ -582,9 +587,34 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     return false;
   }, []);
 
+  /* 다른 창이 건 통화의 시작 시각을 받아 내 시계 원점을 맞춘다.
+     **듣기는 항상 shared 버스로 한다** — 고객 화면의 demoBus는 발행을 막은 스텁이라
+     on이 없다(고객 창은 같은 발화를 두 번 싣지 않으려고 발행을 안 한다).
+     버스는 자기 탭에도 루프백하므로 내가 보낸 것도 되돌아오는데, 값이 같아 아무 일도 안 난다.
+     이미 세고 있던 중이라도 원점만 바꾸면 다음 tick(≤500ms)에 바로 따라잡는다. */
+  useEffect(
+    () =>
+      sharedDemoBus.on("call.incoming", (p) => {
+        if (typeof p.startedAtMs !== "number") return;
+        /* **이미 내 통화가 돌고 있으면 내 시계가 정본이다.** 뒤늦게 도착한 원점을 받아들이면
+           화면에서 초가 뒤로 튀는데, 그건 어떤 어긋남보다 나쁘다(관객이 바로 알아챈다).
+           아직 원점이 없는 창(= 지금 이 통화에 합류하는 창)만 발신 시각을 따라간다. */
+        if (clockOrigin.current != null) return;
+        clockOrigin.current = p.startedAtMs;
+      }),
+    []
+  );
+
   const startClock = useCallback(() => {
     if (clockT.current) return;
-    clockT.current = window.setInterval(() => setClock((c) => c + 1), 1000);
+    if (clockOrigin.current == null) clockOrigin.current = Date.now();
+    const tick = () => {
+      const from = clockOrigin.current ?? Date.now();
+      setClock(Math.max(0, Math.round((Date.now() - from) / 1000)));
+    };
+    tick();
+    // 500ms로 도는 이유: 다른 창의 원점이 도착해 시계가 보정될 때 1초를 기다리지 않는다
+    clockT.current = window.setInterval(tick, 500);
   }, []);
 
   // 분류 파이프라인 이벤트 연출 — 관리자 대시보드(?role=admin)가 구독한다.
@@ -1120,6 +1150,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     demoBus.emit("call.incoming", {
       callId: resp.call_id,
       kind,
+      // 다른 창의 접수 경과가 이 시각부터 세어진다
+      startedAtMs: clockOrigin.current ?? Date.now(),
       ...(callGenerationRef.current > 0
         ? { generation: callGenerationRef.current }
         : {}),
@@ -1164,6 +1196,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setRagRefs([]); // 지난 통화의 규정이 다음 통화 유의사항에 남지 않게
     setGuideSteps([]); // 지난 통화의 스크립트도 마찬가지 — 픽스처로 시작해 분석 도착 시 교체
     transitionPhase("connecting");
+    clockOrigin.current = Date.now();
     setClock(0);
     setCallStartedAt(fmtCallTimestamp(new Date()));
     setEmo(0);
@@ -1274,6 +1307,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     summaryText.current = "";
     demoBus.emit("demo.reset", {});
     transitionPhase("idle");
+    clockOrigin.current = null;
     setClock(0);
     setCallStartedAt("");
     setEmo(0);
@@ -1433,6 +1467,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             // Keep an explicit ended screen until the customer starts another
             // call or resets. There is no arbitrary auto-dismiss timer.
             transitionPhase("wrap");
+            clockOrigin.current = null;
             setClock(0);
             setMobileIntakePending(false);
             setMobileIntakeComplete(false);
@@ -1861,6 +1896,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setLiveTranscriptLines([]);
       setMode("mic");
       transitionPhase("recording");
+      clockOrigin.current = Date.now();
       setClock(0);
       setEmo(0);
       setMicErr("");

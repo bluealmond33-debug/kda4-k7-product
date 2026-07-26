@@ -24,7 +24,10 @@ export type PipelineStageStatus = "start" | "done" | "skip";
 export type DemoCallKind = "normal" | "urgent" | "transfer";
 
 export interface DemoEventMap {
-  "call.incoming": { callId: string; kind: DemoCallKind; generation?: number };
+  /** startedAtMs — 통화가 실제로 시작된 시각(epoch ms). 이걸 실어 보내야 다른 창의
+   *  '접수 경과'가 고객이 전화를 건 시점부터 세어진다. 없으면 창마다 제 시계로 돌아
+   *  같은 통화인데 화면마다 다른 초가 찍힌다. */
+  "call.incoming": { callId: string; kind: DemoCallKind; generation?: number; startedAtMs?: number };
   "stt.utterance": {
     callId: string;
     text: string;
