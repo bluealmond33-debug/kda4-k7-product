@@ -89,7 +89,9 @@ export default function RoutingFeed({
   const strips = feed.filter((r) => !heroIds.has(r.callId));
 
   return (
-    <div className="card" style={css("display:flex;flex-direction:column;min-height:0;padding:16px 0 8px")}>
+    /* height:100% — 그리드 행이 부서 보드 높이로 늘어나도 이 카드가 따라 늘어나
+       목록이 바닥까지 이어진다(짧게 서면 아래가 빈 채로 잘려 보인다) */
+    <div className="card" style={css("height:100%;display:flex;flex-direction:column;min-height:0;padding:16px 0 8px")}>
       {/* 헤더 — 범례는 카드가 스스로 말하므로 없앴다(중복). 전부 nowrap: 좁아도 안 꺾인다 */}
       <div style={css("display:flex;align-items:center;gap:10px;padding:0 18px 10px;white-space:nowrap")}>
         <span className="sechd" style={css("white-space:nowrap")}>실시간 라우팅 피드</span>

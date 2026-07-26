@@ -22,9 +22,9 @@ export default function KnowledgeBasePanel({
 
   // min-width 고정 — "1,153"처럼 넓은 숫자가 있어도 컬럼 간격이 고르게 유지된다
   const stat = (value: string, label: string, accent = "var(--gray-1000)") => (
-    <span style={css("display:flex;flex-direction:column;gap:3px;align-items:flex-start;min-width:82px")}>
-      <span className="bignum" style={css("font-size:21px;color:" + accent)}>{value}</span>
-      <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>{label}</span>
+    <span style={css("display:flex;flex-direction:column;gap:1px;align-items:flex-start;min-width:82px")}>
+      <span className="bignum" style={css("font-size:18px;line-height:1.1;color:" + accent)}>{value}</span>
+      <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>{label}</span>
     </span>
   );
   const divider = <span style={css("width:1px;align-self:stretch;background:var(--gray-200)")} />;
@@ -32,7 +32,9 @@ export default function KnowledgeBasePanel({
   const rag = status.rag.available;
 
   return (
-    <div className="card" style={css("flex:1;display:flex;align-items:center;gap:16px;padding:12px 18px")}>
+    /* 바닥 띠는 낮게 — 이 패널은 상시 참조하는 숫자판이지 주인공이 아니다.
+       여기서 아낀 높이는 그대로 위 두 패널(라우팅 피드·부서 보드)의 목록 길이가 된다. */
+    <div className="card" style={css("flex:1;display:flex;align-items:center;gap:16px;padding:7px 18px")}>
       <span style={css("display:inline-flex;align-items:center;gap:8px;flex:none")}>
         <span className="mi" style={css("font-size:19px;color:var(--gray-800)")}>database</span>
         <span>
@@ -52,14 +54,14 @@ export default function KnowledgeBasePanel({
       {stat(chunks.toLocaleString(), live ? "청크 · 실측" : "전처리 청크")}
       {stat(String(RAG_STATS.categories), "분류 체계(대분류)")}
       {divider}
-      <span style={css("display:flex;flex-direction:column;gap:5px;min-width:0")}>
+      <span style={css("display:flex;flex-direction:column;gap:2px;min-width:0")}>
         <span style={css("display:inline-flex;align-items:center;gap:7px;white-space:nowrap")}>
           <span style={css("width:8px;height:8px;border-radius:9999px;flex:none;background:" + (rag ? "var(--green-700)" : rag === false ? "var(--amber-700)" : "var(--gray-500)"))} />
-          <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);white-space:nowrap")}>
+          <span style={css("font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);white-space:nowrap")}>
             {rag ? "pgvector 하이브리드 가동" : rag === false ? "임베딩 미적재 — 폴백" : "RAG 실측 대기 (데모)"}
           </span>
         </span>
-        <span style={css("font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>
+        <span style={css("font:400 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>
           dense .65 + kw .35 · bge-m3 · HNSW
         </span>
       </span>
@@ -67,7 +69,7 @@ export default function KnowledgeBasePanel({
       {/* PDF 업로드 — 청킹→추천→임베딩→적재→검색 반영까지 한 번에. CTA는 ONAIR 규약대로 파랑 */}
       <span
         onClick={onOpenUpload}
-        style={css("flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;border-radius:9999px;padding:8px 15px;font:600 12.5px 'Avenir Next','Pretendard',sans-serif;background:var(--blue-700);color:#fff;cursor:pointer")}
+        style={css("flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;border-radius:9999px;padding:6px 15px;font:600 12.5px 'Avenir Next','Pretendard',sans-serif;background:var(--blue-700);color:#fff;cursor:pointer")}
       >
         <span className="mi" style={css("font-size:16px")}>upload_file</span>PDF 업로드
       </span>
