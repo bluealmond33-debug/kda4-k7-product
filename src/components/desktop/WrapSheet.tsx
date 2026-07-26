@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { css } from "../../lib/css";
+import { KEYS, KeyHint, useShortcuts } from "../../lib/shortcuts";
 import { Coffee, Phone } from "lucide-react";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { AGENT } from "../../data/demoContent";
@@ -14,9 +15,19 @@ const FONT = "'Avenir Next','Pretendard',sans-serif";
  *  접으면 헤더 바만 하단에 남아 방금 통화 내용을 다시 볼 수 있다.
  *  승강 커브 = --ease-drawer (iOS 드로어), transform만 애니메이션(GPU). */
 export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
+
   // 재료(녹취·메모)는 기본 접힘 — 후처리 결과가 주인공. 둘은 같은 '재료'라 한 번에 함께 여닫는다
   const [matsOpen, setMatsOpen] = useState(false);
   const open = vm.wrapSheetOpen;
+  /* 후처리 단축키 — 저장이 두 갈래(다음 콜 S · 휴식 B)라 손이 마우스로 갈 필요가 없다.
+     시트가 열려 있을 때만 듣는다(접힌 상태에서는 뒤 통화 화면이 주인공). */
+  useShortcuts(
+    {
+      [KEYS.saveNext]: vm.saveWrap,
+      [KEYS.saveBreak]: vm.saveWrap,
+    },
+    open
+  );
   // 시트 전체 높이 700px(1440 좌표계 — 콘텐츠에 맞게, 휑하지 않게), 접힌 상태 = 헤더 56px만
   const SHEET_H = 700;
   const PEEK = 56;
@@ -188,9 +199,11 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
               {/* 후처리는 어느 쪽이든 저장된다 — 갈리는 건 '다음에 무엇을 할지'뿐 */}
               <span onClick={vm.saveWrap} title="후처리를 저장하고 대기 화면으로 돌아갑니다" style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-400);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-800);cursor:pointer;background:var(--onair-surface);white-space:nowrap")}>
                 <Coffee size={17} strokeWidth={2} absoluteStrokeWidth style={{ display: "block" }} /> 저장 후 휴식
+                <KeyHint k={KEYS.saveBreak} />
               </span>
               <span data-tour="wrap-save" onClick={vm.saveWrap} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
                 <Phone size={17} strokeWidth={2} absoluteStrokeWidth style={{ display: "block" }} /> 저장 후 다음 콜
+                <KeyHint k={KEYS.saveNext} tone="on" />
               </span>
             </div>
           </>

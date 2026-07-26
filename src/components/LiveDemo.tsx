@@ -13,6 +13,7 @@ import AdminQueueSheet from "./desktop/AdminQueueSheet";
 import DemoTour, { TourChooser } from "../tour/DemoTour";
 import { SCREEN_ORDER } from "../tour/steps";
 import DiagPanel from "./DiagPanel";
+import { KEYS, ShortcutHelp, useShortcuts } from "../lib/shortcuts";
 
 /**
  * K7 라이브 상담 시연 — 왼쪽 아이폰(자연어 접수) + 오른쪽 상담사 데스크톱.
@@ -42,6 +43,9 @@ export default function LiveDemo({
   view = "full",
   ...config
 }: CallFlowConfig & { view?: LiveDemoView } = {}) {
+  /* 단축키 도움말 — 화면을 넘나드는 전체 지도. 버튼 옆 배지는 '지금 보이는 것'만 알려 준다. */
+  const [helpOpen, setHelpOpen] = useState(false);
+  useShortcuts({ [KEYS.help]: () => setHelpOpen((v) => !v) });
   // 직원 콘솔 통화 연결 시 좌측에 실시간 발화(STT) 패널을 붙이는 분할 뷰.
   // 켜지면 데스크톱 본체(1100)가 오른쪽으로 축소되고 왼쪽에 고객 발화 패널이 들어온다.
   // 통화 연결(answerCall) 시 자동 on, 상단 알약 토글로 끌 수 있다(발표자가 화면을 다시 키우고 싶을 때).
@@ -399,6 +403,7 @@ export default function LiveDemo({
       {/* 시연 현장 진단 패널 — 기본은 숨김. ?diag=1 또는 Ctrl+Shift+D 로만 열린다.
           실제 백엔드 통화에서만 나오는 마이크·메모 문제를 그 자리에서 판정하기 위한 도구다. */}
       <DiagPanel vm={vm} />
+      <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

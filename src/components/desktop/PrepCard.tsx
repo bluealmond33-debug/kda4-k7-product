@@ -4,6 +4,7 @@ import type { CallFlowVM } from "../../hooks/useCallFlow";
 import DesktopShell from "./DesktopShell";
 import BriefingCardBody from "./BriefingCardBody";
 import ScriptTimeline from "./ScriptTimeline";
+import { KEYS, KeyHint, useShortcuts } from "../../lib/shortcuts";
 
 const FONT = "'Avenir Next','Pretendard',sans-serif";
 
@@ -62,6 +63,14 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
   const reservedDept = vm.transferReserved ? vm.transferTarget ?? vm.suggestedDept : null;
   const auto = useAutoConnect(vm);
 
+  /* 준비 카드 단축키 — 통화 연결(C)과 이관(T). 전화를 받기 직전이라 손이 마우스에
+     가 있지 않을 수 있다. 연결 불가 상태에서는 C를 먹지 않는다(조용히 무시되면
+     '눌렀는데 왜 안 되지'가 된다 — 아예 배선하지 않는다). */
+  useShortcuts({
+    [KEYS.connect]: vm.canConnect ? vm.answerCall : undefined,
+    [KEYS.transfer]: () => setTransferMenu((v) => !v),
+  });
+
   return (
     <DesktopShell>
       {/* 뒤 배경 (인입 대기) */}
@@ -110,6 +119,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 {reservedDept ? "이관 · " + reservedDept : "이관"}
                 {/* 화살표 — 누르면 창이 열린다는 신호. 열리면 뒤집혀 상태를 말한다 */}
                 <span className="mi" style={css("font-size:17px;margin-left:-1px;transition:transform .2s;transform:rotate(" + (transferMenu ? 180 : 0) + "deg)")}>expand_more</span>
+                <KeyHint k={KEYS.transfer} tone={reservedDept ? "on" : "off"} />
               </span>
               {transferMenu && (
                 <>
@@ -166,6 +176,9 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               <span style={css("display:flex;align-items:center;gap:6px")}>
                 <span className="mi" style={css("font-size:18px")}>call</span> 통화 연결
               </span>
+              {/* 단축키 배지 — 연결 가능할 때만. 못 누르는 상태에서 키를 알려 주면
+                  눌러 보고 아무 일도 안 일어나 더 헷갈린다. */}
+              {vm.canConnect && <KeyHint k={KEYS.connect} tone="on" />}
               {/* 남은 초 — 숫자만 줄어든다. 바닥 띠·숫자 배경을 뺐다: 버튼 안에 띠와 알약까지
                   들어가면 장식이 셋이라 정작 읽어야 하는 숫자가 묻히고, 줄어드는 선은 오류
                   표시로 오해되기도 했다. 마지막 5초만 숫자가 굵고 밝아진다. */}
