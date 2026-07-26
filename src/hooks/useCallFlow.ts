@@ -45,6 +45,12 @@ import {
   type SttSession,
 } from "../services";
 import {
+  SNAPSHOT_BEAT_MS,
+  clearCallSnapshot,
+  readCallSnapshot,
+  writeCallSnapshot,
+} from "../services/callSnapshot";
+import {
   searchRegulations,
   fetchRegSuggests,
   fetchRegulationDocument,
@@ -493,6 +499,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   /* 다른 창의 전화에 합류하는 중 — 이때는 call.incoming을 다시 싣지 않는다.
      두 번 실리면 관제 보드에 같은 통화가 두 건으로 쌓인다. */
   const joiningRef = useRef(false);
+  /** 이 통화를 내가 걸었나 — 칠판을 살려 두는 건 건 쪽 하나면 된다(합류한 창까지 적을 이유가 없다) */
+  const ownsCallRef = useRef(false);
   const startCallRef = useRef<() => void>(() => undefined);
   const silT = useRef<number | null>(null);
   /** 카드 생성 창 타이머 — 리셋 때 반드시 끊는다(안 끊으면 초기화한 뒤에 prep으로 튄다) */
@@ -621,6 +629,46 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     []
   );
 
+  /* 통화 중인 창이 칠판을 살려 둔다 — 갱신이 멈추면 다른 창이 '끝난 통화'로 보고 무시한다.
+     발신한 창(합류가 아닌 쪽)만 적는다: 두 창이 같은 칠판에 번갈아 적을 이유가 없다. */
+  const inCallForBeat = phase !== "idle" && phase !== "wrap";
+  useEffect(() => {
+    if (!inCallForBeat || !ownsCallRef.current) return;
+    const beat = () => {
+      if (clockOrigin.current == null) return;
+      writeCallSnapshot({
+        callId: respRef.current.call_id,
+        kind: incomingRef.current,
+        startedAtMs: clockOrigin.current,
+      });
+    };
+    beat();
+    const id = window.setInterval(beat, SNAPSHOT_BEAT_MS);
+    return () => window.clearInterval(id);
+  }, [inCallForBeat]);
+
+  /* 창이 열릴 때 한 번 — 이미 돌고 있는 통화가 있으면 그 통화로 들어간다.
+     버스(생방송)를 못 들은 창을 위한 보험이다: 새로고침하거나 시연 도중에 창을 새로 열어도
+     대기 화면에 혼자 남지 않는다. 고객 화면은 전화를 거는 쪽이라 합류하지 않는다. */
+  useEffect(() => {
+    if (isCustomerSurface) return;
+    /* StrictMode(개발)는 마운트를 두 번 돌린다. "한 번만" 플래그로 막으면 **살아남는 쪽**이
+       막혀 원점을 못 받는다(늦게 연 창이 몇 초 늦게 세던 원인). 그래서 막지 않고,
+       몇 번 돌아도 같은 결과가 나오게 만든다 — 매번 joining으로 표시하고 원점을 못 박는다. */
+    const snap = readCallSnapshot();
+    if (!snap) return;
+    if (phaseRef.current !== "idle") return;
+    clockOrigin.current = snap.startedAtMs;
+    joiningRef.current = true;
+    startCallRef.current();
+    /* startCall이 안에서 무엇을 하든 **마지막에 원점을 못 박는다.** 시작 경로가 여러 갈래라
+       중간에 지금 시각으로 덮이는 길이 남아 있었고(늦게 연 창이 몇 초 뒤부터 세는 증상),
+       원점은 여기서 정하는 게 맞다 — 이 창은 남의 통화에 합류하는 중이다.
+       다음 tick(≤500ms)에 화면이 따라온다. */
+    clockOrigin.current = snap.startedAtMs;
+    // 마운트 직후 한 번만 — 이후의 통화는 버스가 알려 준다
+  }, [isCustomerSurface]);
+
   const startClock = useCallback(() => {
     if (clockT.current) return;
     if (clockOrigin.current == null) clockOrigin.current = Date.now();
@@ -632,6 +680,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 500ms로 도는 이유: 다른 창의 원점이 도착해 시계가 보정될 때 1초를 기다리지 않는다
     clockT.current = window.setInterval(tick, 500);
   }, []);
+
+  /* 통화 중이면 시계는 **항상** 돈다.
+     clearAll이 인터벌을 지우는 자리가 여러 곳이라(effect 정리·재시작 등), 시작 경로에서 한 번
+     켜는 것만으로는 부족했다 — 실제로 늦게 합류한 창의 시계가 몇 초 만에 멈춰 그 값에 굳었다.
+     상태에 걸어 두면 무엇이 지우든 다음 렌더에 되살아난다. */
+  useEffect(() => {
+    if (phase === "idle" || phase === "wrap") return;
+    startClock();
+  }, [phase, startClock]);
+
 
   // 분류 파이프라인 이벤트 연출 — 관리자 대시보드(?role=admin)가 구독한다.
   // 실제 처리(픽스처)는 즉시 끝나므로 스테이지 진행을 step 간격으로 흘린다.
@@ -1141,6 +1199,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   // ── public actions ──
   const startCall = useCallback(() => {
+    ownsCallRef.current = !joiningRef.current;
     selfStartRef.current = true;
     window.setTimeout(() => {
       selfStartRef.current = false;
@@ -1182,6 +1241,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           ? { generation: callGenerationRef.current }
           : {}),
       });
+      writeCallSnapshot({ callId: resp.call_id, kind, startedAtMs: clockOrigin.current ?? Date.now() });
     }
     demoBus.emit("pipeline.stage", {
       callId: resp.call_id,
@@ -1340,6 +1400,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     demoBus.emit("demo.reset", {});
     transitionPhase("idle");
     clockOrigin.current = null;
+    ownsCallRef.current = false;
+    clearCallSnapshot();
     setClock(0);
     setCallStartedAt("");
     setEmo(0);
@@ -1500,6 +1562,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             // call or resets. There is no arbitrary auto-dismiss timer.
             transitionPhase("wrap");
             clockOrigin.current = null;
+            ownsCallRef.current = false;
+            clearCallSnapshot();
             setClock(0);
             setMobileIntakePending(false);
             setMobileIntakeComplete(false);
