@@ -690,7 +690,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       if (!isCurrent()) return false;
       const headline = "수신된 고객 발화가 없어 자동 요약을 생성하지 않았습니다.";
       setAnalysisSource("no-transcript");
-      setLiveActionItems(["고객 문의 내용을 다시 확인해 주세요."]);
+      // 뽑아낸 요구사항이 없으면 **빈 채로 둔다.** 예전엔 "고객 문의 내용을 다시 확인해
+      // 주세요"로 자리를 채웠는데, 요약이 정상 생성된 뒤에도 같이 노출돼 "이 문구는 도대체
+      // 왜?"(0724 시연, 박정운)를 불렀다. 없는 것은 없다고 보여주는 편이 낫다 —
+      // headline이 이미 "발화가 없어 요약을 생성하지 않았다"고 말하고 있다.
+      setLiveActionItems([]);
       setSummary({
         type: "미분류",
         headline,
@@ -2704,10 +2708,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepEmotionScore: temperature.score ?? null,
     transcriptQuote: groundedTranscript,
     // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
+    // 라이브 콜에서 뽑아낸 게 없으면 **빈 배열** — 데모 픽스처로 메우지도, 플레이스홀더
+    // 문구로 자리를 채우지도 않는다(0724 피드백 F7). 소비처가 map이라 빈 배열이면
+    // 불릿 영역이 그대로 비고, 없는 분석을 있는 것처럼 보이게 하지 않는다.
     summaryPoints: liveActionItems.length
       ? liveActionItems
       : EXPLICIT_LIVE_CALL_ID
-      ? ["고객 문의 내용을 다시 확인해 주세요."]
+      ? []
       : actualSummaryPoints,
     prepSummaryBullets,
     knowledgeQuery: card.business_type,
