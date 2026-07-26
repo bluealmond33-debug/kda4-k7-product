@@ -7,11 +7,38 @@
 
 ---
 
+## 0. 시연 구성 — 시연 PC에서 앱을 직접 실행한다
+
+시연 PC(Windows 노트북)가 프런트와 백엔드를 **자기 안에서** 돌린다. 그래서 접속 주소가
+`localhost`가 되고, **마이크는 그냥 열린다** — https 인증서(mkcert)도, LAN IP 확인도 필요 없다.
+"LAN에서 마이크가 안 열린다"는 문제는 이 구성에서는 아예 발생하지 않는다.
+
+최초 설치는 이미 만들어 둔 스크립트가 처리한다(자세한 건 [scripts/windows/README.md](../scripts/windows/README.md)):
+
+```powershell
+.\scripts\windows\setup-local-ai.cmd   # .venv · Python/Node 의존성 · Ollama/EXAONE · faster-whisper
+npm install
+Copy-Item .env.example .env
+```
+
+`.env`는 온프레미스 엔진을 가리키게 둔다:
+
+```dotenv
+VITE_API_BASE_URL=http://localhost:8000
+VITE_USE_REAL_DATA_API=true
+VITE_DATA_API_PREFIX=/api/v1
+```
+
+> **비워 두면 mock(시뮬레이션) 모드로 돈다.** 화면은 정상으로 보이지만 실제 STT·분류가
+> 돌지 않으므로, 라이브를 보여줄 자리면 반드시 채워야 한다.
+
+---
+
 ## 1. 시연 전 체크 (5분)
 
 | # | 항목 | 확인 방법 | 안 되면 |
 |---|---|---|---|
-| 1 | **HTTPS 또는 localhost** | 진단 패널 `MIC › secure = true` | 마이크가 아예 안 열립니다 → §2 |
+| 1 | **localhost로 접속** | 진단 패널 `MIC › secure = true` | 마이크가 아예 안 열립니다 → §2 |
 | 2 | **ARS 안내 음성** | `ls public/demo/ars/*.mp3` 가 7개 | 소리 없이 자막만 흐릅니다 → [녹음 스펙](../public/demo/ars/README.md) |
 | 3 | **마이크 권한** | 통화 시작 후 다이나믹 아일랜드 주황 점 점등 | 브라우저 주소창 자물쇠 → 마이크 허용 |
 | 4 | **백엔드 분류 응답** | 진단 패널 `분류 › 업무코드`가 `미분류`가 아닌지 | 미분류면 라우팅 실패 (숨기지 않고 그대로 표시됨) |
@@ -24,23 +51,25 @@ http://localhost:5173/?role=employee    # 직원 콘솔
 http://localhost:5173/?role=customer    # 고객 화면
 ```
 
-> **LAN IP로 접속하면 마이크가 죽습니다.** `getUserMedia`는 보안 컨텍스트(localhost·https)에서만 동작합니다.
-> IP는 바뀔 수 있으니 필요할 때 `ipconfig getifaddr en0` 으로 확인하세요.
+> 시연 PC에서 직접 실행하므로 **localhost가 정답이다.** LAN IP로 우회해 열면 마이크가 죽는다(§2).
 
 ---
 
-## 2. LAN에서 다른 기기로 시연해야 할 때 (HTTPS)
+## 2. (예비) LAN에서 다른 기기로 붙어야 할 때
 
-두 대(고객 폰 화면 + 직원 콘솔)를 다른 기기에 띄우려면 http로는 **마이크가 열리지 않습니다.**
-로컬 인증서를 발급해 https로 띄우는 게 가장 깔끔합니다.
+**기본 구성에서는 읽지 않아도 된다.** 시연 PC가 앱을 직접 돌리므로 localhost로 끝난다.
+
+계획이 바뀌어 *다른 기기가 이 PC에 LAN으로 붙는* 구성이 되면 그때만 문제가 생긴다:
+브라우저는 마이크(`getUserMedia`)를 보안 컨텍스트(localhost·https)에서만 허용하므로
+`http://192.168.x.x`로 열면 **마이크가 죽는다**. 그 경우에만 로컬 인증서가 필요하다.
 
 ```bash
-brew install mkcert && mkcert -install
-mkcert 192.168.x.x localhost            # 실제 LAN IP로
+brew install mkcert && mkcert -install     # 시스템 신뢰 저장소에 루트 인증서를 심는다
+mkcert <LAN-IP> localhost
 # vite.config.ts 의 server 에 https: { key, cert } 추가 후 --host 로 기동
 ```
 
-확인: 진단 패널 `MIC › secure = true`, `판정 = 정상 동작 중`.
+확인: 진단 패널 `MIC › secure = true`.
 
 ---
 
