@@ -487,6 +487,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
      ② 다른 창에서 온 call.incoming의 startedAtMs로 원점을 맞추면, 창이 몇 개든
         '접수 경과'가 고객이 전화를 건 그 시각부터 같은 초를 찍는다. */
   const clockOrigin = useRef<number | null>(null);
+  /* 내가 방금 건 전화 — 버스가 자기 탭에도 루프백하므로, 그걸 '남이 건 전화'로 오해해
+     또 한 통을 시작하지 않게 한다. emit 안에서 동기적으로 배달되므로 이 플래그로 충분하다. */
+  const selfStartRef = useRef(false);
+  /* 다른 창의 전화에 합류하는 중 — 이때는 call.incoming을 다시 싣지 않는다.
+     두 번 실리면 관제 보드에 같은 통화가 두 건으로 쌓인다. */
+  const joiningRef = useRef(false);
+  const startCallRef = useRef<() => void>(() => undefined);
   const silT = useRef<number | null>(null);
   /** 카드 생성 창 타이머 — 리셋 때 반드시 끊는다(안 끊으면 초기화한 뒤에 prep으로 튄다) */
   const buildT = useRef<number | null>(null);
@@ -596,12 +603,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   useEffect(
     () =>
       sharedDemoBus.on("call.incoming", (p) => {
-        if (typeof p.startedAtMs !== "number") return;
         /* **이미 내 통화가 돌고 있으면 내 시계가 정본이다.** 뒤늦게 도착한 원점을 받아들이면
            화면에서 초가 뒤로 튀는데, 그건 어떤 어긋남보다 나쁘다(관객이 바로 알아챈다).
            아직 원점이 없는 창(= 지금 이 통화에 합류하는 창)만 발신 시각을 따라간다. */
-        if (clockOrigin.current != null) return;
-        clockOrigin.current = p.startedAtMs;
+        if (typeof p.startedAtMs === "number" && clockOrigin.current == null) {
+          clockOrigin.current = p.startedAtMs;
+        }
+        /* 고객이 전화를 걸면 직원 콘솔이 **스스로** 접수 화면으로 들어간다.
+           발표자가 두 창을 각각 조작하지 않아도 한 통화로 붙는다.
+           · 내가 건 전화(루프백)는 무시 · 이미 통화 중이면 무시
+           · 고객 화면은 합류하지 않는다 — 전화를 거는 쪽이지 받는 쪽이 아니다 */
+        if (selfStartRef.current || isCustomerSurface) return;
+        if (phaseRef.current !== "idle") return;
+        joiningRef.current = true;
+        startCallRef.current();
       }),
     []
   );
@@ -1126,6 +1141,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   // ── public actions ──
   const startCall = useCallback(() => {
+    selfStartRef.current = true;
+    window.setTimeout(() => {
+      selfStartRef.current = false;
+    }, 0);
     lifecycleEpoch.current += 1;
     analysisRequestSeq.current += 1;
     intakeTransitionPending.current = false;
@@ -1148,15 +1167,22 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setConsultationResponse(resp);
     // 리렌더 전에 타이머 콜백이 읽을 수 있도록 ref는 즉시 동기화
     respRef.current = resp;
-    demoBus.emit("call.incoming", {
-      callId: resp.call_id,
-      kind,
-      // 다른 창의 접수 경과가 이 시각부터 세어진다
-      startedAtMs: clockOrigin.current ?? Date.now(),
-      ...(callGenerationRef.current > 0
-        ? { generation: callGenerationRef.current }
-        : {}),
-    });
+    /* 통화 시작만은 **고객 화면도 발행한다**(shared 버스). 고객이 전화를 거는 순간
+       직원 콘솔이 스스로 접수 화면으로 들어가야 두 창이 한 통화가 된다.
+       발화·파이프라인은 여전히 상담사 쪽만 싣는다 — 같은 전사가 두 번 실리는 걸 막는 규칙은
+       그대로다. 여기서 나가는 건 "언제 시작했다" 한 줄뿐이다.
+       합류로 시작한 경우(joiningRef)는 싣지 않는다 — 이미 남이 실은 통화다. */
+    if (!joiningRef.current) {
+      sharedDemoBus.emit("call.incoming", {
+        callId: resp.call_id,
+        kind,
+        // 다른 창의 접수 경과가 이 시각부터 세어진다
+        startedAtMs: clockOrigin.current ?? Date.now(),
+        ...(callGenerationRef.current > 0
+          ? { generation: callGenerationRef.current }
+          : {}),
+      });
+    }
     demoBus.emit("pipeline.stage", {
       callId: resp.call_id,
       stage: "utterance",
@@ -1197,7 +1223,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setRagRefs([]); // 지난 통화의 규정이 다음 통화 유의사항에 남지 않게
     setGuideSteps([]); // 지난 통화의 스크립트도 마찬가지 — 픽스처로 시작해 분석 도착 시 교체
     transitionPhase("connecting");
-    clockOrigin.current = Date.now();
+    /* 합류로 시작한 경우엔 원점을 덮지 않는다 — 이미 다른 창이 건 통화의 시작 시각을 받아 뒀다.
+       덮어쓰면 늦게 합류한 창이 0부터 다시 세어, 고치려던 어긋남이 그대로 돌아온다. */
+    if (!joiningRef.current) clockOrigin.current = Date.now();
     setClock(0);
     setCallStartedAt(fmtCallTimestamp(new Date()));
     setEmo(0);
@@ -1222,7 +1250,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     startClock();
     if (realCallActiveRef.current) beginRecording();
     else after(3000, () => beginRecording());
+    joiningRef.current = false;
   }, [after, beginRecording, clearAll, startClock, transitionPhase]);
+
+  startCallRef.current = startCall;
 
   const pickIncoming = useCallback((k: IncomingKind) => {
     if (phaseRef.current === "idle") setIncoming(k);
