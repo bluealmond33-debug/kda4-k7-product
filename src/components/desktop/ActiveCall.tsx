@@ -642,7 +642,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-600)")}>첫 응대 문장</span>
                 {/* 카드 요약 다음 순서로 쳐 내려간다 — 요약(무슨 일인가) → 첫 문장(뭐라고 말할까) */}
                 <div style={css("font:500 14px/1.6 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000);word-break:keep-all")}>
-                  <TypingAnimation text={vm.firstLine} continuous={false} speed={20} />
+                  <TypingAnimation text={vm.firstLine} continuous={false} speed={30} />
                 </div>
               </div>
             )}

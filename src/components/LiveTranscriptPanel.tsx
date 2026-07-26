@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
-import { useTyping } from "./ui/TypingAnimation";
+import { SPEECH_MS_PER_CHAR, useTyping } from "./ui/TypingAnimation";
 import SiriWave from "./SiriWave";
 import { getMicLevel, useMic } from "../lib/mic";
 import { maskPii } from "../lib/maskPii";
@@ -77,7 +77,7 @@ export default function LiveTranscriptPanel({
   useEffect(() => {
     if (stream.length > prevCount.current) {
       const last = stream[stream.length - 1];
-      speakingUntil.current = performance.now() + last.text.length * 32 + 600;
+      speakingUntil.current = performance.now() + last.text.length * SPEECH_MS_PER_CHAR + 600;
       speakingGain.current = last.who === self ? 1 : 0.34;
     }
     prevCount.current = stream.length;
@@ -320,7 +320,7 @@ function BubbleLine({
      같은 구현이라야 속도·커서가 화면마다 달라지지 않는다.
      여기는 **이어치기**(continuous): STT는 "잘못 송금" → "잘못 송금했어요"처럼 뒤가
      붙으며 자라므로, 자랄 때마다 처음부터 치면 글자가 요동쳐 읽을 수가 없다. */
-  const { text, typing } = useTyping(full, 32, isLast, true);
+  const { text, typing } = useTyping(full, SPEECH_MS_PER_CHAR, isLast, true);
   const spk = SPK[who];
   const mine = who !== LEFT_SIDE;
   const timePx = Math.round(Math.max(9, fontPx - 3.5) * 10) / 10;

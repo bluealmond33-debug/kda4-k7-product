@@ -14,6 +14,12 @@ import { css } from "../../lib/css";
  *
  * 커서는 치는 동안에만 깜빡인다 — 다 치고도 남아 있으면 아직 쓰는 중으로 오해된다.
  */
+/** 사람이 말하는 속도에 맞춘 글자당 ms.
+ *  한국어는 초당 4~5음절이라 한 글자가 200ms 안팎인데, 그대로 쓰면 시연이 늘어진다.
+ *  90ms는 "말하는 대로 받아 적히는 중"으로 읽히면서 발화보다 앞서 끝나는 지점이다.
+ *  ※ 전사 패널의 파형 스웰 계산도 이 값을 쓴다 — 둘이 갈리면 물결과 글자가 어긋난다. */
+export const SPEECH_MS_PER_CHAR = 90;
+
 export function useTyping(target: string, speedMs = 32, enabled = true, continuous = true) {
   const [shown, setShown] = useState(enabled ? 0 : target.length);
 

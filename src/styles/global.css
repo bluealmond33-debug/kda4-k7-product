@@ -554,27 +554,25 @@ a:hover {
       (ONAIR: 빛을 쓰지 않고 그림자가 위계를 만든다).
    filter는 100%에서 none으로 명시한다 — 남겨 두면 position:fixed 자식이 이 요소를
    기준으로 잡혀 팝오버가 엉뚱한 자리에 뜬다. */
+/* 카드 안착 — **제자리에서 뒤로 물러나며** 앉는다.
+   앞(크게·높이 뜬 그림자)에서 제 자리(원래 크기·낮은 그림자)로 한 방향으로만 간다.
+   예전 판은 끝에서 0.994로 줄었다 1.004로 다시 커지는 오버슈트가 있었고, 위아래 이동까지
+   섞여 있어 카드가 자리를 못 잡고 흔들리는 것처럼 보였다 — 튕김은 가벼운 물건의 문법이지
+   방금 만들어진 상담 카드의 문법이 아니다. 깊이(크기·그림자·초점)만 쓰고 위치는 안 쓴다. */
 @keyframes cardLand {
   0% {
     opacity: 0;
-    transform: scale(1.16) translateY(-30px);
-    filter: blur(7px);
-    box-shadow: 0 44px 96px rgba(16, 24, 40, 0.32);
+    transform: scale(1.1);
+    filter: blur(6px);
+    box-shadow: 0 40px 90px rgba(16, 24, 40, 0.3);
   }
-  50% {
+  45% {
     opacity: 1;
     filter: blur(0);
   }
-  72% {
-    transform: scale(0.994) translateY(3px);
-    box-shadow: 0 26px 58px rgba(16, 24, 40, 0.28);
-  }
-  86% {
-    transform: scale(1.004) translateY(-1px);
-  }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1);
     filter: none;
     box-shadow: var(--sh-near);
   }
