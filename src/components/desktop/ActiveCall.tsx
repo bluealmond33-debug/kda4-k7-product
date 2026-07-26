@@ -233,7 +233,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           className="pill"
           /* 오른쪽 여백 — 마지막 버튼(종료) 배지가 알약 밖으로 삐져나가 잘렸다.
              .pill 기본 padding-right(8px)로는 배지 자리(19px+폭)가 안 나온다. */
-          style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding-right:34px;animation:fadeIn .7s ease-out .35s both")}
+          style={css("position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding-right:26px;animation:fadeIn .7s ease-out .35s both")}
         >
           {vm.showWrap ? (
             /* 통화 종료 — 온에어 소등, 배경으로 남은 화면임을 알약이 말해준다 */
@@ -286,9 +286,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           ) : (
           <span style={css("display:flex;gap:21px")}>
             {/* 간격 21px — 배지가 버튼 오른쪽 가운데에 붙으므로, 5px면 옆 버튼과 겹쳐
-                배지가 어느 버튼 것인지 안 읽힌다 */}
+                간격 21px — 배지가 버튼 오른쪽 19px 자리를 쓰므로 그보다 좁으면 옆 버튼을 침범한다.
+                (호버로 한 번에 하나만 뜨더라도 자리 자체는 비어 있어야 한다) */}
             {/* 이관 — 음소거 왼쪽. 예전처럼 통화 컨트롤과 같은 원형 버튼(cbtn). 클릭 시 부서 드롭다운 */}
-            <span style={css("position:relative;display:inline-flex")}>
+            <span className="keyreveal" style={css("position:relative;display:inline-flex")}>
               <span
                 className="cbtn"
                 title="다른 부서로 이관 — 종료 시 예약"
@@ -326,7 +327,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 </>
               )}
             </span>
-            <span style={css("position:relative;display:inline-flex")}>
+            <span className="keyreveal" style={css("position:relative;display:inline-flex")}>
               <span
                 className="cbtn"
                 aria-disabled={vm.isExplicitLiveCall}
@@ -339,7 +340,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               {/* 실연동에선 키가 안 먹으므로 배지도 달지 않는다 — 표시와 동작은 늘 같아야 한다 */}
               {!vm.isExplicitLiveCall && <KeyHint k={KEYS.mute} style="position:absolute;right:-19px;top:50%;transform:translateY(-50%)" />}
             </span>
-            <span style={css("position:relative;display:inline-flex")}>
+            <span className="keyreveal" style={css("position:relative;display:inline-flex")}>
               <span
                 className="cbtn"
                 aria-disabled={vm.isExplicitLiveCall}
@@ -356,9 +357,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
           {!vm.showWrap && (
           <span
             data-tour="call-end"
+            className="keyreveal"
             /* margin-left — 앞 그룹의 마지막 배지(H)가 이 버튼에 가리지 않게 벌린다.
                .pill 기본 gap(14px)은 배지 자리(19px)보다 좁다. */
-            style={css("position:relative;margin-left:14px")}
+            style={css("position:relative;margin-left:21px")}
           >
             <span
               title={"통화 종료 · 단축키 " + KEYS.endCall}
@@ -610,7 +612,15 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
         </BlurFade>
 
         {/* ── 중 컬럼 ── (통화 연결 시 브리핑 카드가 먼저 제자리로 안착하고, 스크립트·메모는 뒤이어 아래서 올라온다) */}
-        <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
+        {/* 가운데 열 — 스크롤된다. 카드+스크립트+메모를 합치면 화면보다 길어서, 아래 후처리
+            바에 메모창이 가려 입력칸이 안 보이는 일이 있었다(규정 검색 중에 특히).
+            min-height:0이 있어야 flex 자식이 줄어들어 실제로 스크롤이 생긴다.
+            바닥 여백은 접힌 후처리 바 높이만큼 — 마지막 줄이 바에 딱 붙지 않게. */}
+        <div
+          data-tour="call-center"
+          className="noscrollbar"
+          style={css("flex:1;min-width:0;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:44px")}
+        >
           {/* 안착 대상 — 준비 카드가 살짝 컸다가 딱 제자리로 가라앉는다(가장 먼저) */}
           <div className="card" style={css("flex:none;padding:0;overflow:hidden;animation:cardLand .78s cubic-bezier(.16,1,.3,1) both")}>
             {/* 준비 단계 카드와 **보이는 것이 완전히 같아야 한다** — 같은 카드가 옮겨 온 것이지

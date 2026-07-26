@@ -2127,7 +2127,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setSemHits(res.available ? res.documents : []);
         setSemLoading(false);
       } catch (err) {
-        if (!(err instanceof DOMException && err.name === "AbortError")) {
+        /* 연타로 취소된 것(AbortError)은 다음 요청이 이어받으므로 로딩을 유지한다.
+           다만 **타임아웃(TimeoutError)은 이어받을 요청이 없다** — 여기서 안 풀면
+           스피너가 영원히 돈다(백엔드 주소가 틀렸을 때 실제로 그랬다). */
+        const aborted = err instanceof DOMException && err.name === "AbortError";
+        if (!aborted) {
           setSemHits([]);
           setSemLoading(false);
         }

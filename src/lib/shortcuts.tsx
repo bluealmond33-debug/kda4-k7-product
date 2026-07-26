@@ -106,6 +106,7 @@ export function KeyHint({
   return (
     <span
       aria-hidden="true"
+      data-keyhint=""
       style={css(
         "flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;" +
           "padding:0 4px;border-radius:4px;font:700 9.5px 'Avenir Next','Pretendard',sans-serif;" +

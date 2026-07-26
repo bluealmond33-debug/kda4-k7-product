@@ -70,6 +70,9 @@ export function categoryForDepartment(label: string | undefined | null): string 
 
 export const semanticSearchEnabled = !!API_BASE_URL;
 
+/** 규정 검색 응답을 기다리는 한계(ms) — 넘으면 포기하고 로컬 필터 결과만 보여준다 */
+const SEARCH_TIMEOUT_MS = 8000;
+
 export async function searchRegulations(
   query: string,
   opts: {
@@ -90,9 +93,15 @@ export async function searchRegulations(
   if (opts.docType) params.set("doc_type", opts.docType);
   if (opts.kind) params.set("kind", opts.kind);
   if (opts.effectiveFrom) params.set("effective_from", opts.effectiveFrom);
+  /* 타임아웃 — 백엔드 주소가 틀리거나(옛 LAN IP 등) 죽어 있으면 fetch가 TCP 타임아웃까지
+     수십 초를 매달린다. 그동안 화면은 "검색 중…" 스피너로 멈춰 있어 고장으로 보인다.
+     8초면 정상 검색(하이브리드 pgvector)에는 충분하고, 죽은 주소는 빨리 포기한다.
+     호출부의 abort와 함께 걸어야 연타 취소도 계속 동작한다. */
+  const timeout = AbortSignal.timeout(SEARCH_TIMEOUT_MS);
+  const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
   const res = await fetch(
     `${API_BASE_URL}${DATA_API_PREFIX}/regulations/search?${params}`,
-    { headers: { Accept: "application/json" }, signal: opts.signal }
+    { headers: { Accept: "application/json" }, signal }
   );
   if (!res.ok) throw new Error(`regulation search failed: ${res.status}`);
   return (await res.json()) as RegulationSearchResponse;
