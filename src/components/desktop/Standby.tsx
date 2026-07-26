@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, CalendarClock, GraduationCap, History } from "lucide-react";
 import { css } from "../../lib/css";
 import { useCallLog } from "../../lib/callLog";
 import LedClock from "./LedClock";
 import { highlight } from "../../lib/highlight";
-import { AGENT, SHEETS } from "../../data/demoContent";
+import { AGENT, SHEETS, rowSignal, sheetColIndex } from "../../data/demoContent";
+import SignalMark from "./SignalMark";
+
+/** 표식이 붙는 칸 — 라벨로 찾는다. 이 시트는 이미 한 번 열 순서가 바뀐 적이 있다. */
+const MANUAL_CONTENT_COL = sheetColIndex(SHEETS.manual.cols, "내용");
 
 /**
  * 아침 대기 화면 (phase === "idle") — "기다리는 콜센터 → 준비되는 콜센터".
@@ -165,6 +169,13 @@ export default function Standby() {
   const [now, setNow] = useState(() => new Date());
   const [view, setView] = useState<PrepKey | null>(null);
   const [onBreak, setOnBreak] = useState(false);
+  /* 토스트 — 내 조작 없이 상태가 바뀌었을 때만 띄운다. 조용히 바뀌면 큐에서 빠진 걸
+     모른 채 앉아 있게 된다. */
+  const [toast, setToast] = useState<{ icon: string; text: string; sub?: string } | null>(null);
+  /* 자동으로 켠 휴식인지 — 코칭 화면을 나갈 때 되돌릴지 판단하는 기준이다.
+     **직접 '휴식하기'를 눌러 둔 사람의 휴식은 건드리지 않는다.** 자기가 켠 걸 화면
+     이동만으로 꺼 버리면 그게 더 놀랍다. */
+  const autoBreak = useRef(false);
   // 알림 읽음 처리 + 필터 (읽으면 타일 배지도 줄어든다)
   const [readSet, setReadSet] = useState<Set<number>>(new Set());
   const [alertFilter, setAlertFilter] = useState<"all" | "unread">("all");
@@ -178,6 +189,37 @@ export default function Standby() {
     const t = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(t);
   }, []);
+
+  /* 코칭·리뷰에 들어가면 자동으로 휴식으로 전환한다.
+     오늘의 미션이 3분·2분짜리라 수신 가능 상태로 시작하면 도중에 콜이 들어와 끊긴다.
+     대신 **조용히 바꾸지 않는다** — 토스트로 알리고, 화면을 나가면 되돌린다. */
+  useEffect(() => {
+    if (view === "coach") {
+      if (!onBreak) {
+        autoBreak.current = true;
+        setOnBreak(true);
+        setToast({
+          icon: "self_improvement",
+          text: "휴식 중으로 전환했습니다",
+          sub: "미션에 집중하도록 콜을 받지 않습니다 · 나가면 수신 대기로 돌아갑니다",
+        });
+      }
+      return;
+    }
+    // 코칭에서 나왔다 — 자동으로 켠 휴식만 되돌린다
+    if (autoBreak.current) {
+      autoBreak.current = false;
+      setOnBreak(false);
+      setToast({ icon: "play_arrow", text: "수신 대기로 돌아왔습니다" });
+    }
+  }, [view, onBreak]);
+
+  /* 토스트는 잠깐만 — 상태 표시는 우상단 램프가 상시로 맡는다 */
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 3600);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   const hh = two(now.getHours());
   const mm = two(now.getMinutes());
@@ -696,19 +738,11 @@ export default function Standby() {
                       <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{ri + 1}</span>
                       {row.map((cell, ci) => {
                         // 사고 방지 신호는 열을 늘리지 않고 내용 칸 앞에 표식으로만 세운다.
-                        // 조항(마지막 열)으로 찾아 붙인다 — 금지는 빨강, 선행조건은 앰버.
-                        const sig = ci === 2 ? SHEETS.manual.signals?.[row[row.length - 1]] : undefined;
+                        // 통화 중 규정 패널과 같은 표식(SignalMark)·같은 조회(rowSignal)를 쓴다.
+                        const sig = ci === MANUAL_CONTENT_COL ? rowSignal(SHEETS.manual, row) : undefined;
                         return (
                         <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>
-                          {sig && (
-                            <span
-                              title={sig.kind + " · " + sig.text}
-                              className="mi"
-                              style={css("font-size:14px;margin-right:4px;vertical-align:-2px;cursor:help;color:" + (sig.kind === "금지" ? "var(--red-700)" : "var(--amber-700)"))}
-                            >
-                              {sig.kind === "금지" ? "block" : "priority_high"}
-                            </span>
-                          )}
+                          {sig && <SignalMark sig={sig} />}
                           {highlight(cell, manualSearch)}
                         </span>
                         );
@@ -736,7 +770,7 @@ export default function Standby() {
                   휴식 중 — 복귀하면 수신 대기로 전환됩니다
                 </div>
                 <span
-                  onClick={() => setOnBreak(false)}
+                  onClick={() => { autoBreak.current = false; setOnBreak(false); }}
                   style={css(
                     "margin-top:16px;display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:9999px;background:var(--blue-700);color:#fff;font:600 12px 'Avenir Next','Pretendard',sans-serif;cursor:pointer;box-shadow:var(--sh-focus);pointer-events:auto"
                   )}
@@ -770,11 +804,39 @@ export default function Standby() {
                 알림
               </span>
               <span style={css("width:1px;height:14px;background:var(--gray-300);margin:0 8px")} />
-              <span onClick={() => setOnBreak(true)} className="ghosttile">
+              <span onClick={() => { autoBreak.current = false; setOnBreak(true); }} className="ghosttile">
                 <span className="mi" style={css("font-size:16px")}>local_cafe</span>휴식하기
               </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 상태 전환 토스트 — 화면 아래 가운데. 내 조작 없이 바뀐 것만 알린다.
+          상시 상태는 우상단 램프가 맡으므로 여기는 잠깐 떴다 사라진다. */}
+      {toast && (
+        <div
+          style={css(
+            "position:absolute;left:50%;bottom:26px;z-index:60;display:flex;align-items:center;gap:10px;" +
+              "background:var(--gray-1000);color:#fff;border-radius:9999px;padding:10px 18px 10px 14px;" +
+              "box-shadow:var(--sh-modal);animation:toastIn .26s cubic-bezier(.2,.8,.2,1) both;max-width:calc(100% - 48px)"
+          )}
+        >
+          <span className="mi" style={css("font-size:19px;flex:none;color:var(--amber-500)")}>{toast.icon}</span>
+          <span style={css("display:flex;flex-direction:column;gap:1px;min-width:0")}>
+            <span style={css("font:700 12.5px 'Avenir Next','Pretendard',sans-serif;white-space:nowrap")}>{toast.text}</span>
+            {toast.sub && (
+              <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:rgba(255,255,255,.72)")}>{toast.sub}</span>
+            )}
+          </span>
+          <span
+            onClick={() => setToast(null)}
+            className="mi"
+            title="닫기"
+            style={css("font-size:16px;flex:none;margin-left:2px;color:rgba(255,255,255,.6);cursor:pointer")}
+          >
+            close
+          </span>
         </div>
       )}
     </div>

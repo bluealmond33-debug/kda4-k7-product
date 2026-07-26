@@ -40,6 +40,46 @@ a:hover {
   font-feature-settings: "liga";
 }
 
+/* 사고 방지 표식(SignalMark) — 규정 시트 내용 칸 앞에 서는 경고 글리프.
+   글리프는 선택에서 빼둔다: 내용 칸을 드래그 복사하면 리거처 원문이 딸려간다. */
+.sigmark {
+  position: relative;
+  display: inline-block;
+  margin-right: 4px;
+  cursor: help;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sigmark:focus-visible {
+  outline: 2px solid var(--blue-700);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+/* 설명은 올렸을 때·포커스했을 때만 — 상시 펼치면 정작 읽을 문장을 가린다 */
+.sigmark-tip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: -4px;
+  z-index: 6;
+  display: none;
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 9px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(20, 23, 28, 0.16);
+  font: 400 11.5px/1.45 var(--font-sans);
+  color: var(--gray-1000);
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+}
+.sigmark:hover .sigmark-tip,
+.sigmark:focus-visible .sigmark-tip {
+  display: block;
+}
+
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -428,6 +468,20 @@ a:hover {
   }
 }
 
+/* 토스트 — 아래에서 올라와 잠깐 머물다 사라진다.
+   상태가 **내 조작 없이** 바뀌었을 때(코칭 진입 → 자동 휴식) 그 사실을 알리는 용도다.
+   조용히 바뀌면 큐에서 빠진 걸 모른 채 앉아 있게 된다. */
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 /* 관제 LIVE 심장박동 — 전 시스템 정상일 때 초록 점이 잔잔하게 숨쉰다 (안심 신호) */
 @keyframes livePulse {
   0%,
@@ -572,6 +626,16 @@ a:hover {
     to {
       opacity: 1;
       transform: translate(-50%, -50%);
+    }
+  }
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
     }
   }
   /* 이동·스케일을 모두 빼고 페이드만 — 카드가 '나타난다'는 사실만 남긴다 */
