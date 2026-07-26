@@ -1,4 +1,5 @@
 import { css } from "../../lib/css";
+import TypingAnimation from "../ui/TypingAnimation";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import { BRAND_LOCKUP_PNG, BRAND_LOCKUP_RATIO } from "../../assets/brandLockup";
 import EmotionBar from "./EmotionBar";
@@ -14,9 +15,13 @@ export default function BriefingCardBody({
   vm,
   showAuth = true,
   arriving = false,
+  typeHeadline = false,
 }: {
   vm: CallFlowVM;
   showAuth?: boolean;
+  /** 한 줄 요약을 타이핑으로 — AI가 방금 써 낸 문장이라는 걸 보여준다.
+   *  통화 화면에서만 켠다: 준비 카드에서도 치면 통화로 넘어오며 같은 문장을 두 번 친다. */
+  typeHeadline?: boolean;
   /** 카드가 막 날아와 안착하는 중(접수 화면). 라우팅 체인이 순서대로 점등된다.
    *  통화 화면에서는 카드가 이미 자리에 있으므로 켜지 않는다 — 매번 깜빡이면 잔소리가 된다. */
   arriving?: boolean;
@@ -169,7 +174,9 @@ export default function BriefingCardBody({
               <span className="mi" style={css("font-size:14px;color:var(--blue-700)")}>summarize</span>전화 요약 · 고객 발화 STT
             </div>
             {/* 한 줄 요약 — 제목(크게). 근거 발화는 바로 아래 붙인다 */}
-            <div style={css("font:700 17px/1.35 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>{vm.prepHeadline}</div>
+            <div style={css("font:700 17px/1.35 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>
+              <TypingAnimation text={vm.prepHeadline} enabled={typeHeadline} continuous={false} speed={22} />
+            </div>
             {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선 */}
             <div style={css("font:400 11.5px/1.4 " + FONT + ";color:var(--gray-700);margin-top:2px;padding-bottom:8px;border-bottom:1px solid var(--gray-200)")}>
               근거 발화 · <span style={css("font-style:italic;color:var(--gray-900)")}>“{maskPii(vm.transcriptQuote)}”</span>

@@ -7,6 +7,8 @@ import Spinner from "../Spinner";
 import BriefingCardBody from "./BriefingCardBody";
 import ScriptTimeline from "./ScriptTimeline";
 import SignalMark from "./SignalMark";
+import BlurFade from "../ui/BlurFade";
+import TypingAnimation from "../ui/TypingAnimation";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
@@ -328,7 +330,13 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
       <div style={css("flex:1;display:flex;gap:16px;min-height:0;padding:16px 16px " + (vm.showWrap ? "16px" : "42px") + " 16px")}>
         {/* ── 좌 컬럼 ── (안착 morph — 왼쪽 가장자리에서 스르륵 등장) */}
-        <div ref={leftColRef} data-tour="call-left" style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden;animation:consoleInL .8s cubic-bezier(.16,1,.3,1) .82s both")}>
+        <BlurFade
+          ref={leftColRef}
+          data-tour="call-left"
+          direction="left"
+          delay={0.82}
+          style={css("width:320px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overflow-x:hidden")}
+        >
           <div className="card" style={css("padding:13px 15px;display:flex;align-items:center;gap:12px" + (vm.verified ? ";opacity:.93" : ""))}>
             <span className="av" style={css("width:42px;height:42px")}><span className="mi" style={css("font-size:22px")}>headset_mic</span></span>
             <div style={css("flex:1;min-width:0")}>
@@ -544,7 +552,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             </div>
           )}
-        </div>
+        </BlurFade>
 
         {/* ── 중 컬럼 ── (통화 연결 시 브리핑 카드가 먼저 제자리로 안착하고, 스크립트·메모는 뒤이어 아래서 올라온다) */}
         <div data-tour="call-center" style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:14px")}>
@@ -553,11 +561,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             {/* 준비 단계 카드와 **보이는 것이 완전히 같아야 한다** — 같은 카드가 옮겨 온 것이지
                 다른 카드가 아니다. 예전엔 showAuth={false}로 인증 칩만 빼서, 통화로 넘어오는
                 순간 카드에서 한 칸이 사라져 "다른 카드"처럼 보였다. */}
-            <BriefingCardBody vm={vm} />
+            <BriefingCardBody vm={vm} typeHeadline />
           </div>
 
           {/* 단계별 스크립트 — 아코디언. 초보 상담사용 기초 안내라 기본 접힘, 헤더 클릭으로 펼침 (카드 안착 후 아래서 등장) */}
-          <div className="card" style={css("flex:none;min-height:0;display:flex;flex-direction:column;overflow:hidden;animation:consoleInUp .8s cubic-bezier(.16,1,.3,1) .9s both")}>
+          <BlurFade className="card" direction="up" delay={0.94} style={css("flex:none;min-height:0;display:flex;flex-direction:column;overflow:hidden")}>
             <div
               onClick={() => setScriptOpen((v) => !v)}
               style={css("display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none" + (scriptOpen ? ";border-bottom:1px dashed var(--color-border)" : ""))}
@@ -577,8 +585,9 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             {!scriptOpen && (
               <div style={css("padding:0 16px 13px;display:flex;flex-direction:column;gap:5px")}>
                 <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-600)")}>첫 응대 문장</span>
+                {/* 카드 요약 다음 순서로 쳐 내려간다 — 요약(무슨 일인가) → 첫 문장(뭐라고 말할까) */}
                 <div style={css("font:500 14px/1.6 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000);word-break:keep-all")}>
-                  {vm.firstLine}
+                  <TypingAnimation text={vm.firstLine} continuous={false} speed={20} />
                 </div>
               </div>
             )}
@@ -587,13 +596,13 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                 <ScriptTimeline steps={vm.steps} />
               </div>
             )}
-          </div>
+          </BlurFade>
 
           {/* 하단 메모 — 카드 안착 후 아래서 등장(래퍼가 애니메이션, 안쪽 카드는 미인증 딤 opacity 유지).
               높이를 210으로 묶는다: flex:1로 두면 남는 세로를 메모가 다 먹어 화면 절반이 빈
               메모칸이 된다. 메모는 통화 중 몇 줄 적는 자리이지 주인공이 아니다 —
               남는 공간은 아래 여백으로 두고, 읽을 것(카드·스크립트)이 위에서 자리를 갖는다. */}
-          <div style={css("flex:none;height:210px;display:flex;flex-direction:column;animation:consoleInUp .8s cubic-bezier(.16,1,.3,1) .9s both")}>
+          <BlurFade direction="up" delay={0.94} style={css("flex:none;height:210px;display:flex;flex-direction:column")}>
           <div className="card" style={css("flex:1;min-height:0;display:flex;flex-direction:column" + (focus === "memo" ? ";box-shadow:var(--sh-focus)" : vm.verified ? "" : ";opacity:.93"))}>
             <div style={css("display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px dashed var(--color-border)")}>
               <span className="sechd" style={css("display:flex;align-items:center;gap:5px")}>
@@ -671,12 +680,17 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               />
             </div>
           </div>
-          </div>
+          </BlurFade>
         </div>
 
         {/* ── 우 컬럼 : 규정 ── (안착 morph — 오른쪽 가장자리에서 스르륵 등장) */}
         {/* 오토레이아웃 모션 — 규정 패널 확장(372↔640)이 스냅 대신 부드럽게 밀린다 */}
-        <div data-tour="call-right" style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1);animation:consoleInR .8s cubic-bezier(.16,1,.3,1) .82s both")}>
+        <BlurFade
+          data-tour="call-right"
+          direction="right"
+          delay={0.82}
+          style={css("width:" + (regWide ? 640 : 372) + "px;flex:none;display:flex;flex-direction:column;gap:14px;min-height:0;transition:width .35s cubic-bezier(0.2,0.8,0.2,1)")}
+        >
           <div className="card" style={css("flex:" + (regWide ? "1" : "none") + ";min-height:0;display:flex;flex-direction:column;overflow:hidden" + (focus === "reg" ? ";box-shadow:var(--sh-focus)" : ";opacity:" + (vm.verified ? ".95" : ".9")))}>
             {/* 헤더 — 제목 + 상시 검색 input(한 element로 고정) + 확장 시 축소 버튼.
                 검색 input이 여기 상주하므로 접힘↔확장·검색 유무가 바뀌어도 remount되지 않는다(한글 안 깨짐). */}
@@ -916,7 +930,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             )}
           </div>
-        </div>
+        </BlurFade>
       </div>
 
       {/* 접힌 후처리 시트의 가장자리 — 통화 중에도 "종료하면 여기서 이어진다"를 예고 */}

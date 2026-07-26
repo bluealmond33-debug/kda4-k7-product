@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
+import { useTyping } from "./ui/TypingAnimation";
 import SiriWave from "./SiriWave";
 import { getMicLevel, useMic } from "../lib/mic";
 import { maskPii } from "../lib/maskPii";
@@ -24,8 +25,9 @@ import { maskPii } from "../lib/maskPii";
  * "말이 글자가 된다"(전사) 두 감각만 보여준다.
  *
  * 같은 화자의 연속 조각은 STT답게 한 말풍선으로 이어 붙이고 화자가 바뀌면 끊는다.
- * 타이핑은 연속 타자기(useTypewriter): 목표 텍스트가 자라나도 재시작 없이
- * 이어서 따라간다 — 문장 단위로 끊기지 않는 진짜 STT 스트림 감각.
+ * 타이핑은 ui/TypingAnimation의 **이어치기**(useTyping continuous): 목표 텍스트가 자라나도
+ * 재시작 없이 따라간다 — 문장 단위로 끊기지 않는 진짜 STT 스트림 감각.
+ * KARI-NA의 ARS 안내도 같은 스트림을 타므로, 안내 멘트가 음성과 함께 한 글자씩 찍힌다.
  */
 
 export interface StreamItem {
@@ -247,29 +249,6 @@ export default function LiveTranscriptPanel({
   );
 }
 
-/** 연속 타자기 — 목표 텍스트가 자라나도 타이핑이 재시작 없이 이어서 따라간다.
- *  조각(문장) 단위로 끊기지 않는 진짜 STT 스트림 감각의 핵심. */
-function useTypewriter(target: string, speedMs: number, enabled: boolean) {
-  const [shown, setShown] = useState(0);
-  const targetRef = useRef(target);
-  targetRef.current = target;
-  useEffect(() => {
-    if (!enabled) {
-      setShown(target.length);
-      return;
-    }
-    const id = window.setInterval(() => {
-      setShown((s) => (s < targetRef.current.length ? s + 1 : s));
-    }, speedMs);
-    return () => window.clearInterval(id);
-  }, [enabled, speedMs, target.length]);
-  // 새 콜로 목표가 짧아지면 처음부터
-  useEffect(() => {
-    setShown((s) => (s > target.length ? 0 : s));
-  }, [target.length]);
-  return target.slice(0, shown);
-}
-
 /** 왼쪽에 서는 화자 — 고객뿐이다. 반대편(오른쪽)은 은행 쪽, 즉 KARI-NA와 상담원이 함께 선다.
  *  AI가 접수하다 상담원이 이어받아도 고객에게는 '같은 은행'과 계속 말하는 한 줄기 대화다 —
  *  좌우가 그 구조를 그대로 보여준다. 규칙이 하나뿐이라 고객 창·직원 창이 같은 코드로 같은
@@ -337,9 +316,11 @@ function BubbleLine({
   full: string;
   isLast: boolean;
 }) {
-  const typed = useTypewriter(full, 32, isLast);
-  const text = isLast ? typed : full;
-  const typing = isLast && typed.length < full.length;
+  /* 타자기는 ui/TypingAnimation의 useTyping 하나로 모았다 — 카드 요약·첫 응대 문장과
+     같은 구현이라야 속도·커서가 화면마다 달라지지 않는다.
+     여기는 **이어치기**(continuous): STT는 "잘못 송금" → "잘못 송금했어요"처럼 뒤가
+     붙으며 자라므로, 자랄 때마다 처음부터 치면 글자가 요동쳐 읽을 수가 없다. */
+  const { text, typing } = useTyping(full, 32, isLast, true);
   const spk = SPK[who];
   const mine = who !== LEFT_SIDE;
   const timePx = Math.round(Math.max(9, fontPx - 3.5) * 10) / 10;

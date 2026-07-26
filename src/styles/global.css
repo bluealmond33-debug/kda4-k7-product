@@ -80,6 +80,22 @@ a:hover {
   display: block;
 }
 
+/* 블러 페이드(BlurFade) — 거리·방향·블러는 요소가 CSS 변수로 정한다.
+   키프레임 하나로 네 방향을 다 쓰는 이유: 방향마다 키프레임을 두면 여섯 개가 되고,
+   그중 하나만 값이 어긋나도 아무도 모른다. */
+@keyframes blurFadeIn {
+  from {
+    opacity: 0;
+    filter: blur(var(--bf-blur, 6px));
+    transform: translate(var(--bf-x, 0), var(--bf-y, 6px));
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
 /* 인입 리스트 항목 등장(AnimatedList) — 위에서 내려앉으며 제 크기를 찾는다.
    새로 mount된 항목만 한 번 돈다: 애니메이션은 요소 생성 시점에 걸리므로
    리렌더로는 다시 실행되지 않는다. */
@@ -563,24 +579,8 @@ a:hover {
     box-shadow: var(--sh-near);
   }
 }
-/* (consoleSettle 제거 — cardLand가 대체했다. 안 쓰는 키프레임을 남기면 다음 사람이
-   둘 중 무엇이 진짜인지 찾게 된다.) */
-@keyframes consoleInL {
-  from { opacity: 0; transform: translateX(-16px); filter: blur(8px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes consoleInR {
-  from { opacity: 0; transform: translateX(16px); filter: blur(8px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes consoleInDown {
-  from { opacity: 0; transform: translateY(-12px); filter: blur(8px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes consoleInUp {
-  from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
-  to { opacity: 1; transform: none; }
-}
+/* (consoleSettle·consoleInL/R/Up 제거 — cardLand와 BlurFade가 대체했다.
+   안 쓰는 키프레임을 남기면 다음 사람이 둘 중 무엇이 진짜인지 찾게 된다.) */
 
 /* 가이드 투어 스테퍼 — 단계 콘텐츠가 방향성 슬라이드로 전환 (앞=오른쪽서, 뒤=왼쪽서) */
 @keyframes guideSlideFwd {
