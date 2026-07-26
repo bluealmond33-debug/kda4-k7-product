@@ -759,7 +759,7 @@ export default function Standby() {
 
       {view === "keys" && (
         <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0;overflow:auto")}>
-          <SubHead onBack={back} title="단축키" sub="자판에서 위치로 익히기" />
+          <SubHead onBack={back} title="단축키" sub="눌러 보면서 익히기" />
           <KeyboardMap />
         </div>
       )}
