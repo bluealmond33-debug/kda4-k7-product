@@ -39,7 +39,7 @@ export default function DepartmentBoard({ feed, explain }: { feed: AdminFeed; ex
   );
 
   return (
-    <div className="card" style={css("display:flex;flex-direction:column;padding:14px 16px 12px;min-height:0")}>
+    <div className="card" style={css("flex:1;display:flex;flex-direction:column;padding:14px 16px 12px;min-height:0")}>
       <div style={css("display:flex;align-items:center;gap:10px;margin-bottom:12px;white-space:nowrap")}>
         <span className="sechd" style={css("white-space:nowrap")}>부서 현황 보드</span>
         {/* 설명 모드에선 이 패널의 백엔드 역할을(회색 블록 — 다른 패널과 동일 문법), 평소엔 안내를 */}

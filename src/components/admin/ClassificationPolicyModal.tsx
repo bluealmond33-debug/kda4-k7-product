@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { css } from "../../lib/css";
+import { BeamPath } from "../ui/AnimatedBeam";
 import { SGE_META } from "../../services";
 
 const FONT = "'Avenir Next','Pretendard',sans-serif";
@@ -125,10 +126,27 @@ export default function ClassificationPolicyModal({ onClose }: { onClose: () => 
           <div style={css("position:relative;width:" + CW + "px;height:" + CH + "px;margin:0 auto;background-image:radial-gradient(var(--gray-300) 1px,transparent 0);background-size:19px 19px;background-position:8px 8px")}>
             {/* 엣지 레이어 */}
             <svg width={CW} height={CH} viewBox={"0 0 " + CW + " " + CH} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
+              {/* 연결선에 빛이 흐른다 — 파이프라인 플로우와 같은 빔(BeamPath).
+                  여기 좌표는 상수라 DOM을 재지 않고 경로를 바로 넘긴다.
+                  단계마다 조금씩 늦게 출발시켜 인입 → 게이트 → 등급 → 부서 순서가 눈에 보이게. */}
               {EDGES.map(([a, b], i) => {
                 const p = rMid(NODES[a]), q = lMid(NODES[b]);
                 const d = Math.max(28, (q.x - p.x) * 0.5);
-                return <path key={i} d={"M" + p.x + " " + p.y + " C " + (p.x + d) + " " + p.y + " " + (q.x - d) + " " + q.y + " " + q.x + " " + q.y} fill="none" stroke="var(--gray-400)" strokeWidth="1.5" />;
+                return (
+                  <BeamPath
+                    key={i}
+                    d={"M" + p.x + " " + p.y + " C " + (p.x + d) + " " + p.y + " " + (q.x - d) + " " + q.y + " " + q.x + " " + q.y}
+                    x1={p.x}
+                    y1={p.y}
+                    x2={q.x}
+                    y2={q.y}
+                    duration={2.6}
+                    delay={p.x < 500 ? 0 : 0.55}
+                    pathColor="var(--gray-400)"
+                    pathWidth={1.5}
+                    pathOpacity={1}
+                  />
+                );
               })}
               {EDGES.map(([a, b], i) => {
                 const p = rMid(NODES[a]), q = lMid(NODES[b]);

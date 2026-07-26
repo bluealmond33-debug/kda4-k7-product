@@ -135,8 +135,10 @@ export default function RoutingFeed({
         {/* 진행 중 콜 전부 — 카드마다 제 프로세스(미니 파이프라인)가 돈다 */}
         {heroes.length > 0 && (
           <div style={css("display:flex;flex-direction:column;gap:8px")}>
-            {heroes.map((r) => (
-              <FrontCard key={r.callId} r={r} />
+            {/* 들리는 건 맨 위 한 장뿐 — 여러 콜이 동시에 돌 때 전부 sh-focus를 달면
+                그림자가 겹쳐 패널 전체가 어두워진다(ONAIR: 초점은 하나) */}
+            {heroes.map((r, i) => (
+              <FrontCard key={r.callId} r={r} lifted={i === 0} />
             ))}
           </div>
         )}
@@ -165,14 +167,20 @@ export default function RoutingFeed({
 }
 
 /** 최신 카드 — 맨 위, 분류 결과 전체. 새로 얹힐 때 위에서 '딜'되는 모션(cardDeal). */
-function FrontCard({ r }: { r: AdminCallRecord }) {
+function FrontCard({ r, lifted = true }: { r: AdminCallRecord; lifted?: boolean }) {
+  const lift = lifted ? "var(--sh-focus)" : "var(--sh-near)";
   const sge = r.sge;
   const meta = sge ? SGE_META[sge] : null;
   const live = r.endedAt === null;
 
   if (!r.card || !sge || !meta) {
     return (
-      <div style={css("position:relative;border-radius:12px;background:var(--background-200);box-shadow:var(--sh-focus);padding:14px 16px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
+      /* 분류 중 카드도 **완료 카드와 같은 면**(onair-surface)이다.
+         예전엔 --background-200을 썼는데 ONAIR 테마에서 그건 무대 바닥색(#e9eaeb)이라,
+         갓 들어온 카드가 회색으로 파인 구멍처럼 보였다 — 지금 가장 살아있는 카드가
+         가장 죽어 보이는 셈. 진행 중이라는 건 면 색이 아니라 스피너·진행 점·그림자가 말한다.
+         (ONAIR 문법: 면은 한 색, 위계는 그림자) */
+      <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:" + lift + ";padding:14px 16px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
         <div style={css("display:flex;align-items:center;gap:9px")}>
           <Spinner size={16} speedMs={800} />
           <span style={css("font:700 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>분류 중…</span>
@@ -188,7 +196,7 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
   }
 
   return (
-    <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:var(--sh-focus);padding:13px 16px 14px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
+    <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:" + lift + ";padding:13px 16px 14px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
       <div style={css("display:flex;align-items:center;gap:8px")}>
         {/* S/G/E 신호 — 틴트·색 바 없이 점 + 잉크 (ONAIR: 색은 점·글자에만) */}
         <span style={css("flex:none;display:inline-flex;align-items:center;gap:6px;font:700 12px 'Avenir Next','Pretendard',sans-serif;color:" + meta.fg)}>

@@ -22,8 +22,8 @@ export default function KnowledgeBasePanel({
 
   // min-width 고정 — "1,153"처럼 넓은 숫자가 있어도 컬럼 간격이 고르게 유지된다
   const stat = (value: string, label: string, accent = "var(--gray-1000)") => (
-    <span style={css("display:flex;flex-direction:column;gap:1px;align-items:flex-start;min-width:82px")}>
-      <span className="bignum" style={css("font-size:18px;line-height:1.1;color:" + accent)}>{value}</span>
+    <span style={css("display:flex;flex-direction:column;gap:2px;align-items:flex-start;min-width:78px")}>
+      <span className="bignum" style={css("font-size:20px;line-height:1.12;color:" + accent)}>{value}</span>
       <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);white-space:nowrap")}>{label}</span>
     </span>
   );
@@ -32,9 +32,9 @@ export default function KnowledgeBasePanel({
   const rag = status.rag.available;
 
   return (
-    /* 바닥 띠는 낮게 — 이 패널은 상시 참조하는 숫자판이지 주인공이 아니다.
-       여기서 아낀 높이는 그대로 위 두 패널(라우팅 피드·부서 보드)의 목록 길이가 된다. */
-    <div className="card" style={css("flex:1;display:flex;align-items:center;gap:16px;padding:7px 18px")}>
+    /* 오른쪽 기둥 바닥에 붙는 띠 — 부서 보드와 같은 폭. 상시 참조하는 숫자판이라
+       주인공은 아니지만, 숫자를 읽어야 하므로 지나치게 납작하게 두지 않는다. */
+    <div className="card" style={css("flex:none;display:flex;align-items:center;gap:16px;padding:11px 18px")}>
       <span style={css("display:inline-flex;align-items:center;gap:8px;flex:none")}>
         <span className="mi" style={css("font-size:19px;color:var(--gray-800)")}>database</span>
         <span>

@@ -121,6 +121,10 @@ export default function AdminDashboard() {
                 status={status}
                 onNodeClick={setNodeDetail}
               />
+              {/* 두 기둥 — 왼쪽은 인입 피드가 **바닥까지** 한 줄기로 내려오고,
+                  오른쪽은 부서 보드 아래에 지식베이스가 같은 폭으로 붙는다.
+                  지식베이스를 화면 폭 전체로 깔면 피드가 그 위에서 잘려, 가장 길게 봐야 할
+                  목록이 가장 짧아진다 — 관제에서 세로로 긴 것은 목록이지 숫자판이 아니다. */}
               <div style={css("flex:1;display:grid;grid-template-columns:400px 1fr;gap:12px;min-height:0")}>
                 <RoutingFeed
                   feed={feed.feed}
@@ -128,16 +132,15 @@ export default function AdminDashboard() {
                   explain={explain}
                   onOpenCard={setCardDetail}
                 />
-                <DepartmentBoard feed={feed} explain={explain} />
-              </div>
-              {/* 하단 행 — 지식베이스 풀폭 (테스트 콜 리모컨은 상단 알약으로 이동) */}
-              <div style={css("display:flex;flex:none")}>
-                <KnowledgeBasePanel
-                  totalCards={feed.state.totalCards}
-                  status={status}
-                  onOpenUpload={() => setUploadOpen(true)}
-                  explain={explain}
-                />
+                <div style={css("display:flex;flex-direction:column;gap:12px;min-height:0")}>
+                  <DepartmentBoard feed={feed} explain={explain} />
+                  <KnowledgeBasePanel
+                    totalCards={feed.state.totalCards}
+                    status={status}
+                    onOpenUpload={() => setUploadOpen(true)}
+                    explain={explain}
+                  />
+                </div>
               </div>
             </div>
             {/* 상담카드 상세 — 캔버스 안의 딤+모달(PrepCard 문법)이라 직원 화면 카드와 같은 크기로 읽힌다 */}
