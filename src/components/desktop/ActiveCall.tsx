@@ -516,7 +516,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       style={css("position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;outline:none;padding:0;cursor:text;caret-color:transparent")}
                     />
                   </label>
-                  <span onClick={vm.runVerify} style={css("display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Avenir Next','Pretendard',sans-serif;cursor:pointer")}>대조<KeyHint k={KEYS.verify} tone="on" /></span>
+                  <span onClick={vm.runVerify} className="keyreveal" style={css("display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;background:var(--blue-700);color:#fff;border-radius:9999px;font:700 12.5px 'Avenir Next','Pretendard',sans-serif;cursor:pointer")}>대조<KeyHint k={KEYS.verify} tone="on" /></span>
                 </div>
                 {vm.authErr && (
                   <div style={css("margin-top:7px;display:flex;align-items:center;gap:4px;font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--red-800)")}>
@@ -531,7 +531,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             )}
 
             <div style={css("margin-top:12px")}>
-              <div style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
+              <div className="keyreveal" style={css("font:700 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
                 고객 상세 조회 <span style={css("font-weight:400;color:var(--gray-600)")}>· 본인인증 후 열람</span>
                 {vm.verified && <KeyHint k={KEYS.detail} style="margin-left:6px;vertical-align:-3px" />}
               </div>
@@ -760,8 +760,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
             {/* 헤더 — 제목 + 상시 검색 input(한 element로 고정) + 확장 시 축소 버튼.
                 검색 input이 여기 상주하므로 접힘↔확장·검색 유무가 바뀌어도 remount되지 않는다(한글 안 깨짐). */}
             <div style={css("display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px dashed var(--color-border)")}>
-              <span className="sechd" style={css("display:flex;align-items:center;gap:5px;flex:none")}>
+              {/* 제목에 R 배지 — 검색창은 입력 요소라 배지를 안에 넣으면 검색어를 가린다.
+                  그래서 '관련 규정' 제목이 이 패널의 단축키 자리를 맡는다. 다른 버튼과 같이
+                  호버할 때만 뜬다. */}
+              <span className="sechd keyreveal" style={css("display:flex;align-items:center;gap:5px;flex:none;position:relative")}>
                 <span className="mi" style={css("font-size:18px")}>gavel</span> 관련 규정
+                <KeyHint k={KEYS.reg} style="margin-left:2px" />
               </span>
               <span style={css("flex:1;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--gray-400);border-radius:9999px;padding:6px 11px;background:var(--onair-surface)")}>
                 <span className="mi" style={css("font-size:16px;color:var(--gray-600)")}>search</span>

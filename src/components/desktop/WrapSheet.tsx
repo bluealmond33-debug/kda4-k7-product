@@ -208,11 +208,11 @@ export default function WrapSheet({ vm }: { vm: CallFlowVM }) {
               <ClassifierFeedback vm={vm} />
               <span style={css("width:1px;height:22px;background:var(--gray-300);flex:none")} />
               {/* 후처리는 어느 쪽이든 저장된다 — 갈리는 건 '다음에 무엇을 할지'뿐 */}
-              <span onClick={vm.saveWrap} title="후처리를 저장하고 대기 화면으로 돌아갑니다" style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-400);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-800);cursor:pointer;background:var(--onair-surface);white-space:nowrap")}>
+              <span onClick={vm.saveWrap} className="keyreveal" title="후처리를 저장하고 대기 화면으로 돌아갑니다" style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid var(--gray-400);border-radius:9999px;font-size:14px;font-weight:700;color:var(--gray-800);cursor:pointer;background:var(--onair-surface);white-space:nowrap")}>
                 <Coffee size={17} strokeWidth={2} absoluteStrokeWidth style={{ display: "block" }} /> 저장 후 휴식
                 <KeyHint k={KEYS.saveBreak} />
               </span>
-              <span data-tour="wrap-save" onClick={vm.saveWrap} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
+              <span data-tour="wrap-save" className="keyreveal" onClick={vm.saveWrap} style={css("display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--blue-700);color:#fff;border-radius:9999px;font-weight:700;font-size:14px;cursor:pointer")}>
                 <Phone size={17} strokeWidth={2} absoluteStrokeWidth style={{ display: "block" }} /> 저장 후 다음 콜
                 <KeyHint k={KEYS.saveNext} tone="on" />
               </span>

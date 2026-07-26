@@ -107,6 +107,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 카드 하단이라 드롭다운은 위로 편다. */}
             <div style={css("position:relative;flex:none")}>
               <span
+                className="keyreveal"
                 onClick={() => setTransferMenu((v) => !v)}
                 title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "다른 부서로 이관 — 종료 시 예약"}
                 style={css(
@@ -158,6 +159,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
                 바닥의 흰 띠가 줄어들며 "이 버튼이 스스로 눌린다"를 말한다. */}
             <span
               data-tour="prep-connect"
+              className="keyreveal"
               onClick={vm.answerCall}
               title={
                 auto.counting
