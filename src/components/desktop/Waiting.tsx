@@ -31,7 +31,7 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
     if (idle) setStage(0);
   }, [idle]);
 
-  if (idle) return <Standby />;
+  if (idle) return <Standby manual={vm.manualSheet} />;
 
   const steps = STEPS;
 
@@ -49,7 +49,7 @@ export default function Waiting({ vm }: { vm: CallFlowVM }) {
           inset:-8px = 블러가 만드는 흐린 테두리를 화면 밖으로 밀어낸다(안 하면 가장자리에
           희끗한 띠가 생겨 화면이 잘린 것처럼 보인다). 바깥 overflow:hidden이 잘라 준다. */}
       <div style={css("position:absolute;inset:-8px;filter:blur(3px) saturate(.94)")}>
-        <Standby />
+        <Standby manual={vm.manualSheet} />
       </div>
       {/* 얇은 베일 — 흰 패널이 확실히 앞으로 나오게 뒤를 살짝 누른다.
           pointer-events:none 이라 대기 화면은 계속 클릭된다(못 쓰게 만들지 않는다). */}

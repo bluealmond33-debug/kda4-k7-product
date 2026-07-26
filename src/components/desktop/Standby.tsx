@@ -5,11 +5,8 @@ import { useCallLog } from "../../lib/callLog";
 import KeyboardMap from "./KeyboardMap";
 import LedClock from "./LedClock";
 import { highlight } from "../../lib/highlight";
-import { AGENT, SHEETS, rowSignal, sheetColIndex } from "../../data/demoContent";
+import { AGENT, SHEETS, rowSignal, sheetColIndex, type SheetData } from "../../data/demoContent";
 import SignalMark from "./SignalMark";
-
-/** 표식이 붙는 칸 — 라벨로 찾는다. 이 시트는 이미 한 번 열 순서가 바뀐 적이 있다. */
-const MANUAL_CONTENT_COL = sheetColIndex(SHEETS.manual.cols, "내용");
 
 /**
  * 아침 대기 화면 (phase === "idle") — "기다리는 콜센터 → 준비되는 콜센터".
@@ -166,7 +163,7 @@ function SubHead({ onBack, title, sub }: { onBack: () => void; title: string; su
   );
 }
 
-export default function Standby() {
+export default function Standby({ manual = SHEETS.manual }: { manual?: SheetData } = {}) {
   const [now, setNow] = useState(() => new Date());
   const [view, setView] = useState<PrepKey | null>(null);
   const [onBreak, setOnBreak] = useState(false);
@@ -180,6 +177,8 @@ export default function Standby() {
   // 알림 읽음 처리 + 필터 (읽으면 타일 배지도 줄어든다)
   const [readSet, setReadSet] = useState<Set<number>>(new Set());
   const [alertFilter, setAlertFilter] = useState<"all" | "unread">("all");
+  /** 표식이 붙는 칸 — 라벨로 찾는다. 업로드본마다 열 순서가 다르므로 시트가 바뀌면 다시 찾는다. */
+  const manualContentCol = sheetColIndex(manual.cols, "내용");
   const [manualSearch, setManualSearch] = useState(""); // 매뉴얼 실검색 — 우측 시트 필터
   // 워밍업 체크
   const [warmDone, setWarmDone] = useState<Set<number>>(new Set());
@@ -717,39 +716,48 @@ export default function Standby() {
             <div style={css("flex:1;min-width:0;background:var(--onair-surface);border-radius:8px;box-shadow:var(--sh-near);overflow:hidden;display:flex;flex-direction:column")}>
               <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--excel-green);color:#fff;flex:none")}>
                 <span className="mi" style={css("font-size:17px")}>grid_on</span>
-                <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif")}>{SHEETS.manual.file}</span>
-                <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;opacity:.8")}>· {SHEETS.manual.sheet} 시트</span>
+                <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif")}>{manual.file}</span>
+                <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;opacity:.8")}>· {manual.sheet} 시트</span>
               </div>
               <div style={css("flex:1;min-height:0;overflow:auto;background:#fff")}>
                 <div style={css("display:flex;flex-direction:column;min-width:max-content")}>
                   <div style={css("display:flex;position:sticky;top:0")}>
                     <span style={css("width:34px;flex:none;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300)")} />
-                    {SHEETS.manual.cols.map((c, i) => (
+                    {manual.cols.map((c, i) => (
                       <span key={i} style={css("width:" + c.w + "px;flex:none;padding:8px 10px;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-300);font:700 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>{c.l}</span>
                     ))}
                   </div>
-                  {SHEETS.manual.rows
-                    .map((row, ri) => [row, ri] as const)
-                    .filter(([row]) =>
-                      !manualSearch.trim() ||
-                      row.some((cell) => cell.toLowerCase().includes(manualSearch.trim().toLowerCase()))
-                    )
-                    .map(([row, ri]) => (
+                  {(() => {
+                    const needle = manualSearch.trim().toLowerCase();
+                    const hits = manual.rows
+                      .map((row, ri) => [row, ri] as const)
+                      .filter(([row]) => !needle || row.some((cell) => cell.toLowerCase().includes(needle)));
+                    /* 결과가 없으면 그렇게 말한다 — 빈 표만 남기면 매뉴얼이 안 열린 것처럼 보여
+                       통화 중에 새로고침하게 만든다(통화 화면 규정 패널은 이미 이렇게 말한다) */
+                    if (hits.length === 0) {
+                      return (
+                        <div style={css("padding:26px 0;text-align:center;font:400 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>
+                          “{manualSearch.trim()}” 검색 결과 없음 · 전체 {manual.rows.length}행
+                        </div>
+                      );
+                    }
+                    return hits.map(([row, ri]) => (
                     <div key={ri} style={css("display:flex")}>
                       <span style={css("width:34px;flex:none;padding:8px 0;text-align:center;background:var(--gray-100);border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{ri + 1}</span>
                       {row.map((cell, ci) => {
                         // 사고 방지 신호는 열을 늘리지 않고 내용 칸 앞에 표식으로만 세운다.
                         // 통화 중 규정 패널과 같은 표식(SignalMark)·같은 조회(rowSignal)를 쓴다.
-                        const sig = ci === MANUAL_CONTENT_COL ? rowSignal(SHEETS.manual, row) : undefined;
+                        const sig = ci === manualContentCol ? rowSignal(manual, row) : undefined;
                         return (
-                        <span key={ci} style={css("width:" + SHEETS.manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>
+                        <span key={ci} style={css("width:" + manual.cols[ci].w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>
                           {sig && <SignalMark sig={sig} />}
                           {highlight(cell, manualSearch)}
                         </span>
                         );
                       })}
                     </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
               </div>
             </div>

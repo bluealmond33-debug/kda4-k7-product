@@ -2781,6 +2781,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     clockStr: fmt(clock),
     /** 고객이 먼저 끊었다 — 준비 카드는 남기되 자동 연결을 멈추고 콜백 대상으로 표시한다 */
     customerEnded,
+    /** 지금 쓰이는 업무매뉴얼 원본 — 업로드본이 있으면 그것. 대기 화면 매뉴얼도 같은 걸 봐야
+     *  두 화면이 서로 다른 규정을 주장하지 않는다(표식이 붙는 조항도 여기서 나온다) */
+    manualSheet: manualData ?? SHEETS.manual,
     callStartedAt: callStartedAt || "시작 시각 미기록",
     showTimer: inCall && p !== "connecting",
     // 통화 누르자마자 00:01 — 실기기처럼 연결음 단계부터 타이머가 붙는다
