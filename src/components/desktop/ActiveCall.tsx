@@ -5,6 +5,7 @@ import type { CallFlowVM } from "../../hooks/useCallFlow";
 import Spinner from "../Spinner";
 import BriefingCardBody from "./BriefingCardBody";
 import ScriptTimeline from "./ScriptTimeline";
+import SignalMark from "./SignalMark";
 import { AGENT } from "../../data/demoContent";
 import DesktopShell from "./DesktopShell";
 
@@ -838,7 +839,11 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                             <span key={ci} style={css("width:" + cell.w + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--gray-100)" : "transparent"))}>{highlight(cell.text, vm.regSearch)}</span>
                           ))}
                           <span style={css("flex:1;min-width:0;padding:8px 10px;border-bottom:1px solid var(--gray-200);background:" + (hit ? "var(--gray-100)" : "transparent"))}>
-                            <span style={css("display:block;font:" + (hit ? "600" : "400") + " 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(r.cells[2].text, vm.regSearch)}</span>
+                            {/* 사고 방지 표식 — 대기 화면 매뉴얼과 같은 것. 통화 중에 놓치면 가장 비싼 실수라 여기가 본자리다 */}
+                            <span style={css("display:block;font:" + (hit ? "600" : "400") + " 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>
+                              {r.signal && <SignalMark sig={r.signal} />}
+                              {highlight(r.cells[2].text, vm.regSearch)}
+                            </span>
                             {ment && (
                               <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
                             )}

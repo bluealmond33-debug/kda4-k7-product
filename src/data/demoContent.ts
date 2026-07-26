@@ -456,6 +456,8 @@ export const SHEETS: Record<"history" | "accounts" | "manual", SheetData> = {
 export interface SheetRow {
   n: number;
   cells: { text: string; w: number }[];
+  /** 이 행의 사고 방지 신호(있으면). 어느 화면이든 표식은 이것 하나만 보면 된다. */
+  signal?: SheetSignal;
 }
 export interface RenderedSheet {
   title: string;
@@ -463,6 +465,19 @@ export interface RenderedSheet {
   sheet: string;
   cols: SheetColumn[];
   rows: SheetRow[];
+}
+
+/** 열을 라벨로 찾는다. 열 순서는 시트마다·업로드본마다 달라 인덱스를 박으면 조용히 어긋난다. */
+export function sheetColIndex(cols: SheetColumn[], label: string): number {
+  return cols.findIndex((c) => c.l.replace(/\s+/g, "") === label);
+}
+
+/** 행의 조항으로 신호를 찾는다. 조항 열이 없는 시트(이력·계좌)는 신호도 없다. */
+export function rowSignal(d: SheetData, row: string[]): SheetSignal | undefined {
+  if (!d.signals) return undefined;
+  const ci = sheetColIndex(d.cols, "조항");
+  if (ci < 0) return undefined;
+  return d.signals[(row[ci] ?? "").trim()];
 }
 
 /** Expand a SheetData into row objects with per-cell widths for rendering. */
@@ -475,6 +490,8 @@ export function renderSheet(d: SheetData): RenderedSheet {
     rows: d.rows.map((r, ri) => ({
       n: ri + 1,
       cells: r.map((c, ci) => ({ text: c, w: d.cols[ci].w })),
+      // 신호는 렌더 모델에 실어 보낸다 — 여기서 떨어뜨리면 통화 중 화면엔 표식이 영영 안 뜬다.
+      signal: rowSignal(d, r),
     })),
   };
 }

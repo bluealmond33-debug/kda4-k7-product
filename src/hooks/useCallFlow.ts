@@ -19,6 +19,7 @@ import {
   ADMIN_QUEUE_POOL,
   type IncomingKind,
   type SheetData,
+  type SheetRow,
   renderSheet,
   WRAP_TYPE_OPTIONS,
   WRAP_RESULT_OPTIONS,
@@ -2338,7 +2339,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           { l: "근거 내용", w: 430 },
           { l: "관련도", w: 80 },
         ],
-        rows: card.knowledge_references.map((reference, index) => ({
+        // SheetRow로 못박는다 — 규정 시트와 같은 행 모델이라야 사고 방지 표식이 이 경로에서도 산다
+        rows: card.knowledge_references.map((reference, index): SheetRow => ({
           n: index + 1,
           cells: [
             { text: reference.title, w: 220 },
