@@ -151,6 +151,8 @@ export const SHORTCUT_GUIDE: { screen: string; items: { k: string; label: string
   {
     screen: "공통",
     items: [
+      { k: "↑↓", label: "관련 규정 표에서 조항 이동" },
+      { k: "⏎", label: "고른 조항 펼치기 · 접기" },
       { k: "Esc", label: "닫기 · 입력 빠져나오기" },
       { k: KEYS.help, label: "이 도움말" },
     ],

@@ -69,6 +69,12 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [endConfirm, setEndConfirm] = useState(false);
   const [transferMenu, setTransferMenu] = useState(false); // 이관 부서 선택 드롭다운
+  /* 펼친 조항 — 표의 칸은 좁아 긴 조항이 잘린다. 행을 누르면 그 조항만 전문으로 편다.
+     데이터는 이미 cells에 다 들어 있다(화면에서만 잘렸다) — 새로 받아올 게 없다. */
+  const [openRow, setOpenRow] = useState<number | null>(null);
+  /* 키보드 커서 — ↑↓로 행을 옮기고 Enter로 편다. 규정 확인은 통화 중에 하므로
+     손이 마우스로 가지 않는 길이 있어야 한다. */
+  const [regCursor, setRegCursor] = useState<number | null>(null);
   const [scriptOpen, setScriptOpen] = useState(false); // 단계별 스크립트 아코디언 — 기본 접힘(초보 상담사용, 필요할 때만 펼침)
   // 메모 인라인 수정 — editIdx 행이 input으로 바뀐다
   const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -136,6 +142,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
       const el = e.target as HTMLElement;
       setEndConfirm(false);
       setEditIdx(null);
+      setOpenRow(null);
       if (isTypingTarget(el)) el.blur();
     };
     window.addEventListener("keydown", onEsc);
@@ -169,6 +176,35 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
     },
     !vm.showWrap
   );
+
+  /* 규정 표 키보드 이동 — ↑↓로 행을 옮기고 Enter로 편다.
+     이제 행에 '열기'라는 실제 동작이 생겼으므로 방향키가 뜻을 갖는다(전엔 하이라이트만
+     움직이고 Enter가 아무것도 안 해서 넣지 않았다).
+     한 글자 키를 쓰지 않는다 — 목록 이동은 어느 목록에서나 같은 방식이어야 외울 게 없다. */
+  useEffect(() => {
+    if (vm.showWrap || vm.regCollapsed) return;
+    const rows = vm.regRows;
+    if (!rows.length) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isTypingTarget(e.target)) return; // 검색창에서는 방향키가 글자 커서를 옮겨야 한다
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
+      e.preventDefault();
+      const at = rows.findIndex((r) => r.n === regCursor);
+      if (e.key === "Enter") {
+        if (at >= 0) setOpenRow((v) => (v === rows[at].n ? null : rows[at].n));
+        return;
+      }
+      const next = e.key === "ArrowDown"
+        ? Math.min(rows.length - 1, at < 0 ? 0 : at + 1)
+        : Math.max(0, at < 0 ? 0 : at - 1);
+      setRegCursor(rows[next].n);
+      // 커서가 화면 밖으로 나가지 않게 — 긴 표에서 방향키만 눌러도 따라 내려간다
+      document.querySelector('[data-regrow="' + rows[next].n + '"]')?.scrollIntoView({ block: "nearest" });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [vm.showWrap, vm.regCollapsed, vm.regRows, regCursor]);
 
   const copyWrapSummary = async () => {
     try {
@@ -897,8 +933,19 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                       const hit = vm.regTargetRow != null && r.n === vm.regTargetRow + 1;
                       const q = regPlan.quote >= 0 ? r.cells[regPlan.quote] : undefined;
                       const ment = q && q.text !== "—" ? q.text : null;
+                      const opened = openRow === r.n;
+                      const cursored = regCursor === r.n;
                       return (
-                        <div key={r.n} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--gray-1000);position:relative;z-index:1" : ""))}>
+                        <div key={r.n}>
+                        <div
+                          data-regrow={r.n}
+                          onClick={() => { setOpenRow(opened ? null : r.n); setRegCursor(r.n); }}
+                          title="눌러서 조항 전문 보기"
+                          style={css("display:flex;cursor:pointer" +
+                            (hit ? ";box-shadow:inset 0 0 0 1.5px var(--gray-1000);position:relative;z-index:1" : "") +
+                            // 키보드 커서는 테두리로만 — 배경까지 칠하면 '열린 것'과 헷갈린다
+                            (cursored && !hit ? ";box-shadow:inset 0 0 0 1.5px var(--blue-700);position:relative;z-index:1" : ""))}
+                        >
                           <span style={css("width:36px;flex:none;padding:8px 0;text-align:center;border-right:1px solid var(--gray-300);border-bottom:1px solid var(--gray-200);font:" + (hit ? "700" : "400") + " 11px 'Avenir Next','Pretendard',sans-serif;color:" + (hit ? "var(--gray-1000)" : "var(--gray-600)") + ";background:" + (hit ? "var(--gray-100)" : "var(--gray-100)"))}>{r.n}</span>
                           {regPlan.lead.map((i) => (
                             <span key={i} style={css("width:" + (r.cells[i]?.w ?? vm.regCols[i].w) + "px;flex:none;padding:8px 10px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);font:" + (hit ? "600" : "400") + " 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:" + (hit ? "var(--gray-100)" : "transparent"))}>{highlight(r.cells[i]?.text ?? "", vm.regSearch)}</span>
@@ -913,6 +960,42 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                               <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
                             )}
                           </span>
+                        </div>
+                        {/* 조항 전문 — 표의 칸 폭에 매이지 않고 전부 펼친다.
+                            금지·선행조건을 맨 위에 둔다: 통화 중 가장 비싼 실수라
+                            내용보다 먼저 눈에 들어와야 한다. */}
+                        {opened && (
+                          <div style={css("padding:12px 14px 14px 50px;border-bottom:1px solid var(--gray-200);background:var(--gray-100);animation:fadeIn .14s ease-out")}>
+                            {r.signal && (
+                              <div style={css("margin-bottom:9px")}>
+                                <SignalMark sig={r.signal} />
+                                <span style={css("font:600 12px 'Avenir Next','Pretendard',sans-serif;color:" + (r.signal.kind === "금지" ? "var(--red-800)" : "var(--amber-900)"))}>
+                                  {r.signal.kind} · {r.signal.text}
+                                </span>
+                              </div>
+                            )}
+                            <div style={css("display:flex;flex-direction:column;gap:8px")}>
+                              {r.cells.map((c, i) => (
+                                c.text && c.text !== "—" ? (
+                                  <div key={i} style={css("display:flex;gap:10px;align-items:baseline")}>
+                                    <span style={css("flex:none;width:64px;font:600 10px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-600)")}>
+                                      {vm.regCols[i]?.l}
+                                    </span>
+                                    <span style={css("flex:1;min-width:0;font:400 13px/1.65 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);word-break:keep-all")}>
+                                      {highlight(c.text, vm.regSearch)}
+                                    </span>
+                                  </div>
+                                ) : null
+                              ))}
+                            </div>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); setOpenRow(null); }}
+                              style={css("display:inline-flex;align-items:center;gap:4px;margin-top:10px;font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);cursor:pointer")}
+                            >
+                              <span className="mi" style={css("font-size:15px")}>expand_less</span>접기 · Esc
+                            </span>
+                          </div>
+                        )}
                         </div>
                       );
                     })}
