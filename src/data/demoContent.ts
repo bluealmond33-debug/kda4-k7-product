@@ -145,16 +145,16 @@ export const TRANSFER_TARGETS = [
 /* 이관은 특정 개인이 아니라 부서로 — 특정 사람에게 넘기면 책임 소재가 흐려진다는 실무 지적 반영.
    부서 대기열이 책임 주체가 되고, 그 안에서 수신 가능한 상담사에게 배정된다. */
 export const TRANSFER_DEPTS = [
-  { name: "사고대응팀", desc: "명의도용·보이스피싱·이상거래", state: "대기 2건" },
-  { name: "여신심사팀", desc: "대출 심사·재약정·한도 변경", state: "대기 1건" },
-  { name: "전자금융팀", desc: "OTP·공동인증서·이체 오류", state: "대기 0건" },
+  { name: "사고·신고", desc: "명의도용·보이스피싱·이상거래", state: "대기 2건" },
+  { name: "여신·대출", desc: "대출 심사·재약정·한도 변경", state: "대기 1건" },
+  { name: "전자금융·디지털", desc: "OTP·공동인증서·이체 오류", state: "대기 0건" },
 ] as const;
 
 /* AI가 콜 유형으로 추천하는 이관 부서 — 기본 이관의 목적지 */
 export const SUGGESTED_DEPT: Record<IncomingKind, string> = {
-  normal: "여신심사팀",
-  urgent: "사고대응팀",
-  transfer: "여신심사팀",
+  normal: "여신·대출",
+  urgent: "사고·신고",
+  transfer: "여신·대출",
 };
 
 /* 규정 검색 추천어 — 통화 중 검색창 아래 알약. 콜 유형별 후보를 두고,
@@ -202,7 +202,7 @@ export const PREP_NEED_TAGS: Record<IncomingKind, string[]> = {
  *  대기 건수는 TRANSFER_DEPTS의 state(대기 2·1·0건)와 같은 사건을 말한다. */
 export const ADMIN_QUEUE = [
   {
-    dept: "사고대응팀",
+    dept: "사고·신고",
     desc: "명의도용·보이스피싱·이상거래",
     available: 1,
     busy: 2,
@@ -212,14 +212,14 @@ export const ADMIN_QUEUE = [
     ],
   },
   {
-    dept: "여신심사팀",
+    dept: "여신·대출",
     desc: "대출 심사·재약정·한도 변경",
     available: 2,
     busy: 1,
     waiting: [{ masked: "김*진", summary: "주택담보대출 금리 재약정 상담", baseSec: 65 }],
   },
   {
-    dept: "전자금융팀",
+    dept: "전자금융·디지털",
     desc: "OTP·공동인증서·이체 오류",
     available: 3,
     busy: 0,
@@ -229,12 +229,12 @@ export const ADMIN_QUEUE = [
 
 /** '통화 추가' 데모 — 관리자 대기열에 랜덤으로 들어올 더미 인입 풀 (긴급 없음, 일반 카드만) */
 export const ADMIN_QUEUE_POOL = [
-  { dept: "여신심사팀", masked: "정*아", summary: "신용대출 한도 증액 가능 여부 문의" },
-  { dept: "여신심사팀", masked: "이*준", summary: "전세자금대출 서류 재제출 절차 문의" },
-  { dept: "사고대응팀", masked: "한*솔", summary: "해외 결제 승인 취소 요청" },
-  { dept: "사고대응팀", masked: "오*택", summary: "스미싱 문자 클릭 후 계좌 점검 요청" },
-  { dept: "전자금융팀", masked: "유*나", summary: "OTP 재발급 및 이체한도 문의" },
-  { dept: "전자금융팀", masked: "강*민", summary: "공동인증서 갱신 오류 해결 요청" },
+  { dept: "여신·대출", masked: "정*아", summary: "신용대출 한도 증액 가능 여부 문의" },
+  { dept: "여신·대출", masked: "이*준", summary: "전세자금대출 서류 재제출 절차 문의" },
+  { dept: "사고·신고", masked: "한*솔", summary: "해외 결제 승인 취소 요청" },
+  { dept: "사고·신고", masked: "오*택", summary: "스미싱 문자 클릭 후 계좌 점검 요청" },
+  { dept: "전자금융·디지털", masked: "유*나", summary: "OTP 재발급 및 이체한도 문의" },
+  { dept: "전자금융·디지털", masked: "강*민", summary: "공동인증서 갱신 오류 해결 요청" },
 ] as const;
 
 export interface ScriptStep {

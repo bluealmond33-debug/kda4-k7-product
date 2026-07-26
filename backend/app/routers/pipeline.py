@@ -7,6 +7,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from app.config import settings
+from app.routing import taxonomy
 from app.services.pii_guard import PII_SCOPE, mask_transcript
 from app.schemas import (
     AnalyzeResult,
@@ -85,14 +86,48 @@ _RAG_MIN_SCORE_UNFILTERED = 0.60
 # 라우팅 부서 → 규정 대분류(TAXONOMY) 하드 필터. 사고 계열 통화에 상품설명서(DEP/LON)가
 # 섞이는 것을 막는다 — 실측: 보이스피싱 건 유의사항 3개 중 2위가 '주택청약종합저축'(0.620)
 # 이었다. 점수 하한만으로는 못 거른다(하한을 그 위로 올리면 '지급정지 신청 절차' 0.601도
-# 같이 날아간다). 매핑에 없는 부서(일반상담팀 등)는 필터 없이 전체 검색한다.
+# 같이 날아간다).
+#
+# **부서명은 taxonomy.DEPARTMENTS 하나로 통일한다.** 예전엔 LLM 프롬프트가 "목록에 없으면
+# OO팀 형식으로 새로 만들어라"고 시켜서, 모델이 지어낸 이름("일반상담팀" 등)이 이 표에
+# 없으면 필터가 조용히 풀렸다 — 사고 건에 상품설명서가 섞이던 경로가 바로 그것이다.
+# 이제 프롬프트가 7개 닫힌 집합만 답하므로 매핑은 taxonomy에서 파생된다(항등).
 _DEPT_RAG_CATEGORIES: dict[str, list[str]] = {
-    "보이스피싱대응팀": ["SG", "EFN", "CRD"],
-    "카드분실신고팀": ["CRD", "SG"],
-    "계좌보안팀": ["SG", "EFN", "CRD"],
-    "이체오류처리팀": ["EFN", "SG"],
-    "대출상담팀": ["LON"],
+    label: [code] for code, label in taxonomy.DEPARTMENTS.items()
 }
+# 사고·신고는 예외적으로 인접 대분류까지 함께 본다 — 보이스피싱·명의도용은 전자금융/카드
+# 규정과 얽혀 있어 SG만 보면 정작 필요한 절차 문서를 놓친다.
+_DEPT_RAG_CATEGORIES[taxonomy.EMERGENCY_DEPARTMENT_LABEL] = ["SG", "EFN", "CRD"]
+
+# 구버전 모델·픽스처가 아직 옛 이름을 뱉을 수 있다. 조용히 필터가 풀리는 것보다
+# 옛 이름을 taxonomy 라벨로 흡수하는 편이 안전하다(로그로 남긴다).
+_LEGACY_DEPT_ALIASES: dict[str, str] = {
+    "보이스피싱대응팀": "사고·신고",
+    "계좌보안팀": "사고·신고",
+    "카드분실신고팀": "카드·결제",
+    "이체오류처리팀": "전자금융·디지털",
+    "대출상담팀": "여신·대출",
+    "일반상담팀": "수신·예적금",
+    "사고대응팀": "사고·신고",
+}
+
+
+def normalize_department(name: str | None) -> str | None:
+    """LLM이 돌려준 부서명을 taxonomy 라벨로 맞춘다.
+
+    닫힌 집합에 있으면 그대로, 옛 이름이면 흡수, 둘 다 아니면 None을 돌려
+    호출부가 '필터 없음'을 **의식적으로** 선택하게 한다(조용히 풀리지 않게).
+    """
+    if not name:
+        return None
+    if taxonomy.is_valid_department_label(name):
+        return name
+    alias = _LEGACY_DEPT_ALIASES.get(name.strip())
+    if alias:
+        logger.info("부서명 별칭 흡수: %s → %s", name, alias)
+        return alias
+    logger.warning("taxonomy에 없는 부서명 — 규정 필터를 걸지 않는다: %s", name)
+    return None
 
 
 def _rag_query(reason_codes: list[AttentionReasonCode], summary: str) -> str:
@@ -236,7 +271,8 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
     # 쪽이 절차 문서("대출 만기 연장·중도상환·약정변경 상담", 0.761)를 1위로 올린다.
     # 부수효과로 개인정보가 RAG 질의에 실리지 않는다(주제 12).
     rag_query = " ".join(filter(None, [gpt_result.summary, " ".join(gpt_result.keywords)])).strip()
-    rag_categories = _DEPT_RAG_CATEGORIES.get(gpt_result.department)
+    dept = normalize_department(gpt_result.department)
+    rag_categories = _DEPT_RAG_CATEGORIES.get(dept) if dept else None
     try:
         references = search_procedures(
             settings, rag_query or body.text, top_k=3, categories=rag_categories
