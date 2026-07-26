@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, CalendarClock, GraduationCap, History } from "lucide-react";
 import { css } from "../../lib/css";
 import { useCallLog } from "../../lib/callLog";
+import KeyboardMap from "./KeyboardMap";
 import LedClock from "./LedClock";
 import { highlight } from "../../lib/highlight";
 import { AGENT, SHEETS, rowSignal, sheetColIndex } from "../../data/demoContent";
@@ -21,7 +22,7 @@ const MANUAL_CONTENT_COL = sheetColIndex(SHEETS.manual.cols, "내용");
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const two = (n: number) => (n < 10 ? "0" + n : "" + n);
 
-type PrepKey = "today" | "alerts" | "coach" | "manual";
+type PrepKey = "today" | "alerts" | "coach" | "manual" | "keys";
 
 const TODAY = {
   count: 12,
@@ -756,6 +757,13 @@ export default function Standby() {
         </div>
       )}
 
+      {view === "keys" && (
+        <div style={css("flex:1;display:flex;flex-direction:column;padding:6px 26px 26px;min-height:0;overflow:auto")}>
+          <SubHead onBack={back} title="단축키" sub="자판에서 위치로 익히기" />
+          <KeyboardMap />
+        </div>
+      )}
+
       {!view && (
         /* ── 대기(시계) 화면 — 시계가 정중앙의 유일한 주인공. 나머지는 가장자리로 ── */
         <div style={css("flex:1;min-height:0")}>
@@ -804,6 +812,9 @@ export default function Standby() {
                 알림
               </span>
               <span style={css("width:1px;height:14px;background:var(--gray-300);margin:0 8px")} />
+              <span onClick={() => setView("keys")} className="ghosttile">
+                <span className="mi" style={css("font-size:16px")}>keyboard</span>단축키
+              </span>
               <span onClick={() => { autoBreak.current = false; setOnBreak(true); }} className="ghosttile">
                 <span className="mi" style={css("font-size:16px")}>local_cafe</span>휴식하기
               </span>
