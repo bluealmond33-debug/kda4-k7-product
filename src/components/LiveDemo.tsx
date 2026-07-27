@@ -96,6 +96,7 @@ export default function LiveDemo({
         id: `${line.generation ?? 0}-${line.audioSeq ?? line.seq}-${line.speaker}-${line.at}`,
         text: line.text,
         who: line.speaker,
+        piiMasked: line.piiMasked,
       }))
     : bus.lines.map((line) => ({ id: line.id, text: line.text, who: line.speaker }));
   // AI(KARI-NA) 안내를 발화와 한 줄기로 섞는다 — 고객이 무엇을 듣고 무엇을 답했는지가

@@ -34,6 +34,8 @@ export interface StreamItem {
   id: string;
   text: string;
   who: "customer" | "agent" | "ai";
+  /** 이 조각에서 마스킹된 개인정보 건수(11개 항목 — pii_guard.PII_SCOPE) */
+  piiMasked?: number;
 }
 
 export default function LiveTranscriptPanel({
@@ -151,7 +153,7 @@ export default function LiveTranscriptPanel({
   // 들리는 대로 다 받아 적는 한 벌 전사 — 문장별로 끊지 않고 이어 붙이되, '다른 사람'이
   // 말하기 시작하면 그때만 칸을 띄운다. 즉 같은 화자의 연속 발화는 한 덩이로 묶고
   // 화자가 바뀌는 순간에만 새 문단을 연다. 화자는 글자 색으로 구분(고객 파랑·상담원 보라).
-  const groups: { who: StreamItem["who"]; texts: string[]; firstId: string; lastId: string; time: string }[] = [];
+  const groups: { who: StreamItem["who"]; texts: string[]; firstId: string; lastId: string; time: string; piiMasked: number }[] = [];
   // 시각은 '말풍선이 끊어진 시각' — 그 덩이의 마지막 조각이 도착한 때다. 첫 조각 시각을
   // 쓰면 길게 말한 발화가 "말을 시작한 시각"으로 남아, 다음 말풍선과의 간격이 실제 대화의
   // 리듬과 어긋난다. 마지막 조각을 쓰면 "여기서 말이 끊겼다"가 그대로 기록된다.
@@ -161,8 +163,9 @@ export default function LiveTranscriptPanel({
       g.texts.push(it.text);
       g.lastId = it.id;
       g.time = stamp(it.id);
+      g.piiMasked += it.piiMasked ?? 0;
     } else {
-      groups.push({ who: it.who, texts: [it.text], firstId: it.id, lastId: it.id, time: stamp(it.id) });
+      groups.push({ who: it.who, texts: [it.text], firstId: it.id, lastId: it.id, time: stamp(it.id), piiMasked: it.piiMasked ?? 0 });
     }
   });
 
@@ -240,6 +243,7 @@ export default function LiveTranscriptPanel({
               fontPx={fontPx}
               full={maskPii(g.texts.join(" "))}
               isLast={gi === groups.length - 1}
+              piiMasked={g.piiMasked}
             />
           ))
         )}
@@ -308,6 +312,7 @@ function BubbleLine({
   fontPx,
   full,
   isLast,
+  piiMasked = 0,
 }: {
   time: string;
   who: StreamItem["who"];
@@ -315,6 +320,7 @@ function BubbleLine({
   fontPx: number;
   full: string;
   isLast: boolean;
+  piiMasked?: number;
 }) {
   /* 타자기는 ui/TypingAnimation의 useTyping 하나로 모았다 — 카드 요약·첫 응대 문장과
      같은 구현이라야 속도·커서가 화면마다 달라지지 않는다.
@@ -335,6 +341,21 @@ function BubbleLine({
       {time}
     </span>
   );
+  // 이 발화에서 개인정보가 실제로 마스킹됐을 때만 뜬다 — 상시 표시하면 "늘 켜진 배지"라
+  // 신호가 안 된다. 자물쇠 + 건수만: 뭘 가렸는지는 말풍선 안에 이미 *로 보이므로 중복 설명 없음.
+  const piiBadge = piiMasked > 0 && (
+    <span
+      title={piiMasked + "건 개인정보 마스킹됨"}
+      style={css(
+        "flex:none;display:inline-flex;align-items:center;gap:2px;color:#e0b24d;font:600 " +
+          timePx +
+          "px 'Avenir Next','Pretendard',sans-serif"
+      )}
+    >
+      <span className="mi" style={css("font-size:" + (timePx + 3) + "px")}>lock</span>
+      {piiMasked}
+    </span>
+  );
   return (
     <div style={css("display:flex;flex-direction:column;gap:3px;animation:fadeIn .18s ease-out;align-items:" + (mine ? "flex-end" : "flex-start"))}>
       {/* 이름은 양쪽 다 적는다 — 오른쪽에 KARI-NA와 상담원이 함께 서므로 위치만으로는
@@ -352,6 +373,7 @@ function BubbleLine({
         {spk.name}
       </span>
       <div style={css("display:flex;align-items:flex-end;gap:6px;max-width:100%;justify-content:" + (mine ? "flex-end" : "flex-start"))}>
+        {mine && piiBadge}
         {mine && stampEl}
         <div
           style={css(
@@ -383,6 +405,7 @@ function BubbleLine({
           )}
         </div>
         {!mine && stampEl}
+        {!mine && piiBadge}
       </div>
     </div>
   );
