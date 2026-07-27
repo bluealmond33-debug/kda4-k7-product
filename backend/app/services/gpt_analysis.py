@@ -11,6 +11,7 @@ import json
 from openai import OpenAI
 
 from app.config import settings
+from app.routing.taxonomy import normalize_department
 from app.schemas import GptAnalysis, RiskFlags
 
 _SYSTEM_PROMPT = """\
@@ -58,7 +59,7 @@ _RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
         "summary": {"type": "string", "description": "상담 내용 2~3문장 요약"},
-        "department": {"type": "string", "description": "담당 부서 (예: 보이스피싱대응팀, 카드분실신고팀, 일반상담팀 등)"},
+        "department": {"type": "string", "description": "담당 부서 (수신·예적금/여신·대출/카드·결제/외환·수출입/전자금융·디지털/연금·신탁·투자/사고·신고 중 하나)"},
         "keywords": {
             "type": "array",
             "items": {"type": "string"},
@@ -87,7 +88,7 @@ def analyze_transcript(client: OpenAI, transcript: str) -> GptAnalysis:
     payload = json.loads(response.choices[0].message.content)
     return GptAnalysis(
         summary=payload["summary"],
-        department=payload["department"],
+        department=normalize_department(payload["department"]),
         keywords=payload["keywords"],
         risk_flags=RiskFlags(**payload["risk_flags"]),
     )

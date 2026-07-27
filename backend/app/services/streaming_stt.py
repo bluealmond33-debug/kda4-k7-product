@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from app.config import Settings
-from app.services.local_stt import _get_model
 from app.services.pii_guard import PiiHit, mask_transcript
 
 
@@ -29,11 +28,15 @@ def transcribe_utterance(settings: Settings, pcm_int16: bytes) -> str:
     ⚠️ 반환값에 PII가 들어 있을 수 있다. 상담사·AI·DB로 나가는 스트리밍 경로에서는 이 함수를
     직접 쓰지 말고 transcribe_utterance_masked()를 써라(마스킹본만 반환). 이 함수는 그
     마스킹 함수의 내부 단계로만 남긴다.
+
+    faster-whisper(ctranslate2) 대신 transformers Whisper로 전사한다 — 이 랩탑은 Smart App
+    Control이 ctranslate2._ext 네이티브 DLL을 차단해 faster-whisper가 로드조차 안 된다.
     """
     audio = utterance_to_float32(pcm_int16)
-    model = _get_model(settings)
-    segments, _info = model.transcribe(audio, language="ko")
-    return "".join(seg.text for seg in segments).strip()
+    # STT 엔진: transformers Whisper(torch/GPU). 이 랩탑은 Smart App Control이 faster-whisper의
+    # ctranslate2/av 네이티브 DLL을 차단하므로 torch 기반으로 대체했다(app/services/transformers_stt.py).
+    from app.services.transformers_stt import transcribe_float32
+    return transcribe_float32(settings, audio).strip()
 
 
 @dataclass(frozen=True)

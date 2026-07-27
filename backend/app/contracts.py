@@ -146,7 +146,7 @@ class ConsultationCard(BaseModel):
 class MvpCallResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    schema_version: Literal["mvp-1.0"] = "mvp-1.0"
+    schema_version: Literal["mvp-1.1"] = "mvp-1.1"
     call_id: UUID
     status: CallStatus
     source_channel: Literal["voice"] = "voice"

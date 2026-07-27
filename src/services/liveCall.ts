@@ -19,6 +19,8 @@ export interface LiveTranscript {
   speaker: LiveSpeaker;
   generation?: number;
   audioSeq?: number;
+  /** 이 발화에서 백엔드(pii_guard, 11개 항목)가 마스킹한 개인정보 건수 — 화면 배지용 */
+  piiMasked?: number;
 }
 
 export interface LiveHandle {
@@ -75,6 +77,7 @@ export async function startLiveCall(
         text?: string;
         at?: number;
         speaker?: unknown;
+        pii_masked?: number;
         level?: number;
         status?: string;
         device?: string;
@@ -104,6 +107,7 @@ export async function startLiveCall(
         const seq = Math.max(0, Number(message.seq ?? audioSeq) || 0);
         if (seq > 0 && seq <= lastSeq) return;
         lastSeq = Math.max(lastSeq, seq);
+        const piiMasked = Math.max(0, Number(message.pii_masked) || 0);
         handlers.onTranscript?.({
           seq,
           text: message.text ?? "",
@@ -111,6 +115,7 @@ export async function startLiveCall(
           speaker,
           ...(generation > 0 ? { generation } : {}),
           ...(audioSeq > 0 ? { audioSeq } : {}),
+          ...(piiMasked > 0 ? { piiMasked } : {}),
         });
         settleSeqWaiters();
       }

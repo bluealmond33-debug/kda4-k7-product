@@ -19,11 +19,22 @@ export interface MobileArsHandlers {
   onCallEnd?(event: ArsLifecycleEvent): void;
   onState?(state: ArsStateSnapshot): void;
   onError?(message: string): void;
+  /** 본인인증 생년월일 8자리 수집 시작(서버 ack) — 안내 음성 재생 신호로 쓴다. */
+  onAuthStart?(): void;
+  /** 자리 입력마다(8자리 전까지) — 화면에 "N/8" 같은 진행 표시용. */
+  onAuthProgress?(count: number): void;
+  /** 8자리 다 채워짐 — 데모는 대조 없이 여기서 바로 완료 처리. */
+  onAuthComplete?(digits: string): void;
+  /** 8자리 안 채우고 #/*를 눌렀을 때 — "8자리 다 눌러주세요" 리마인드용. */
+  onAuthIncomplete?(count: number): void;
+  /** 8자리는 채웠지만 형식이 유효한 생년월일이 아닐 때 — 재입력 요청. */
+  onAuthMismatch?(): void;
 }
 
 export interface MobileArsHandle {
   startCall(): void;
   pressDigit(digit: string): boolean;
+  startAuth(): void;
   endCall(): void;
   stop(options?: { hangup?: boolean }): void;
 }
@@ -50,6 +61,9 @@ export function startMobileArsControl(
     dtmfCount: 0,
     finalSeq: 0,
     drained: true,
+    awaitingAuth: false,
+    authDigitCount: 0,
+    authVerified: false,
   };
   let pendingStart = false;
   let pendingStartSent = false;
@@ -143,6 +157,9 @@ export function startMobileArsControl(
     generation?: number;
     end_reason?: string;
     ended_by?: string;
+    awaiting_auth?: boolean;
+    auth_digit_count?: number;
+    auth_verified?: boolean;
   }) => {
     state = {
       ...lifecycleEvent(message),
@@ -151,6 +168,9 @@ export function startMobileArsControl(
       intakeComplete: Boolean(message.intake_complete),
       agentConnected: Boolean(message.agent_connected),
       dtmfCount: Math.max(0, Number(message.dtmf_count) || 0),
+      awaitingAuth: Boolean(message.awaiting_auth),
+      authDigitCount: Math.max(0, Number(message.auth_digit_count) || 0),
+      authVerified: Boolean(message.auth_verified),
     };
     hydrated = true;
     if (state.active) pendingStart = false;
@@ -208,6 +228,7 @@ export function startMobileArsControl(
         generation?: number;
         end_reason?: string;
         ended_by?: string;
+        count?: number;
       };
       try {
         message = JSON.parse(event.data as string);
@@ -245,6 +266,26 @@ export function startMobileArsControl(
         pendingIntakeGeneration = null;
         state = { ...state, active: false, ...lifecycle };
         handlers.onCallEnd?.(lifecycle);
+      }
+      if (message.type === "auth_start") {
+        state = { ...state, awaitingAuth: true, authDigitCount: 0, authVerified: false };
+        handlers.onAuthStart?.();
+      }
+      if (message.type === "auth_progress") {
+        const count = Math.max(0, Number(message.count) || 0);
+        state = { ...state, authDigitCount: count };
+        handlers.onAuthProgress?.(count);
+      }
+      if (message.type === "auth_complete" && typeof message.digits === "string") {
+        state = { ...state, awaitingAuth: false, authVerified: true };
+        handlers.onAuthComplete?.(message.digits);
+      }
+      if (message.type === "auth_incomplete") {
+        handlers.onAuthIncomplete?.(Math.max(0, Number(message.count) || 0));
+      }
+      if (message.type === "auth_mismatch") {
+        state = { ...state, authDigitCount: 0 };
+        handlers.onAuthMismatch?.();
       }
       if (message.type === "ars_state") applySnapshot(message);
     };
@@ -301,6 +342,12 @@ export function startMobileArsControl(
         send("intake_complete", {}, pendingIntakeGeneration);
       }
       return true;
+    },
+    startAuth() {
+      if (!state.active || state.awaitingAuth || !hydrated || socket?.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      send("auth_start");
     },
     endCall() {
       pendingStart = false;

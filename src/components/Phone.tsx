@@ -6,6 +6,25 @@ import { BrandSymbol } from "./BrandLogo";
 import { CUSTOMER } from "../data/demoContent";
 import { useMic } from "../lib/mic";
 
+// iOS Safari 등은 실제 탭(사용자 제스처) 안에서 오디오 play()가 동기적으로 한 번
+// 성공해야, 이후 phase 전환에 반응해 비동기로 트는 안내 음성(lib/arsDialogue)도
+// 자동재생이 풀린다. 통화 버튼을 누르는 이 순간이 유일한 진짜 사용자 제스처이므로
+// 여기서 무음 WAV를 한 번 재생해 페이지의 오디오 잠금을 미리 풀어둔다.
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==";
+function unlockAudioAutoplay() {
+  try {
+    const a = new Audio(SILENT_WAV);
+    void a.play().then(() => a.pause()).catch(() => {});
+  } catch {
+    // noop
+  }
+}
+function startCallUnlocked(vm: CallFlowVM) {
+  unlockAudioAutoplay();
+  vm.startCall();
+}
+
 /**
  * 아이폰 목업 — 프레임을 CSS로 직접 그린다. 실기기 스크린샷(IMG_7570~7572) 기준,
  * 아이콘은 애플 SF Symbols를 본뜬 Framework7 Icons(MIT)를 SVG로 이식(AppleIcon):
@@ -301,7 +320,7 @@ function SmsScreen({ vm }: { vm: CallFlowVM }) {
             padding만 키우면 배지가 알약 안에서 위아래로 끼여 얇아 보이므로 높이를 직접 잡고
             배지도 같이 키운다(알약 높이의 절반쯤). */}
         <div
-          onClick={vm.startCall}
+          onClick={() => startCallUnlocked(vm)}
           style={css("position:absolute;left:22px;top:24px;height:38px;box-sizing:border-box;display:flex;align-items:center;gap:4px;background:#eeeef0;border-radius:9999px;padding:0 11px 0 7px;cursor:pointer")}
         >
           <span className="mi" style={css("font-size:25px;color:#000;line-height:1")}>chevron_left</span>
@@ -463,6 +482,28 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
             키움은행 고객센터 <span style={css("font-weight:700;color:" + INK)}>mobile</span>
           </div>
         </div>
+        {/* 마이크 소스 — 통화 전 한 번 고른다. getUserMedia는 항상 "지금 이 화면이 열려있는
+            기기"의 마이크를 잡으므로(다른 기기 마이크를 원격으로 끌어오지 않는다), 랩탑에서
+            이 화면을 열 계획이면 여기서 미리 표시해 둔다. */}
+        <div style={css("display:flex;justify-content:center;margin-top:22px")}>
+          <div style={css("display:inline-flex;background:#f2f2f7;border-radius:9999px;padding:3px;gap:2px")}>
+            {(["phone", "laptop"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => vm.setMicSource(s)}
+                style={css(
+                  "appearance:none;border:none;font-size:12.5px;font-weight:600;padding:7px 16px;border-radius:9999px;cursor:pointer;transition:background .12s,color .12s;" +
+                    (vm.micSource === s
+                      ? "background:#fff;color:" + INK + ";box-shadow:0 1px 3px rgba(0,0,0,.12)"
+                      : "background:transparent;color:" + INK_SUB)
+                )}
+              >
+                {s === "phone" ? "이 폰 마이크 사용" : "랩탑 마이크 사용"}
+              </button>
+            ))}
+          </div>
+        </div>
         <div style={css("flex:1")} />
         {/* 키패드 — 클릭 시 입력·눌림 피드백(KeyButton). 실기기 비율: 큼직한 원 88px */}
         <div style={css("display:grid;grid-template-columns:repeat(3,88px);justify-content:center;column-gap:24px;row-gap:16px")}>
@@ -476,7 +517,7 @@ function IdleScreen({ vm }: { vm: CallFlowVM }) {
           <span />
           <div
             data-tour="phone-call"
-            onClick={vm.startCall}
+            onClick={() => startCallUnlocked(vm)}
             style={css("width:88px;height:88px;border-radius:9999px;background:#31d158;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(49,209,88,.35)")}
           >
             <AppleIcon name="call" size={42} />
@@ -638,7 +679,7 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
         {vm.phEnded && vm.isCustomerSurface && (
           <div style={css("display:flex;flex-direction:column;align-items:center;gap:7px")}>
             <span style={css("font-size:13px;color:#8a8a8e")}>새 상담을 시작할 수 있습니다</span>
-            <CallButtonRow color="#34c759" icon="call" onClick={vm.startCall} />
+            <CallButtonRow color="#34c759" icon="call" onClick={() => startCallUnlocked(vm)} />
           </div>
         )}
       </div>

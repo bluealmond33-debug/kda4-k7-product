@@ -216,7 +216,7 @@ def finalize_live_call(
                     emotion_status, emotion_score, emotion_level, emotion_reason,
                     raw_model_result
                 )
-                VALUES (%s, 'mvp-1.0', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, 'mvp-1.1', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (call_id) DO UPDATE SET
                     summary = EXCLUDED.summary,
                     business_type = EXCLUDED.business_type,
