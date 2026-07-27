@@ -42,8 +42,23 @@ if [ -n "$orphan_helpers" ]; then
   killed=$((killed + 1))
 fi
 
-# 3) 주인 없는 임시 프로파일 디렉터리 — 하루 지난 것만. 쓰는 중인 것은 건드리지 않는다.
-find /tmp -maxdepth 1 -type d -name "cdp-*" -mtime +1 -exec rm -rf {} + 2>/dev/null
+# 3) 주인 없는 임시 프로파일 디렉터리.
+#
+# 프로세스만 거두면 디스크가 샌다: 크롬은 뜰 때마다 새 프로파일(cdp-a4, cdp-auth2 …)에
+# 캐시를 쌓고, 개당 70~150MB가 남는다. 실측으로 37개 4.2GB가 쌓여 있었다.
+#
+# 판정은 **날짜가 아니라 사용 여부**로 한다. 처음엔 -mtime +1(하루 지난 것)로 뒀는데,
+# 세션들이 몇 분 간격으로 새 프로파일을 만들어서 하루를 못 넘기고 계속 늘기만 했다.
+# 지금 크롬이 --user-data-dir로 물고 있는 것만 남기고 나머지는 지운다 —
+# 크롬이 죽은 순간 그 프로파일은 두 번 다시 쓰이지 않는다(매번 새 이름으로 뜬다).
+inuse=$(ps -Ao args | grep "Google Chrome" | grep -oE "user-data-dir=/tmp/cdp-[A-Za-z0-9_-]+" | sed 's|.*/tmp/||' | sort -u)
+for dir in /tmp/cdp-*; do
+  [ -d "$dir" ] || continue
+  name=$(basename "$dir")
+  echo "$inuse" | grep -qx "$name" && { say "프로파일 유지: $name (사용 중)"; continue; }
+  say "프로파일 삭제: $name ($(du -sh "$dir" 2>/dev/null | cut -f1))"
+  rm -rf "$dir" 2>/dev/null
+done
 
 if [ "$killed" = "0" ]; then
   say "수거할 고아 없음"
