@@ -52,6 +52,11 @@ class CallSession:
         # ── 실시간 DB 저장용 누적 상태 ──
         self.db_started = False     # calls 행 생성했는지
         self.masked_parts: list[str] = []   # 마스킹본 발화 누적(종료 시 분석 입력)
+        # 접수 발화(recording) 구간 원본 PCM 누적 — eGeMAPS+LightGBM 감정온도용. WavLM처럼
+        # 발화마다 바로 버리지 않는 이유는 이 모델이 완결된 오디오 한 덩어리를 보고 판단하는
+        # 배치형 모델이라서다. /analyze-text가 recording 종료 시 _consume_recording_audio()로
+        # 한 번 소비하고 즉시 비운다 — DB에는 저장하지 않고 프로세스 메모리에만 잠깐 머문다.
+        self.raw_audio_chunks: list[bytes] = []
         self.max_anger = 0.0        # 통화 중 최대 음성분노 확률(judge/후처리 위험판단용 — 절대 안 내려감, 의도된 동작)
         # 실시간 감정온도 게이지 전용(박정운 피드백: "차분히 말하는데 41도 고정") — max_anger는
         # "이 통화에서 한 번이라도 격해진 적 있는가"엔 맞는 신호지만, 통화 중 지금 상태를
@@ -104,10 +109,24 @@ def _pcm_to_wav(pcm: bytes, sample_rate: int = 16_000) -> bytes:
     return buffer.getvalue()
 
 
+def _consume_recording_audio(session: CallSession) -> bytes | None:
+    """recording 구간 누적 PCM을 WAV 하나로 합쳐 반환하고 세션에서 비운다.
+
+    /analyze-text가 감정온도(eGeMAPS+LightGBM) 분석 직전 1회 호출한다 — 소비 즉시 비워
+    원본 음성을 필요 이상 오래 들고 있지 않는다(휘발 원칙). 누적된 게 없으면 None.
+    """
+    if not session.raw_audio_chunks:
+        return None
+    combined_pcm = b"".join(session.raw_audio_chunks)
+    session.raw_audio_chunks = []
+    return _pcm_to_wav(combined_pcm)
+
+
 async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     # STT 수신 즉시 마스킹(주제 11·12): 원문 전사문은 streaming_stt 안에서만 존재하고
     # 여기로 나오지 않는다 — 상담사·AI·DB로 가는 것은 처음부터 마스킹본뿐이다.
-    # 원본 음성(utterance)도 이 함수 안에서만 쓰이고 저장·반환하지 않는다(휘발).
+    # 원본 음성(utterance)은 감정온도(eGeMAPS+LightGBM) 분석을 위해 세션에 잠깐 누적되지만,
+    # DB에는 저장되지 않고 /analyze-text가 한 번 소비한 뒤 즉시 비운다(휘발 원칙 유지).
     result = await run_in_threadpool(transcribe_utterance_masked, settings, utterance)
     if result.is_empty:
         return
@@ -141,6 +160,7 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     # ── 상담 중 실시간 DB 저장(주제 11·12 준수: 마스킹본만) ──
     # 누적은 종료 시 카드 분석 입력으로, DB append는 통화 진행 중 전사 영속화로 쓴다.
     session.masked_parts.append(masked)
+    session.raw_audio_chunks.append(utterance)
     if anger:
         session.voice_model_calls += 1
         session.max_anger = max(session.max_anger, anger.probability)

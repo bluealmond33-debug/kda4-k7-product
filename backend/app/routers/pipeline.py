@@ -262,16 +262,34 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
     api_contract.md 스키마(summary/category/emotion/urgency_score/routing/keywords)로 응답한다."""
     gpt_result = _analyze(body.text)
 
-    # 감정 — call_id가 있으면 그 통화 중 실시간으로 이미 돈 WavLM 음성분노 신호(진짜 음성
-    # 기반 모델)를 쓴다. 텍스트를 가짜 WAV로 감싸 analyze_emotion에 넣던 예전 방식은 음향
-    # 모델이 텍스트를 못 읽어 항상 스텁으로 떨어졌다(박정운 피드백 "감정모델 연동 안됨"의 원인).
+    # 감정온도 — 실제로 쓸 수 있는 신호를 우선순위대로 시도한다:
+    #   1) eGeMAPS+LightGBM: recording 구간에서 누적된 진짜 오디오가 있으면 최우선으로 쓴다
+    #      (감정온도 모델 원래 설계 그대로 — 음향 특징 기반 산출. 박정운 모델).
+    #   2) WavLM recent_anger: 위가 없거나(체크포인트 미탑재 등) 그 오디오로도 REAL_MODEL이
+    #      안 나오면(너무 짧음·무음 등) 통화 중 실시간으로 이미 돈 WavLM 분노 신호로 대신한다.
+    #   3) 스텁: 그마저 없으면(call_id 자체가 없는 순수 프론트 데모 등) 기존 폴백.
+    # 텍스트를 가짜 WAV로 감싸 analyze_emotion에 넣던 예전 방식은 음향 모델이 텍스트를 못 읽어
+    # 항상 스텁으로 떨어졌다(박정운 피드백 "감정모델 연동 안됨"의 원인).
     live_session = None
     if body.call_id:
         from app.ws.call import registry as _call_registry
 
         live_session = _call_registry._sessions.get(body.call_id)
-    emotion_is_live = bool(live_session and live_session.voice_model_calls > 0)
-    if emotion_is_live:
+
+    emotion_result: EmotionResult | None = None
+    emotion_reason = "실시간 음성 신호 없음(텍스트만 전달됨)"
+
+    if live_session is not None:
+        from app.ws.call import _consume_recording_audio
+
+        recorded_wav = _consume_recording_audio(live_session)
+        if recorded_wav is not None:
+            candidate = analyze_emotion(recorded_wav)
+            if candidate.analysis_source == AnalysisSource.REAL_MODEL:
+                emotion_result = candidate
+                emotion_reason = "실시간 녹음 오디오(eGeMAPS+LightGBM) 분석"
+
+    if emotion_result is None and live_session is not None and live_session.voice_model_calls > 0:
         # 실시간 게이지는 max_anger(통화 내내 안 내려가는 역대 최고치)가 아니라
         # recent_anger(최근 발화 위주 지수이동평균)를 쓴다 — 안 그러면 초반 스파이크
         # 한 번으로 고객이 진정돼도 온도가 41도에 계속 고정된다(박정운 피드백).
@@ -283,8 +301,12 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
             neutral_probability=max(0.0, 1.0 - anger_p), uncertainty=0.0,
             analysis_source=AnalysisSource.REAL_MODEL,
         )
-    else:
+        emotion_reason = f"실시간 음성분노(WavLM) 신호 · 발화 {live_session.voice_model_calls}건 분석"
+
+    if emotion_result is None:
         emotion_result = analyze_emotion(body.text.encode("utf-8"))
+
+    emotion_is_live = emotion_result.analysis_source == AnalysisSource.REAL_MODEL
     judgement = run_judge(gpt_result.risk_flags, emotion_result)
 
     # S/G/E 업무분리(전형진 classify_routing_safe) — department(GPT 자유형 추측)와 다른
@@ -331,11 +353,7 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
             label=emotion_label,
             score=round(emotion_score * 100, 1),
             status="completed" if emotion_is_live else "unavailable",
-            reason=(
-                f"실시간 음성분노(WavLM) 신호 · 발화 {live_session.voice_model_calls}건 분석"
-                if emotion_is_live
-                else "실시간 음성 신호 없음(텍스트만 전달됨)"
-            ),
+            reason=emotion_reason,
         ),
         urgency_score=urgency_score_for(judgement.attention_level),
         routing=LegacyRouting(
