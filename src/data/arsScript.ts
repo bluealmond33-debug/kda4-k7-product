@@ -43,6 +43,7 @@ export const ARS_GREETING: ArsLine[] = [
     id: "greet-1",
     text: "안녕하세요, 키움은행 고객센터입니다.",
     sec: 3,
+    audio: "ars/greet-1.wav",
   },
   {
     id: "greet-2",
@@ -81,6 +82,101 @@ export const ARS_HANDOFF: ArsLine[] = [
     id: "handoff-2",
     text: "잠시 기다리시면 상담사를 연결해 드립니다. 지금 통화를 종료하셔도 접수는 그대로 남아, 담당 상담사가 확인 후 콜백드립니다.",
     sec: 8,
+  },
+];
+
+/**
+ * 본인확인(IVR 단계) — ARS_RECORDING_SCRIPT.txt 기반. 아직 어느 phase에도 연결되지 않은
+ * 대기 상태다. useCallFlow에 auth phase/DTMF 대조 로직이 붙기 전까지는 재생되지 않는다.
+ */
+export const ARS_AUTH: ArsLine[] = [
+  {
+    id: "auth-prompt",
+    text: "본인 확인을 위해, 생년월일 여덟 자리를 키패드로 눌러 주세요. 예를 들어 1985년 3월 7일이면, 일 구 팔 오 공 삼 공 칠 입니다.",
+    sec: 10,
+    audio: "ars/auth-prompt.wav",
+  },
+  {
+    id: "auth-reminder",
+    text: "생년월일 여덟 자리를 키패드로 눌러 주세요. 태어난 연도 네 자리부터 눌러 주시면 됩니다.",
+    sec: 6,
+    audio: "ars/auth-reminder.wav",
+  },
+  {
+    id: "auth-length",
+    text: "여덟 자리를 모두 눌러 주세요. 연도 네 자리, 월 두 자리, 일 두 자리 순서입니다.",
+    sec: 6,
+    audio: "ars/auth-length.wav",
+  },
+  {
+    id: "auth-mismatch",
+    text: "입력하신 정보가 등록된 정보와 일치하지 않습니다. 다시 한 번 눌러 주세요.",
+    sec: 5.5,
+    audio: "ars/auth-mismatch.wav",
+  },
+  {
+    id: "auth-success",
+    text: "본인 확인이 완료되었습니다. 상담사에게 연결해 드리겠습니다.",
+    sec: 4.5,
+    audio: "ars/auth-success.wav",
+  },
+  {
+    id: "auth-handoff",
+    text: "본인 확인이 어려우신 것 같습니다. 상담사가 바로 도와드리겠습니다. 잠시만 기다려 주세요.",
+    sec: 6.5,
+    audio: "ars/auth-handoff.wav",
+  },
+];
+
+/**
+ * 청취 종료 후 처리 흐름 — ARS_RECORDING_SCRIPT.txt 08~10번. 아직 어느 phase에도 연결되지
+ * 않은 대기 상태다(기존 ARS_CONFIRM/ARS_HANDOFF와 통합 여부는 나중에 한 번에 정리한다).
+ */
+export const ARS_WRAP: ArsLine[] = [
+  {
+    id: "listening-done",
+    text: "고객님께서 말씀하신 내용 잘 들었습니다. 잠시만 기다려 주세요.",
+    sec: 4.5,
+    audio: "ars/listening-done.wav",
+  },
+  {
+    id: "processing",
+    text: "말씀하신 내용을 정리하고 있습니다. 잠시만 기다려 주세요.",
+    sec: 4,
+    audio: "ars/processing.wav",
+  },
+  {
+    // 주의: 이 id("connecting")는 useCallFlow의 phase 이름("connecting")과 같은 문자열이다.
+    // 서로 다른 네임스페이스(줄 id vs phase 키)라 지금은 충돌 없지만, phase 배선 때 헷갈리기 쉽다.
+    id: "connecting",
+    text: "상담사에게 내용을 전달했습니다. 곧 연결해 드리겠습니다.",
+    sec: 4,
+    audio: "ars/connecting.wav",
+  },
+];
+
+/**
+ * 업무유형별 분기 안내 — ARS_RECORDING_SCRIPT.txt 11~13번. 아직 어느 phase에도 연결되지
+ * 않은 대기 상태다. 업무 분류(G001 등) 결과에 따라 재생될 줄을 고르는 로직이 나중에 필요하다.
+ */
+export const ARS_TASK_BRANCH: ArsLine[] = [
+  {
+    id: "task-confirm-g001",
+    text: "잘못 보내신 송금 건으로 확인했습니다. 담당 상담사에게 바로 연결해 드리겠습니다. 신속한 처리를 위해, 본인 확인을 먼저 진행하겠습니다.",
+    sec: 10,
+    audio: "ars/task-confirm-g001.wav",
+  },
+  {
+    id: "emergency-handoff",
+    text: "안전과 관련된 내용으로 확인했습니다. 전담 상담사에게 바로 연결해 드리겠습니다.",
+    sec: 6,
+    audio: "ars/emergency-handoff.wav",
+  },
+  {
+    id: "system-error",
+    text: "지금은 안내가 어렵습니다. 상담사에게 연결해 드리겠습니다.",
+    sec: 4.5,
+    audio: "ars/system-error.wav",
   },
 ];
 
