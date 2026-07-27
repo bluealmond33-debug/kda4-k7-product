@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CallFlowVM } from "../hooks/useCallFlow";
-import { ARS_BY_PHASE } from "../data/arsScript";
+import { ARS_BY_PHASE, ARS_HANDOFF_EMERGENCY } from "../data/arsScript";
 import type { StreamItem } from "../components/LiveTranscriptPanel";
 
 /**
@@ -29,6 +29,16 @@ type SaidLine = { id: string; text: string; afterCount: number };
  */
 function audioUrl(line: { id: string; audio?: string }) {
   return "/demo/" + (line.audio ?? `ars/${line.id}.mp3`);
+}
+
+// 안내 음성 단일 소유권 — 이 파일의 접수 큐(연결·확인·인계)와 useCallFlow.playArsAudio(본인인증)
+// 가 서로 모른 채 각자 new Audio()를 만들다 보니, 타이밍이 겹치면 두 안내가 동시에 들렸다
+// ("가장 최근 것만 나오게 해달라" 피드백). 새 안내가 시작될 때 이전 걸 여기서 멈춘다 —
+// 두 재생 경로 모두 이 함수를 거쳐야 한다.
+let currentArsAudio: HTMLAudioElement | null = null;
+export function takeOverArsAudio(audio: HTMLAudioElement): void {
+  if (currentArsAudio && currentArsAudio !== audio) currentArsAudio.pause();
+  currentArsAudio = audio;
 }
 
 /**
@@ -69,7 +79,8 @@ export function useConversationStream(
   // 파일이 없거나(error) 자동재생이 막히면 그 줄만 sec으로 넘어간다 — 화면은 끊기지 않는다.
   useEffect(() => {
     if (idle) return;
-    const lines = ARS_BY_PHASE[phase];
+    // prep은 긴급(E) 분류면 전담 상담사 직결 안내로 갈아탄다 — 대기 설명 없이 짧게.
+    const lines = phase === "prep" && vm.prepSge === "E" ? ARS_HANDOFF_EMERGENCY : ARS_BY_PHASE[phase];
     if (!lines) return;
     const queue = lines.filter((l) => !playedRef.current.has(l.id));
     if (!queue.length) return;
@@ -78,9 +89,13 @@ export function useConversationStream(
     let cancelled = false;
     let timer = 0;
     let audio: HTMLAudioElement | null = null;
+    // 재생을 "시작"만 하고 끝(ended/에러 폴백)을 못 본 줄의 인덱스 — cleanup에서 이 지점부터
+    // playedRef 표시를 되돌린다(아래 return 참고).
+    let reachedIndex = 0;
 
     const speak = (i: number) => {
       if (cancelled || i >= queue.length) return;
+      reachedIndex = i;
       const line = queue[i];
       // 말풍선을 먼저 띄우고 그 다음 소리를 낸다 — 글과 목소리가 같은 순간에 시작한다
       setSaid((prev) => [...prev, { id: line.id, text: line.text, afterCount: countRef.current }]);
@@ -103,6 +118,7 @@ export function useConversationStream(
       audio.addEventListener("ended", next);
       // 파일 없음·디코드 실패 → 그 줄만 대본 길이로 넘긴다(다음 줄엔 소리가 있을 수 있다)
       audio.addEventListener("error", bySec);
+      takeOverArsAudio(audio); // 다른 안내(본인인증 등)가 재생 중이면 여기서 멈춘다
       audio.play().catch(bySec); // 자동재생 차단도 같은 처리
     };
 
@@ -111,6 +127,13 @@ export function useConversationStream(
       cancelled = true;
       clearTimeout(timer);
       audio?.pause();
+      // React StrictMode(dev)는 이 effect를 mount→cleanup→mount로 두 번 돌린다. playedRef는
+      // ref라 두 마운트 사이에 안 비워지므로, 손 안 대면 "재생 시작"만 하고 곧장 끊긴 첫
+      // 마운트의 줄이 이미 "말했음"으로 남아 진짜 마운트가 다시 시도하지 않는다(안내 음성이
+      // 통째로 안 나오던 원인). 끝까지 못 본 줄만 되돌려 살아남는 마운트가 처음부터 잇는다.
+      for (let i = reachedIndex; i < queue.length; i++) {
+        playedRef.current.delete(queue[i].id);
+      }
     };
   }, [idle, phase, playAudio]);
 

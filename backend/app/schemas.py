@@ -122,6 +122,14 @@ class RoutingResult(BaseModel):
     reason: str
     matched_keywords: list[str] = Field(default_factory=list)
     bank_topic: Optional[str] = None  # 로컬 ML 모델이 붙였을 때만
+    # 본인인증 정책(형진님 KARI-NA 본인확인 적용 정책, IDENTITY_AUTH_POLICY.md) —
+    # NOT_REQUIRED(접수 단계 불필요) / REQUIRED(상담사 연결 직전 실행) /
+    # EXEMPT(E001·E002 — 본인확인보다 긴급 연결 우선, 실행 자체를 건너뜀). S/G/E와
+    # 다른 축이라 병행 신호. task_code 명시 목록 기준(routing_classifier.py 참고).
+    auth_policy: str = "NOT_REQUIRED"
+    # 구 프론트 호환 필드 — auth_policy == REQUIRED일 때만 True. EXEMPT는 즉시 키패드로
+    # 해석되면 안 되므로 여기 포함하지 않는다.
+    auth_required: bool = False
 
 
 class AnalyzeResult(BaseModel):
@@ -228,7 +236,9 @@ class RagRequest(BaseModel):
 class LegacyAnalyzeRequest(BaseModel):
     text: str
     average_volume: float = 0
-    call_id: str | None = None  # 있으면 그 통화의 실시간 WavLM 음성분노 신호를 감정으로 쓴다
+    # 있으면 백엔드가 이 통화의 실시간 WavLM 음성분노 신호를 감정으로 쓴다(텍스트만
+    # 있을 때의 가짜 감정 대신 진짜 음성 기반 신호 — 박정운 피드백).
+    call_id: str | None = None
 
 
 class LegacyEmotion(BaseModel):
@@ -249,6 +259,9 @@ class LegacyRouting(BaseModel):
     task_name: str | None = None
     classification: str | None = None  # EMERGENCY / SIMPLE / GENERAL
     handler: str | None = None  # AI_CC / HUMAN
+    # 본인인증 정책 — NOT_REQUIRED/REQUIRED/EXEMPT. 분류 실패 시 None(프론트는 인증 요구 안 함).
+    auth_policy: str | None = None
+    auth_required: bool = False
 
 
 class LegacyAnalyzeResponse(BaseModel):
@@ -264,6 +277,31 @@ class LegacyAnalyzeResponse(BaseModel):
     script_steps: list[ConsultScriptStep] = []
     follow_ups: list[str] = []
     result_label: str = ""
+    # 준비 카드 "STT 요약 불릿" — 프론트 vm.summaryPoints가 이 필드를 읽는데 원래 이 스키마에
+    # 없어서 라이브 콜에서 그 자리가 항상 비어 보였다. 상담 가이드의 follow_ups를 재사용한다
+    # (이미 계산돼 있어 추가 LLM 호출 없이 채울 수 있다).
+    action_items: list[str] = []
+
+
+# ---------- 상담사 연결 후 대화 시뮬레이션(실마이크 대신) ----------
+# 현장 요청: # 접수완료 후로는 실마이크를 더 안 잡는다. 그 대신 고객이 접수 때 실제로
+# 한 말을 이어서, 있을 법한 상담사↔고객 대화를 만들어 전사 패널에 스트리밍하고, 그걸로
+# 후처리(요약)까지 만든다.
+
+class DialogueTurn(BaseModel):
+    speaker: str  # "agent" | "customer"
+    text: str
+
+
+class ContinuationRequest(BaseModel):
+    opening_text: str  # 고객이 접수 때 실제로 한 발화(전체 또는 요약)
+    summary: str = ""
+    keywords: list[str] = []
+    department: str = ""
+
+
+class ContinuationResponse(BaseModel):
+    turns: list[DialogueTurn]
 
 
 # ---------- kda4-k7-product(팀 React 데모) 연동 ----------

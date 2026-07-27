@@ -30,3 +30,6 @@ backend/app/services/rag_data/*.fingerprint
 models/
 artifacts/
 backend/data/classifier_feedback/sessions/
+
+# 로컬 데모 HTTPS 자체서명 인증서 — key.pem(개인키) 포함, 절대 커밋하지 않는다.
+.certs/
