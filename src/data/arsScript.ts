@@ -16,9 +16,9 @@
  *  · 개인정보를 먼저 요구하지 않는다. 본인확인은 상담사 연결 뒤 화면에서 진행한다.
  *
  * 흐름은 useCallFlow의 phase를 그대로 탄다(별도 타이머를 새로 만들지 않는다):
- *   connecting  → 첫 안내(약 13초)
+ *   connecting  → 첫 안내(greet-1 하나, 인사·AI소개·용건요청·# 안내를 한 번에 전달, ~14.5초)
  *   recording   → 고객이 말하는 중 (AI는 말하지 않고 듣는다)
- *   confirm     → 침묵이 이어짐: 더 있는지 확인 + # 안내
+ *   confirm     → 침묵이 이어짐 (greet-1에서 # 안내를 이미 했으므로 AI는 말하지 않는다)
  *   prep        → 카드 요약·전달 완료: 연결 안내 + 콜백 약속
  * 침묵 몇 초에 다음 단계로 갈지는 useCallFlow의 silenceSec1·silenceSec2가 정한다.
  */
@@ -37,37 +37,16 @@ export type ArsLine = {
   audio?: string;
 };
 
-/** 통화 연결 직후 — 총 13초쯤. "버튼 없이 그냥 말하면 된다"를 먼저 알린다 */
+/**
+ * 통화 연결 직후 — greet-1 하나로 고정(~14.5초). 인사·AI소개·용건요청·# 안내를 한 줄에
+ * 다 담아서 말하므로 별도의 greet-2/greet-3·confirm 안내가 필요 없다.
+ */
 export const ARS_GREETING: ArsLine[] = [
   {
     id: "greet-1",
-    text: "안녕하세요, 키움은행 고객센터입니다.",
-    sec: 3,
+    text: "안녕하세요, 키움은행입니다. 에이아이 상담 도우미가 안내해 드립니다. 정확한 안내를 위해 문의하실 내용을 편하게 말씀해 주세요. 상담사에게 전달할 내용을 정리해 드립니다. 말씀을 다 마치면 우물 정자를 눌러주세요.",
+    sec: 14.5,
     audio: "ars/greet-1.wav",
-  },
-  {
-    id: "greet-2",
-    text: "번호를 누르지 않으셔도 됩니다. 상담사 연결 전에, 어떤 일로 연락하셨는지 편하게 말씀해 주세요.",
-    sec: 6,
-  },
-  {
-    id: "greet-3",
-    text: "말씀하신 내용은 상담사에게 먼저 전달돼요. 같은 설명을 다시 하지 않으셔도 됩니다.",
-    sec: 4,
-  },
-];
-
-/** 말이 끊긴 뒤(confirm) — 더 있는지 한 번 확인하고, 끝났으면 #을 안내한다 */
-export const ARS_CONFIRM: ArsLine[] = [
-  {
-    id: "confirm-1",
-    text: "더 말씀하실 내용이 있으신가요?",
-    sec: 2.5,
-  },
-  {
-    id: "confirm-2",
-    text: "말씀이 끝나셨으면 우물정자(#)를 눌러 주세요. 바로 정리해 드립니다.",
-    sec: 4,
   },
 ];
 
@@ -130,7 +109,7 @@ export const ARS_AUTH: ArsLine[] = [
 
 /**
  * 청취 종료 후 처리 흐름 — ARS_RECORDING_SCRIPT.txt 08~10번. 아직 어느 phase에도 연결되지
- * 않은 대기 상태다(기존 ARS_CONFIRM/ARS_HANDOFF와 통합 여부는 나중에 한 번에 정리한다).
+ * 않은 대기 상태다(기존 ARS_HANDOFF와 통합 여부는 나중에 한 번에 정리한다).
  */
 export const ARS_WRAP: ArsLine[] = [
   {
@@ -180,9 +159,12 @@ export const ARS_TASK_BRANCH: ArsLine[] = [
   },
 ];
 
-/** phase → 그 단계에서 AI가 말할 줄. 여기 없는 phase에서는 AI가 말하지 않는다(듣기만 한다). */
+/**
+ * phase → 그 단계에서 AI가 말할 줄. 여기 없는 phase에서는 AI가 말하지 않는다(듣기만 한다).
+ * confirm이 없는 건 의도된 것 — greet-1에서 이미 "# 눌러주세요"를 안내했으므로 침묵이
+ * 이어져도(confirm phase) AI가 또 말할 필요가 없다.
+ */
 export const ARS_BY_PHASE: Record<string, ArsLine[]> = {
   connecting: ARS_GREETING,
-  confirm: ARS_CONFIRM,
   prep: ARS_HANDOFF,
 };

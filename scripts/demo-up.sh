@@ -60,7 +60,12 @@ EOF
 # 3) 백엔드 (bge-m3 warm-up은 부팅 시 백그라운드 스레드가 알아서)
 [ -x "$VENV/bin/uvicorn" ] || { echo "❌ backend/.venv 없음 — python3.12 -m venv backend/.venv 후 requirements(-rag) 설치"; exit 1; }
 pkill -f "uvicorn app.main:app" 2>/dev/null || true; sleep 1
-(cd "$ROOT/backend" && nohup "$VENV/bin/uvicorn" app.main:app --host 0.0.0.0 --port 8000 \
+# lightgbm·scikit-learn(OpenBLAS)·faiss·torch(bge-m3)가 각자 다른 libomp.dylib를 번들링해서
+# 같은 프로세스에서 동시에 스레드풀을 돌리면 libomp 내부에서 SIGSEGV가 난다(macOS 크래시 리포트로
+# 확인됨, faulting thread가 전부 libomp.dylib 프레임). KMP_DUPLICATE_LIB_OK=TRUE(main.py)는 중복
+# 로드 자체는 허용하지만 동시 실행 충돌까지 막아주진 않으므로, 각 런타임을 스레드 1개로 강제한다.
+(cd "$ROOT/backend" && nohup env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 \
+  NUMEXPR_NUM_THREADS=1 MKL_NUM_THREADS=1 "$VENV/bin/uvicorn" app.main:app --host 0.0.0.0 --port 8000 \
   > "$LOG_DIR/backend.log" 2>&1 &)
 for i in $(seq 1 20); do curl -sf "http://localhost:8000/health" >/dev/null && break || sleep 1; done
 curl -sf "http://localhost:8000/health" >/dev/null || { echo "❌ 백엔드 기동 실패 — $LOG_DIR/backend.log 확인"; exit 1; }
