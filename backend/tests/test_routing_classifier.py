@@ -108,6 +108,10 @@ def no_topic_model(monkeypatch):
         ("연체된 금액이 얼마나 되나요", "G008"),
         ("금리를 감면받을 수 있나요", "G009"),
         ("환전 수수료가 얼마인가요", "G010"),
+        # G011~G013 (2026-07-27 추가) — 활성 분류기(GENERAL_TASKS)에 누락돼 있었다.
+        ("주택청약 통장 만들고 싶어요", "G011"),
+        ("연금저축 계좌 문의드려요", "G012"),
+        ("카드 관련해서 종합 상담 받고 싶어요", "G013"),
     ],
 )
 def test_general_subtask_rule_fallback_without_ml_model(
@@ -125,3 +129,29 @@ def test_자동이체_상담은_본인인증_required이다(no_topic_model):
     assert result.task_code == "G006"
     assert result.auth_policy == "REQUIRED"
     assert result.auth_required is True
+
+
+@pytest.mark.parametrize("transcript,expected_code", [
+    ("주택청약 통장 만들고 싶어요", "G011"),
+    ("연금저축 계좌 문의드려요", "G012"),
+    ("카드 관련해서 종합 상담 받고 싶어요", "G013"),
+])
+def test_신규_업무코드는_본인인증_not_required이다(no_topic_model, transcript, expected_code):
+    """G011~G013은 조회·상담 위주라 계좌/카드 상태가 바뀌는 REQUIRED 업무와 다르다 —
+    접수 단계에서는 인증 없이 받는다(2026-07-27 요청)."""
+    result = classify_routing(transcript)
+    assert result.task_code == expected_code
+    assert result.auth_policy == "NOT_REQUIRED"
+    assert result.auth_required is False
+
+
+@pytest.mark.parametrize("transcript", [
+    "실수로 다른 계좌번호로 보내버렸어요",
+    "계좌번호를 잘못 입력했어요",
+])
+def test_착오송금_자연어_표현은_G001이다(no_topic_model, transcript):
+    """격식체("착오송금")가 아닌 자연어 표현도 G001로 잡혀야 한다 — main 브랜치에서
+    추가됐던 키워드가 personal 병합 과정에서 빠지지 않았는지 확인하는 회귀 테스트."""
+    result = classify_routing(transcript)
+    assert result.task_code == "G001"
+    assert result.classification == "GENERAL"

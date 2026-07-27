@@ -29,6 +29,9 @@ _AUTH_REQUIRED_TASK_CODES = {
     "S124", "S126", "S127", "G001", "G003", "G004", "G006", "G007",
 }
 _AUTH_EXEMPT_TASK_CODES = {"E001", "E002"}
+# G011(주택청약)·G012(연금·IRP)·G013(카드 이용)은 신규 업무코드 — 조회·상담 위주라
+# 계좌/카드 상태가 바뀌는 위 REQUIRED 업무와 다르다. 우선은 목록에 넣지 않아 기본값인
+# NOT_REQUIRED로 접수한다(2026-07-27 요청). 실제 운영 정책이 정해지면 재검토.
 
 
 def _auth_policy_for(task_code: str, classification: str) -> str:

@@ -30,6 +30,9 @@ GENERAL_TASKS = [
     {"code": "G008", "name": "이자·연체금액", "department_id": 1, "classification": "GENERAL", "handler": "HUMAN"},
     {"code": "G009", "name": "부수거래 금리감면", "department_id": 1, "classification": "GENERAL", "handler": "HUMAN"},
     {"code": "G010", "name": "환전 문의", "department_id": 1, "classification": "GENERAL", "handler": "HUMAN"},
+    {"code": "G011", "name": "주택청약 상담", "department_id": 1, "classification": "GENERAL", "handler": "HUMAN"},
+    {"code": "G012", "name": "연금·IRP 상담", "department_id": 1, "classification": "GENERAL", "handler": "HUMAN"},
+    {"code": "G013", "name": "카드 이용 상담", "department_id": 1, "classification": "GENERAL", "handler": "HUMAN"},
 ]
 
 EMERGENCY_TASKS = [
@@ -99,12 +102,19 @@ TASK_KEYWORDS = {
         "영업시간 안내", "영업시간 알려", "은행 몇 시까지", "은행은 몇 시까지",
         "은행이 몇 시까지", "창구 몇 시까지", "창구는 몇 시까지", "은행 문 여는 시간",
     ],
-    "G001": ["착오송금", "잘못 송금", "잘못 보낸", "송금 반환", "돌려받"],
+    # 원래 격식체("착오송금") 위주였는데, 고객은 보통 "실수로 다른 계좌번호로 보내버렸어요"
+    # 처럼 말해서 하나도 안 걸렸다(현장 피드백: 라우팅이 G004로 빠져 규정검색도 엉뚱하게 감).
+    "G001": [
+        "착오송금", "잘못 송금", "잘못 보낸", "송금 반환", "돌려받",
+        "실수로 보내", "실수로 송금", "실수로 이체", "다른 계좌번호로 보내",
+        "다른 계좌로 잘못", "계좌번호를 잘못", "엉뚱한 계좌", "잘못된 계좌로",
+    ],
     "G002": ["대출 조건", "대출 금리", "대출 한도", "상환 조건", "대출 상담"],
     "G003": ["계좌 제한", "계좌 이용 제한", "계좌 정지", "계좌가 정지", "거래 정지", "거래가 정지", "거래 제한", "계좌 잠", "압류"],
-    # G005~G010: ML 주제 분류 모델(topic_classifier)이 확신 못 할 때의 규칙 기반 폴백.
+    # G005~G013: ML 주제 분류 모델(topic_classifier)이 확신 못 할 때의 규칙 기반 폴백.
     # G004(기타·복합)는 의도된 최종 catch-all이라 여기 넣지 않는다 — 아래 classify_transcript의
-    # G004 없는 별도 폴백 루프에서만 검사된다.
+    # G004 없는 별도 폴백 루프에서만 검사된다. G011~G013은 학습된 ML 모델의 라벨 집합에
+    # 아예 없는 신규 업무라(docs/TASK_TAGS.md 신규 제안 3개) 키워드 규칙에만 의존한다.
     # find_matches는 리터럴 부분일치라 "자동이체를 등록"처럼 단어 사이에 조사(을/를/이/가)가
     # 끼면 "자동이체 등록"과 매칭되지 않는다(S123 카드분실 케이스와 동일한 문제, 위 주석 참고).
     # 조사 유무 두 형태를 함께 나열하거나, 다른 코드와 안 겹치는 단일 명사 어간을 쓴다.
@@ -126,6 +136,9 @@ TASK_KEYWORDS = {
         "금리 할인", "금리를 할인",
     ],
     "G010": ["환전", "환율", "환전 수수료", "외화 환전", "달러 환전", "엔화 환전"],
+    "G011": ["주택청약", "청약통장", "청약저축", "청약 계좌", "청약 자격", "청약 신청"],
+    "G012": ["연금저축", "개인연금", "퇴직연금", "irp", "연금 계좌", "연금 상담"],
+    "G013": ["카드 상담", "카드 관련", "카드 상담사", "카드 상담원", "카드 종합", "카드 복합"],
     **ARS_TASK_KEYWORDS,
 }
 
@@ -244,7 +257,10 @@ def classify_transcript(transcript: str) -> dict:
             "reason": "로컬 은행 데이터 학습 모델이 높은 확신도로 일반 업무 주제를 분류",
         }
 
-    for code in ("G001", "G002", "G003", "G005", "G006", "G007", "G008", "G009", "G010"):
+    for code in (
+        "G001", "G002", "G003", "G005", "G006", "G007", "G008", "G009", "G010",
+        "G011", "G012", "G013",
+    ):
         matches = find_matches(text, TASK_KEYWORDS[code])
         if matches:
             task = TASKS_BY_CODE[code]
