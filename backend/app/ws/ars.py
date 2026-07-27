@@ -10,11 +10,13 @@ src/services/arsMobile.ts·arsControl.ts 참고.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # 소켓이 call_end 없이 그냥 끊겼을 때(와이파이 순단·앱 백그라운드·탭 닫힘) 즉시 종료로
@@ -23,6 +25,15 @@ router = APIRouter()
 # ponytail: 고정 유예(6초)+role당 최신 타이머 1개. 재연결 성공/실패 신호(heartbeat)
 # 기반 정교한 판정이 필요해지면 그때 교체.
 _DISCONNECT_GRACE_SECONDS = 6.0
+
+# 본인인증 — 대조할 실제 고객원장이 없어(데모 전용) 8자리가 유효한 생년월일(YYYYMMDD)
+# "형식"인지만 본다. 진짜 신원 대조는 아니지만, 명백히 말이 안 되는 입력(13월·32일 등)은
+# 걸러서 mismatch/재입력 흐름을 실제로 시연할 수 있게 한다.
+def _is_plausible_birthdate(digits: str) -> bool:
+    if len(digits) != 8 or not digits.isdigit():
+        return False
+    year, month, day = int(digits[:4]), int(digits[4:6]), int(digits[6:8])
+    return 1900 <= year <= 2026 and 1 <= month <= 12 and 1 <= day <= 31
 
 
 @dataclass
@@ -37,6 +48,11 @@ class _ArsState:
     drained: bool = True
     end_reason: str | None = None
     ended_by: str | None = None
+    # 본인인증(형진님 2026-07-23 검토안) — 접수 종료용 digits/intake_complete와 완전히
+    # 분리된 별도 버퍼. awaiting_auth 동안 들어오는 dtmf는 여기로만 쌓인다.
+    awaiting_auth: bool = False
+    auth_digits: str = ""
+    auth_verified: bool = False
 
 
 _states: dict[str, _ArsState] = defaultdict(_ArsState)
@@ -58,6 +74,9 @@ def _payload(state: _ArsState) -> dict:
         "generation": state.generation,
         "end_reason": state.end_reason,
         "ended_by": state.ended_by,
+        "awaiting_auth": state.awaiting_auth,
+        "auth_digit_count": len(state.auth_digits),
+        "auth_verified": state.auth_verified,
     }
 
 
@@ -130,7 +149,69 @@ async def ars_socket(websocket: WebSocket, call_id: str, role: str = "mobile") -
                 state.drained = True
                 state.end_reason = None
                 state.ended_by = None
+                state.awaiting_auth = False
+                state.auth_digits = ""
+                state.auth_verified = False
                 await _broadcast(call_id, {"type": "call_start", "generation": state.generation})
+            elif mtype == "auth_start" and state.active and not state.awaiting_auth:
+                # 본인인증 생년월일 수집 시작 — 접수 종료(digits/intake_complete)와는
+                # 별도 버퍼(auth_digits)로 받는다. 분석 결과 auth_policy=REQUIRED일 때
+                # 고객 쪽(useCallFlow)이 안내 음성 재생과 함께 이 메시지를 보낸다.
+                state.awaiting_auth = True
+                state.auth_digits = ""
+                state.auth_verified = False
+                await _broadcast(
+                    call_id, {"type": "auth_start", "generation": state.generation}
+                )
+            elif mtype == "dtmf" and state.active and state.awaiting_auth:
+                digit = str(message.get("digit", ""))[:1]
+                if digit and digit.isdigit():
+                    state.auth_digits = (state.auth_digits + digit)[:8]
+                    count = len(state.auth_digits)
+                    if count >= 8:
+                        if _is_plausible_birthdate(state.auth_digits):
+                            state.awaiting_auth = False
+                            state.auth_verified = True
+                            # 데모용 — 대조할 실제 고객원장이 없어 형식이 맞으면 그대로
+                            # '확인 완료'로 처리한다(형진님 문서: 데모의 생년월일 인증은
+                            # 실제 운영 인증수단이 아니라 흐름 시연용). 로그엔 자릿수만.
+                            logger.info("auth digits collected: call_id=%s count=%d", call_id, count)
+                            await _broadcast(
+                                call_id,
+                                {
+                                    "type": "auth_complete",
+                                    "digits": state.auth_digits,
+                                    "generation": state.generation,
+                                },
+                            )
+                        else:
+                            # 13월·32일처럼 형식 자체가 말이 안 되면 불일치로 보고 재입력을
+                            # 받는다 — awaiting_auth는 계속 True로 둬서 이어서 누를 수 있게.
+                            state.auth_digits = ""
+                            logger.info("auth digits rejected(format): call_id=%s", call_id)
+                            await _broadcast(
+                                call_id,
+                                {"type": "auth_mismatch", "generation": state.generation},
+                            )
+                    else:
+                        await _broadcast(
+                            call_id,
+                            {
+                                "type": "auth_progress",
+                                "count": count,
+                                "generation": state.generation,
+                            },
+                        )
+                elif digit in ("#", "*") and len(state.auth_digits) < 8:
+                    # 8자리 다 안 채우고 종료 신호를 보내면 리마인드만 하고 계속 기다린다.
+                    await _broadcast(
+                        call_id,
+                        {
+                            "type": "auth_incomplete",
+                            "count": len(state.auth_digits),
+                            "generation": state.generation,
+                        },
+                    )
             elif mtype == "dtmf" and state.active:
                 digit = str(message.get("digit", ""))[:1]
                 if digit:

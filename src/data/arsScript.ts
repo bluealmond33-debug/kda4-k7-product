@@ -37,22 +37,15 @@ export type ArsLine = {
   audio?: string;
 };
 
-/** 통화 연결 직후 — 총 13초쯤. "버튼 없이 그냥 말하면 된다"를 먼저 알린다 */
+/** 통화 연결 직후 — 실제 녹음(greet-1.wav, 14.6초) 한 줄로 재생.
+ *  이전엔 세 줄(greet-1/2/3)로 나뉘어 있었는데, 새 녹음이 그 내용을 이미 한 테이크로
+ *  이어 말하므로(인사→AI 안내→말씀 요청→전달 안내→# 안내) 하나로 합쳤다. */
 export const ARS_GREETING: ArsLine[] = [
   {
     id: "greet-1",
-    text: "안녕하세요, 키움은행 고객센터입니다.",
-    sec: 3,
-  },
-  {
-    id: "greet-2",
-    text: "번호를 누르지 않으셔도 됩니다. 상담사 연결 전에, 어떤 일로 연락하셨는지 편하게 말씀해 주세요.",
-    sec: 6,
-  },
-  {
-    id: "greet-3",
-    text: "말씀하신 내용은 상담사에게 먼저 전달돼요. 같은 설명을 다시 하지 않으셔도 됩니다.",
-    sec: 4,
+    text: "안녕하세요, 키움은행입니다. AI 상담 도우미가 안내해 드립니다. 정확한 안내를 위해 문의하실 내용을 편하게 말씀해 주세요. 상담사에게 전달할 내용을 정리해 드립니다. 말씀을 다 마치면 우물정자 버튼을 눌러 주세요.",
+    sec: 15,
+    audio: "ars/greet-1.wav",
   },
 ];
 
@@ -65,26 +58,98 @@ export const ARS_CONFIRM: ArsLine[] = [
   },
   {
     id: "confirm-2",
-    text: "말씀이 끝나셨으면 우물정자(#)를 눌러 주세요. 바로 정리해 드립니다.",
+    text: "말씀이 끝나셨다면 우물정자를 눌러주세요.",
     sec: 4,
+    audio: "ars/confirm-2.wav",
   },
 ];
 
-/** 요약·전달 완료(prep) — 연결 안내 + "끊어도 콜백 온다"는 약속. 대기 이탈을 손실로 만들지 않는다 */
+/** 요약·전달 완료(prep) — 일반 상담. 실제 녹음 3줄(들었음→정리중→전달완료)로 진행 상황을 순서대로 알린다. */
 export const ARS_HANDOFF: ArsLine[] = [
   {
     id: "handoff-1",
-    text: "말씀하신 내용을 상담 카드로 정리해 담당 부서에 전달했습니다.",
-    sec: 4,
+    text: "고객님께서 말씀하신 내용 잘 들었습니다, 잠시만 기다려 주세요.",
+    sec: 5,
+    audio: "ars/handoff-1.wav",
   },
   {
     id: "handoff-2",
-    text: "잠시 기다리시면 상담사를 연결해 드립니다. 지금 통화를 종료하셔도 접수는 그대로 남아, 담당 상담사가 확인 후 콜백드립니다.",
-    sec: 8,
+    text: "말씀하신 내용을 정리하고 있습니다, 잠시만 기다려 주세요.",
+    sec: 4,
+    audio: "ars/handoff-2.wav",
+  },
+  {
+    id: "handoff-3",
+    text: "상담사에게 내용을 전달했습니다. 곧 연결해드리겠습니다.",
+    sec: 4,
+    audio: "ars/handoff-3.wav",
   },
 ];
 
-/** phase → 그 단계에서 AI가 말할 줄. 여기 없는 phase에서는 AI가 말하지 않는다(듣기만 한다). */
+/** 요약·전달 완료(prep) — 긴급(E) 분류 전용. 대기 설명 없이 전담 상담사 직결만 짧게 알린다.
+ *  어느 걸 쓸지는 arsDialogue.ts가 vm.prepSge === "E"로 고른다. */
+export const ARS_HANDOFF_EMERGENCY: ArsLine[] = [
+  {
+    id: "handoff-emergency",
+    text: "전담 상담사에게 바로 연결해 드리겠습니다.",
+    sec: 3,
+    audio: "ars/handoff-emergency.wav",
+  },
+];
+
+/** 본인인증(생년월일 8자리) — auth_policy=REQUIRED일 때만 prep 진입 시 재생한다.
+ *  phase 큐(ARS_BY_PHASE)가 아니라 DTMF 자리수 이벤트로 진행되는 별도 흐름이라 여기
+ *  넣지 않는다 — useCallFlow.ts가 auth_start/auth_progress/auth_complete/auth_incomplete
+ *  이벤트에 맞춰 아래 줄을 직접 재생한다. */
+export const ARS_AUTH_REQUEST: ArsLine = {
+  id: "auth-request",
+  text: "본인 확인을 위해 생년월일 8자리를 키패드로 눌러주세요. 예를 들어 1985년 3월 7일이면 19850307입니다.",
+  sec: 10,
+  audio: "ars/auth-request.wav",
+};
+
+/** 8자리 다 안 채우고 종료 신호(#/*)를 눌렀을 때 리마인드 */
+export const ARS_AUTH_ALL8: ArsLine = {
+  id: "auth-all8",
+  text: "8자리를 모두 눌러주세요. 연도 4자리, 월 2자리, 일 2자리 순서입니다.",
+  sec: 6,
+  audio: "ars/auth-all8.wav",
+};
+
+/** 8자리 다 입력됨 — 대조할 실제 고객원장이 없어 데모는 여기서 바로 완료 처리한다. */
+export const ARS_AUTH_DONE: ArsLine = {
+  id: "auth-done",
+  text: "본인 확인이 완료되었습니다. 상담사에게 연결해 드리겠습니다.",
+  sec: 4,
+  audio: "ars/auth-done.wav",
+};
+
+/** 인증 포기(길게 무응답 등) — 막지 않고 바로 상담사로 넘긴다. */
+export const ARS_AUTH_HARD: ArsLine = {
+  id: "auth-hard",
+  text: "본인 확인이 어려우신 것 같습니다. 상담사가 바로 도와드리겠습니다, 잠시만 기다려 주세요.",
+  sec: 6,
+  audio: "ars/auth-hard.wav",
+};
+
+/** 8자리가 유효한 생년월일 형식이 아닐 때(13월·32일 등) — 재입력 요청 */
+export const ARS_AUTH_MISMATCH: ArsLine = {
+  id: "auth-mismatch",
+  text: "입력하신 정보가 등록된 정보와 일치하지 않습니다. 다시 한번 눌러주세요.",
+  sec: 6,
+  audio: "ars/auth-mismatch.wav",
+};
+
+/** mismatch 뒤 재입력 안내 — auth-request보다 짧게, 예시 없이 바로 다시 누르게 한다 */
+export const ARS_AUTH_BIRTHDATE_RETRY: ArsLine = {
+  id: "auth-birthdate",
+  text: "생년월일 8자리를 키패드로 눌러주세요. 태어난 연도 4자리부터 눌러주시면 됩니다.",
+  sec: 6,
+  audio: "ars/auth-birthdate.wav",
+};
+
+/** phase → 그 단계에서 AI가 말할 줄. 여기 없는 phase에서는 AI가 말하지 않는다(듣기만 한다).
+ *  prep은 긴급 여부에 따라 갈리므로 arsDialogue.ts에서 별도 처리 — 이 맵의 prep은 일반 케이스 기본값. */
 export const ARS_BY_PHASE: Record<string, ArsLine[]> = {
   connecting: ARS_GREETING,
   confirm: ARS_CONFIRM,

@@ -28,6 +28,10 @@ export interface ArsStateSnapshot extends ArsLifecycleEvent {
   intakeComplete: boolean;
   agentConnected: boolean;
   dtmfCount: number;
+  // 본인인증(생년월일 8자리) — 접수용 digits/intakeComplete와 별개 축.
+  awaitingAuth: boolean;
+  authDigitCount: number;
+  authVerified: boolean;
 }
 
 export interface ArsDtmfEvent {
@@ -48,6 +52,9 @@ export interface ArsControlHandlers {
   onState?(state: ArsStateSnapshot): void;
   onMobileStatus?(connected: boolean): void;
   onError?(message: string): void;
+  /** 고객이 키패드로 생년월일 8자리를 다 입력했을 때 — 상담사 화면 본인인증란
+   *  자동입력용. digits는 8자리 숫자 문자열 그대로(마스킹은 화면에서 한다). */
+  onAuthComplete?(digits: string): void;
 }
 
 export interface ArsControlHandle {
@@ -168,6 +175,9 @@ export function startArsControl(
         phase?: "intake" | "waiting_for_agent" | "active";
         captured_at_ms?: number;
         persisted?: boolean;
+        awaiting_auth?: boolean;
+        auth_digit_count?: number;
+        auth_verified?: boolean;
       };
       try {
         message = JSON.parse(event.data as string);
@@ -218,6 +228,9 @@ export function startArsControl(
       if (message.type === "peer_status" && message.role === "mobile") {
         handlers.onMobileStatus?.(Boolean(message.connected));
       }
+      if (message.type === "auth_complete" && typeof message.digits === "string") {
+        handlers.onAuthComplete?.(message.digits);
+      }
       if (message.type === "ars_state") {
         const state: ArsStateSnapshot = {
           ...lifecycleEvent(message),
@@ -226,6 +239,9 @@ export function startArsControl(
           intakeComplete: Boolean(message.intake_complete),
           agentConnected: Boolean(message.agent_connected),
           dtmfCount: Math.max(0, Number(message.dtmf_count) || 0),
+          awaitingAuth: Boolean(message.awaiting_auth),
+          authDigitCount: Math.max(0, Number(message.auth_digit_count) || 0),
+          authVerified: Boolean(message.auth_verified),
         };
         hydrated = true;
         latestState = state;

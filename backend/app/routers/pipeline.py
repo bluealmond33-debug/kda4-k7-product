@@ -14,6 +14,9 @@ from app.schemas import (
     AnalyzeResult,
     AttentionReasonCode,
     BriefingCard,
+    ConsultGuide,
+    ContinuationRequest,
+    ContinuationResponse,
     EmotionResult,
     JudgeRequest,
     JudgeResult,
@@ -21,6 +24,7 @@ from app.schemas import (
     LegacyAnalyzeResponse,
     LegacyEmotion,
     LegacyRouting,
+    RagDocument,
     RagRequest,
     RagResult,
     ReactCallSummary,
@@ -45,6 +49,7 @@ from app.services.react_adapter import build_call_summary, emotion_label, emotio
 from app.services.routing_classifier import classify_routing_safe
 from app.services.stt import transcribe_audio
 from app.services.consult_guide import generate_consult_guide, stub_consult_guide
+from app.services.dialogue_continuation import generate_continuation
 from app.services.stub_models import analyze_transcript_stub, transcribe_audio_stub
 from app.services.text_emotion import TextEmotionError, classify_text_emotion
 from app.services.voice_anger import analyze_voice_anger
@@ -192,7 +197,7 @@ def _analyze_call(filename: str, audio_bytes: bytes) -> _CallAnalysis:
     gpt_result = _analyze(transcribed.text)
     emotion_result = analyze_emotion(audio_bytes)
     text_emotion_result = _classify_text_emotion_safe(transcribed.text)
-    routing_result = classify_routing_safe(transcribed.text)
+    routing_result = classify_routing_safe(transcribed.text, settings)
     # 음성 분노(WavLM) 부스터 입력 — 모델/의존성 없으면 None(부스터 무동작, 하위호환).
     voice_anger_result = analyze_voice_anger(audio_bytes)
 
@@ -229,7 +234,7 @@ async def analyze_endpoint(audio: UploadFile, transcript: str = Form(...)) -> An
     gpt_result = _analyze(transcript)
     emotion_result = analyze_emotion(audio_bytes)
     text_emotion_result = _classify_text_emotion_safe(transcript)
-    routing_result = classify_routing_safe(transcript)
+    routing_result = classify_routing_safe(transcript, settings)
 
     return AnalyzeResult(
         gpt=gpt_result,
@@ -267,7 +272,12 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
         live_session = _call_registry._sessions.get(body.call_id)
     emotion_is_live = bool(live_session and live_session.voice_model_calls > 0)
     if emotion_is_live:
-        anger_p = min(1.0, max(0.0, live_session.max_anger))
+        # 실시간 게이지는 max_anger(통화 내내 안 내려가는 역대 최고치)가 아니라
+        # recent_anger(최근 발화 위주 지수이동평균)를 쓴다 — 안 그러면 초반 스파이크
+        # 한 번으로 고객이 진정돼도 온도가 41도에 계속 고정된다(박정운 피드백).
+        # max_anger는 통화 종료 후 판단(judge)에서는 그대로 쓴다 — "한 번이라도
+        # 격했는가"는 위험판단엔 여전히 유효한 신호라 거기선 안 바꾼다.
+        anger_p = min(1.0, max(0.0, live_session.recent_anger))
         emotion_result = EmotionResult(
             anger_probability=anger_p, anxiety_probability=anger_p,
             neutral_probability=max(0.0, 1.0 - anger_p), uncertainty=0.0,
@@ -279,7 +289,7 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
 
     # S/G/E 업무분리(전형진 classify_routing_safe) — department(GPT 자유형 추측)와 다른
     # 축이라 병행 신호로 붙인다. 보조 신호라 실패해도 None만 되고 분석 자체는 안 막힌다.
-    routing_result = classify_routing_safe(body.text)
+    routing_result = classify_routing_safe(body.text, settings)
 
     reason_labels = [_REASON_LABELS[code] for code in judgement.reason_codes]
     emotion_label, emotion_score = emotion_label_and_score(emotion_result)
@@ -309,22 +319,10 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
         logger.warning("규정 RAG 검색 실패 — references 없이 진행", exc_info=True)
         references = []
 
-    # 상담 가이드(EXAONE) — 단계별 스크립트·후속 조치·상담 결과를 실제 통화 내용으로 생성.
-    # 하드코딩 스크립트가 실제 문의(예: 계좌 개설)와 어긋나던 문제의 해소 지점.
-    # RAG 근거(references)를 함께 넘겨 "3. 절차 안내"가 실물 규정을 반영하게 한다.
-    # 실패해도 분석은 유지 — 빈 가이드를 보내면 프론트가 기존 픽스처로 폴백한다.
-    try:
-        if settings.stub_models:
-            guide = stub_consult_guide(gpt_result.summary, gpt_result.department)
-        else:
-            guide = generate_consult_guide(
-                settings, gpt_result.summary, gpt_result.department,
-                gpt_result.keywords, references,
-            )
-    except Exception:
-        logger.warning("상담 가이드 생성 실패 — 스크립트 없이 진행", exc_info=True)
-        guide = None
-
+    # 단계별 상담 스크립트(EXAONE consult_guide)는 여기서 만들지 않는다 — 요약 카드
+    # 응답 하나에 묶으면 EXAONE 2번째 호출(~5~8초)까지 끝나야 카드가 뜬다. 박정운
+    # 피드백(카드 생성 대기시간 단축)으로 분리 — 프론트가 카드를 먼저 그리고, 카드
+    # 표시를 막지 않는 별도 호출(POST /consult-guide)로 스크립트를 나중에 채운다.
     return LegacyAnalyzeResponse(
         call_id=str(uuid.uuid4()),
         summary=gpt_result.summary,
@@ -347,13 +345,55 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
             task_name=routing_result.task_name if routing_result else None,
             classification=routing_result.classification if routing_result else None,
             handler=routing_result.handler if routing_result else None,
+            auth_policy=routing_result.auth_policy if routing_result else None,
+            auth_required=routing_result.auth_required if routing_result else False,
         ),
         keywords=gpt_result.keywords,
         references=references,
-        script_steps=guide.script_steps if guide else [],
-        follow_ups=guide.follow_ups if guide else [],
-        result_label=guide.result_label if guide else "",
+        script_steps=[],
+        follow_ups=[],
+        result_label="",
+        # script_steps/follow_ups처럼 /consult-guide에서 나중에 채워지는 값이 아니라 여기서
+        # 바로 채운다 — 이미 계산된 keywords를 재사용하므로 추가 지연이 없다.
+        action_items=gpt_result.keywords,
     )
+
+
+class ConsultGuideRequest(BaseModel):
+    summary: str
+    department: str
+    keywords: list[str] = []
+    references: list[RagDocument] = []
+
+
+@router.post("/consult-guide", response_model=ConsultGuide)
+async def consult_guide_endpoint(body: ConsultGuideRequest) -> ConsultGuide:
+    """단계별 상담 스크립트 전용 생성 — /analyze-text가 요약 카드를 먼저 반환한 뒤,
+    프론트가 카드 렌더를 막지 않는 별도 호출로 이걸 불러 나중에 채운다(박정운 피드백:
+    카드 생성 대기시간 단축). 실패해도 프론트는 기존 콜 유형 픽스처(SCRIPTS)로 유지."""
+    if settings.stub_models:
+        return stub_consult_guide(body.summary, body.department)
+    try:
+        return generate_consult_guide(
+            settings, body.summary, body.department, body.keywords, body.references
+        )
+    except Exception as exc:
+        logger.warning("상담 가이드 생성 실패", exc_info=True)
+        raise HTTPException(status_code=502, detail="상담 가이드 생성 실패") from exc
+
+
+@router.post("/simulate-continuation", response_model=ContinuationResponse)
+async def simulate_continuation_endpoint(body: ContinuationRequest) -> ContinuationResponse:
+    """상담사 연결 후 대화 시뮬레이션 — 현장 요청으로 # 접수완료 이후 실마이크를 안 잡는
+    대신, 접수 발화를 이어서 있을 법한 고객↔상담원 대화를 만들어 프론트가 전사 패널에
+    스트리밍한다. 실패하면 빈 turns를 돌려 프론트가 조용히 건너뛴다(화면이 안 깨지게)."""
+    try:
+        return generate_continuation(
+            settings, body.opening_text, body.summary, body.keywords, body.department
+        )
+    except Exception as exc:
+        logger.warning("대화 시뮬레이션 생성 실패", exc_info=True)
+        return ContinuationResponse(turns=[])
 
 
 @router.post("/emotion", response_model=ReactEmotionScore)

@@ -52,8 +52,15 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    # Vercel 프리뷰 배포(k7product-git-<branch>-….vercel.app)도 허용
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    # Vercel 프리뷰 배포 + 사설 IP 대역(LAN 시연) 전체 허용. 시연 장소 와이파이가 같은
+    # 세션 안에서도 여러 번 바뀌어(192.168.x.x ↔ 10.x.x.x 실측) IP를 하나씩 추가하는 방식은
+    # 계속 깨진다 — 대역 전체를 정규식으로 허용해 다음 네트워크 변경에도 안 죽게 한다.
+    allow_origin_regex=(
+        r"https://.*\.vercel\.app"
+        r"|https?://(192\.168\.\d{1,3}\.\d{1,3}"
+        r"|10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+        r"|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?"
+    ),
     allow_credentials=True,
     allow_methods=["*"],  # WebSocket·파일 업로드가 있어 GET/POST/OPTIONS로는 부족
     allow_headers=["*"],

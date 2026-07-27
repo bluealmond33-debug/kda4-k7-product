@@ -26,7 +26,16 @@ department는 **아래 7개 중 하나를 그대로** 답한다. 목록에 없�
 라우팅과 규정검색이 이 이름으로 필터하므로, 목록 밖 이름이 오면 필터가 조용히 풀린다.
 애매하면 가장 가까운 것을 고르고, 정말 못 정하겠으면 "수신·예적금"으로 답한다.
 수신·예적금, 여신·대출, 카드·결제, 외환·수출입, 전자금융·디지털, 연금·신탁·투자, 사고·신고
-(보이스피싱·명의도용·지급정지 등 사고·신고성 건은 반드시 "사고·신고")
+
+부서 판단 순서 — 위에서부터 먼저 맞는 조건 하나만 적용한다(뒤 규칙보다 항상 우선):
+1. 보이스피싱·명의도용·원격제어·**본인이 하지 않은 거래(무단 출금/이체/결제)** 등 사고·신고
+   성격의 긴급 건은 반드시 "사고·신고" — "출금"·"이체" 같은 단어가 같이 나와도 사고 정황이면
+   이 규칙이 아래 2·3번보다 우선이다.
+2. (사고 정황이 없을 때) 계좌 잔액·거래내역 등 "계좌 자체"에 대한 단순 조회·문의는 "수신·예적금".
+3. (사고 정황이 없을 때) 인터넷/모바일뱅킹 로그인·공동인증서·앱 오류 등 "디지털 채널 자체"의
+   기술적 문제는 "전자금융·디지털".
+예: "계좌에 얼마 있어요?" → 수신·예적금 / "제가 안 한 출금이 찍혀 있어요" → 사고·신고 /
+"앱 로그인이 안 돼요" → 전자금융·디지털
 
 JSON 스키마:
 {
@@ -83,3 +92,47 @@ def analyze_transcript_local(settings: Settings, transcript: str) -> GptAnalysis
         )
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         raise LocalLlmError(f"로컬 LLM 응답 파싱 실패: {exc}\n원본: {content[:500]}") from exc
+
+
+def classify_task_with_llm(settings: Settings, transcript: str) -> str | None:
+    """S/G/E 업무코드 분류의 LLM 보완 경로 — routing_classifier.py의 키워드 규칙이
+    "기타"(G004)로만 떨어졌을 때만 호출된다(현장 피드백: "카드를 잃어버렸어요"처럼
+    키워드 목록에 없는 자연어 표현은 못 잡음). 매 통화 부르지 않으므로 속도에 영향 없다.
+
+    실패하거나 목록에 없는 코드를 답하면 None — 호출부는 기존 규칙기반 결과를 그대로 쓴다.
+    """
+    from app.services.routing.ars_catalog import ARS_TASK_KEYWORDS
+    from app.services.routing.classifier import TASK_NAMES
+
+    def _catalog_line(code: str, name: str) -> str:
+        examples = ARS_TASK_KEYWORDS.get(code)
+        if not examples:
+            return f"{code}: {name}"
+        return f"{code}: {name} (예: {', '.join(examples[:3])})"
+
+    catalog = "\n".join(_catalog_line(code, name) for code, name in TASK_NAMES.items())
+    system_prompt = (
+        "너는 금융 콜센터 업무 분류기다. 아래 업무 목록 중 고객 발화에 가장 가까운 업무 "
+        "코드 하나를 골라라. 애매하거나 목록에 맞는 게 전혀 없으면 NONE이라고만 답해라. "
+        "코드나 NONE 한 단어만 출력하고 다른 설명은 붙이지 마라.\n\n업무 목록:\n" + catalog
+    )
+    try:
+        response = httpx.post(
+            f"{settings.ollama_base_url}/api/chat",
+            json={
+                "model": settings.ollama_model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": transcript},
+                ],
+                "stream": False,
+                "options": {"temperature": 0.1, "num_predict": 10},
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+    except httpx.HTTPError:
+        return None
+
+    code = response.json().get("message", {}).get("content", "").strip().upper()
+    return code if code in TASK_NAMES else None

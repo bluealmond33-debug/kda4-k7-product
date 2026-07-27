@@ -481,10 +481,16 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             ) : (
               <div style={css("margin-top:13px;background:var(--gray-100);border:1px solid var(--gray-300);border-radius:8px;padding:12px")}>
-                {/* 대기 상태 — 틴트 없이 중립(잉크·그레이). 점으로 '진행 필요' 신호 */}
+                {/* 대기 상태 — 틴트 없이 중립(잉크·그레이). 점으로 '진행 필요' 신호.
+                    task_code가 인증 불필요/긴급(EXEMPT)이면 '미완료'가 아니라 정책 자체를
+                    보여준다 — 형진님 정책상 이 업무는 애초에 인증을 요구하지 않는다. */}
                 <div style={css("display:flex;align-items:center;gap:6px;font:700 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:3px")}>
-                  <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--gray-500)")} />
-                  본인확인 · 미완료
+                  <span style={css("width:7px;height:7px;border-radius:9999px;background:" + (vm.authStatus === "NOT_REQUIRED" || vm.authStatus === "EXEMPT" ? "var(--green-700)" : "var(--gray-500)"))} />
+                  {vm.authStatus === "NOT_REQUIRED"
+                    ? "본인확인 · 이 업무는 불필요"
+                    : vm.authStatus === "EXEMPT"
+                    ? "본인확인 · 긴급 우선 연결(생략)"
+                    : "본인확인 · 미완료"}
                 </div>
                 <div style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:11px")}>
                   고객이 말한 <span style={css("font-weight:700;color:var(--blue-900)")}>{vm.authPrompt.what}</span>{vm.authPrompt.hint}를 빈칸에 입력하면 자동 대조됩니다
