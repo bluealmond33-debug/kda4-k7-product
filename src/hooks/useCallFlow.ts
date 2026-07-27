@@ -3008,23 +3008,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? 2
         : 1;
   // 감정온도 = 당근 매너온도식. 36.5를 기준(평온)으로, 격앙될수록 위로 오른다.
-  // 0~100 감정강도 → 36.5~41.0°C. 밴드: ~37.4 평온(초록) · ~39.0 주의(노랑) · 그 위 고조(빨강).
+  // 0~100 감정강도 → 36.5~40.0°C(2026-07-27 재조정: 40도 초과 금지). 밴드: ~37.0 평온(초록) · ~38.0 주의(노랑) · 그 위 고조(빨강).
   const EMO_BASE = 36.5;
+  const EMO_MAX = 40.0;
   const tempC =
     temperature.score == null
       ? null
-      : Math.round((EMO_BASE + Math.min(100, Math.max(0, temperature.score)) * 0.045) * 10) / 10;
+      : Math.round(
+          (EMO_BASE + Math.min(100, Math.max(0, temperature.score)) * ((EMO_MAX - EMO_BASE) / 100)) * 10
+        ) / 10;
   const emoBand: "calm" | "warm" | "hot" =
-    tempC == null ? "warm" : tempC <= 37.4 ? "calm" : tempC <= 39.0 ? "warm" : "hot";
+    tempC == null ? "warm" : tempC <= 37.0 ? "calm" : tempC <= 38.0 ? "warm" : "hot";
   const EMO_BAND_META = {
     calm: { label: "안정", fg: "var(--green-900)", bar: "var(--green-700)" },
     warm: { label: "주의", fg: "var(--amber-900)", bar: "var(--amber-700)" },
     hot: { label: "고조", fg: "var(--red-900)", bar: "var(--red-700)" },
   } as const;
   const emoMeta = EMO_BAND_META[emoBand];
-  // 게이지 눈금 — 35.5~41.0°C 창에서 현재 온도 위치(%)와 36.5 기준점 위치(%)
+  // 게이지 눈금 — 35.5~40.0°C 창에서 현재 온도 위치(%)와 36.5 기준점 위치(%)
   const TEMP_MIN = 35.5;
-  const TEMP_MAX = 41.0;
+  const TEMP_MAX = EMO_MAX;
   const tempPct =
     tempC == null ? 0 : Math.max(0, Math.min(100, ((tempC - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100));
   const basePct = ((EMO_BASE - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100;
@@ -3317,7 +3320,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? isCustomerSurface &&
           realCallActiveRef.current &&
           mobileServerConnected &&
-          (p === "recording" || p === "confirm" || p === "active")
+          // 본인인증은 "prep" phase에서 시작되는데 원래 여기 없었다 — 실서버 모드에서
+          // 인증이 시작돼도 고객이 키패드를 누를 방법이 없었다(awaitingAuth로 보강).
+          (p === "recording" || p === "confirm" || p === "active" || awaitingAuth)
         : p === "connecting" ||
           p === "recording" ||
           p === "confirm" ||
