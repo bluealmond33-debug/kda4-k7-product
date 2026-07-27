@@ -621,12 +621,29 @@ _DEPT_KEYWORDS: dict[str, tuple[str, ...]] = {
 # 정도로만 작동하게 한다. 크면 배제와 다를 바 없어져 관련성 높은 타 부서를 밀어낸다.
 _INFERRED_BOOST = 0.05
 
+# FAISS 폴백용 하이브리드 가중치 — pgvector 경로(rag_store.W_DENSE/W_KEYWORD)와 동일 비율.
+# 순수 코사인만 쓰면 짧고 흔한 질의("연장")는 너무 넓게, 길고 구체적인 질의("주택 담보
+# 이자 연장")는 임베딩이 코퍼스 어느 것과도 안 가까워 오히려 안 걸리는 역설이 생긴다.
+_W_DENSE = 0.65
+_W_KEYWORD = 0.35
+
 
 def _infer_categories(query: str) -> list[str] | None:
     """질의에서 부서 대분류를 추론한다. 매칭 없으면 None(전체 검색)."""
     low = query.lower()
     hits = [code for code, kws in _DEPT_KEYWORDS.items() if any(k in low for k in kws)]
     return hits or None
+
+
+def _keyword_overlap(query: str, text: str) -> float:
+    """질의 단어 중 본문에 등장하는 비율(0~1). 공백 기준 토큰화 — 형태소 분석기 없이도
+    "주택 이자"처럼 단어 단위로 걸리게 해 주는 최소한의 키워드 신호."""
+    tokens = [t for t in query.lower().split() if t]
+    if not tokens:
+        return 0.0
+    low = text.lower()
+    hits = sum(1 for t in tokens if t in low)
+    return hits / len(tokens)
 
 
 def search_procedures(
@@ -687,25 +704,27 @@ def _search_faiss(
     search_k = len(_DOCS)
     scores, indices = index.search(query_vector, search_k)
 
-    # (정렬점수, 원점수, 코퍼스 인덱스) — RagDocument는 최종 top_k만 만든다.
+    # (정렬점수, 표시점수=코사인+키워드 블렌드, 코퍼스 인덱스) — RagDocument는 최종 top_k만.
     ranked: list[tuple[float, float, int]] = []
     spare: list[tuple[float, float, int]] = []   # 하드 필터에 걸러진 것(빈손 방지용)
     for score, idx in zip(scores[0], indices[0]):
         if idx < 0:
             continue
         category = _DOCS[idx].get("category")
-        raw = float(score)
+        cosine = float(score)
+        keyword = _keyword_overlap(query, _DOCS[idx].get("text", ""))
+        blended = _W_DENSE * cosine + _W_KEYWORD * keyword
         if allowed is not None and category not in allowed:
-            spare.append((raw, raw, idx))
+            spare.append((blended, blended, idx))
             continue
-        ranked.append((raw + (_INFERRED_BOOST if category in boosted else 0.0), raw, idx))
+        ranked.append((blended + (_INFERRED_BOOST if category in boosted else 0.0), blended, idx))
 
     ranked.sort(key=lambda row: row[0], reverse=True)
     picked = ranked[:top_k]
     if len(picked) < top_k:   # 지정 부서 후보가 모자라면 관련성 순으로 채운다(빈손 방지)
         picked = picked + spare[: top_k - len(picked)]
 
-    # 가점은 "무엇을 고를지"에만 쓰고, 내보내는 순서는 원점수 기준으로 되돌린다.
+    # 가점은 "무엇을 고를지"에만 쓰고, 내보내는 순서는 블렌드 점수 기준으로 되돌린다.
     # 그래야 화면에 표시되는 score가 정렬과 어긋나 보이지 않는다.
     picked.sort(key=lambda row: row[1], reverse=True)
 
@@ -714,9 +733,9 @@ def _search_faiss(
             doc_id=_DOCS[idx]["doc_id"],
             title=_DOCS[idx]["title"],
             excerpt=_DOCS[idx]["text"],
-            score=round(raw, 3),
+            score=round(blended, 3),
             category=_DOCS[idx].get("category"),
             subcategory=_DOCS[idx].get("subcategory"),
         )
-        for _rank, raw, idx in picked
+        for _rank, blended, idx in picked
     ]
