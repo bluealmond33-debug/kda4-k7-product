@@ -592,6 +592,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const authHardTimerRef = useRef<number | null>(null);
   const [awaitingAuth, setAwaitingAuth] = useState(false);
   const [authVerified, setAuthVerified] = useState(false);
+  // 고객폰 인증 화면의 "N/8" 진행 표시용 — 서버 auth_progress 카운트를 그대로 반영한다.
+  const [authDigitCount, setAuthDigitCount] = useState(0);
   const transcript = useRef<SpeakerTranscriptChunk[]>([]);
   const realCallActiveRef = useRef(false);
   const lifecycleEpoch = useRef(0);
@@ -2119,6 +2121,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       authHardTimerRef.current = window.setTimeout(() => {
         authHardTimerRef.current = null;
         setAwaitingAuth(false);
+        setAuthDigitCount(0);
         playArsAudio(ARS_AUTH_HARD);
       }, 30000);
     };
@@ -2153,13 +2156,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       onCallEnd: (event) => finishCallAfterDrain(event, true),
       onAuthStart: () => {
         setAwaitingAuth(true);
+        setAuthVerified(false);
+        setAuthDigitCount(0);
         playArsAudio(ARS_AUTH_REQUEST);
         armAuthHardTimer();
       },
-      onAuthProgress: () => {
-        // 진행 중 표시는 화면(폰엔 캡션 자체가 안 뜨는 설계)보다 오디오가 없어 생략 —
-        // 상담사 화면은 arsControl의 onState(authDigitCount)로 따로 본다.
-      },
+      // 자리 입력마다 서버가 보내는 카운트를 그대로 반영 — Phone.tsx가 8칸 진행 표시(*)를 그린다.
+      onAuthProgress: (count) => setAuthDigitCount(count),
       onAuthComplete: () => {
         if (authHardTimerRef.current) {
           window.clearTimeout(authHardTimerRef.current);
@@ -2167,10 +2170,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         }
         setAwaitingAuth(false);
         setAuthVerified(true);
+        setAuthDigitCount(8);
         playArsAudio(ARS_AUTH_DONE);
       },
       onAuthIncomplete: () => playArsAudio(ARS_AUTH_ALL8),
       onAuthMismatch: () => {
+        setAuthDigitCount(0);
         armAuthHardTimer();
         playArsAudio(ARS_AUTH_MISMATCH);
         // mismatch 재생이 끝난 뒤 짧은 재입력 안내로 이어 붙인다(동시 재생 방지).
@@ -3281,6 +3286,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     micLevel,
     arsDigits,
     dtmfEvents,
+    awaitingAuth,
+    authVerified,
+    authDigitCount,
     // 숫자만 마스킹해서 보여준다 — #/*는 접수완료 신호일 뿐 고객이 실제로 입력한 번호가
     // 아니므로 화면(상담원 "고객 키패드 입력 수신" 패널 등)에 노출하지 않는다.
     dtmfMasked: (() => {
