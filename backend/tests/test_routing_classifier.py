@@ -5,6 +5,8 @@
 여기서는 규칙 기반 경로(긴급·이상거래·일반)만 검증한다.
 """
 
+import pytest
+
 from app.schemas import RoutingResult
 from app.services.routing_classifier import classify_routing, classify_routing_safe
 
@@ -75,3 +77,51 @@ def test_safe_wrapper_returns_result_on_success():
     result = classify_routing_safe("대출 상담 받고 싶어요")
     assert result is not None
     assert result.classification in {"SIMPLE", "GENERAL", "EMERGENCY"}
+
+
+# ── G005~G010 규칙 기반 폴백 (2026-07-27) ──────────────────────────────────
+# ML 주제 분류 모델(topic_classifier) 파일이 없거나 확신도가 낮을 때, G001~G010 중
+# G001~G003만 키워드 규칙이 있어 G005~G010은 전부 G004(기타)로 뭉개졌다. 자동이체
+# 상담(G006)처럼 본인인증이 REQUIRED인 업무가 여기 걸리면 인증 자체가 트리거되지
+# 않는 문제로 이어졌다(현장 시연 보고). 아래는 그 규칙 기반 폴백을 모델 없이도
+# 검증한다 — CI에 모델 파일(joblib)이 없어도 결정적으로 통과해야 한다.
+
+@pytest.fixture
+def no_topic_model(monkeypatch):
+    """topic_classifier가 없거나 실패하는 상황을 강제해 규칙 기반 폴백만 검증한다."""
+    import app.services.routing.topic_classifier as topic_classifier
+
+    def _unavailable(*_args, **_kwargs):
+        raise FileNotFoundError("forced unavailable for test")
+
+    monkeypatch.setattr(topic_classifier, "predict_bank_topic", _unavailable)
+
+
+@pytest.mark.parametrize(
+    "transcript,expected_code",
+    [
+        ("거래 내역이 이상한데요", "G005"),
+        ("자동이체를 등록하고 싶어요", "G006"),
+        ("자동이체 좀 해지해주세요", "G006"),
+        ("적금을 해지하고 싶어요", "G007"),
+        ("예금을 연장하고 싶은데요", "G007"),
+        ("연체된 금액이 얼마나 되나요", "G008"),
+        ("금리를 감면받을 수 있나요", "G009"),
+        ("환전 수수료가 얼마인가요", "G010"),
+    ],
+)
+def test_general_subtask_rule_fallback_without_ml_model(
+    no_topic_model, transcript, expected_code
+):
+    result = classify_routing(transcript)
+    assert result.classification == "GENERAL"
+    assert result.task_code == expected_code
+    assert result.handler == "HUMAN"
+
+
+def test_자동이체_상담은_본인인증_required이다(no_topic_model):
+    """G006은 계좌 출금권한이 바뀌는 업무라 상담사 연결 전 키패드 인증이 REQUIRED여야 한다."""
+    result = classify_routing("자동이체를 등록하고 싶어요")
+    assert result.task_code == "G006"
+    assert result.auth_policy == "REQUIRED"
+    assert result.auth_required is True

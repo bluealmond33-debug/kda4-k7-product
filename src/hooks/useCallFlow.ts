@@ -398,6 +398,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [transferTarget, setTransferTarget] = useState<string | null>(null);
   // 감정온도는 고정값이 아니라 실시간 신호 — 데모에선 통화 20초 후 안정으로 하강(상담 효과 연출)
   const [emoDrift, setEmoDrift] = useState<{ score: number; level: "stable" | "caution" | "elevated"; reason: string } | null>(null);
+  // recording(접수 발화) 구간 실시간 미리보기 — WavLM 발화별 신호를 지수이동평균(최근 40%
+  // 가중, 백엔드 recent_anger와 동일 계수)으로 누적한다. #을 누르면 /analyze-text의 최종
+  // 융합값(eGeMAPS+LightGBM 베이스 + WavLM 보정)으로 대체되는 "잠정치"일 뿐이다.
+  const [liveRecordingAnger, setLiveRecordingAnger] = useState<number | null>(null);
   const [clock, setClock] = useState(0);
   /** 고객이 먼저 끊었다 — 상담사 화면에서 자동 연결을 멈추고 '콜백 대상'으로 바꾼다 */
   const [customerEnded, setCustomerEnded] = useState(false);
@@ -1307,6 +1311,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           setLiveCaption(item.text);
           setLiveCaptionSpeaker(item.speaker);
           setLiveTranscriptLines((lines) => [...lines, item].slice(-30));
+          // recording 중 실시간 온도 미리보기 — WavLM이 발화마다 이미 보내는 신호를
+          // 지수이동평균으로 누적한다(최종 확정치는 #을 누른 뒤 /analyze-text가 돌려주는
+          // eGeMAPS+LightGBM 융합값 — 이건 그 전까지만 보여주는 잠정치).
+          if (item.speaker === "customer" && typeof item.angerProbability === "number") {
+            const sample = Math.min(1, Math.max(0, item.angerProbability));
+            setLiveRecordingAnger((prev) => (prev == null ? sample : 0.6 * prev + 0.4 * sample));
+          }
           demoBus.emit("stt.utterance", {
             callId: LIVE_CALL_ID,
             text: item.text,
@@ -1533,6 +1544,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setTransferReserved(false);
     setTransferTarget(null);
     setEmoDrift(null);
+    setLiveRecordingAnger(null);
     setRagRefs([]); // 지난 통화의 규정이 다음 통화 유의사항에 남지 않게
     setGuideSteps([]); // 지난 통화의 스크립트도 마찬가지 — 픽스처로 시작해 분석 도착 시 교체
     transitionPhase("connecting");
@@ -1713,6 +1725,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setTransferReserved(false);
     setTransferTarget(null);
     setEmoDrift(null);
+    setLiveRecordingAnger(null);
     setSummaryVersion(0);
     setRegenerating(false);
     setIncoming("normal");
@@ -2231,6 +2244,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setGuideSteps([]);
       setTransferReserved(false);
       setEmoDrift(null);
+      setLiveRecordingAnger(null);
       setMicErr("");
       setEmo(0);
       setSilenceLeft(0);
@@ -2926,6 +2940,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const groundedTranscript = capturedTranscript || consultationResponse.transcript.text.trim();
   // 통화 중 드리프트가 있으면 실시간 값이 카드 초기값을 덮는다
   // 통화 중 드리프트한 감정온도는 종료 후(후처리)에도 유지 — 마지막 실측이 초기 카드값으로 되돌아가지 않게
+  const liveRecordingScore = liveRecordingAnger == null ? null : Math.round(liveRecordingAnger * 100);
+  const liveRecordingLevel: "stable" | "caution" | "elevated" | null =
+    liveRecordingScore == null
+      ? null
+      : liveRecordingScore >= 70
+        ? "elevated"
+        : liveRecordingScore >= 40
+          ? "caution"
+          : "stable";
   const temperature = explicitSummaryPending
     ? {
         status: "unavailable" as const,
@@ -2935,7 +2958,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       }
     : (p === "active" || ended) && emoDrift
       ? { status: "completed" as const, score: emoDrift.score, level: emoDrift.level, reason: emoDrift.reason }
-      : card.emotion;
+      // recording 중엔 아직 최종 카드가 없으니(# 눌러야 /analyze-text가 돈다), WavLM
+      // 실시간 신호로 잠정치를 보여준다 — # 누르는 순간 card.emotion(최종 융합값)으로 정착.
+      : p === "recording" && liveRecordingScore != null
+        ? {
+            status: "completed" as const,
+            score: liveRecordingScore,
+            level: liveRecordingLevel,
+            reason: "실시간 음성분노(WavLM) 미리보기 — 접수 완료 시 확정됩니다",
+          }
+        : card.emotion;
   const inquiryLabel = explicitSummaryPending
     ? "상담 유형 분석 중"
     : card.business_type || summary?.type || "상담 유형 분석 중";
