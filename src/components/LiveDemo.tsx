@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { css } from "../lib/css";
 import { useCallFlow, type CallFlowConfig } from "../hooks/useCallFlow";
 import { useLiveCallBus } from "../hooks/useLiveCallBus";
+import { demoBus } from "../services";
 import Phone from "./Phone";
 import LiveTranscriptPanel, { type StreamItem } from "./LiveTranscriptPanel";
+import { useConversationStream } from "../lib/arsDialogue";
 import Waiting from "./desktop/Waiting";
 import PrepCard from "./desktop/PrepCard";
 import ActiveCall from "./desktop/ActiveCall";
@@ -11,6 +13,8 @@ import WrapSheet from "./desktop/WrapSheet";
 import AdminQueueSheet from "./desktop/AdminQueueSheet";
 import DemoTour, { TourChooser } from "../tour/DemoTour";
 import { SCREEN_ORDER } from "../tour/steps";
+import DiagPanel from "./DiagPanel";
+import { KEYS, ShortcutHelp, useShortcuts } from "../lib/shortcuts";
 
 /**
  * K7 라이브 상담 시연 — 왼쪽 아이폰(자연어 접수) + 오른쪽 상담사 데스크톱.
@@ -25,14 +29,34 @@ import { SCREEN_ORDER } from "../tour/steps";
  */
 export type LiveDemoView = "full" | "phone" | "desktop";
 
+/**
+ * 통화 연결 후 전사 패널이 열리기까지 기다리는 시간.
+ *
+ * 통화 화면 등장은 세 박자로 읽혀야 한다 — 한꺼번에 움직이면 무엇이 어디로 가는지 안 보인다:
+ *   ① 카드가 안착한다            (cardLand, 0 → 0.78s)
+ *   ② 주변 패널이 생긴다          (BlurFade, 0.82 → 1.7s)
+ *   ③ 본체가 오른쪽으로 줄고 대사가 나온다  (여기, 1.9s부터)
+ * ②가 끝나갈 무렵에 ③을 시작해 끊기지 않게 잇는다.
+ */
+const SPLIT_DELAY_MS = 1900;
+/** 대화 인계 연출 길이 — 고객 창에서 나가는 시간과 직원 창에서 들어오는 시간이 같아야
+ *  두 창의 움직임이 한 동작으로 읽힌다. 늘리면 느긋해지고 줄이면 놓치기 쉬워진다. */
+const HANDOFF_MS = 620;
+
 export default function LiveDemo({
   view = "full",
   ...config
 }: CallFlowConfig & { view?: LiveDemoView } = {}) {
+  /* 단축키 도움말 — 화면을 넘나드는 전체 지도. 버튼 옆 배지는 '지금 보이는 것'만 알려 준다. */
+  const [helpOpen, setHelpOpen] = useState(false);
+  useShortcuts({ [KEYS.help]: () => setHelpOpen((v) => !v) });
   // 직원 콘솔 통화 연결 시 좌측에 실시간 발화(STT) 패널을 붙이는 분할 뷰.
   // 켜지면 데스크톱 본체(1100)가 오른쪽으로 축소되고 왼쪽에 고객 발화 패널이 들어온다.
   // 통화 연결(answerCall) 시 자동 on, 상단 알약 토글로 끌 수 있다(발표자가 화면을 다시 키우고 싶을 때).
   const [deskSplit, setDeskSplit] = useState(false);
+  /* 대화 인계 연출이 도는 중 — 통화가 연결돼 **자동으로** 열릴 때만 켠다.
+     상단 알약으로 직접 여는 건 인계가 아니라 조작이므로 조용히 열린다. */
+  const [handoff, setHandoff] = useState(false);
 
   // 고객 화면은 폰+전사 패널을 '항상 가로로 나란히' 둔다 — 화면 폭이 줄어도 세로로
   // 쌓지 않고(패널이 폰 아래로 내려가지 않게) 스테이지를 통째로 축소해 맞춘다.
@@ -67,20 +91,48 @@ export default function LiveDemo({
   // 있으면 그쪽이 정본이다(실통화도 demoBus에 같은 발화를 흘리므로 합치면 중복된다).
   // 이렇게 둬야 희창이형 서버 없이 리허설할 때도 패널이 살아 있다.
   const bus = useLiveCallBus();
-  const phoneLines: StreamItem[] = vm.liveTranscriptLines.length
+  const spokenLines: StreamItem[] = vm.liveTranscriptLines.length
     ? vm.liveTranscriptLines.map((line) => ({
         id: `${line.generation ?? 0}-${line.audioSeq ?? line.seq}-${line.speaker}-${line.at}`,
         text: line.text,
         who: line.speaker,
       }))
     : bus.lines.map((line) => ({ id: line.id, text: line.text, who: line.speaker }));
+  // AI(KARI-NA) 안내를 발화와 한 줄기로 섞는다 — 고객이 무엇을 듣고 무엇을 답했는지가
+  // 한 화면에서 이어져 읽힌다. 안내 음성은 고객 폰 화면에서만 재생해 창이 여러 개 열려도
+  // 같은 안내가 겹쳐 들리지 않는다.
+  const phoneLines = useConversationStream(vm, spokenLines, view === "phone");
+  // 고객 창의 전사 패널은 상담사 연결 시점부터 비운다(종료 화면에서도 계속 비어 있다) —
+  // 연결 뒤 대화를 두 창에 겹쳐 두면 어디를 봐야 할지 흩어지고, 직원 화면이 메인이다.
+  /* 다른 창(직원 콘솔)에서 상담사가 받은 순간 — 고객 창은 자기 대본이 아니라 이 신호로 접는다.
+     둘 중 먼저 오는 쪽을 쓴다: 합본 화면처럼 한 창에서 다 도는 경우엔 vm.phase가 먼저다. */
+  const [agentTook, setAgentTook] = useState(false);
+  useEffect(() => demoBus.on("agent.connected", () => setAgentTook(true)), []);
+  useEffect(() => {
+    if (vm.phIdle) setAgentTook(false);
+  }, [vm.phIdle]);
+  const custPanelOff = view === "phone" && (vm.phase === "active" || vm.phEnded || agentTook);
 
   // 직원 분할 뷰 — 통화 연결(active 진입)의 상승엣지에 자동 on. 리셋(idle)이면 off.
   // 상승엣지로만 켜므로, 통화 중 알약 토글로 끈 뒤 다시 켜지지 않는다(발표자 제어 유지).
+  //
+  // 한 박자 늦게 켠다(SPLIT_DELAY_MS): 통화 연결을 누르면 준비 카드가 통화 화면 제자리로
+  // 안착하는 모션이 먼저 돈다. 그 순간 전사 패널까지 같이 밀려 들어오면 두 움직임이 겹쳐
+  // 무엇이 어디로 가는지 읽히지 않는다. 카드가 앉는 걸 먼저 보여주고, 그다음 "대화 보기"가
+  // 열리는 순서로 두면 시연에서 두 사건이 따로 읽힌다.
   const wasActive = useRef(false);
   useEffect(() => {
-    if (view === "desktop" && vm.showActive && !wasActive.current) setDeskSplit(true);
+    if (view !== "desktop" || !vm.showActive || wasActive.current) {
+      wasActive.current = vm.showActive;
+      return;
+    }
     wasActive.current = vm.showActive;
+    const id = window.setTimeout(() => {
+      setDeskSplit(true);
+      setHandoff(true);
+      window.setTimeout(() => setHandoff(false), HANDOFF_MS + 120);
+    }, SPLIT_DELAY_MS);
+    return () => window.clearTimeout(id);
   }, [view, vm.showActive]);
   useEffect(() => {
     if (vm.phIdle) setDeskSplit(false);
@@ -169,7 +221,7 @@ export default function LiveDemo({
                     >
                       <span
                         style={css(
-                          "width:21px;height:21px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px 'Geist Mono',monospace;" +
+                          "width:21px;height:21px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px 'Avenir Next','Pretendard',sans-serif;" +
                             (active
                               ? "background:var(--blue-700);color:#fff"
                               : done
@@ -300,13 +352,35 @@ export default function LiveDemo({
                 직원 콘솔은 상담원 발화만(왼쪽 정렬) — 나란히 두면 서로 마주 보는 거울.
                 높이는 옆의 폰(clean=886)에 맞춘다 */}
             {view === "phone" && (
-              <LiveTranscriptPanel
-                stream={phoneLines}
-                active={phoneActive}
-                self="customer"
-                height={compactCustomer ? 532 : 820}
-                width={400}
-              />
+              // 상담사가 연결되면(active) 고객 창의 파동·말풍선은 사라진다 — 그 뒤 대화는 직원
+              // 화면이 단독으로 보여준다(직원 화면이 메인). 자리는 그대로 비워 두어 폰이
+              // 커지거나 옆으로 밀리지 않게 한다 — 오른쪽만 조용히 비는 그림이 된다.
+              <div
+                style={{
+                  borderRadius: 20,
+                  opacity: custPanelOff ? 0 : 1,
+                  pointerEvents: custPanelOff ? "none" : "auto",
+                  animation: custPanelOff
+                    ? `handoffOut ${HANDOFF_MS}ms cubic-bezier(.2,.8,.2,1) both`
+                    : undefined,
+                }}
+              >
+                <div
+                  style={{
+                    animation: custPanelOff
+                      ? `handoffOutInner ${HANDOFF_MS}ms cubic-bezier(.2,.8,.2,1) both`
+                      : undefined,
+                  }}
+                >
+                  <LiveTranscriptPanel
+                    stream={phoneLines}
+                    active={phoneActive}
+                    self="customer"
+                    height={compactCustomer ? 532 : 820}
+                    width={400}
+                  />
+                </div>
+              </div>
             )}
             {/* 직원 분할 뷰 — 통화 연결 시 본체 왼쪽에 실시간 전사 패널.
                 항상 마운트해 두고 max-width·이동·투명도를 본체와 같은 커브로 접었다 편다 —
@@ -315,24 +389,42 @@ export default function LiveDemo({
             {view === "desktop" && (
               <div
                 style={{
-                  overflow: "hidden",
+                  // 인계 중에는 막대가 스테이지 왼쪽 **밖에서** 들어와야 하므로 클리핑을 연다
+                  overflow: handoff ? "visible" : "hidden",
                   maxWidth: deskSplit ? 400 : 0,
-                  opacity: deskSplit ? 1 : 0,
+                  opacity: handoff ? 1 : deskSplit ? 1 : 0,
                   marginRight: deskSplit ? 0 : -40,
-                  transform: deskSplit ? "translateX(0)" : "translateX(-28px)",
+                  transform: handoff || deskSplit ? "translateX(0)" : "translateX(-28px)",
                   transition:
                     "max-width .45s cubic-bezier(.2,.8,.2,1), opacity .3s ease-out, margin-right .45s cubic-bezier(.2,.8,.2,1), transform .45s cubic-bezier(.2,.8,.2,1)",
                 }}
               >
                 {/* 이 화면의 주인은 상담원 — 고객 화면과 좌우가 뒤집힌다.
                     높이는 옆의 콘솔 본체(688)에 맞춘다 */}
-                <LiveTranscriptPanel
-                  stream={phoneLines}
-                  active={phoneActive}
-                  self="agent"
-                  height={688}
-                  width={400}
-                />
+                <div
+                  style={{
+                    borderRadius: 20,
+                    animation: handoff
+                      ? `handoffIn ${HANDOFF_MS}ms cubic-bezier(.2,.8,.2,1) both`
+                      : undefined,
+                  }}
+                >
+                  <div
+                    style={{
+                      animation: handoff
+                        ? `handoffInInner ${HANDOFF_MS}ms cubic-bezier(.2,.8,.2,1) both`
+                        : undefined,
+                    }}
+                  >
+                    <LiveTranscriptPanel
+                      stream={phoneLines}
+                      active={phoneActive}
+                      self="agent"
+                      height={688}
+                      width={400}
+                    />
+                  </div>
+                </div>
               </div>
             )}
             {view !== "phone" && (
@@ -354,6 +446,11 @@ export default function LiveDemo({
           실제 제품에선 이 두 줄과 src/tour 폴더만 지우면 투어가 완전히 사라진다. (src/tour/README.md) */}
       {tourMode === "pending" && <TourChooser onPick={(t) => setTourMode(t ? "on" : "off")} />}
       {tourMode === "on" && <DemoTour key={tourRun} vm={vm} screen={screenKey} onExit={() => setTourMode("off")} />}
+
+      {/* 시연 현장 진단 패널 — 기본은 숨김. ?diag=1 또는 Ctrl+Shift+D 로만 열린다.
+          실제 백엔드 통화에서만 나오는 마이크·메모 문제를 그 자리에서 판정하기 위한 도구다. */}
+      <DiagPanel vm={vm} />
+      <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

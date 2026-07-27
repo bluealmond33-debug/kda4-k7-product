@@ -15,7 +15,7 @@ body,
 
 body {
   background: #060607;
-  font-family: var(--font-sans, "Avenir Next", "Pretendard", system-ui, sans-serif);
+  font-family: var(--font-sans);
   color: var(--gray-1000, #171717);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -40,8 +40,117 @@ a:hover {
   font-feature-settings: "liga";
 }
 
+/* 사고 방지 표식(SignalMark) — 규정 시트 내용 칸 앞에 서는 경고 글리프.
+   글리프는 선택에서 빼둔다: 내용 칸을 드래그 복사하면 리거처 원문이 딸려간다. */
+.sigmark {
+  position: relative;
+  display: inline-block;
+  margin-right: 4px;
+  cursor: help;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sigmark:focus-visible {
+  outline: 2px solid var(--blue-700);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+/* 설명은 올렸을 때·포커스했을 때만 — 상시 펼치면 정작 읽을 문장을 가린다 */
+.sigmark-tip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: -4px;
+  z-index: 6;
+  display: none;
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 9px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(20, 23, 28, 0.16);
+  font: 400 11.5px/1.45 var(--font-sans);
+  color: var(--gray-1000);
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+}
+.sigmark:hover .sigmark-tip,
+.sigmark:focus-visible .sigmark-tip {
+  display: block;
+}
+
+/* 블러 페이드(BlurFade) — 거리·방향·블러는 요소가 CSS 변수로 정한다.
+   키프레임 하나로 네 방향을 다 쓰는 이유: 방향마다 키프레임을 두면 여섯 개가 되고,
+   그중 하나만 값이 어긋나도 아무도 모른다. */
+@keyframes blurFadeIn {
+  from {
+    opacity: 0;
+    filter: blur(var(--bf-blur, 6px));
+    transform: translate(var(--bf-x, 0), var(--bf-y, 6px));
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+/* 대화 인계 — 고객 창에서 나가고, 직원 창에서 들어온다.
+   두 브라우저 창은 픽셀을 공유할 수 없으므로 창을 넘나드는 애니메이션은 만들 수 없다.
+   대신 **방향의 연속성**으로 이동을 만든다: 왼쪽 창은 오른쪽 끝으로 빠지고, 오른쪽 창은
+   왼쪽 끝에서 나온다. 두 창을 나란히 놓으면 관객의 눈이 경계를 넘어 이어 붙인다.
+
+   대화 덩이가 한 줄로 눌려(scaleY) 브랜드 블루 막대가 되고, 그 막대가 건너간다 —
+   "내용이 압축돼 옮겨갔다"는 은유다. 봉투·날개 같은 비유는 쓰지 않는다(관제 화면의 톤). */
+@keyframes handoffOut {
+  0% { transform: translateX(0) scaleY(1); background: transparent; opacity: 1; }
+  30% { transform: translateX(0) scaleY(0.007); background: var(--blue-700); opacity: 1; }
+  52% { transform: translateX(0) scaleY(0.007); background: var(--blue-700); opacity: 1; }
+  100% { transform: translateX(58%) scaleY(0.007); background: var(--blue-700); opacity: 0; }
+}
+/* 안쪽(파형·말풍선)은 눌리기 전에 먼저 사라진다 — 글자가 짜부라지는 게 보이면 지저분하다 */
+@keyframes handoffOutInner {
+  0% { opacity: 1; }
+  24% { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes handoffIn {
+  0% { transform: translateX(-58%) scaleY(0.007); background: var(--blue-700); opacity: 0; }
+  16% { transform: translateX(-58%) scaleY(0.007); background: var(--blue-700); opacity: 1; }
+  46% { transform: translateX(0) scaleY(0.007); background: var(--blue-700); opacity: 1; }
+  100% { transform: translateX(0) scaleY(1); background: transparent; opacity: 1; }
+}
+/* 펼쳐진 뒤에 내용이 드러난다 — **이미 다 들어 있는 채로** 펼쳐져야 '옮겨왔다'로 읽힌다.
+   빈 패널이 열리고 나서 채워지면 '새로 시작했다'가 된다 */
+@keyframes handoffInInner {
+  0% { opacity: 0; }
+  52% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* 인입 리스트 항목 등장(AnimatedList) — 위에서 내려앉으며 제 크기를 찾는다.
+   새로 mount된 항목만 한 번 돈다: 애니메이션은 요소 생성 시점에 걸리므로
+   리렌더로는 다시 실행되지 않는다. */
+.alistitem {
+  animation: alistIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes alistIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.94);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .mono {
-  font-family: var(--font-mono, "Geist Mono", ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -53,7 +162,7 @@ a:hover {
 
 /* Shared atoms reused across desktop screens */
 .lbl {
-  font: 700 11px "Avenir Next", "Pretendard", sans-serif;
+  font: 700 11px var(--font-sans);
   color: var(--gray-700);
   letter-spacing: 0.2px;
 }
@@ -92,7 +201,7 @@ a:hover {
 .sechd {
   /* 타입 래더 v2 Section — 실효 크기(×0.764) 기준으로 13px은 지각 하한 아래.
      700→600: 실효 10px대 한글에서 700은 뭉친다 */
-  font: 600 14px "Avenir Next", "Pretendard", sans-serif;
+  font: 600 14px var(--font-sans);
   color: var(--gray-1000);
 }
 .cbtn {
@@ -207,7 +316,7 @@ a:hover {
   padding: 8px 14px;
   border-radius: 9999px;
   color: var(--gray-600);
-  font: 500 12.5px "Avenir Next", "Pretendard", sans-serif;
+  font: 500 12.5px var(--font-sans);
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
@@ -225,18 +334,90 @@ a:hover {
   opacity: 1;
 }
 
-/* ONAIR 대형 숫자(카운터·스탯) — Geist Sans 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
+/* 단축키 배지 — 아이콘만 있는 원형 버튼(통화 컨트롤)에서는 **올렸을 때만** 보인다.
+   넷을 상시로 띄우면 어느 배지가 어느 버튼 것인지 읽는 데 품이 들고, 정작 쉴 때
+   시선이 분산된다. 누르기 전에는 어차피 손이 올라가므로 그때 알려 주면 충분하다.
+   (글자가 있는 버튼 — 통화 연결·이관·저장 — 은 자리가 넉넉해 상시로 둔다.)
+   못 외웠을 때의 길은 따로 있다: ? 도움말 · 대기화면 단축키 연습판 · 툴팁. */
+.keyreveal [data-keyhint] {
+  opacity: 0;
+  transition: opacity 0.14s;
+  pointer-events: none;
+}
+.keyreveal:hover [data-keyhint] {
+  opacity: 1;
+}
+
+/* 이관 부서 선택 행 — 올린 행이 통째로 파랗게 찬다.
+   '이 부서를 고른다'는 선택 행위라 색을 써도 되는 자리다(예약 확정 상태도 같은 파랑으로 찬다).
+   행 안 글자색이 인라인 스타일로 박혀 있어 !important 없이는 못 덮는다. */
+/* 접수 패널 레벨업 — '카드 생성' 단계에 들어가면 한 번 부풀어 그림자가 깊어진다.
+   이어서 준비 카드가 이 자리에서 커지며 날아오므로(cardArrive), 작은 패널이 큰 카드로
+   자라난 것처럼 두 모션이 한 동작으로 읽힌다. 발광은 쓰지 않고 크기와 그림자만 쓴다. */
+@keyframes intakeLevelUp {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.045);
+    box-shadow: 0 26px 60px rgba(28, 32, 45, 0.3), 0 3px 10px rgba(28, 32, 45, 0.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 스크롤은 되지만 스크롤바는 보이지 않는 영역 — 발표 화면(전사 패널)용.
+   막아 두는 게 아니라 숨기는 것이라 휠·드래그로 올려 읽을 수 있다. */
+.noscrollbar {
+  scrollbar-width: none; /* Firefox */
+}
+.noscrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* 부서 선택 행 — 호버가 툭 켜지지 않게 천천히 물든다. 0.12s는 마우스가 목록을 지나가는
+   속도보다 빨라 파란 면이 깜빡이는 것처럼 보였다. 배경·글자가 같은 커브로 함께 움직이고
+   (글자만 먼저 하얘지면 순간 안 읽힌다), 나갈 때는 더 느리게 풀려 잔상이 남는다. */
+.deptrow {
+  transition: background 0.34s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.deptrow * {
+  transition: color 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.deptrow:hover {
+  background: var(--blue-700);
+  transition-duration: 0.2s;
+}
+.deptrow:hover * {
+  transition-duration: 0.2s;
+}
+.deptrow:hover,
+.deptrow:hover * {
+  color: #fff !important;
+}
+/* 취소처럼 '고르는' 행이 아닌 것 — 파랑은 선택에만 쓰고 여기선 조용한 회색으로 */
+.deptrow-quiet {
+  transition: background 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.deptrow-quiet:hover {
+  background: var(--gray-100);
+  transition-duration: 0.2s;
+}
+
+/* ONAIR 대형 숫자(카운터·스탯) — Avenir Next 600 고정폭 숫자, 자간 -2%(조밀하되 붙지 않게) */
 .bignum {
-  font-family: "Avenir Next", "Pretendard", sans-serif;
+  font-family: var(--font-sans);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1;
 }
 
-/* ONAIR 시계 숫자 — Space Grotesk: 각진 1, 열린 6·9. 시계(대형 디스플레이)에만 쓴다 */
+/* ONAIR 시계 숫자 — 시스템 모노(고정폭): 대형 디스플레이의 시계 숫자에만 쓴다 */
 .clocknum {
-  font-family: "Space Grotesk", "Avenir Next", "Pretendard", sans-serif;
+  font-family: var(--font-mono);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
@@ -245,7 +426,7 @@ a:hover {
 
 /* 본인확인 입력 — 입력값은 모노·자간, placeholder는 가는 산세리프로 분리 */
 .authin::placeholder {
-  font: 400 12.5px "Avenir Next", "Pretendard", sans-serif;
+  font: 400 12.5px var(--font-sans);
   letter-spacing: 0;
   color: var(--gray-600);
 }
@@ -312,6 +493,78 @@ a:hover {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+/* ── AI 요약 카드 등장 (F1) ──────────────────────────────────────────
+   "라우팅돼서 날아왔다"를 몸으로 느끼게 하는 연출. 카드가 좌하단(대기열이 있는 쪽)에서
+   작게 시작해 화면 중앙으로 커지며 이동하고, 잠깐 멈췄다가 제자리에 안착한다.
+   바운스는 쓰지 않는다(ONAIR) — 되돌아 튀지 않고 1.03에서 1.00으로 한 번만 가라앉는다. */
+@keyframes cardArrive {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(-34vw, 32vh) scale(0.34);
+  }
+  14% {
+    opacity: 1;
+  }
+  58% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1.03);
+  }
+  72% {
+    /* 잠깐 정지 — 도착했다는 걸 눈이 인지할 시간 */
+    transform: translate(-50%, -50%) translate(0, 0) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+  }
+}
+
+/* 안착 링 — 카드 테두리에서 한 번 퍼지는 가는 선. blur 0이라 글로우가 아니라 '선'이다
+   (빛은 칠하지 않는다 — 원칙을 지키면서 도착을 알리는 방법). */
+@keyframes ringSettle {
+  0% {
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(47, 95, 196, 0.5);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 0 16px rgba(47, 95, 196, 0);
+  }
+}
+
+/* 라우팅 체인 점등 — 부서 → 업무코드가 순서대로 켜진다.
+   파랑으로 켜졌다가 잉크로 식는다: '방금 결정됐다'가 색의 온도로 읽힌다. */
+@keyframes chainLight {
+  0% {
+    opacity: 0.15;
+    color: var(--blue-700);
+  }
+  45% {
+    opacity: 1;
+    color: var(--blue-700);
+  }
+  100% {
+    opacity: 1;
+    color: var(--gray-1000);
+  }
+}
+
+/* 토스트 — 아래에서 올라와 잠깐 머물다 사라진다.
+   상태가 **내 조작 없이** 바뀌었을 때(코칭 진입 → 자동 휴식) 그 사실을 알리는 용도다.
+   조용히 바뀌면 큐에서 빠진 걸 모른 채 앉아 있게 된다. */
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 /* 관제 LIVE 심장박동 — 전 시스템 정상일 때 초록 점이 잔잔하게 숨쉰다 (안심 신호) */
 @keyframes livePulse {
   0%,
@@ -339,26 +592,40 @@ a:hover {
    중앙(브리핑)은 살짝 컸다가 제자리로 가라앉고, 좌/우/상/하 콘솔 상자가 가장자리에서 등장한다. */
 /* FadeContent 풍(reactbits) — 흐릿+투명에서 또렷+불투명으로 스르륵 스며들 듯 등장.
    filter는 from에만 둔다(to에 남기면 filter가 계속 걸려 position:fixed 자식의 기준이 카드로 바뀐다). */
-@keyframes consoleSettle {
-  from { opacity: 0; transform: scale(1.04) translateY(-6px); filter: blur(4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+/* 카드 안착 — "누가 봐도 앉았구나"가 되어야 한다.
+   예전(scale 1.04 · -6px · blur)은 살짝 흐려졌다 선명해지는 페이드에 가까웠고, 어디에
+   도착했는지가 안 읽혔다. 안착으로 읽히려면 세 가지가 필요하다:
+   ① 눈에 보이게 큰 데서 온다(1.16) — 준비 카드는 실제로 더 큰 모달이었다.
+   ② 목표를 지나쳐 눌렸다 되돌아온다(0.994 → 1.003 → 1) — 무게가 느껴지는 지점이다.
+   ③ 닿는 순간 그림자가 깊어졌다 제자리 그림자로 풀린다 — 접촉을 그림자가 말한다
+      (ONAIR: 빛을 쓰지 않고 그림자가 위계를 만든다).
+   filter는 100%에서 none으로 명시한다 — 남겨 두면 position:fixed 자식이 이 요소를
+   기준으로 잡혀 팝오버가 엉뚱한 자리에 뜬다. */
+/* 카드 안착 — **제자리에서 뒤로 물러나며** 앉는다.
+   앞(크게·높이 뜬 그림자)에서 제 자리(원래 크기·낮은 그림자)로 한 방향으로만 간다.
+   예전 판은 끝에서 0.994로 줄었다 1.004로 다시 커지는 오버슈트가 있었고, 위아래 이동까지
+   섞여 있어 카드가 자리를 못 잡고 흔들리는 것처럼 보였다 — 튕김은 가벼운 물건의 문법이지
+   방금 만들어진 상담 카드의 문법이 아니다. 깊이(크기·그림자·초점)만 쓰고 위치는 안 쓴다. */
+@keyframes cardLand {
+  0% {
+    opacity: 0;
+    transform: scale(1.1);
+    filter: blur(6px);
+    box-shadow: 0 40px 90px rgba(16, 24, 40, 0.3);
+  }
+  45% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: none;
+    box-shadow: var(--sh-near);
+  }
 }
-@keyframes consoleInL {
-  from { opacity: 0; transform: translateX(-16px); filter: blur(8px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes consoleInR {
-  from { opacity: 0; transform: translateX(16px); filter: blur(8px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes consoleInDown {
-  from { opacity: 0; transform: translateY(-12px); filter: blur(8px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes consoleInUp {
-  from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
-  to { opacity: 1; transform: none; }
-}
+/* (consoleSettle·consoleInL/R/Up 제거 — cardLand와 BlurFade가 대체했다.
+   안 쓰는 키프레임을 남기면 다음 사람이 둘 중 무엇이 진짜인지 찾게 된다.) */
 
 /* 가이드 투어 스테퍼 — 단계 콘텐츠가 방향성 슬라이드로 전환 (앞=오른쪽서, 뒤=왼쪽서) */
 @keyframes guideSlideFwd {
@@ -424,6 +691,42 @@ a:hover {
     to {
       opacity: 1;
       transform: translate(-50%, -50%);
+    }
+  }
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+  /* 이동·스케일을 모두 빼고 페이드만 — 카드가 '나타난다'는 사실만 남긴다 */
+  @keyframes cardArrive {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+  @keyframes ringSettle {
+    from,
+    to {
+      opacity: 0;
+      box-shadow: none;
+    }
+  }
+  @keyframes chainLight {
+    from {
+      opacity: 0.4;
+    }
+    to {
+      opacity: 1;
     }
   }
   @keyframes guideSlideFwd {

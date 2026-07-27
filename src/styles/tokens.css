@@ -1,102 +1,28 @@
 /* Dotorian Design System — design tokens (ported from _ds bundle).
-   Geist Sans/Mono + Pretendard(KR fallback), Geist-derived color scales,
-   4px spacing grid, tight radii, subtle elevation. Reference via var(--*). */
+   Avenir Next(Latin) + Pretendard(KR fallback) 텍스트 폰트, 4px spacing grid,
+   tight radii, subtle elevation. Reference via var(--*). */
 
 /* ===== fonts.css ===== */
-/* Dotorian webfonts — Geist, per vercel.com/design.md. Declared as @font-face so the
-   compiler ships real font files.
-   Geist Sans (UI + prose) · Geist Mono (code, data, tabular figures).
-   Pretendard is kept ONLY as the Korean fallback in the sans stack, since Geist Sans
-   does not cover Hangul — see --font-sans in typography.css.
+/* 텍스트 폰트는 Avenir Next(라틴) + Pretendard(한글) 두 개만. 전부 self-host(public/fonts),
+   CDN 0개 — 온프레미스 오프라인에서도 뜬다. 모노(코드·숫자·시계)는 시스템 모노 스택으로 내린다.
+   아이콘 폰트(Material Symbols)는 텍스트 폰트가 아니므로 이 규칙에서 예외 — 아래 별도 self-host. */
 
-   폰트 바이너리는 src/assets/fonts/ 에 동봉한다(2026-07-23). 예전엔 jsDelivr·Google
-   Fonts CDN을 직접 참조했는데, 이 제품은 망분리 온프레미스 전제라 브라우저가 외부로
-   나가면 안 된다 — 인터넷이 없으면 아이콘 폰트가 로드되지 않아 .mi 글리프 151곳이
-   'mic', 'call_end' 같은 리터럴 텍스트로 표시된다. 상대경로로 두면 Vite가 해시 붙여
-   dist/assets에 함께 굽는다. */
-
-/* Geist Sans — UI + headings */
-@font-face {
-  font-family: "Geist Sans";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../assets/fonts/geist-sans-400.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Geist Sans";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../assets/fonts/geist-sans-500.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Geist Sans";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("../assets/fonts/geist-sans-600.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Geist Sans";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../assets/fonts/geist-sans-700.woff2") format("woff2");
-}
-
-/* Geist Mono — code, data, tabular figures */
-@font-face {
-  font-family: "Geist Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../assets/fonts/geist-mono-400.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Geist Mono";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../assets/fonts/geist-mono-500.woff2") format("woff2");
-}
-
-/* Space Grotesk — 대형 시계 숫자 전용 디스플레이 폰트 (각진 1·열린 6/9, 숫자에 캐릭터).
-   본문·소형 숫자는 계속 Geist — 시계에만 쓴다. */
-@font-face {
-  font-family: "Space Grotesk";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../assets/fonts/space-grotesk-500.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Space Grotesk";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("../assets/fonts/space-grotesk-600.woff2") format("woff2");
-}
-
-/* Pretendard — Korean fallback only (weight 45–920 variable) */
+/* Pretendard — Korean fallback (weight 45–920 variable), self-host */
 @font-face {
   font-family: "Pretendard";
   font-style: normal;
   font-weight: 45 920;
   font-display: swap;
-  src: url("../assets/fonts/pretendard-variable.woff2") format("woff2-variations");
+  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
 }
 
-/* Material Symbols Outlined — 아이콘 글리프. global.css의 .mi 헬퍼가 이 패밀리를 쓴다.
-   리거처 기반이라 <span class="mi">mic</span> 처럼 아이콘 이름을 텍스트로 적는 방식이므로,
-   폰트가 안 뜨면 아이콘이 아니라 'mic'이라는 글자가 그대로 보인다 — 예전 index.html의
-   Google Fonts <link>를 이 선언으로 대체했다(2026-07-23, 망분리 대응). */
+/* Material Symbols Outlined — 아이콘 폰트(텍스트 폰트 아님). self-host, 단일 소스. */
 @font-face {
   font-family: "Material Symbols Outlined";
   font-style: normal;
   font-weight: 400;
   font-display: block;
-  src: url("../assets/fonts/material-symbols-outlined.woff2") format("woff2");
+  src: url("/fonts/material-symbols-outlined.woff2") format("woff2");
 }
 
 /* Avenir Next — 라틴 주서체(브랜드 지정). self-host(public/fonts) 라 온프레미스 오프라인에서도 뜬다.
@@ -133,7 +59,7 @@
 
 
 /* ===== colors.css ===== */
-/* Dotorian color system — Geist-derived scales + semantic aliases.
+/* Dotorian color system — accent scales + semantic aliases.
    Each accent scale runs 100–1000 where the step encodes INTENT, not just lightness:
    100 bg · 200 hover-bg · 300 active-bg · 400 border · 500 hover-border · 600 active-border
    700 solid fill · 800 solid-fill hover · 900 secondary text/icon · 1000 primary text/icon.
@@ -247,18 +173,20 @@
 }
 
 /* ===== typography.css ===== */
-/* Dotorian typography — Geist, per vercel.com/design.md.
-   Geist Sans sets UI + prose; Geist Mono sets code, data, and tabular figures.
-   Pretendard stays in the sans stack ONLY as the Korean fallback (Geist Sans lacks Hangul).
+/* Dotorian typography — Avenir Next(라틴) sets UI + prose, Pretendard가 한글을 이어받는다.
+   모노(코드·데이터·숫자·시계)는 시스템 모노 스택. 텍스트 폰트는 이 둘뿐 — 토큰이 단일 소스.
    Headings tighten letter-spacing as size grows. Each --text-* token is a `font` shorthand;
    pair heading tokens with the matching --tracking-*. copy-16 / label-14 cover most text. */
 
 :root {
-  --font-display: "Avenir Next", "Geist Sans", "Pretendard", system-ui, -apple-system, sans-serif;
-  --font-sans: "Avenir Next", "Geist Sans", "Pretendard", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: "Avenir Next", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-sans: "Avenir Next", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, "Segoe UI", sans-serif;
+  /* 번들된 폰트는 Avenir Next·Pretendard뿐이다. 시스템 모노를 쓰면 맥은 SF Mono,
+     윈도우는 Consolas로 갈려 시연 기기마다 숫자 모양이 달라진다 — 그래서 모노도
+     브랜드 서체로 받고 자릿수 정렬은 font-variant-numeric: tabular-nums가 맡는다. */
+  --font-mono: "Avenir Next", "Pretendard", sans-serif;
 
-  /* Headings — Geist Sans 600, tightening tracking */
+  /* Headings — Avenir Next 600, tightening tracking */
   --text-heading-72: 600 72px/72px var(--font-display);  --tracking-72: -4.32px;
   --text-heading-64: 600 64px/64px var(--font-display);  --tracking-64: -3.84px;
   --text-heading-56: 600 56px/56px var(--font-display);  --tracking-56: -3.36px;
@@ -290,7 +218,7 @@
   --text-button-14: 500 14px/20px var(--font-sans);
   --text-button-12: 500 12px/16px var(--font-sans);
 
-  /* Mono — Geist Mono, code / data / tabular figures */
+  /* Mono — 시스템 모노, code / data / tabular figures */
   --text-mono-14: 400 14px/20px var(--font-mono);
   --text-mono-13: 400 13px/18px var(--font-mono);
   --text-mono-12: 400 12px/16px var(--font-mono);
@@ -402,13 +330,29 @@
   --onair-bg: #e9eaeb;
   /* 엑셀 시트 크롬 전용 — 실물(엑셀) 메타포는 실물의 색을 쓴다 (사용자 지정, 2026-07-19) */
   --excel-green: #107c41;
-  --sh-focus: 0 2px 4px rgba(15, 18, 24, 0.16), 0 14px 30px -10px rgba(15, 18, 24, 0.32);
+  /* ── 광원 v3.0 (2026-07-25) ─────────────────────────────────────
+     그림자에 '방향'이 생겼다. 커서를 무한원 광원으로 보고, 그 반대편으로 모든 그림자가
+     함께 기운다(lib/lightSource가 --lx/--ly를 매 프레임 흘려보낸다).
+     -1~1 범위이며 JS가 없거나 모션 축소 설정이면 0으로 남아 예전의 수직 드롭 그대로다.
+
+     주의: 높이(elevation)는 여전히 흐림/불투명도가 담당한다. 방향은 높이를 말하지 않는다 —
+     한 화면의 모든 면이 같은 방향으로 기울기 때문에 위계는 흔들리지 않는다.
+     기울기 폭(아래 계수)은 단의 높이에 비례한다: 높이 뜬 것일수록 더 많이 끌린다. */
+  --lx: 0;
+  --ly: 0;
+
+  --sh-focus: calc(var(--lx) * 2px) calc(2px + var(--ly) * 2px) 4px rgba(15, 18, 24, 0.16),
+    calc(var(--lx) * 10px) calc(14px + var(--ly) * 10px) 30px -10px rgba(15, 18, 24, 0.32);
   /* 호버 부상 — near(바닥)와 focus(초점) 사이. 마우스가 올라간 카드가 분명히 들리되 초점보다는 낮다 */
-  --sh-hover: 0 3px 6px rgba(15, 18, 24, 0.14), 0 12px 26px -9px rgba(15, 18, 24, 0.28);
-  --sh-near: 0 3px 8px -3px rgba(15, 18, 24, 0.25), 0 1px 2px rgba(15, 18, 24, 0.10);
+  --sh-hover: calc(var(--lx) * 2px) calc(3px + var(--ly) * 2px) 6px rgba(15, 18, 24, 0.14),
+    calc(var(--lx) * 8px) calc(12px + var(--ly) * 8px) 26px -9px rgba(15, 18, 24, 0.28);
+  --sh-near: calc(var(--lx) * 2px) calc(3px + var(--ly) * 2px) 8px -3px rgba(15, 18, 24, 0.25),
+    calc(var(--lx) * 1px) calc(1px + var(--ly) * 1px) 2px rgba(15, 18, 24, 0.10);
   --sh-far: var(--sh-near); /* v2.9: 거리별 그림자 폐기 — 균등 낮은 드롭으로 수렴 */
+  /* 이음새 그림자 — 붙어 있는 두 면의 경계를 그린다. 높이가 아니라 접합이라 광원을 따르지 않는다 */
   --sh-joint: 0 -8px 14px -10px rgba(15, 18, 24, 0.30);
-  --sh-modal: 0 2px 4px rgba(15, 18, 24, 0.14), 0 18px 40px -10px rgba(15, 18, 24, 0.35);
+  --sh-modal: calc(var(--lx) * 3px) calc(2px + var(--ly) * 3px) 4px rgba(15, 18, 24, 0.14),
+    calc(var(--lx) * 14px) calc(18px + var(--ly) * 14px) 40px -10px rgba(15, 18, 24, 0.35);
 
   /* ── 온에어 타입 래더 v2 (2026-07-19 전문가 리뷰 반영) ──────────
      주의: 직원 화면은 scale(0.76389)로 축소 렌더 — 명목 13px = 실효 9.9px.

@@ -369,6 +369,8 @@ function onEvent(state: FeedState, env: DemoEnvelope): FeedState {
         ticker: null,
       };
     }
+    // 관제 보드가 할 일이 없는 이벤트 — 고객 창의 인계 연출 신호라 상태를 건드리지 않는다
+    case "agent.connected":
     case "queue.snapshot":
       return state;
   }

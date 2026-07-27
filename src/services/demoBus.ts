@@ -24,7 +24,10 @@ export type PipelineStageStatus = "start" | "done" | "skip";
 export type DemoCallKind = "normal" | "urgent" | "transfer";
 
 export interface DemoEventMap {
-  "call.incoming": { callId: string; kind: DemoCallKind; generation?: number };
+  /** startedAtMs — 통화가 실제로 시작된 시각(epoch ms). 이걸 실어 보내야 다른 창의
+   *  '접수 경과'가 고객이 전화를 건 시점부터 세어진다. 없으면 창마다 제 시계로 돌아
+   *  같은 통화인데 화면마다 다른 초가 찍힌다. */
+  "call.incoming": { callId: string; kind: DemoCallKind; generation?: number; startedAtMs?: number };
   "stt.utterance": {
     callId: string;
     text: string;
@@ -62,6 +65,10 @@ export interface DemoEventMap {
     confidence: number | null;
     risk: MvpIncidentRisk;
   };
+  /** 상담사가 통화를 받았다 — 고객 창이 "내 말이 상담사에게 넘어갔다"를 아는 유일한 신호.
+   *  이게 없으면 두 창이 각자 시계로 돌아 인계 연출이 어긋난다(고객 쪽은 자기 대본대로
+   *  넘어가고 직원 쪽은 사람이 누른 시점에 넘어간다). */
+  "agent.connected": { callId: string | null };
   "transfer.requested": { callId: string | null; toDept: string; mode: "reserve" | "immediate" };
   "transfer.completed": { callId: string | null; toDept: string };
   "call.ended": {
@@ -106,6 +113,7 @@ const DEMO_EVENT_TYPES = new Set<DemoEventType>([
   "pipeline.stage",
   "card.created",
   "routing.assigned",
+  "agent.connected",
   "transfer.requested",
   "transfer.completed",
   "call.ended",

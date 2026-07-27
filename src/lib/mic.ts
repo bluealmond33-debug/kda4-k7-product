@@ -1,0 +1,195 @@
+import { useEffect, useState } from "react";
+
+/**
+ * 공용 마이크 레벨 미터 — 실제 입력 음량(0~1)을 매 프레임 읽을 수 있게 한다.
+ *
+ * 한 대의 마이크를 여러 컴포넌트가 같이 본다(폰의 주황 점, 전사 패널 두 개의 파형).
+ * 그래서 getUserMedia를 각자 부르지 않고 **참조 카운트로 스트림 하나를 공유**한다 —
+ * 마지막 사용자가 놓을 때만 트랙을 정지한다.
+ *
+ * 주의: getUserMedia는 보안 컨텍스트(localhost·https)에서만 동작한다. LAN http로
+ * 시연하면 브라우저가 막으므로 getMicLevel()은 계속 null을 준다 — 호출부는 그때
+ * 시뮬레이션 값으로 되돌아가야 한다(파형이 죽어버리지 않게).
+ */
+
+// ── 레벨 산출 파라미터 ────────────────────────────────────────────────
+// 사람 목소리를 눈에 보이게 만드는 구간. 무음(-55dB 이하)은 0으로 게이트하고,
+// 보통 말소리(-30~-15dB)가 파형의 대부분을 쓰도록 -12dB를 천장으로 잡는다.
+const DB_FLOOR = -55;
+const DB_CEIL = -12;
+/** 작은 소리도 눈에 보이게 살짝 부풀린다(1보다 작을수록 아래쪽이 들림) */
+const CURVE = 0.75;
+/** 어택은 빠르게, 릴리즈는 느리게 — 옛 시리처럼 말이 시작되면 바로 부풀고 천천히 잦아든다 */
+const ATTACK_TAU = 0.045;
+const RELEASE_TAU = 0.32;
+
+let refCount = 0;
+let stream: MediaStream | null = null;
+let audioCtx: AudioContext | null = null;
+let analyser: AnalyserNode | null = null;
+// ArrayBuffer로 명시 — getByteTimeDomainData는 SharedArrayBuffer 뷰를 받지 않는다
+let buf: Uint8Array<ArrayBuffer> | null = null;
+let starting: Promise<void> | null = null;
+/** 평활된 현재 레벨(0~1) */
+let level = 0;
+let raf = 0;
+let lastT = 0;
+/** 마이크가 실제로 살아 있는지 — false면 호출부는 시뮬레이션으로 되돌아간다 */
+let live = false;
+
+const listeners = new Set<(on: boolean) => void>();
+const notify = () => listeners.forEach((fn) => fn(live));
+
+function tick(t: number) {
+  const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0.016;
+  lastT = t;
+
+  let target = 0;
+  if (analyser && buf) {
+    analyser.getByteTimeDomainData(buf);
+    // RMS — 파형의 실효값. 피크보다 체감 음량에 가깝다.
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) {
+      const v = (buf[i] - 128) / 128;
+      sum += v * v;
+    }
+    const rms = Math.sqrt(sum / buf.length);
+    // dB로 옮겨야 사람 귀처럼 반응한다 — 선형 RMS는 작은 소리에서 거의 안 움직인다.
+    const db = 20 * Math.log10(Math.max(rms, 1e-6));
+    const norm = (db - DB_FLOOR) / (DB_CEIL - DB_FLOOR);
+    target = Math.pow(Math.max(0, Math.min(1, norm)), CURVE);
+  }
+
+  // 프레임 독립 이징 — 프레임률이 흔들려도 같은 속도로 붙는다
+  const tau = target > level ? ATTACK_TAU : RELEASE_TAU;
+  level += (target - level) * (1 - Math.exp(-dt / tau));
+
+  raf = requestAnimationFrame(tick);
+}
+
+/**
+ * 세대 번호 — stop()마다 증가한다.
+ *
+ * getUserMedia는 비동기라 '기다리는 동안 상태가 뒤집히는' 창이 열린다. refCount만 보면
+ * 다음 경우를 놓친다: 대기 중 refCount가 1→0→1로 튀면 stop()이 starting을 비우고,
+ * 새 acquire가 start()를 한 번 더 부른다. 그러면 **스트림 두 개가 열리고 먼저 온 것이
+ * stream 변수에서 밀려나 영영 정지되지 않는다** — 마이크가 계속 켜져 있는 상태(F2).
+ * 특히 React StrictMode(개발)는 이펙트를 mount→cleanup→mount로 돌려 이 경로를 바로 탄다.
+ * 그래서 refCount가 아니라 '내가 시작한 그 세대가 아직 유효한가'로 판정한다.
+ */
+let generation = 0;
+
+async function start() {
+  if (!navigator.mediaDevices?.getUserMedia) return;
+  const myGen = generation;
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // 기다리는 사이 마지막 사용자가 놓았거나(refCount 0), 그 사이 stop()이 한 번 돌아
+    // 세대가 바뀌었으면(=이 스트림은 이미 남의 자리) 즉시 정리한다.
+    if (refCount === 0 || myGen !== generation) {
+      s.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    stream = s;
+    const Ctx: typeof AudioContext =
+      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    audioCtx = new Ctx();
+    // 자동재생 정책으로 suspended 상태로 열릴 수 있다 — 통화는 클릭에서 시작하므로 대개 풀린다
+    if (audioCtx.state === "suspended") await audioCtx.resume().catch(() => {});
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    // 평활은 우리가 dt 기반으로 직접 한다 — 여기선 원신호를 받는다
+    analyser.smoothingTimeConstant = 0;
+    buf = new Uint8Array(new ArrayBuffer(analyser.fftSize));
+    audioCtx.createMediaStreamSource(s).connect(analyser);
+    // analyser는 destination에 연결하지 않는다 — 연결하면 스피커로 되돌아 나가 하울링이 난다
+    live = true;
+    lastT = 0;
+    raf = requestAnimationFrame(tick);
+    notify();
+  } catch (e) {
+    // 권한 거부·미지원·비보안 컨텍스트 — 조용히 포기하고 시뮬레이션에 맡긴다.
+    // 사유는 남긴다: 시연 현장에서 '권한 거부'와 'http라서 차단'을 구분해야 조치가 갈린다.
+    lastError = e instanceof Error ? e.name + ": " + e.message : String(e);
+    live = false;
+    notify();
+  }
+}
+
+function stop() {
+  // 진행 중이던 start()가 있으면 그 결과를 무효화한다(위 generation 주석 참고)
+  generation++;
+  cancelAnimationFrame(raf);
+  raf = 0;
+  stream?.getTracks().forEach((t) => t.stop());
+  audioCtx?.close().catch(() => {});
+  stream = null;
+  audioCtx = null;
+  analyser = null;
+  buf = null;
+  level = 0;
+  live = false;
+  starting = null;
+  notify();
+}
+
+/** 마이크를 잡는다. 반환된 함수를 부르면 놓는다(마지막 사용자가 놓을 때 실제로 정지). */
+export function acquireMic(): () => void {
+  refCount++;
+  if (refCount === 1 && !starting) starting = start();
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    refCount--;
+    if (refCount === 0) stop();
+  };
+}
+
+/** 지금 입력 레벨(0~1). 마이크가 안 살아 있으면 null — 호출부는 시뮬레이션으로 대체한다. */
+export function getMicLevel(): number | null {
+  return live ? level : null;
+}
+
+/** 마지막 getUserMedia 실패 사유 — 진단 패널이 읽는다(권한 거부/비보안 컨텍스트 구분용) */
+let lastError = "";
+
+/**
+ * 시연 현장 진단용 스냅샷.
+ *
+ * "마이크가 안 꺼진다"(F2)는 로컬 데모로 재현이 안 된다 — refCount가 0이 되는지를
+ * **실제 통화 중에 눈으로 봐야** 잡힌다. 그래서 내부 상태를 그대로 노출한다.
+ * refCount가 0인데 live가 true면 release 누락, 반대면 소유권이 잘못 넘어간 것이다.
+ */
+export function micDiag() {
+  return {
+    refCount,
+    live,
+    level: live ? level : 0,
+    hasTrack: !!stream?.getAudioTracks().length,
+    trackState: stream?.getAudioTracks()[0]?.readyState ?? "-",
+    ctxState: audioCtx?.state ?? "-",
+    secure: typeof window !== "undefined" ? window.isSecureContext : false,
+    supported: typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia,
+    lastError,
+  };
+}
+
+/** 마이크가 실제로 켜져 있는 동안 true (권한 허용 + 스트림 활성) */
+export function useMic(active: boolean): boolean {
+  const [on, setOn] = useState(live);
+  useEffect(() => {
+    if (!active) {
+      setOn(false);
+      return;
+    }
+    const release = acquireMic();
+    setOn(live);
+    listeners.add(setOn);
+    return () => {
+      listeners.delete(setOn);
+      release();
+    };
+  }, [active]);
+  return on;
+}

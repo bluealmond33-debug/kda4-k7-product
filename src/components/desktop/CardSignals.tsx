@@ -11,7 +11,7 @@ export function ConfidenceRing({ pct }: { pct: number }) {
     <svg width={S} height={S} viewBox={"0 0 " + S + " " + S} style={{ flex: "none", display: "block" }}>
       <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--gray-200)" strokeWidth="4" />
       <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--gray-1000)" strokeWidth="4" strokeDasharray={C} strokeDashoffset={off} strokeLinecap="round" transform={"rotate(-90 " + cx + " " + cx + ")"} />
-      <text x={cx} y={cx + 0.5} textAnchor="middle" dominantBaseline="central" style={{ font: "800 14px 'Avenir Next','Geist Sans','Pretendard',sans-serif", letterSpacing: "-0.5px", fill: "var(--gray-1000)" }}>{pct}</text>
+      <text x={cx} y={cx + 0.5} textAnchor="middle" dominantBaseline="central" style={{ font: "800 14px 'Avenir Next','Pretendard',sans-serif", letterSpacing: "-0.5px", fill: "var(--gray-1000)" }}>{pct}</text>
     </svg>
   );
 }

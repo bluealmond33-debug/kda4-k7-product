@@ -15,12 +15,11 @@ import {
   TRANSFER_DEPTS,
   SUGGESTED_DEPT,
   REG_SUGGEST,
-  PREP_BUSINESS_CODE,
-  PREP_BUSINESS_CODE_LABEL,
   PREP_NEED_TAGS,
   ADMIN_QUEUE_POOL,
   type IncomingKind,
   type SheetData,
+  type SheetRow,
   renderSheet,
   WRAP_TYPE_OPTIONS,
   WRAP_RESULT_OPTIONS,
@@ -28,6 +27,7 @@ import {
   type Followup,
 } from "../data/demoContent";
 import { piiVerify, piiAccounts, piiHistory } from "../services/pii";
+import { addCallLog } from "../lib/callLog";
 import { emotionLabel } from "../services/emotion";
 import type { EmotionTemperatureLevel, IncidentRisk } from "../services/types";
 import {
@@ -44,6 +44,13 @@ import {
   type TranscriptChunk,
   type SttSession,
 } from "../services";
+import {
+  SNAPSHOT_BEAT_MS,
+  SNAPSHOT_MAX_LINES,
+  clearCallSnapshot,
+  readCallSnapshot,
+  writeCallSnapshot,
+} from "../services/callSnapshot";
 import {
   searchRegulations,
   fetchRegSuggests,
@@ -62,6 +69,8 @@ import {
   type LiveTranscript,
 } from "../services/liveCall";
 import { resolveCallId, resolveExplicitCallId } from "../services/callId";
+import { DEPT_UNKNOWN, normalizeDept } from "../data/taxonomy";
+import { maskPii } from "../lib/maskPii";
 import {
   startArsControl,
   type ArsControlHandle,
@@ -196,7 +205,8 @@ const ACTIVE_DIALOGUE: { speaker: "agent" | "customer"; text: string }[] = [
   { speaker: "agent", text: "네 고객님, 주택담보대출 만기 연장 문의 주셨죠. 제가 바로 확인해 드릴게요." },
   { speaker: "customer", text: "네, 다음 달이 만기인데 연장이 가능할까요?" },
   { speaker: "agent", text: "먼저 본인 확인부터 도와드릴게요. 생년월일 여덟 자리 말씀해 주시겠어요?" },
-  { speaker: "customer", text: "890315입니다." },
+  // 안내가 "여덟 자리"이므로 고객도 여덟 자리로 답한다(정답: CUSTOMER.authAnswers.birth).
+  { speaker: "customer", text: "19990303입니다." },
   { speaker: "agent", text: "확인되었습니다. 재약정으로 만기 연장 가능하시고, 금리는 심사 후 안내드려요." },
   { speaker: "customer", text: "필요한 서류는 어떤 게 있나요?" },
   { speaker: "agent", text: "소득증빙과 등기부등본이 필요하고, 비대면으로도 제출하실 수 있어요." },
@@ -248,13 +258,13 @@ const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; n
   },
   wrap: {
     step: "후처리",
-    title: "상담사의 유일한 산출물 = 초안 검증",
+    title: "상담사의 유일한 산출물 = 후처리 결과 검증",
     points: [
       "통화 종료와 동시에 시트가 자동으로 올라옵니다. 통화 화면은 배경에 남아 방금 내용을 다시 볼 수 있습니다.",
-      "왼쪽 상담 정보는 녹취·메모에서 자동으로 채워지고, 상담사는 필요한 것만 고칩니다(연필 아이콘). 오른쪽 초안도 클릭해 편집합니다.",
+      "왼쪽 상담 정보는 녹취·메모에서 자동으로 채워지고, 상담사는 필요한 것만 고칩니다(연필 아이콘). 오른쪽 후처리 결과도 클릭해 편집합니다.",
       "상담 유형·결과·후속조치는 이번 콜 유형에 맞춰 미리 채워집니다.",
     ],
-    next: "'초안 폐기·다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
+    next: "'저장 후 다음 콜' 또는 상단 '초기화'로 처음부터 다시 볼 수 있어요.",
   },
 };
 
@@ -302,6 +312,15 @@ type SpeakerTranscriptChunk = TranscriptChunk & {
 };
 
 type SummaryScope = "intake" | "full";
+
+/** 카드 생성 창 — 침묵이 끝나고 준비 카드가 날아오기까지 '카드 만드는 중'을 보여 주는 시간.
+ *  0으로 두면(예전 동작) 카드가 즉시 떠서 '카드 생성' 단계가 한 번도 켜지지 않는다.
+ *  실제 요약·분류가 쓰는 시간과 비슷한 눈금으로 잡는다 — 화면이 사실보다 빠른 척하지 않게. */
+const CARD_BUILD_MS = 1200;
+
+/** 단계 바에서 '후처리'로 건너뛸 때 표시할 통화 길이(초).
+ *  후처리는 통화가 끝난 뒤의 화면이라 시계가 흐르면 안 된다 — 끝난 통화의 길이로 고정한다. */
+const WRAP_JUMP_CALL_SEC = 187;
 
 // 후속 조치 라벨 → Material Symbols 아이콘. 백엔드(EXAONE)가 라벨 문자열만 주므로
 // 아이콘은 프론트가 키워드로 고른다(픽스처 Followup과 같은 모양을 유지하기 위함).
@@ -353,6 +372,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 감정온도는 고정값이 아니라 실시간 신호 — 데모에선 통화 20초 후 안정으로 하강(상담 효과 연출)
   const [emoDrift, setEmoDrift] = useState<{ score: number; level: "stable" | "caution" | "elevated"; reason: string } | null>(null);
   const [clock, setClock] = useState(0);
+  /** 고객이 먼저 끊었다 — 상담사 화면에서 자동 연결을 멈추고 '콜백 대상'으로 바꾼다 */
+  const [customerEnded, setCustomerEnded] = useState(false);
   const [callStartedAt, setCallStartedAt] = useState("");
   const [emo, setEmo] = useState(0);
   const [silenceLeft, setSilenceLeft] = useState(0);
@@ -362,6 +383,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [liveCaptionSpeaker, setLiveCaptionSpeaker] =
     useState<LiveSpeaker>("customer");
   const [liveTranscriptLines, setLiveTranscriptLines] = useState<LiveTranscript[]>([]);
+  /* 하트비트가 최신 전사를 읽는 통로 — state를 effect 의존성에 넣으면 말이 한 줄 늘 때마다
+     5초 타이머가 리셋돼 칠판이 갱신되지 않는다(그러면 15초 뒤 스스로 상한다). */
+  const linesRef = useRef<LiveTranscript[]>([]);
+  linesRef.current = liveTranscriptLines;
   const [captureBySpeaker, setCaptureBySpeaker] = useState<Record<LiveSpeaker, boolean>>({
     customer: false,
     agent: false,
@@ -373,6 +398,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [analysisSource, setAnalysisSource] = useState("demo");
   const [liveActionItems, setLiveActionItems] = useState<string[]>([]);
   const [summaryPending, setSummaryPending] = useState(false);
+  /** 카드 생성 창이 도는 중 — 접수 패널의 '카드 생성' 단계를 켜고, 끝나면 카드가 날아온다 */
+  const [cardBuilding, setCardBuilding] = useState(false);
   const [arsDigits, setArsDigits] = useState("");
   const [dtmfEvents, setDtmfEvents] = useState<ArsDtmfEvent[]>([]);
   const [arsMobileConnected, setArsMobileConnected] = useState(false);
@@ -475,7 +502,28 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // ── imperative bookkeeping (not part of render state) ──
   const timers = useRef<number[]>([]);
   const clockT = useRef<number | null>(null);
+  /* 통화 시계의 **원점**(epoch ms). 초를 +1씩 세지 않고 이 시각과의 차이로 계산한다.
+     ① 탭이 백그라운드로 가면 setInterval이 느려져 +1 방식은 초가 밀린다.
+     ② 다른 창에서 온 call.incoming의 startedAtMs로 원점을 맞추면, 창이 몇 개든
+        '접수 경과'가 고객이 전화를 건 그 시각부터 같은 초를 찍는다. */
+  const clockOrigin = useRef<number | null>(null);
+  /* 내가 방금 건 전화 — 버스가 자기 탭에도 루프백하므로, 그걸 '남이 건 전화'로 오해해
+     또 한 통을 시작하지 않게 한다. emit 안에서 동기적으로 배달되므로 이 플래그로 충분하다. */
+  const selfStartRef = useRef(false);
+  /* 다른 창의 전화에 합류하는 중 — 이때는 call.incoming을 다시 싣지 않는다.
+     두 번 실리면 관제 보드에 같은 통화가 두 건으로 쌓인다. */
+  const joiningRef = useRef(false);
+  /** 이 통화를 내가 걸었나 — 칠판을 살려 두는 건 건 쪽 하나면 된다(합류한 창까지 적을 이유가 없다) */
+  const ownsCallRef = useRef(false);
+  /** 내가 방금 낸 종료 이벤트 — 버스 루프백을 '남이 끊었다'로 오해하지 않게 */
+  const selfEndRef = useRef(false);
+  const startCallRef = useRef<() => void>(() => undefined);
+  const endCallRef = useRef<() => void>(() => undefined);
+  const startClockRef = useRef<() => void>(() => undefined);
+  const resetRef = useRef<() => void>(() => undefined);
   const silT = useRef<number | null>(null);
+  /** 카드 생성 창 타이머 — 리셋 때 반드시 끊는다(안 끊으면 초기화한 뒤에 prep으로 튄다) */
+  const buildT = useRef<number | null>(null);
   const silStage = useRef<null | "first" | "confirmPause" | "second">(null);
   // 임계 이상 레벨이 연속 몇 회 이어졌는지 — 순간 잡음과 실제 발화를 가른다.
   const loudRun = useRef(0);
@@ -513,6 +561,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   transferRef.current = { reserved: transferReserved, target: transferTarget };
   const wrapRef = useRef({ type: wrapType, result: wrapResult });
   wrapRef.current = { type: wrapType, result: wrapResult };
+  // 통화 시간 거울 — 종료 처리는 async 콜백에서 일어나 clock 상태가 오래된 값일 수 있다
+  const clockRef = useRef(0);
+  clockRef.current = clock;
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -571,10 +622,165 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     return false;
   }, []);
 
+  /* 다른 창이 건 통화의 시작 시각을 받아 내 시계 원점을 맞춘다.
+     **듣기는 항상 shared 버스로 한다** — 고객 화면의 demoBus는 발행을 막은 스텁이라
+     on이 없다(고객 창은 같은 발화를 두 번 싣지 않으려고 발행을 안 한다).
+     버스는 자기 탭에도 루프백하므로 내가 보낸 것도 되돌아오는데, 값이 같아 아무 일도 안 난다.
+     이미 세고 있던 중이라도 원점만 바꾸면 다음 tick(≤500ms)에 바로 따라잡는다. */
+  useEffect(
+    () =>
+      sharedDemoBus.on("call.incoming", (p) => {
+        /* **이미 내 통화가 돌고 있으면 내 시계가 정본이다.** 뒤늦게 도착한 원점을 받아들이면
+           화면에서 초가 뒤로 튀는데, 그건 어떤 어긋남보다 나쁘다(관객이 바로 알아챈다).
+           아직 원점이 없는 창(= 지금 이 통화에 합류하는 창)만 발신 시각을 따라간다. */
+        if (typeof p.startedAtMs === "number" && clockOrigin.current == null) {
+          clockOrigin.current = p.startedAtMs;
+        }
+        /* 고객이 전화를 걸면 직원 콘솔이 **스스로** 접수 화면으로 들어간다.
+           발표자가 두 창을 각각 조작하지 않아도 한 통화로 붙는다.
+           · 내가 건 전화(루프백)는 무시 · 이미 통화 중이면 무시
+           · 고객 화면은 합류하지 않는다 — 전화를 거는 쪽이지 받는 쪽이 아니다 */
+        if (selfStartRef.current || isCustomerSurface) return;
+        /* 이미 통화 중인데 다른 창에서 새 통화가 시작됐다 — 시연에서 실제로 밟는 순서다
+           (발표자가 테스트 콜을 먼저 누른 뒤 고객이 전화). 그대로 무시하면 두 화면이 서로
+           **다른 통화**를 보여준다: 왼쪽은 고객의 새 통화, 오른쪽은 아까의 테스트 콜.
+           데모에는 통화가 하나뿐이므로 **나중에 시작된 쪽이 진실**이다 — 접고 새로 붙는다. */
+        if (phaseRef.current !== "idle") resetRef.current();
+        joiningRef.current = true;
+        clockOrigin.current = typeof p.startedAtMs === "number" ? p.startedAtMs : null;
+        startCallRef.current();
+        if (typeof p.startedAtMs === "number") clockOrigin.current = p.startedAtMs;
+      }),
+    []
+  );
+
+  /* 고객이 먼저 끊었다 — 상담사 화면이 그걸 모르면 시연에서 가장 나쁜 그림이 된다:
+     왼쪽 폰은 종료 화면인데 오른쪽 콘솔은 계속 "통화 중"이고, 15초 카운트다운은 그대로
+     흘러 **끊은 고객에게 자동 연결**된다.
+
+     · 통화 중(active)이었으면 이쪽도 종료로 넘긴다 — 이미 끊긴 통화를 붙들고 있을 이유가 없다.
+     · 아직 연결 전(접수·준비)이면 **카드는 남긴다.** 접수는 끝났고 담당자가 콜백할 건이라,
+       카드를 지우면 그 사실까지 지워진다. 대신 자동 연결만 멈추고 '콜백 대상'으로 표시한다. */
+  useEffect(
+    () =>
+      sharedDemoBus.on("call.ended", (p) => {
+        if (isCustomerSurface) return; // 고객 창은 제 폰이 진실이다
+        if (selfEndRef.current) return; // 내가 낸 종료(루프백)
+        if (p.endedBy === "agent") return; // 상담사가 끊은 건 이 창이 이미 안다
+        const ph = phaseRef.current;
+        if (ph === "idle" || ph === "wrap" || ph === "summarizing") return;
+        setCustomerEnded(true);
+        if (ph === "active") endCallRef.current();
+      }),
+    [isCustomerSurface]
+  );
+
+  /* 통화 중인 창이 칠판을 살려 둔다 — 갱신이 멈추면 다른 창이 '끝난 통화'로 보고 무시한다.
+     발신한 창(합류가 아닌 쪽)만 적는다: 두 창이 같은 칠판에 번갈아 적을 이유가 없다. */
+  const inCallForBeat = phase !== "idle" && phase !== "wrap";
+  useEffect(() => {
+    if (!inCallForBeat || !ownsCallRef.current) return;
+    const beat = () => {
+      if (clockOrigin.current == null) return;
+      writeCallSnapshot({
+        callId: respRef.current.call_id,
+        kind: incomingRef.current,
+        startedAtMs: clockOrigin.current,
+        phase: phaseRef.current,
+        // 마스킹해서 담는다 — 원문은 저장소에 남기지 않는다(화면에 보이는 것과 같은 문장)
+        lines: linesRef.current.slice(-SNAPSHOT_MAX_LINES).map((l) => ({
+          seq: l.seq,
+          text: maskPii(l.text),
+          at: l.at,
+          speaker: l.speaker,
+        })),
+      });
+    };
+    beat();
+    const id = window.setInterval(beat, SNAPSHOT_BEAT_MS);
+    return () => window.clearInterval(id);
+    // 말이 한 줄 늘 때마다 즉시 다시 적는다 — 5초 주기만 믿으면 새로고침 직전에 온 말이
+    // 칠판에 없어 복구했을 때 대화가 잘려 보인다(타이머는 다시 감기지만 비용은 없다)
+  }, [inCallForBeat, liveTranscriptLines.length]);
+
+  /* 창이 열릴 때 한 번 — 이미 돌고 있는 통화가 있으면 그 통화로 들어간다.
+     버스(생방송)를 못 들은 창을 위한 보험이다: 새로고침하거나 시연 도중에 창을 새로 열어도
+     대기 화면에 혼자 남지 않는다. 고객 화면은 전화를 거는 쪽이라 합류하지 않는다. */
+  /* 고객 창 새로고침 복구 — **대본을 다시 돌리지 않는다.**
+     startCall을 부르면 ARS 안내가 처음부터 다시 나가고(음성까지) 접수가 리셋된다.
+     새로고침한 사람이 원하는 건 "하던 통화로 돌아가는 것"이지 새 통화가 아니다.
+     그래서 되돌리는 건 **화면 상태와 시계뿐**이다: 폰이 다이얼이 아니라 통화 화면으로,
+     경과 시간은 처음 걸었던 시각부터.
+     지난 전사는 메모리에만 있어 돌아오지 않는다 — 지금부터의 말이 이어서 쌓인다. */
+  useEffect(() => {
+    if (!isCustomerSurface) return;
+    const snap = readCallSnapshot();
+    if (!snap) return;
+    if (phaseRef.current !== "idle") return;
+    const back = snap.phase;
+    if (!back || !["recording", "confirm", "prep", "active"].includes(back)) return;
+    clockOrigin.current = snap.startedAtMs;
+    /* 칠판을 이어서 살려 둔다 — 복구한 창이 새 주인이다. 안 하면 갱신이 끊겨 15초 뒤
+       칠판이 상하고, 그때부터는 아무도(자기 자신도) 이 통화로 못 돌아온다. */
+    ownsCallRef.current = true;
+    // 지난 대화도 되돌린다 — 빈 패널로 돌아오면 "통화가 처음부터 다시 시작됐다"로 읽힌다
+    if (snap.lines?.length) {
+      setLiveTranscriptLines(
+        snap.lines.map((l) => ({ seq: l.seq, text: l.text, at: l.at, speaker: l.speaker as LiveSpeaker }))
+      );
+    }
+    // connecting(안내 재생 중)으로는 돌리지 않는다 — 안내는 이미 지나갔다
+    transitionPhase(back as Phase);
+    startClockRef.current();
+  }, [isCustomerSurface, transitionPhase]);
+
+  useEffect(() => {
+    if (isCustomerSurface) return;
+    /* StrictMode(개발)는 마운트를 두 번 돌린다. "한 번만" 플래그로 막으면 **살아남는 쪽**이
+       막혀 원점을 못 받는다(늦게 연 창이 몇 초 늦게 세던 원인). 그래서 막지 않고,
+       몇 번 돌아도 같은 결과가 나오게 만든다 — 매번 joining으로 표시하고 원점을 못 박는다. */
+    const snap = readCallSnapshot();
+    if (!snap) return;
+    if (phaseRef.current !== "idle") return;
+    clockOrigin.current = snap.startedAtMs;
+    joiningRef.current = true;
+    startCallRef.current();
+    // startCall이 전사를 비우므로 **그 뒤에** 지난 대화를 얹는다
+    if (snap.lines?.length) {
+      setLiveTranscriptLines(
+        snap.lines.map((l) => ({ seq: l.seq, text: l.text, at: l.at, speaker: l.speaker as LiveSpeaker }))
+      );
+    }
+    /* startCall이 안에서 무엇을 하든 **마지막에 원점을 못 박는다.** 시작 경로가 여러 갈래라
+       중간에 지금 시각으로 덮이는 길이 남아 있었고(늦게 연 창이 몇 초 뒤부터 세는 증상),
+       원점은 여기서 정하는 게 맞다 — 이 창은 남의 통화에 합류하는 중이다.
+       다음 tick(≤500ms)에 화면이 따라온다. */
+    clockOrigin.current = snap.startedAtMs;
+    // 마운트 직후 한 번만 — 이후의 통화는 버스가 알려 준다
+  }, [isCustomerSurface]);
+
   const startClock = useCallback(() => {
     if (clockT.current) return;
-    clockT.current = window.setInterval(() => setClock((c) => c + 1), 1000);
+    if (clockOrigin.current == null) clockOrigin.current = Date.now();
+    const tick = () => {
+      const from = clockOrigin.current ?? Date.now();
+      setClock(Math.max(0, Math.round((Date.now() - from) / 1000)));
+    };
+    tick();
+    // 500ms로 도는 이유: 다른 창의 원점이 도착해 시계가 보정될 때 1초를 기다리지 않는다
+    clockT.current = window.setInterval(tick, 500);
   }, []);
+  startClockRef.current = startClock;
+
+  /* 통화 중이면 시계는 **항상** 돈다.
+     clearAll이 인터벌을 지우는 자리가 여러 곳이라(effect 정리·재시작 등), 시작 경로에서 한 번
+     켜는 것만으로는 부족했다 — 실제로 늦게 합류한 창의 시계가 몇 초 만에 멈춰 그 값에 굳었다.
+     상태에 걸어 두면 무엇이 지우든 다음 렌더에 되살아난다. */
+  useEffect(() => {
+    if (phase === "idle" || phase === "wrap") return;
+    startClock();
+  }, [phase, startClock]);
+
 
   // 분류 파이프라인 이벤트 연출 — 관리자 대시보드(?role=admin)가 구독한다.
   // 실제 처리(픽스처)는 즉시 끝나므로 스테이지 진행을 step 간격으로 흘린다.
@@ -686,7 +892,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       if (!isCurrent()) return false;
       const headline = "수신된 고객 발화가 없어 자동 요약을 생성하지 않았습니다.";
       setAnalysisSource("no-transcript");
-      setLiveActionItems(["고객 문의 내용을 다시 확인해 주세요."]);
+      // 뽑아낸 요구사항이 없으면 **빈 채로 둔다.** 예전엔 "고객 문의 내용을 다시 확인해
+      // 주세요"로 자리를 채웠는데, 요약이 정상 생성된 뒤에도 같이 노출돼 "이 문구는 도대체
+      // 왜?"(0724 시연, 박정운)를 불렀다. 없는 것은 없다고 보여주는 편이 낫다 —
+      // headline이 이미 "발화가 없어 요약을 생성하지 않았다"고 말하고 있다.
+      setLiveActionItems([]);
       setSummary({
         type: "미분류",
         headline,
@@ -703,7 +913,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             ...prev.consultation_card,
             summary: headline,
             business_type: "미분류",
-            department: "일반상담팀",
+            // 발화가 없으면 부서도 없다. 예전엔 "일반상담팀"으로 자리를 채웠는데,
+            // taxonomy에 없는 이름이라 규정 필터가 조용히 풀리는 경로였다(500ad1e 참고).
+            department: DEPT_UNKNOWN,
             routing_reason: "고객 발화가 없어 자동 라우팅하지 않음",
             incident_risk: "low",
             risk_reason: null,
@@ -787,9 +999,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       const emotionLevel =
         emotionScore >= 70 ? "elevated" : emotionScore >= 40 ? "caution" : "stable";
       const highRisk = Number(data?.urgency_score ?? 0) >= 60;
-      const department = String(
-        data?.routing?.department || data?.category || "일반상담팀"
-      );
+      // 백엔드가 준 이름을 taxonomy 라벨로 정규화한다. 모르는 이름이면 지어내지 않고
+      // '미분류'로 둔다 — 가짜 부서명이 붙으면 규정 필터가 조용히 풀린다.
+      const department =
+        normalizeDept(data?.routing?.department) ??
+        normalizeDept(data?.category) ??
+        DEPT_UNKNOWN;
       const keywords: string[] = Array.isArray(data?.keywords)
         ? data.keywords.filter((item: unknown): item is string => typeof item === "string")
         : [];
@@ -922,10 +1137,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAnalysisSource("pending");
       setSummaryPending(true);
     }
-    transitionPhase("prep");
     // 최신 준비 카드는 체크박스 없이 유의사항을 한 번에 제시한다.
     // 연결 게이트는 체크 동작 대신 실제 요약 완료 여부로만 제어한다.
     setPrepChecks(Array(PREP_LEN).fill(true));
+    // 요약·분류는 지금 바로 시작한다(아래 카드 생성 창과 병렬로 돈다)
     void runSummary({ forceLive, scope: "intake" }).then((completed) => {
       if (completed) {
         emitCardPipeline(forceLive ? "backend" : "demo", forceLive ? 250 : 700, {
@@ -933,6 +1148,18 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         });
       }
     });
+    // 카드 생성 창 — 접수 패널의 '카드 생성' 단계를 실제로 보여주는 시간.
+    // 예전엔 침묵이 끝나자마자 prep으로 넘어가 패널이 그 순간 사라졌고, 그래서 '카드 생성'
+    // 단계가 한 번도 켜지지 않았다(카드 생성이 0초로 보였다). 실제 시스템은 요약·분류에
+    // 시간을 쓰므로 그 시간을 눈에 보이게 둔다 — 화면이 사실보다 빠른 척하면 시연에서
+    // "이게 진짜 도는 건가"라는 의심을 부른다. 이 창이 끝나면 카드가 날아온다.
+    setCardBuilding(true);
+    if (buildT.current) clearTimeout(buildT.current);
+    buildT.current = window.setTimeout(() => {
+      buildT.current = null;
+      setCardBuilding(false);
+      transitionPhase("prep");
+    }, CARD_BUILD_MS);
   }, [emitCardPipeline, runSummary, transitionPhase]);
 
   const armFirst = useCallback(() => {
@@ -1091,6 +1318,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   // ── public actions ──
   const startCall = useCallback(() => {
+    ownsCallRef.current = !joiningRef.current;
+    /* 원점은 **알리기 전에** 정한다. 예전엔 emit 뒤에 정해서, 전에 다른 창이 흘린 시작 시각이
+       남아 있으면 그 낡은 값을 '내 통화 시작'이라고 실어 보냈다 —
+       받는 쪽은 9초 전에 시작한 통화로 알아듣는다(실측으로 잡힌 증상). */
+    if (!joiningRef.current) clockOrigin.current = Date.now();
+    setCustomerEnded(false);
+    selfStartRef.current = true;
+    window.setTimeout(() => {
+      selfStartRef.current = false;
+    }, 0);
     lifecycleEpoch.current += 1;
     analysisRequestSeq.current += 1;
     intakeTransitionPending.current = false;
@@ -1113,13 +1350,28 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setConsultationResponse(resp);
     // 리렌더 전에 타이머 콜백이 읽을 수 있도록 ref는 즉시 동기화
     respRef.current = resp;
-    demoBus.emit("call.incoming", {
-      callId: resp.call_id,
-      kind,
-      ...(callGenerationRef.current > 0
-        ? { generation: callGenerationRef.current }
-        : {}),
-    });
+    /* 통화 시작만은 **고객 화면도 발행한다**(shared 버스). 고객이 전화를 거는 순간
+       직원 콘솔이 스스로 접수 화면으로 들어가야 두 창이 한 통화가 된다.
+       발화·파이프라인은 여전히 상담사 쪽만 싣는다 — 같은 전사가 두 번 실리는 걸 막는 규칙은
+       그대로다. 여기서 나가는 건 "언제 시작했다" 한 줄뿐이다.
+       합류로 시작한 경우(joiningRef)는 싣지 않는다 — 이미 남이 실은 통화다. */
+    if (!joiningRef.current) {
+      sharedDemoBus.emit("call.incoming", {
+        callId: resp.call_id,
+        kind,
+        // 다른 창의 접수 경과가 이 시각부터 세어진다
+        startedAtMs: clockOrigin.current ?? Date.now(),
+        ...(callGenerationRef.current > 0
+          ? { generation: callGenerationRef.current }
+          : {}),
+      });
+      writeCallSnapshot({
+        callId: resp.call_id,
+        kind,
+        startedAtMs: clockOrigin.current ?? Date.now(),
+        phase: "connecting",
+      });
+    }
     demoBus.emit("pipeline.stage", {
       callId: resp.call_id,
       stage: "utterance",
@@ -1133,7 +1385,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setPrepChecks(Array(PREP_LEN).fill(false));
     setSummary(null);
     setVerified(false);
-    setAuthMethod("birth"); // 본인인증 기본 8칸(생년월일 8자리) — 박정운 피드백
+    // 초기값(birth)과 같게 되돌린다 — 예전엔 "phone"으로 떨어져 리셋 후에는
+    // 안내는 "생년월일 8자리"인데 칸은 4개가 되는 어긋남이 났다.
+    setAuthMethod("birth");
     setAuthInput("");
     setAuthErr(false);
     setAuthErrMsg("");
@@ -1182,7 +1436,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     startClock();
     if (realCallActiveRef.current) beginRecording();
     else after(3000, () => beginRecording());
+    joiningRef.current = false;
   }, [after, beginRecording, clearAll, startClock, transitionPhase]);
+
+  startCallRef.current = startCall;
 
   const pickIncoming = useCallback((k: IncomingKind) => {
     if (phaseRef.current === "idle") setIncoming(k);
@@ -1208,6 +1465,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         return;
       }
       transitionPhase("active");
+      /* 다른 창에 "상담사가 받았다"를 알린다 — 고객 창은 이 신호로 대화 인계 연출을 시작한다.
+         두 창이 같은 순간에 움직여야 "말이 저쪽으로 건너갔다"로 읽힌다. */
+      demoBus.emit("agent.connected", { callId: respRef.current.call_id });
       // 로컬 데모 — 통화 연결 후 고객↔상담원 대화를 스크립트로 재생.
       // 양쪽 전사 패널(liveTranscriptLines·demoBus)에 화자가 번갈아 표시된다.
       let td = 1100;
@@ -1254,11 +1514,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     endRequested.current = false;
     resetRequested.current = false;
     inactiveStatePolls.current = 0;
+    // 카드 생성 창을 끊는다 — 안 끊으면 초기화한 뒤에 예약된 타이머가 prep으로 튄다
+    if (buildT.current) {
+      clearTimeout(buildT.current);
+      buildT.current = null;
+    }
+    setCardBuilding(false);
     clearAll();
     transcript.current = [];
     summaryText.current = "";
     demoBus.emit("demo.reset", {});
     transitionPhase("idle");
+    clockOrigin.current = null;
+    ownsCallRef.current = false;
+    clearCallSnapshot();
     setClock(0);
     setCallStartedAt("");
     setEmo(0);
@@ -1282,7 +1551,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     respRef.current = demo;
     setPrepChecks(Array(PREP_LEN).fill(false));
     setVerified(false);
-    setAuthMethod("birth"); // 본인인증 기본 8칸(생년월일 8자리) — 박정운 피드백
+    // 초기값(birth)과 같게 되돌린다 — 예전엔 "phone"으로 떨어져 리셋 후에는
+    // 안내는 "생년월일 8자리"인데 칸은 4개가 되는 어긋남이 났다.
+    setAuthMethod("birth");
     setAuthInput("");
     setAuthErr(false);
     setAuthErrMsg("");
@@ -1416,15 +1687,22 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             // Keep an explicit ended screen until the customer starts another
             // call or resets. There is no arbitrary auto-dismiss timer.
             transitionPhase("wrap");
+            clockOrigin.current = null;
+            ownsCallRef.current = false;
+            clearCallSnapshot();
             setClock(0);
             setMobileIntakePending(false);
             setMobileIntakeComplete(false);
             setMobileAgentConnected(false);
-            demoBus.emit("call.ended", {
+            selfEndRef.current = true;
+            window.setTimeout(() => {
+              selfEndRef.current = false;
+            }, 0);
+            sharedDemoBus.emit("call.ended", {
               callId: LIVE_CALL_ID,
               ...(generation ? { generation } : {}),
               endReason: event.endReason,
-              endedBy: event.endedBy,
+              endedBy: event.endedBy ?? (isCustomerSurface ? "customer" : "agent"),
             });
             return;
           }
@@ -1432,33 +1710,56 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           const endedBeforeAgent = ["connecting", "recording", "confirm", "prep"].includes(
             currentPhase
           );
-          const hasTranscript = transcript.current.some(
+          const finals = transcript.current.filter(
             (chunk) => chunk.isFinal && chunk.text.trim().length > 0
           );
+          const hasTranscript = finals.length > 0;
+          // 후처리 진입 게이트 — "상담사와 실제로 말이 오간 콜"에만 후처리를 연다.
+          //   진입 = 상담사 연결됨(active) + 상담사·고객 양쪽 발화 최소 1턴 + 종료 이벤트
+          // ARS 접수만 하고 끊은 콜은 녹취가 있어도 '상담'이 아니다 → 후처리를 열지 않는다.
+          // 화자 라벨이 없는 라이브 STT는 라벨 대신 발화 존재로 판단한다 — 라벨을 못 받는다는
+          // 이유로 정상 상담의 후처리가 막히면 그게 더 큰 사고다.
+          const labeled = finals.filter((c) => c.speaker);
+          const hadConversation = labeled.length
+            ? labeled.some((c) => c.speaker === "agent") &&
+              labeled.some((c) => c.speaker === "customer")
+            : hasTranscript;
+          const agentConnected = currentPhase === "active";
           const customerEnded =
             event.endedBy === "customer" ||
             event.endReason === "customer_hangup" ||
             event.endReason === "customer_disconnect" ||
             (!event.endedBy && !event.endReason && !endRequested.current);
-          if (endedBeforeAgent && !hasTranscript) {
+          // 미상담 종료 — 상담사와 말이 오가기 전에 끊긴 콜. 후처리를 열지 않고 내역에만 남긴다.
+          // (전에는 ARS 녹취만 있어도 후처리가 열려 "종료 안 했는데 넘어왔다"는 신고가 나왔다)
+          if (!agentConnected || !hadConversation) {
             // A LAN counselor event must close the admin record explicitly;
             // counselor demo.reset is intentionally not relay-authorized.
-            demoBus.emit("call.ended", {
+            selfEndRef.current = true;
+            window.setTimeout(() => {
+              selfEndRef.current = false;
+            }, 0);
+            sharedDemoBus.emit("call.ended", {
               callId: LIVE_CALL_ID,
               ...(generation ? { generation } : {}),
               endReason: event.endReason ?? "ended_before_transcript",
-              endedBy: event.endedBy,
+              endedBy: event.endedBy ?? (isCustomerSurface ? "customer" : "agent"),
             });
+            // 대기(idle) 같은 비통화 상태에서 들어온 종료 이벤트는 콜이 아니므로 남기지 않는다
+            if (endedBeforeAgent || agentConnected) {
+              addCallLog({
+                type: wrapRef.current.type,
+                status: "미상담 종료",
+                talk: fmt(clockRef.current),
+                result: customerEnded ? "고객 종료 · 상담 없음" : "상담 전 종료",
+              });
+            }
             realCallActiveRef.current = false;
             reset();
             return;
           }
-          if (currentPhase === "active" || (endedBeforeAgent && hasTranscript)) {
+          if (agentConnected) {
             clearAll();
-            if (endedBeforeAgent) {
-              setWrapResult(customerEnded ? "상담 중단 · 고객 종료" : "추가 확인 필요");
-              setFollowups([]);
-            }
             realCallActiveRef.current = false;
             transitionPhase("summarizing");
             setWrapSheetOpen(true);
@@ -1478,15 +1779,19 @@ export function useCallFlow(config: CallFlowConfig = {}) {
                 callId: LIVE_CALL_ID,
                 stage: "wrap",
                 status: "done",
-                detail: "고객·상담원 전체 대화 후처리 초안",
+                detail: "고객·상담원 전체 대화 후처리 결과",
               });
-              demoBus.emit("call.ended", {
+              selfEndRef.current = true;
+            window.setTimeout(() => {
+              selfEndRef.current = false;
+            }, 0);
+            sharedDemoBus.emit("call.ended", {
                 callId: LIVE_CALL_ID,
                 wrapType: wrapRef.current.type,
                 wrapResult: wrapRef.current.result,
                 ...(generation ? { generation } : {}),
                 endReason: event.endReason,
-                endedBy: event.endedBy,
+                endedBy: event.endedBy ?? (isCustomerSurface ? "customer" : "agent"),
               });
               if (transferRef.current.reserved) {
                 demoBus.emit("transfer.completed", {
@@ -1564,8 +1869,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
 
   const pressCustomerDigit = useCallback(
     (digit: string) => {
-      // 로컬 데모(서버 없음)에선 키패드 입력을 조용히 무시 — 오류 배너 띄우지 않는다.
-      if (!customerLiveMode) return true;
+      // 로컬 데모(서버 없음): 서버로 보낼 채널이 없으니 입력을 화면에만 반영한다. 예전엔 그냥
+      // return true 했는데, 그러면 눌러도 입력창에 아무것도 안 떠서 '안 눌리는' 것처럼 보였다.
+      // (실서버 모드에선 서버 onDigit 이벤트가 arsDigits를 채우므로 여기서 건드리지 않는다.)
+      if (!customerLiveMode) {
+        setArsDigits((value) => (value + digit).slice(-24));
+        return true;
+      }
       const sent = mobileArsRef.current?.pressDigit(digit) ?? false;
       if (!sent) {
         setMicErr("키패드 전송 채널이 준비되지 않았습니다. 연결 상태를 확인해 주세요.");
@@ -1748,16 +2058,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setSilenceLeft(0);
       setVerified(false);
       setAuthInput("");
-      startClock();
       if (n === 2) {
+        startClock();
         setPrepChecks(Array(PREP_LEN).fill(true));
         setWrapSheetOpen(false);
         setPhase("prep");
       } else if (n === 3) {
+        startClock();
         setPrepChecks(Array(PREP_LEN).fill(true)); // 유의사항 확인을 거친 상태로 진입
         setWrapSheetOpen(false);
         setPhase("active");
       } else {
+        // 후처리는 '통화가 끝난 뒤'에만 존재하는 화면이다. 여기로 건너뛸 때 시계를 계속
+        // 돌리면 통화가 아직 붙어 있는 것처럼 보인다(01:02가 흘러감) — 실제로는 끝난 상태다.
+        // 그래서 시계를 멈추고 끝난 통화의 길이로 고정한다(clearAll이 이미 인터벌을 껐다).
+        setClock(WRAP_JUMP_CALL_SEC);
         setPrepChecks(Array(PREP_LEN).fill(true));
         setWrapSheetOpen(true);
         setPhase("wrap");
@@ -1774,12 +2089,25 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       else arsControlRef.current?.endCall();
       return;
     }
-    if (phaseRef.current !== "active") {
+    // 통화 중이면 종료 화면(wrap→고객 폰은 SMS)으로. 아직 연결 전(connecting/idle)이면 reset.
+    // active만 허용하면 통화 대부분을 'recording'에서 보내는 폰이 끊을 때 다이얼로 리셋돼
+    // 종료 화면이 안 뜬다 → 이미 말이 오가는 recording/confirm도 통화 중으로 본다(합본 화면 포함).
+    // prep(상담사 준비)은 고객 쪽에선 통화가 붙어 있는 상태라 고객 surface에서만 통화 중.
+    const p = phaseRef.current;
+    const inCallNow =
+      p === "active" ||
+      p === "recording" ||
+      p === "confirm" ||
+      (isCustomerSurface && p === "prep");
+    if (!inCallNow) {
       reset();
       return;
     }
     finishCallAfterDrain({ finalSeq: 0, drained: true }, false);
   }, [finishCallAfterDrain, isCustomerSurface, reset]);
+
+  endCallRef.current = endCall;
+  resetRef.current = reset;
 
   const setSim = useCallback(() => {
     if (phaseRef.current === "idle") {
@@ -1805,6 +2133,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setLiveTranscriptLines([]);
       setMode("mic");
       transitionPhase("recording");
+      clockOrigin.current = Date.now();
       setClock(0);
       setEmo(0);
       setMicErr("");
@@ -1916,10 +2245,31 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setAuthMethodLabel(lbl);
     setAuthErr(false);
   }, [authInput, authMethod]);
+  /* 자릿수가 다 차면 스스로 대조한다.
+     화면에는 늘 "빈칸에 입력하면 **자동 대조**됩니다"라고 적혀 있었는데 실제로는 대조 버튼을
+     눌러야 했다 — 안내와 동작이 어긋나면 상담사는 안내를 믿지 않게 된다. 마지막 자리를
+     치는 순간이 곧 "다 말했다"는 신호이므로, 여기가 대조의 자연스러운 자리다.
+     같은 값으로 두 번 조회하지 않도록 직전에 대조한 값을 기억한다(불일치 후 그대로 둬도
+     매 렌더마다 재시도하지 않는다). 지우고 다시 치면 값이 달라지므로 다시 대조된다. */
+  const lastTried = useRef("");
+  useEffect(() => {
+    if (verified) return;
+    const need = authMethod === "birth" ? 8 : 4;
+    const digits = authInput.replace(/\D/g, "");
+    if (digits.length < need) {
+      lastTried.current = ""; // 지우는 중 — 다시 채우면 대조할 수 있어야 한다
+      return;
+    }
+    const key = authMethod + ":" + digits;
+    if (lastTried.current === key) return;
+    lastTried.current = key;
+    void runVerify();
+  }, [authInput, authMethod, verified, runVerify]);
   const resetAuth = useCallback(() => {
     setVerified(false);
     setAuthInput("");
     setAuthErr(false);
+    lastTried.current = "";
     setPiiAcc(null);
     setPiiHist(null);
   }, []);
@@ -2152,7 +2502,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setSemHits(res.available ? res.documents : []);
         setSemLoading(false);
       } catch (err) {
-        if (!(err instanceof DOMException && err.name === "AbortError")) {
+        /* 연타로 취소된 것(AbortError)은 다음 요청이 이어받으므로 로딩을 유지한다.
+           다만 **타임아웃(TimeoutError)은 이어받을 요청이 없다** — 여기서 안 풀면
+           스피너가 영원히 돈다(백엔드 주소가 틀렸을 때 실제로 그랬다). */
+        const aborted = err instanceof DOMException && err.name === "AbortError";
+        if (!aborted) {
           setSemHits([]);
           setSemLoading(false);
         }
@@ -2379,7 +2733,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           { l: "근거 내용", w: 430 },
           { l: "관련도", w: 80 },
         ],
-        rows: card.knowledge_references.map((reference, index) => ({
+        // SheetRow로 못박는다 — 규정 시트와 같은 행 모델이라야 사고 방지 표식이 이 경로에서도 산다
+        rows: card.knowledge_references.map((reference, index): SheetRow => ({
           n: index + 1,
           cells: [
             { text: reference.title, w: 220 },
@@ -2408,6 +2763,25 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     text: i === 0 ? adaptiveOpening : step.text,
   }));
 
+  // 후처리 결과 본문 기본값 — 화면(wrapSummaryDefault)과 저장(saveWrap)이 같은 문장을 써야 하므로
+  // 한 곳에서 만든다. 상담사가 직접 고쳤다면 summaryText.current가 이걸 대신한다.
+  // 여기서 한 번 가린다 — 렌더가 아니라 **소스**에서. 후처리 초안은 상담사가 고쳐 쓰는
+  // contentEditable이라 그리는 쪽에서 가리면 별표가 저장 본문에 섞인다. 소스에서 가리면
+  // 화면·저장·복사가 같은(가려진) 문장을 쓴다 — 원문 PII가 DB로 새지 않는다.
+  const wrapSummaryText = maskPii(
+    [
+      // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
+      // v0 = 카드 요약 원문. 이미 "고객이…"로 시작하므로 접두사를 붙이면 "고객의 고객이" 중복이 된다
+      summaryVersion % 2 === 0
+        ? `${card.summary ?? summary?.headline ?? "상담 내용을 요약했습니다."}`
+        : `${SUMMARY_PROSE[incoming]}`,
+      `업무유형: ${card.business_type}.`,
+      `전달부서: ${card.department}.`,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
   return {
     // refs
     rootRef,
@@ -2418,6 +2792,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     stageWpx: stageW + "px",
     scaledH: natH ? natH * scale + "px" : "auto",
     // header
+    /** 원본 phase — 고객 폰의 AI 안내 스크립트가 단계별로 말할 줄을 고르는 데 쓴다.
+     *  화면용 라벨(phaseLabel)과 달리 상태 그 자체라 분기 조건에 안전하게 쓸 수 있다. */
+    phase: p,
     phaseLabel: LABELS[p] || p,
     // 데모 진행 단계 — 0 대기 · 1 접수 · 2 준비 · 3 통화 · 4 후처리
     stepIndex:
@@ -2479,6 +2856,54 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setMic,
     submitAudio,
     reset: requestReset,
+    /**
+     * 시연 현장 진단 스냅샷 (DiagPanel이 주기적으로 읽는다).
+     *
+     * F2(마이크 미해제)·F4(메모 미동작)는 로컬 데모로 재현되지 않는다 — 실제 백엔드 통화에서
+     * 무슨 값이 어떻게 흐르는지 봐야 잡힌다. 그래서 판단에 필요한 원시 상태를 그대로 노출한다.
+     * ref에서 읽으므로 호출 시점의 진짜 값이다(렌더 시점의 오래된 state가 아니라).
+     */
+    diagSnapshot: () => {
+      const finals = transcript.current.filter(
+        (c) => c.isFinal && c.text.trim().length > 0
+      );
+      const labeled = finals.filter((c) => c.speaker);
+      const hasAgent = labeled.some((c) => c.speaker === "agent");
+      const hasCustomer = labeled.some((c) => c.speaker === "customer");
+      const agentConnected = phaseRef.current === "active";
+      // 라벨이 없으면 발화 존재로 대체 판단 — finishCallAfterDrain의 게이트와 같은 규칙
+      const hadConversation = labeled.length ? hasAgent && hasCustomer : finals.length > 0;
+      return {
+        phase: phaseRef.current,
+        clock: fmt(clockRef.current),
+        liveCall: realCallActiveRef.current,
+        transcriptFinals: finals.length,
+        labeledChunks: labeled.length,
+        hasAgent,
+        hasCustomer,
+        memoCount: memoItems.length,
+        lastMemo: memoItems.length ? memoItems[memoItems.length - 1] : "",
+        // 후처리가 열릴지 미리 보여준다 — "왜 후처리가 안 떴나"를 현장에서 바로 답할 수 있게
+        wrapGate: { agentConnected, hadConversation, willOpen: agentConnected && hadConversation },
+        businessCode: card.routing?.task_code ?? null,
+        businessName: card.routing?.task_name ?? null,
+        department: card.department,
+        confidence: card.routing_confidence,
+      };
+    },
+    /** 후처리 저장 — 처리 내역에 한 줄 남기고 대기 화면으로. '저장' 버튼이 실제로 저장한다.
+     *  콜백 예약 후속 조치가 붙어 있으면 상태를 '콜백 예약'으로 잡는다(내역 타임라인이 색으로 구분). */
+    saveWrap: () => {
+      addCallLog({
+        type: wrapType,
+        result: wrapResult,
+        status: followups.some((f) => f.icon === "event") ? "콜백 예약" : "후처리 완료",
+        talk: fmt(clock),
+        summary: (summaryText.current || wrapSummaryText).trim(),
+        followups: followups.map((f) => ({ icon: f.icon, label: f.label })),
+      });
+      requestReset();
+    },
     jumpToStep,
     startCall: customerLiveMode ? requestCustomerStart : startCall,
     answerCall,
@@ -2493,6 +2918,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     phInCall: inCall || ended,
     phEnded: ended,
     clockStr: fmt(clock),
+    /** 고객이 먼저 끊었다 — 준비 카드는 남기되 자동 연결을 멈추고 콜백 대상으로 표시한다 */
+    customerEnded,
+    /** 지금 쓰이는 업무매뉴얼 원본 — 업로드본이 있으면 그것. 대기 화면 매뉴얼도 같은 걸 봐야
+     *  두 화면이 서로 다른 규정을 주장하지 않는다(표식이 붙는 조항도 여기서 나온다) */
+    manualSheet: manualData ?? SHEETS.manual,
     callStartedAt: callStartedAt || "시작 시각 미기록",
     showTimer: inCall && p !== "connecting",
     // 통화 누르자마자 00:01 — 실기기처럼 연결음 단계부터 타이머가 붙는다
@@ -2534,15 +2964,30 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     mobileIntakeComplete,
     mobileIntakePending,
     mobileAgentConnected,
+    // 통화 중이면 키패드는 항상 눌린다. 실기기에서 통화 중 키패드가 잠기는 일은 없다.
+    // - 실서버 모드: DTMF를 보낼 채널이 실제로 열려 있어야 한다(고객 폰 + 서버 연결).
+    // - 로컬 데모(백엔드 없이 시연): 통화 중이면 무조건 열린다. 고객이 #을 눌러 통화를 끝내는
+    //   흐름을 보여줘야 하고, 합본 화면(surface="full")의 폰도 같이 눌려야 한다.
+    //   이 값은 Phone.tsx에서만 쓰이고 Phone은 직원 전용 화면에선 렌더되지 않아 안전하다.
+    //   로컬 데모는 **전화를 건 순간부터**(connecting 포함) 켠다 — 실기기는 통화 화면이
+    //   뜨는 즉시 키패드를 누를 수 있고, 처음 몇 초만 흐릿하면 고장으로 보인다.
     customerKeypadEnabled:
-      isCustomerSurface &&
-      realCallActiveRef.current &&
-      mobileServerConnected &&
       !mobileIntakePending &&
-      (p === "recording" || p === "confirm" || p === "active"),
+      (customerLiveMode
+        ? isCustomerSurface &&
+          realCallActiveRef.current &&
+          mobileServerConnected &&
+          (p === "recording" || p === "confirm" || p === "active")
+        : p === "connecting" ||
+          p === "recording" ||
+          p === "confirm" ||
+          p === "active" ||
+          p === "prep"),
     customerPressDigit: pressCustomerDigit,
     // desktop waiting
     showWaiting: ["idle", "connecting", "recording", "confirm"].includes(p),
+    /** 카드를 만드는 중 — 접수 패널의 '카드 생성' 단계를 켠다(끝나면 카드가 날아온다) */
+    cardBuilding,
     waitingText:
       p === "idle"
         ? "상담 대기 중"
@@ -2586,7 +3031,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     summaryPending,
     // 본인인증 상태 — 인수인계(transfer) 콜은 전임 상담사가 이미 인증(재인증 생략),
     // 신규·긴급은 연결 직후 상담사가 인증한다(=아직 미완료). 유의사항 첫 항목과 일치.
-    prepVerified: incoming === "transfer",
+    // 통화 중 상담사가 대조를 마치면(verified) 카드도 따라 바뀐다 — 예전엔 인입 유형만
+    // 봐서, 왼쪽 패널이 "본인인증 완료"인데 카드는 "인증 미완료"로 남는 모순이 났다.
+    prepVerified: incoming === "transfer" || verified,
     prepHeadline: summaryPending
       ? "AI가 실제 고객 발화를 요약하고 있습니다…"
       : card.summary || summary?.headline || "상담카드 생성 중",
@@ -2615,10 +3062,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       card.routing ? CLASSIFICATION_TO_SGE[card.routing.classification] : undefined
     ),
     prepBusinessType: card.business_type || "업무 유형 분석 중",
-    // 3층 라우팅 체인 표시용 — 업무코드(3층)와 핵심 니즈 태그. 실제 배정(card.routing)이
-    // 있으면 그걸 쓰고, 없으면(데모/분류 실패) 콜 유형 픽스처로 폴백.
-    prepBusinessCode: card.routing?.task_code || PREP_BUSINESS_CODE[incoming],
-    prepBusinessCodeLabel: card.routing?.task_name || PREP_BUSINESS_CODE_LABEL[incoming],
+    // 3층 업무코드 — **분류 결과(card.routing)에서 그대로 읽는다.**
+    // 예전엔 콜 유형별 상수(PREP_BUSINESS_CODE)를 찍어서, 백엔드가 분류에 실패해(routing=null)
+    // 아무것도 못 줘도 화면엔 늘 코드가 떠 있었다. "업무코드가 계속 G002"의 정체가 이거였다 —
+    // 폴백이 아니라 분류 결과와 무관한 값이었고, 그래서 분류 실패가 UI에서 보이지 않았다.
+    // 이제 실패는 실패로 보인다(null → '미분류'). 조용한 기본값으로 덮지 않는다.
+    prepBusinessCode: card.routing?.task_code ?? null,
+    prepBusinessCodeLabel: card.routing?.task_name ?? null,
     prepNeedTags: PREP_NEED_TAGS[incoming],
     // 라벨·색은 당근식 온도 밴드(36.5 기준)에서 나온다 — 온도·색·라벨·멘트가 한 소스로 일관.
     prepEmotionLabel:
@@ -2665,10 +3115,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     prepEmotionScore: temperature.score ?? null,
     transcriptQuote: groundedTranscript,
     // AI가 발화에서 분해한 요구사항 — 이관 판단이 가능한 요약 본문
+    // 라이브 콜에서 뽑아낸 게 없으면 **빈 배열** — 데모 픽스처로 메우지도, 플레이스홀더
+    // 문구로 자리를 채우지도 않는다(0724 피드백 F7). 소비처가 map이라 빈 배열이면
+    // 불릿 영역이 그대로 비고, 없는 분석을 있는 것처럼 보이게 하지 않는다.
     summaryPoints: liveActionItems.length
       ? liveActionItems
       : EXPLICIT_LIVE_CALL_ID
-      ? ["고객 문의 내용을 다시 확인해 주세요."]
+      ? []
       : actualSummaryPoints,
     prepSummaryBullets,
     knowledgeQuery: card.business_type,
@@ -2679,17 +3132,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     customerType: CUSTOMER.type,
     customerPhone: CUSTOMER.phoneMasked,
     inquiryLabel,
-    wrapSummaryDefault: [
-      // '다시 생성'을 누르면 다른 문형으로 재작성된다 (데모: 템플릿 순환)
-      // v0 = 카드 요약 원문. 이미 "고객이…"로 시작하므로 접두사를 붙이면 "고객의 고객이" 중복이 된다
-      summaryVersion % 2 === 0
-        ? `${card.summary ?? summary?.headline ?? "상담 내용을 요약했습니다."}`
-        : `${SUMMARY_PROSE[incoming]}`,
-      `업무유형: ${card.business_type}.`,
-      `전달부서: ${card.department}.`,
-    ]
-      .filter(Boolean)
-      .join(" "),
+    wrapSummaryDefault: wrapSummaryText,
     summaryVersion,
     regenerating,
     regenerateSummary: () => {
@@ -2705,6 +3148,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           .filter(Boolean)
           .join(" · ") || card.summary || "고객 음성에서 확인된 상담 내용을 검토하고 있습니다."
       : SUMMARY_PROSE[incoming],
+    /** 지금 통화 연결이 가능한가 — 준비 카드의 자동 연결 카운트다운이 이 값으로 게이트된다.
+     *  (연결 불가 상태에서 카운트다운이 0이 되면 answerCall이 조용히 무시돼 사고가 된다) */
+    canConnect,
     connectBg: canConnect ? "var(--blue-700)" : "var(--gray-200)",
     connectFg: canConnect ? "#fff" : "var(--gray-600)",
     connectCursor: canConnect ? "pointer" : "not-allowed",
@@ -2746,6 +3192,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     canApplyDtmfToAuth: arsDigits.replace(/\D/g, "").length > 0,
     // 자릿수 = 입력 상자 개수 — 마스킹된 전체 번호는 보여주지 않는다(최소 표시 원칙, 필요한 칸만)
     authMaxLen: authMethod === "birth" ? 8 : 4,
+    /* 입력 안내 — **authMethod에서 파생한다.** 화면에 문구를 하드코딩해 두면
+       인증 수단이 바뀌었을 때 칸 수와 설명이 어긋난다(실제로 났던 버그). */
+    authPrompt:
+      authMethod === "birth"
+        ? { what: "생년월일 8자리", hint: "(YYYYMMDD)" }
+        : authMethod === "phone"
+        ? { what: "연락처 뒤 4자리", hint: "" }
+        : { what: "계좌 뒤 4자리", hint: "" },
     // 지금 물어야 할 값 — 안내 문구가 대조 방식을 따라간다
     authAskLabel:
       authMethod === "birth" ? "생년월일 8자리 (YYYYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
@@ -2833,8 +3287,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     clearRegSearch: () => setRegSearch(""),
     // 알약 클릭 = 그 용어로 바로 검색 (같은 걸 다시 누르면 해제)
     applyRegSearch: (q: string) => setRegSearch((cur) => (cur === q ? "" : q)),
-    // 실시간 추천 검색어 — 통화에서 실제 나온 용어(hot)를 앞으로 끌어올린다.
-    // liveTranscriptLines·liveCaption 이 state라 발화가 쌓일수록 순서·점등이 갱신된다.
+    /** 추천 검색어의 근거 — 화면이 라벨을 정직하게 붙일 수 있게 출처를 밝힌다.
+     *  "통화 중 언급"이라고만 적었더니, 실제로는 **AI 접수 단계에서 고객이 말한** 용어인데
+     *  상담원과 통화하기 전부터 칩이 떠 있어 오해를 샀다. 기준은 아래 regSuggests 참조. */
+    regSuggestSource: (backendRegSuggests && backendRegSuggests.length ? "backend" : "spoken") as
+      | "backend"
+      | "spoken",
+    /**
+     * 추천 검색어 기준 — 두 단계로만 정한다. 추측으로 채우지 않는다.
+     *  1) 백엔드 RAG가 고른 용어가 있으면 그것을 그대로 쓴다(무엇이 관련 규정인지는 백엔드 몫).
+     *  2) 없으면(백엔드 off) **고객이 실제로 말한 문장에 등장한 용어만** 처음 나온 순서대로.
+     *     여기서 '말한 문장'은 AI 접수 발화 + 상담원 통화 발화를 모두 포함한다 — 접수에서 이미
+     *     말한 용어를 통화에 들어와서 지우면 상담사가 근거를 잃는다.
+     *  3) 둘 다 비면 줄 자체를 그리지 않는다(빈 칩이나 기본값을 만들지 않는다).
+     */
     regSuggests: (() => {
       // 1순위: 백엔드 RAG가 고른 관련 규정(연결 시). 어떤 용어인지는 백엔드가 결정한다.
       if (backendRegSuggests && backendRegSuggests.length) return backendRegSuggests;
@@ -2920,16 +3386,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       remove: () => removeFollowup(i),
     })),
     noFollowups: followups.length === 0,
-    // 이미 추가된 추천은 숨긴다 — x로 빼면 다시 나타난다
+    // 되살릴 수 있는 후보 = (기본 조치 ∪ 추천 조치) − 지금 붙어 있는 것.
+    // 기본 조치까지 후보에 넣는 게 핵심이다: 추천만 후보로 두면 x로 지운 기본 조치는
+    // 영영 되살릴 길이 없어 실수 한 번이 복구 불가가 된다. 라벨로 중복을 걸러 기본 → 추천
+    // 순서를 유지하므로, 지웠다 되살려도 칩이 튀지 않고 늘 같은 자리에 나타난다.
     recoFollowups: EXPLICIT_LIVE_CALL_ID
       ? []
-      : WRAP_DEFAULTS[incoming].recommended.filter(
-          (f) => !followups.some((x) => x.label === f.label)
-        ).map((f) => ({
-          icon: f.icon,
-          label: f.label,
-          add: () => addFollowup(f),
-        })),
+      : (() => {
+          const preset = WRAP_DEFAULTS[incoming];
+          const pool: Followup[] = [];
+          preset.followups.concat(preset.recommended).forEach((f) => {
+            if (!pool.some((x) => x.label === f.label)) pool.push(f);
+          });
+          return pool
+            .filter((f) => !followups.some((x) => x.label === f.label))
+            .map((f) => ({
+              icon: f.icon,
+              label: f.label,
+              add: () => addFollowup(f),
+            }));
+        })(),
     onSummary: (e: React.FormEvent<HTMLDivElement>) => {
       summaryText.current = (e.target as HTMLElement).innerText;
     },

@@ -7,7 +7,7 @@
 export const AGENT = {
   name: "김키움",
   role: "상담사",
-  dept: "대출·금융상담팀",
+  dept: "여신·대출팀",
   tenure: "4년차",
   level: "시니어" as "시니어" | "주니어",
   id: "K7-1042",
@@ -20,8 +20,10 @@ export const CUSTOMER = {
   masked: "김*기",
   phoneMasked: "010-****-4821",
   type: "개인 고객",
-  /** 본인확인 대조 정답 — 불일치 경로를 데모하기 위한 기준값 (원문은 화면에 표시하지 않는다) */
-  authAnswers: { phone: "4821", birth: "19880214", account: "4821" },
+  /** 본인확인 대조 정답 — 불일치 경로를 데모하기 위한 기준값 (원문은 화면에 표시하지 않는다).
+   *  birth는 시연 대본에서 고객이 실제로 말하는 값과 반드시 같아야 한다
+   *  (useCallFlow.ts ACTIVE_DIALOGUE). 어긋나면 시연 중 대조가 '불일치'로 떨어진다. */
+  authAnswers: { phone: "4821", birth: "19990303", account: "4821" },
 } as const;
 
 /** 데모 인입 콜 유형 — 라우팅 기준 후보 문서(vault 07 Outputs 2026-07-18) 참조.
@@ -46,7 +48,7 @@ export const URGENT_RESPONSE = {
     department: "대출 및 금융상담",
     routing_reason: "본인 미신청 대출 실행 정황 — 긴급 확인 대상",
     incident_risk: "high",
-    risk_reason: "명의도용·대출사기 의심 · 사고대응팀 공조 필요",
+    risk_reason: "명의도용·대출사기 의심 · 사고·신고팀 공조 필요",
     routing_confidence: 0.91,
     // 데모 더미값 — 감정 모델 연동 시 실값으로 대체
     emotion: {
@@ -145,16 +147,16 @@ export const TRANSFER_TARGETS = [
 /* 이관은 특정 개인이 아니라 부서로 — 특정 사람에게 넘기면 책임 소재가 흐려진다는 실무 지적 반영.
    부서 대기열이 책임 주체가 되고, 그 안에서 수신 가능한 상담사에게 배정된다. */
 export const TRANSFER_DEPTS = [
-  { name: "사고대응팀", desc: "명의도용·보이스피싱·이상거래", state: "대기 2건" },
-  { name: "여신심사팀", desc: "대출 심사·재약정·한도 변경", state: "대기 1건" },
-  { name: "전자금융팀", desc: "OTP·공동인증서·이체 오류", state: "대기 0건" },
+  { name: "사고·신고", desc: "명의도용·보이스피싱·이상거래", state: "대기 2건" },
+  { name: "여신·대출", desc: "대출 심사·재약정·한도 변경", state: "대기 1건" },
+  { name: "전자금융·디지털", desc: "OTP·공동인증서·이체 오류", state: "대기 0건" },
 ] as const;
 
 /* AI가 콜 유형으로 추천하는 이관 부서 — 기본 이관의 목적지 */
 export const SUGGESTED_DEPT: Record<IncomingKind, string> = {
-  normal: "여신심사팀",
-  urgent: "사고대응팀",
-  transfer: "여신심사팀",
+  normal: "여신·대출",
+  urgent: "사고·신고",
+  transfer: "여신·대출",
 };
 
 /* 규정 검색 추천어 — 통화 중 검색창 아래 알약. 콜 유형별 후보를 두고,
@@ -190,21 +192,6 @@ export const REG_SUGGEST: Record<IncomingKind, RegSuggest[]> = {
   ],
 };
 
-/* 3층 업무코드 — backend/app/routing/taxonomy.py의 BUSINESS_CODES와 같은 축.
-   1층 SGE(deriveSge) → 2층 부서(card.department) → 3층 업무코드(여기). 라우팅 체인 표시용. */
-export const PREP_BUSINESS_CODE: Record<IncomingKind, string> = {
-  normal: "G002", // 대출 — 주담대 만기 연장
-  urgent: "G001", // 사고·신고 — 명의도용 지급정지
-  transfer: "G002", // 대출 — 이관 인계
-};
-
-/* 업무코드가 무슨 업무인지 — 코드만 보면 모른다. 라우팅 단계에 함께 띄운다. */
-export const PREP_BUSINESS_CODE_LABEL: Record<IncomingKind, string> = {
-  normal: "대출",
-  urgent: "사고·신고",
-  transfer: "대출",
-};
-
 /* 핵심 니즈 태그 — 고객이 무엇을 원하는지 한눈에. 준비 카드 감정온도 옆 항목. */
 export const PREP_NEED_TAGS: Record<IncomingKind, string[]> = {
   normal: ["만기 연장", "필요 서류", "비대면 가능"],
@@ -217,7 +204,7 @@ export const PREP_NEED_TAGS: Record<IncomingKind, string[]> = {
  *  대기 건수는 TRANSFER_DEPTS의 state(대기 2·1·0건)와 같은 사건을 말한다. */
 export const ADMIN_QUEUE = [
   {
-    dept: "사고대응팀",
+    dept: "사고·신고",
     desc: "명의도용·보이스피싱·이상거래",
     available: 1,
     busy: 2,
@@ -227,14 +214,14 @@ export const ADMIN_QUEUE = [
     ],
   },
   {
-    dept: "여신심사팀",
+    dept: "여신·대출",
     desc: "대출 심사·재약정·한도 변경",
     available: 2,
     busy: 1,
     waiting: [{ masked: "김*진", summary: "주택담보대출 금리 재약정 상담", baseSec: 65 }],
   },
   {
-    dept: "전자금융팀",
+    dept: "전자금융·디지털",
     desc: "OTP·공동인증서·이체 오류",
     available: 3,
     busy: 0,
@@ -244,12 +231,12 @@ export const ADMIN_QUEUE = [
 
 /** '통화 추가' 데모 — 관리자 대기열에 랜덤으로 들어올 더미 인입 풀 (긴급 없음, 일반 카드만) */
 export const ADMIN_QUEUE_POOL = [
-  { dept: "여신심사팀", masked: "정*아", summary: "신용대출 한도 증액 가능 여부 문의" },
-  { dept: "여신심사팀", masked: "이*준", summary: "전세자금대출 서류 재제출 절차 문의" },
-  { dept: "사고대응팀", masked: "한*솔", summary: "해외 결제 승인 취소 요청" },
-  { dept: "사고대응팀", masked: "오*택", summary: "스미싱 문자 클릭 후 계좌 점검 요청" },
-  { dept: "전자금융팀", masked: "유*나", summary: "OTP 재발급 및 이체한도 문의" },
-  { dept: "전자금융팀", masked: "강*민", summary: "공동인증서 갱신 오류 해결 요청" },
+  { dept: "여신·대출", masked: "정*아", summary: "신용대출 한도 증액 가능 여부 문의" },
+  { dept: "여신·대출", masked: "이*준", summary: "전세자금대출 서류 재제출 절차 문의" },
+  { dept: "사고·신고", masked: "한*솔", summary: "해외 결제 승인 취소 요청" },
+  { dept: "사고·신고", masked: "오*택", summary: "스미싱 문자 클릭 후 계좌 점검 요청" },
+  { dept: "전자금융·디지털", masked: "유*나", summary: "OTP 재발급 및 이체한도 문의" },
+  { dept: "전자금융·디지털", masked: "강*민", summary: "공동인증서 갱신 오류 해결 요청" },
 ] as const;
 
 export interface ScriptStep {
@@ -269,8 +256,8 @@ export const SCRIPTS: Record<IncomingKind, ScriptStep[]> = {
   urgent: [
     { title: "1. 오프닝 · 공감", text: "“네 고객님, 많이 놀라셨죠. 지금 바로 확인해 드리겠습니다.”" },
     { title: "2. 사실 확인", text: "“받으신 문자의 대출 실행 시각과 금액을 확인해볼게요. 최근 본인 명의로 신청하신 대출이 있으신가요?”" },
-    { title: "3. 긴급 조치 · 지급정지", text: "“본인이 신청하지 않은 것으로 확인되면 즉시 지급정지와 명의도용 사고 접수를 진행합니다. 사고대응팀과 바로 연결해 드릴게요.”" },
-    { title: "4. 마무리 · 후속 안내", text: "“접수 번호를 문자로 보내드리고, 사고대응팀에서 30분 내 콜백 드리겠습니다. 통화 중에는 다른 금융기관 앱을 열지 말아 주세요.”" },
+    { title: "3. 긴급 조치 · 지급정지", text: "“본인이 신청하지 않은 것으로 확인되면 즉시 지급정지와 명의도용 사고 접수를 진행합니다. 사고·신고팀과 바로 연결해 드릴게요.”" },
+    { title: "4. 마무리 · 후속 안내", text: "“접수 번호를 문자로 보내드리고, 사고·신고팀에서 30분 내 콜백 드리겠습니다. 통화 중에는 다른 금융기관 앱을 열지 말아 주세요.”" },
   ],
   transfer: [
     { title: "1. 오프닝 · 이어받기", text: "“네 고객님, 앞서 상담 내용은 전달받았습니다. 중도상환수수료 조건부터 이어서 안내드릴게요.”" },
@@ -286,10 +273,13 @@ export const REG_RECOS: Record<IncomingKind, { title: string; body: string; file
   normal: [
     { title: "주택담보대출 재약정 절차", body: "만기 연장은 재약정 심사 대상 — 소득 증빙·담보 재평가 기준을 확인한다.", file: "여신_업무매뉴얼 · 31행", row: 0 },
     { title: "만기 연장 필요 서류", body: "소득금액증명원·등기부등본·인감증명서. 비대면 접수 가능 조건 확인.", file: "여신_서류기준 · 8행", row: 3 },
+    // 세 번째 추천 — 실제 RAG는 top_k=3이라 한 화면에 셋이 뜨는 게 정상 분량이다.
+    // 둘만 두면 시연에서 "AI가 겨우 두 개 찾았나"로 보이고, 스크롤 여백도 남는다.
+    { title: "비대면 재약정 신청 요건", body: "전자약정은 본인확인·공동인증서 필요. 담보물 변동 없을 때만 비대면 진행.", file: "여신_비대면업무기준 · 22행", row: 5 },
   ],
   urgent: [
     { title: "명의도용 대출 사고 접수", body: "본인 미신청 확인 시 즉시 지급정지 → 사고 접수 → 수사기관 신고 안내.", file: "금융사고_대응지침 · 12행", row: 2 },
-    { title: "전자금융 이상거래(FDS) 대응", body: "거래 시각·기기·IP 변경 이력 확인. 의심 시 사고대응팀 연계.", file: "이상거래_대응지침 · 44행", row: 4 },
+    { title: "전자금융 이상거래(FDS) 대응", body: "거래 시각·기기·IP 변경 이력 확인. 의심 시 사고·신고팀 연계.", file: "이상거래_대응지침 · 44행", row: 4 },
   ],
   transfer: [
     { title: "중도상환수수료 면제 조건", body: "약정서 특약 기준 — 경과 기간·상환 비율별 면제 조건을 확인한다.", file: "여신_수수료기준 · 17행", row: 1 },
@@ -330,7 +320,7 @@ export const SUMMARY_PROSE: Record<IncomingKind, string> = {
   normal:
     "고객은 보유 중인 주택담보대출의 만기가 다가와 연장이 가능한지 확인하고 싶어 합니다. 연장에 필요한 서류와 비대면 접수 가능 여부까지 함께 묻고 있어, 재약정 절차 안내가 필요한 상담입니다.",
   urgent:
-    "고객은 본인이 신청한 적 없는 대출 실행 문자를 받고 크게 불안해하며 즉시 확인을 요청하고 있습니다. 명의도용 가능성이 있어 지급정지 등 긴급 조치와 사고대응팀 공조가 필요한 상담입니다.",
+    "고객은 본인이 신청한 적 없는 대출 실행 문자를 받고 크게 불안해하며 즉시 확인을 요청하고 있습니다. 명의도용 가능성이 있어 지급정지 등 긴급 조치와 사고·신고팀 공조가 필요한 상담입니다.",
   transfer:
     "전세자금대출 중도상환 관련 상담이 앞선 상담사에게서 이관되었습니다. 수수료 면제 조건 확인까지 진행된 상태로, 남은 절차 안내부터 이어가면 되는 상담입니다.",
 };
@@ -339,12 +329,21 @@ export interface SheetColumn {
   l: string;
   w: number;
 }
+/** 사고 방지 신호 — 백엔드 구조화의 prohibitions/requirements에 대응한다.
+ *  금지는 "하면 안 되는 것", 선행은 "먼저 해야 하는 것". */
+export interface SheetSignal {
+  kind: "금지" | "선행";
+  text: string;
+}
+
 export interface SheetData {
   title: string;
   file: string;
   sheet: string;
   cols: SheetColumn[];
   rows: string[][];
+  /** 조항 → 신호. 있는 시트에만 붙는다(과거 이력·계좌 시트에는 없다) */
+  signals?: Record<string, SheetSignal>;
 }
 
 export const SHEETS: Record<"history" | "accounts" | "manual", SheetData> = {
@@ -390,56 +389,68 @@ export const SHEETS: Record<"history" | "accounts" | "manual", SheetData> = {
     title: "전자금융거래 업무매뉴얼",
     file: "전자금융거래_업무매뉴얼_v24.xlsx",
     sheet: "착오송금 반환",
+    /* 조항별 사고 방지 신호 — 백엔드 구조화(structured.prohibitions/requirements)가
+       뽑아내는 값과 같은 것을 시연용으로 고정해 둔다.
+       표에 열로 넣지 않는 이유: 열을 하나 더 두면 정작 읽어야 할 안내 멘트가 좁아진다.
+       대신 내용 칸 앞에 표식만 세우고 자세한 문장은 올렸을 때 보여준다 —
+       "확정적 표현 사용 금지" 같은 건 통화 중 가장 비싼 실수라 놓치면 안 되지만,
+       상시 펼쳐 두면 정작 읽을 문장을 가린다. */
+    signals: {
+      "§12-1": { kind: "금지", text: "수취인 동의 없이 임의 반환 불가" },
+      "§12-2": { kind: "금지", text: "「무조건 반환」 등 확정적 표현 사용 금지" },
+      "§12-3": { kind: "선행", text: "반환 접수 전 본인확인 필수" },
+      "§13-1": { kind: "선행", text: "이상거래 징후 시 사고·신고팀 연계 후 처리" },
+      "§14-1": { kind: "금지", text: "원문은 화면에 표시하지 않는다" },
+      "§14-2": { kind: "금지", text: "재차 불일치면 열람 불가 · 지점 내방 안내" },
+      "§14-3": { kind: "금지", text: "본인 동의 확인 전 대리인에게 열람·안내 불가" },
+    },
+    /* 열 순서 — 안내 멘트가 맨 앞이다.
+       통화 중에 조항 번호로 찾는 일은 거의 없고, 조항은 내용이 아니라 **출처 표시**다.
+       상담사가 급할 때 필요한 건 '지금 뭐라고 말해야 하나' 한 줄이라 그걸 가장 넓게
+       왼쪽에 두고, 조항은 오른쪽 끝에 좁게 붙인다. */
     cols: [
-      { l: "조항", w: 64 },
-      { l: "항목", w: 130 },
-      { l: "내용", w: 300 },
-      { l: "안내 멘트", w: 300 },
+      { l: "안내 멘트", w: 286 },
+      { l: "항목", w: 104 },
+      { l: "내용", w: 232 },
+      { l: "조항", w: 58 },
     ],
     rows: [
       [
-        "§12-1",
+        "“수취인 동의 없이 임의로 돌려드릴 수는 없고, 반환지원 제도로 신청하실 수 있습니다.”",
         "반환지원 대상",
         "수취인 동의 없이 임의 반환 불가. 예금보험공사 반환지원 제도로 신청 접수.",
-        "“수취인 동의 없이 임의로 돌려드릴 수는 없고, 반환지원 제도로 신청하실 수 있습니다.”",
-      ],
+        "§12-1"],
       [
-        "§12-2",
+        "“반드시 돌려받는다고 말씀드리긴 어렵지만, 절차대로 최대한 도와드리겠습니다.”",
         "확정 표현 금지",
         "“무조건 반환” 등 확정적 표현 사용 금지.",
-        "“반드시 돌려받는다고 말씀드리긴 어렵지만, 절차대로 최대한 도와드리겠습니다.”",
-      ],
+        "§12-2"],
       [
-        "§12-3",
+        "“접수를 위해 본인확인을 먼저 도와드릴게요.”",
         "본인확인",
         "반환 접수 전 본인확인 필수(연락처·생년월일·계좌 대조).",
-        "“접수를 위해 본인확인을 먼저 도와드릴게요.”",
-      ],
-      ["§12-4", "정보 확인", "수취 계좌·거래 시각 등 상담 핵심정보를 확인.", "—"],
+        "§12-3"],
+      [ "—", "정보 확인", "수취 계좌·거래 시각 등 상담 핵심정보를 확인.","§12-4"],
       [
-        "§13-1",
+        "“안전을 위해 사고·신고팀으로 연결해 드리겠습니다.”",
         "FDS 연계",
-        "이상거래 징후 시 사고대응팀 연계 후 처리.",
-        "“안전을 위해 사고대응팀으로 연결해 드리겠습니다.”",
-      ],
+        "이상거래 징후 시 사고·신고팀 연계 후 처리.",
+        "§13-1"],
       [
-        "§14-1",
+        "“확인을 위해 연락처 뒤 4자리를 말씀해 주시겠어요?”",
         "본인확인 방법",
         "연락처·생년월일·계좌 뒷자리 중 고객 진술값을 원문과 대조. 원문은 화면에 표시하지 않는다.",
-        "“확인을 위해 연락처 뒤 4자리를 말씀해 주시겠어요?”",
-      ],
+        "§14-1"],
       [
-        "§14-2",
+        "“말씀해주신 정보가 일치하지 않아 다른 방법으로 한 번 더 확인하겠습니다.”",
         "본인확인 불일치",
         "불일치 시 다른 방식으로 1회 재시도. 재차 불일치면 열람 불가·지점 내방 안내.",
-        "“말씀해주신 정보가 일치하지 않아 다른 방법으로 한 번 더 확인하겠습니다.”",
-      ],
+        "§14-2"],
       [
-        "§14-3",
+        "“본인 동의 확인 전에는 상세 내용을 안내드리기 어렵습니다.”",
         "대리인 상담 시 본인확인",
         "위임장·본인 동의 확인 전에는 대리인에게 계좌·상담 정보를 열람·안내할 수 없다.",
-        "“본인 동의 확인 전에는 상세 내용을 안내드리기 어렵습니다.”",
-      ],
+        "§14-3"],
     ],
   },
 };
@@ -447,6 +458,8 @@ export const SHEETS: Record<"history" | "accounts" | "manual", SheetData> = {
 export interface SheetRow {
   n: number;
   cells: { text: string; w: number }[];
+  /** 이 행의 사고 방지 신호(있으면). 어느 화면이든 표식은 이것 하나만 보면 된다. */
+  signal?: SheetSignal;
 }
 export interface RenderedSheet {
   title: string;
@@ -454,6 +467,19 @@ export interface RenderedSheet {
   sheet: string;
   cols: SheetColumn[];
   rows: SheetRow[];
+}
+
+/** 열을 라벨로 찾는다. 열 순서는 시트마다·업로드본마다 달라 인덱스를 박으면 조용히 어긋난다. */
+export function sheetColIndex(cols: SheetColumn[], label: string): number {
+  return cols.findIndex((c) => c.l.replace(/\s+/g, "") === label);
+}
+
+/** 행의 조항으로 신호를 찾는다. 조항 열이 없는 시트(이력·계좌)는 신호도 없다. */
+export function rowSignal(d: SheetData, row: string[]): SheetSignal | undefined {
+  if (!d.signals) return undefined;
+  const ci = sheetColIndex(d.cols, "조항");
+  if (ci < 0) return undefined;
+  return d.signals[(row[ci] ?? "").trim()];
 }
 
 /** Expand a SheetData into row objects with per-cell widths for rendering. */
@@ -466,6 +492,8 @@ export function renderSheet(d: SheetData): RenderedSheet {
     rows: d.rows.map((r, ri) => ({
       n: ri + 1,
       cells: r.map((c, ci) => ({ text: c, w: d.cols[ci].w })),
+      // 신호는 렌더 모델에 실어 보낸다 — 여기서 떨어뜨리면 통화 중 화면엔 표식이 영영 안 뜬다.
+      signal: rowSignal(d, r),
     })),
   };
 }
@@ -486,7 +514,7 @@ export const WRAP_RESULT_OPTIONS = [
   "상담 완료 · 재약정 접수",
   "재상담 예약",
   "추가 확인 필요",
-  "타 부서 이관 · 사고대응팀",
+  "타 부서 이관 · 사고·신고팀",
 ];
 
 export interface Followup {
@@ -495,7 +523,7 @@ export interface Followup {
 }
 
 /** 콜 유형별 후처리 프리셋 — 상담 유형·결과·후속조치가 실제 통화 내용과 어긋나지 않게 한다.
- *  (구: 정적 기본값이 모든 콜에 착오송금/사고대응팀을 물려, 주담대 상담이 사고팀 이관으로
+ *  (구: 정적 기본값이 모든 콜에 착오송금/사고·신고팀을 물려, 주담대 상담이 사고팀 이관으로
  *   끝나는 자기모순을 만들었다) */
 export interface WrapPreset {
   type: string;
@@ -521,9 +549,9 @@ export const WRAP_DEFAULTS: Record<IncomingKind, WrapPreset> = {
   },
   urgent: {
     type: "전자금융 › 명의도용 의심",
-    result: "타 부서 이관 · 사고대응팀",
+    result: "타 부서 이관 · 사고·신고팀",
     followups: [
-      { icon: "confirmation_number", label: "사고대응팀 이관 티켓 생성" },
+      { icon: "confirmation_number", label: "사고·신고팀 이관 티켓 생성" },
       { icon: "block", label: "지급정지 요청 접수" },
     ],
     recommended: [

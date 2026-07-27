@@ -5,11 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/karina-logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>옹기 · 상담 콘솔 — 키움은행</title>
-    <!-- 웹폰트는 전부 src/styles/tokens.css의 @font-face로 동봉한다(2026-07-23).
-         여기 있던 Google Fonts·jsDelivr <link>는 제거했다 — 망분리 온프레미스 전제라
-         브라우저가 외부로 나가면 안 되고, 인터넷이 없으면 Material Symbols가 로드되지
-         않아 아이콘 151곳이 'mic' 같은 글자로 보였다.
-         IBM Plex Mono는 코드상 항상 'Geist Mono' 뒤의 폴백으로만 쓰여(실사용 0) 뺐다. -->
+    <!-- 폰트는 전부 self-host (src/styles/tokens.css @font-face). CDN/Google Fonts 미사용 → 온프레미스 오프라인 대응. -->
   </head>
   <body>
     <div id="root"></div>

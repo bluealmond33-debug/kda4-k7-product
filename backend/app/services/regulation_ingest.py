@@ -26,8 +26,6 @@ logger = logging.getLogger(__name__)
 CHUNKS_PATH = pathlib.Path(__file__).resolve().parent / "rag_data" / "regulation_chunks.jsonl"
 
 # 청킹 크기 — 김동희 기존 청크(평균 ~1.5KB)와 비슷하게 맞춘다.
-_CHUNK_CHARS = 1200
-_CHUNK_OVERLAP = 150
 
 
 class IngestError(RuntimeError):
@@ -89,46 +87,6 @@ def suggest_category(filename: str, sample_text: str = "") -> dict[str, Any]:
     }
 
 
-def _extract_pages(path: pathlib.Path) -> dict[int, str]:
-    try:
-        import pdfplumber
-    except ImportError as exc:  # requirements에 없으면 안내 문구로 실패
-        raise IngestError(
-            "PDF 처리 라이브러리(pdfplumber)가 설치돼 있지 않습니다. "
-            "pip install pdfplumber 후 다시 시도하세요."
-        ) from exc
-
-    pages: dict[int, str] = {}
-    try:
-        with pdfplumber.open(str(path)) as pdf:
-            for n, page in enumerate(pdf.pages, start=1):
-                pages[n] = (page.extract_text() or "").strip()
-    except Exception as exc:
-        raise IngestError(f"PDF를 열 수 없습니다: {exc}") from exc
-    return pages
-
-
-def _split(text: str) -> list[str]:
-    """문단 경계를 지키며 _CHUNK_CHARS 안팎으로 자른다(겹침 포함)."""
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    if len(text) <= _CHUNK_CHARS:
-        return [text] if text else []
-
-    parts: list[str] = []
-    start = 0
-    while start < len(text):
-        end = min(start + _CHUNK_CHARS, len(text))
-        if end < len(text):
-            cut = text.rfind("\n", start + _CHUNK_CHARS // 2, end)
-            if cut > start:
-                end = cut
-        piece = text[start:end].strip()
-        if piece:
-            parts.append(piece)
-        if end >= len(text):
-            break
-        start = max(end - _CHUNK_OVERLAP, start + 1)
-    return parts
 
 
 def normalize_filename(name: str) -> str:
@@ -154,16 +112,19 @@ def _doc_id(filename: str) -> str:
     return f"{slug or 'doc'}-{digest}" if slug else f"doc-{digest}"
 
 
-def ingest_pdf(settings: Settings, path: pathlib.Path) -> dict[str, Any]:
-    """PDF 한 건을 적재하고 프론트 `RegulationUploadResult` 계약으로 반환한다."""
-    filename = normalize_filename(path.name)
-    pages = _extract_pages(path)
-    body = "\n".join(t for t in pages.values() if t)
-    if not body.strip():
-        raise IngestError(
-            "텍스트를 추출하지 못했습니다. 스캔본 PDF로 보이며, OCR이 필요합니다."
-        )
+def ingest_document(settings: Settings, path: pathlib.Path) -> dict[str, Any]:
+    """규정 한 건을 적재하고 프론트 `RegulationUploadResult` 계약으로 반환한다.
 
+    **추출·청킹·구조화는 app.rag.ingest가 전담한다.** 예전엔 이 파일이 자체적으로
+    페이지를 뽑아 1200자로 기계 분할했는데, 그러면 오프라인 CLI로 넣을 때와 결과가 달라져
+    "admin으로 올리면 품질이 떨어지는" 상태가 됐다. 표는 줄글로 뭉개지고 섹션 제목도 없고
+    조항·안내멘트 구조화도 붙지 않았다. 경로를 하나로 합쳐 그 차이를 없앤다.
+
+    형식은 확장자로 갈린다 — PDF는 물론 xlsx·csv 업무매뉴얼도 같은 함수로 들어온다.
+    """
+    from app.rag.ingest import ingest_path  # pdfplumber/openpyxl — 요청 시에만 로드
+
+    filename = normalize_filename(path.name)
     doc_id = _doc_id(filename)
     is_revision = any(rag.document_id_of(c) == doc_id for c in rag._DOCS)
     if is_revision:
@@ -172,36 +133,58 @@ def ingest_pdf(settings: Settings, path: pathlib.Path) -> dict[str, Any]:
             "개정본 처리는 pgvector 전환 후 지원됩니다."
         )
 
-    suggestion = suggest_category(filename, body[:2000])
     title = pathlib.Path(filename).stem
+    try:
+        raw_chunks = ingest_path(path, {"doc_id": doc_id, "title": title, "categories": [], "filename": filename})
+    except ValueError as exc:  # 지원하지 않는 확장자
+        raise IngestError(str(exc)) from exc
+    except RuntimeError as exc:  # openpyxl 미설치 등 의존성 안내
+        raise IngestError(str(exc)) from exc
+    except ImportError as exc:
+        raise IngestError(
+            "PDF 처리 라이브러리(pdfplumber)가 설치돼 있지 않습니다. "
+            "pip install -r backend/requirements-rag.txt 후 다시 시도하세요."
+        ) from exc
+    except Exception as exc:
+        raise IngestError(f"파일을 열 수 없습니다: {exc}") from exc
+
+    if not raw_chunks:
+        # PDF는 스캔본(이미지)일 때, 표 파일은 인식 가능한 헤더가 없을 때 여기로 온다
+        if path.suffix.lower() == ".pdf":
+            raise IngestError("텍스트를 추출하지 못했습니다. 스캔본 PDF로 보이며, OCR이 필요합니다.")
+        raise IngestError(
+            "표에서 인식할 수 있는 열을 찾지 못했습니다. "
+            "머리글에 조항·항목·내용·안내 멘트 중 두 개 이상이 있어야 합니다."
+        )
+
+    body = "\n".join(c.get("raw", "") for c in raw_chunks)
+    suggestion = suggest_category(filename, body[:2000])
 
     chunks: list[dict[str, Any]] = []
-    for page_no, page_text in sorted(pages.items()):
-        for i, piece in enumerate(_split(page_text)):
-            chunk_id = f"{doc_id}-p{page_no}-{i}"
-            chunks.append({
-                # rag._DOCS 계약(검색·인덱스 매핑용)
-                "doc_id": chunk_id,
-                "category": suggestion["department"],
-                "subcategory": suggestion["business_code"],
-                "title": title,
-                "text": f"[{title} > p{page_no}]\n{piece}",
-                # 규정 API 메타(프론트 계약용)
-                "chunk_id": chunk_id,
-                "source_doc_id": doc_id,
-                "filename": filename,
-                "doc_type": "규정",
-                "categories": [suggestion["department"]],
-                "version": "v1",
-                "effective_date": None,
-                "status": "active",
-                "page": page_no,
-                "kind": "text",
-                "section": title,
-            })
-
-    if not chunks:
-        raise IngestError("추출된 본문이 비어 있어 적재할 청크가 없습니다.")
+    for c in raw_chunks:
+        chunks.append({
+            # rag._DOCS 계약(검색·인덱스 매핑용)
+            "doc_id": c["chunk_id"],
+            "category": suggestion["department"],
+            "subcategory": suggestion["business_code"],
+            "title": title,
+            "text": c["text"],
+            # 규정 API 메타(프론트 계약용)
+            "chunk_id": c["chunk_id"],
+            "source_doc_id": doc_id,
+            "filename": filename,
+            "doc_type": "규정",
+            "categories": [suggestion["department"]],
+            "version": c.get("version") or "v1",
+            "effective_date": c.get("effective_date"),
+            "status": c.get("status") or "active",
+            "page": c.get("page") or 1,
+            "kind": c.get("kind") or "text",
+            "section": c.get("section") or title,
+            "raw": c.get("raw") or c["text"],
+            # 조항/항목/내용/안내멘트 — 화면이 정리된 형태로 보여 주려면 여기 실려야 한다
+            "structured": c.get("structured"),
+        })
 
     _append_jsonl(chunks)
     rag.register_chunks(settings, chunks)
@@ -212,8 +195,8 @@ def ingest_pdf(settings: Settings, path: pathlib.Path) -> dict[str, Any]:
         "doc_id": doc_id,
         "is_scanned": False,
         "chunks_loaded": len(chunks),
-        "n_text": len(chunks),
-        "n_table": 0,
+        "n_text": sum(1 for c in chunks if c["kind"] != "table"),
+        "n_table": sum(1 for c in chunks if c["kind"] == "table"),
         "revision_of": None,
         "suggestion": suggestion,
     }
@@ -239,9 +222,14 @@ def _append_jsonl(chunks: list[dict[str, Any]]) -> None:
                     "kind": c["kind"],
                     "section": c["section"],
                     "text": c["text"],
-                    "raw": c["text"],
+                    "raw": c.get("raw") or c["text"],
+                    "structured": c.get("structured"),
                     "department": c["category"],
                     "business_code": c["subcategory"],
                 }, ensure_ascii=False) + "\n")
     except Exception:
         logger.warning("규정 청크 파일 append 실패(인메모리 적재는 유지)", exc_info=True)
+
+
+#: 예전 이름 — 라우터·테스트가 쓰던 호출부를 깨지 않는다(이제 PDF 전용이 아니다).
+ingest_pdf = ingest_document

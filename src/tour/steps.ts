@@ -92,7 +92,7 @@ export const TOUR: Record<ScreenKey, TourStep[]> = {
     },
     {
       target: "prep-checks",
-      placement: "top",
+      placement: "right",
       title: "유의사항 확인",
       body: "이번 콜 유형에 맞춘 응대 유의사항입니다 — 체크 조작 없이 한눈에 훑도록 설계했습니다.",
     },
@@ -143,7 +143,7 @@ export const TOUR: Record<ScreenKey, TourStep[]> = {
       placement: "top",
       pad: 4,
       title: "후처리 시트",
-      body: "종료와 동시에 자동으로 올라옵니다. 상담 정보와 초안은 녹취·메모로 미리 채워져 있고, 상담사는 필요한 것만 고칩니다 — 상담사의 유일한 산출물은 초안 검증입니다.",
+      body: "종료와 동시에 자동으로 올라옵니다. 상담 정보와 후처리 결과는 녹취·메모로 미리 채워져 있고, 상담사는 필요한 것만 고칩니다 — 상담사의 유일한 산출물은 그 결과를 검증하는 일입니다.",
     },
     {
       target: "wrap-save",

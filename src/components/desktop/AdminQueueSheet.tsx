@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
 import { ADMIN_QUEUE } from "../../data/demoContent";
 
-const FONT = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
-const MONO = "'Geist Mono','IBM Plex Mono',monospace";
+const FONT = "'Avenir Next','Pretendard',sans-serif";
+const MONO = "'Avenir Next','Pretendard',sans-serif";
 
 const fmt = (s: number) => {
   const m = Math.floor(s / 60);

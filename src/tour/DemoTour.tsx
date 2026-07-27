@@ -16,7 +16,7 @@ import { TOUR, TOUR_OFFSETS, TOUR_TOTAL, SCREEN_LABELS, type ScreenKey } from ".
  * 실제 제품에서 뺄 때: <DemoTour/>·<TourChooser/> 마운트와 src/tour 폴더만 지우면 끝. (README.md)
  */
 
-const FONT = "'Avenir Next','Geist Sans','Pretendard',sans-serif";
+const FONT = "'Avenir Next','Pretendard',sans-serif";
 const BUBBLE_W = 340;
 const GAP = 14; // 스팟라이트 ↔ 말풍선 간격
 
@@ -307,7 +307,7 @@ export default function DemoTour({
             <span onClick={onExit} style={css("font:600 11.5px " + FONT + ";color:var(--gray-500);cursor:pointer")} title="Esc로도 종료됩니다">
               투어 종료
             </span>
-            <div style={css("flex:1;text-align:center;font:600 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--gray-500)")}>
+            <div style={css("flex:1;text-align:center;font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-500)")}>
               {globalNo} / {TOUR_TOTAL}
             </div>
             {step.act ? (

@@ -3,6 +3,7 @@ import Spinner from "../Spinner";
 import { SGE_META } from "../../services";
 import { playTestCall } from "../../services/adminScenario";
 import { PIPELINE_NODES } from "../../data/adminContent";
+import AnimatedList from "../ui/AnimatedList";
 import type { AdminCallRecord } from "../../hooks/useAdminFeed";
 
 const fmtTime = (ts: number) => {
@@ -53,7 +54,7 @@ export function MiniPipeline({
     <div style={css("margin-top:8px;display:flex;align-items:center;gap:8px")}>
       {dots}
       {active && (
-        <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--blue-900)")}>
+        <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-900)")}>
           {active.label} 진행 중
         </span>
       )}
@@ -88,27 +89,29 @@ export default function RoutingFeed({
   const strips = feed.filter((r) => !heroIds.has(r.callId));
 
   return (
-    <div className="card" style={css("display:flex;flex-direction:column;min-height:0;padding:16px 0 8px")}>
+    /* height:100% — 그리드 행이 부서 보드 높이로 늘어나도 이 카드가 따라 늘어나
+       목록이 바닥까지 이어진다(짧게 서면 아래가 빈 채로 잘려 보인다) */
+    <div className="card" style={css("height:100%;display:flex;flex-direction:column;min-height:0;padding:16px 0 8px")}>
       {/* 헤더 — 범례는 카드가 스스로 말하므로 없앴다(중복). 전부 nowrap: 좁아도 안 꺾인다 */}
       <div style={css("display:flex;align-items:center;gap:10px;padding:0 18px 10px;white-space:nowrap")}>
         <span className="sechd" style={css("white-space:nowrap")}>실시간 라우팅 피드</span>
         <span style={css("flex:none;display:inline-flex;align-items:baseline;gap:4px;background:var(--gray-100);border-radius:9999px;padding:3px 11px;white-space:nowrap")}>
-          <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>오늘 누적</span>
+          <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>오늘 누적</span>
           <span className="bignum" style={css("font-size:14px;color:var(--gray-1000)")}>{totalCards}</span>
-          <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
+          <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>건</span>
         </span>
         <div style={css("flex:1")} />
         {pipelineLive.length > 0 && (
           <span style={css("flex:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap")}>
             <span className="onairdot" style={{ animation: "recBlink 1.4s infinite" }} />
-            <span style={css("font:600 11px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900)")}>분류 중 {pipelineLive.length}건</span>
+            <span style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900)")}>분류 중 {pipelineLive.length}건</span>
           </span>
         )}
       </div>
 
       {/* 설명 모드 — 이 패널의 백엔드 역할 한 줄 */}
       {explain && (
-        <div style={css("margin:0 16px 8px;font:400 11px/1.55 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:7px 11px;animation:dockDown .25s var(--ease-out)")}>
+        <div style={css("margin:0 16px 8px;font:400 11px/1.55 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800);background:var(--gray-100);border:1px solid var(--blue-500);border-radius:8px;padding:7px 11px;animation:dockDown .25s var(--ease-out)")}>
           분류 파이프라인의 출구 — 카드 1장이 PostgreSQL 상담카드 1건입니다. 카드가 쌓이는 속도가 곧 시스템 처리량입니다.
         </div>
       )}
@@ -118,7 +121,7 @@ export default function RoutingFeed({
           /* 빈 상태 — 세로 중앙 + 바로 시작할 수 있는 고스트 CTA (발표자가 어디서든 쇼를 연다) */
           <div style={css("flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:20px;color:var(--gray-700)")}>
             <span className="mi" style={css("font-size:32px;color:var(--gray-500)")}>quickreply</span>
-            <span style={css("font:400 12.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;text-align:center;line-height:1.65")}>
+            <span style={css("font:400 12.5px 'Avenir Next','Pretendard',sans-serif;text-align:center;line-height:1.65")}>
               아직 분류된 콜이 없습니다.
               <br />
               상담사 화면의 콜 또는 테스트 콜이 여기 카드로 쌓입니다.
@@ -132,8 +135,11 @@ export default function RoutingFeed({
         {/* 진행 중 콜 전부 — 카드마다 제 프로세스(미니 파이프라인)가 돈다 */}
         {heroes.length > 0 && (
           <div style={css("display:flex;flex-direction:column;gap:8px")}>
+            {/* 들림은 **한 장뿐일 때만**. 여러 콜이 동시에 도는 중이면 어느 것도 초점이 아니라
+                전부 같은 낮은 그림자로 둔다 — 맨 위만 들리면 그 한 장이 잘못된 것처럼 어둡게 보인다.
+                (ONAIR: 초점은 하나이거나 없다) */}
             {heroes.map((r) => (
-              <FrontCard key={r.callId} r={r} />
+              <FrontCard key={r.callId} r={r} lifted={heroes.length === 1} recent={pipelineLive.length === 0} />
             ))}
           </div>
         )}
@@ -141,15 +147,18 @@ export default function RoutingFeed({
         {/* 완료된 콜 — 관제실 처리 로그(타임라인): 시각 거터 + 헤어라인 위의 색 점 */}
         {strips.length > 0 && (
           <div style={css("margin-top:12px")}>
-            <div style={css("font:700 9.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;letter-spacing:.4px;color:var(--gray-700);padding:0 2px 7px")}>
+            <div style={css("font:700 9.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.4px;color:var(--gray-700);padding:0 2px 7px")}>
               처리 흐름 · {strips.length}건
             </div>
             <div style={css("position:relative")}>
               {/* 타임라인 축 — 점들이 이 선 위에 앉는다 */}
               <div style={css("position:absolute;left:57px;top:7px;bottom:7px;width:1px;background:var(--gray-300)")} />
-              {strips.map((r) => (
-                <TimelineRow key={r.callId} r={r} onOpen={() => onOpenCard(r)} />
-              ))}
+              {/* 새 처리 건이 위에서 내려앉는다 — 관제는 목록이 '변했다'는 걸 숫자보다 먼저 봐야 한다 */}
+              <AnimatedList>
+                {strips.map((r) => (
+                  <TimelineRow key={r.callId} r={r} onOpen={() => onOpenCard(r)} />
+                ))}
+              </AnimatedList>
             </div>
           </div>
         )}
@@ -159,21 +168,36 @@ export default function RoutingFeed({
 }
 
 /** 최신 카드 — 맨 위, 분류 결과 전체. 새로 얹힐 때 위에서 '딜'되는 모션(cardDeal). */
-function FrontCard({ r }: { r: AdminCallRecord }) {
+function FrontCard({
+  r,
+  lifted = true,
+  recent = false,
+}: {
+  r: AdminCallRecord;
+  lifted?: boolean;
+  /** 도는 콜이 하나도 없어서 '가장 최근 결과'로 남아 있는 카드 */
+  recent?: boolean;
+}) {
+  const lift = lifted ? "var(--sh-focus)" : "var(--sh-near)";
   const sge = r.sge;
   const meta = sge ? SGE_META[sge] : null;
   const live = r.endedAt === null;
 
   if (!r.card || !sge || !meta) {
     return (
-      <div style={css("position:relative;border-radius:12px;background:var(--background-200);box-shadow:var(--sh-focus);padding:14px 16px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
+      /* 분류 중 카드도 **완료 카드와 같은 면**(onair-surface)이다.
+         예전엔 --background-200을 썼는데 ONAIR 테마에서 그건 무대 바닥색(#e9eaeb)이라,
+         갓 들어온 카드가 회색으로 파인 구멍처럼 보였다 — 지금 가장 살아있는 카드가
+         가장 죽어 보이는 셈. 진행 중이라는 건 면 색이 아니라 스피너·진행 점·그림자가 말한다.
+         (ONAIR 문법: 면은 한 색, 위계는 그림자) */
+      <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:" + lift + ";padding:14px 16px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
         <div style={css("display:flex;align-items:center;gap:9px")}>
           <Spinner size={16} speedMs={800} />
-          <span style={css("font:700 13px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000)")}>분류 중…</span>
+          <span style={css("font:700 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>분류 중…</span>
           <div style={css("flex:1")} />
-          <span style={css("font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
+          <span style={css("font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
         </div>
-        <div style={css("margin-top:8px;font:400 12px/1.55 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
+        <div style={css("margin-top:8px;font:400 12px/1.55 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
           {r.utterances[r.utterances.length - 1] ?? "발화 수신 대기 중"}
         </div>
         <MiniPipeline stages={r.stages} />
@@ -182,48 +206,55 @@ function FrontCard({ r }: { r: AdminCallRecord }) {
   }
 
   return (
-    <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:var(--sh-focus);padding:13px 16px 14px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
+    <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:" + lift + ";padding:13px 16px 14px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
       <div style={css("display:flex;align-items:center;gap:8px")}>
         {/* S/G/E 신호 — 틴트·색 바 없이 점 + 잉크 (ONAIR: 색은 점·글자에만) */}
-        <span style={css("flex:none;display:inline-flex;align-items:center;gap:6px;font:700 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + meta.fg)}>
+        <span style={css("flex:none;display:inline-flex;align-items:center;gap:6px;font:700 12px 'Avenir Next','Pretendard',sans-serif;color:" + meta.fg)}>
           <span style={css("width:9px;height:9px;border-radius:9999px;flex:none;background:" + meta.bar)} />
           {sge} · {meta.label}
         </span>
-        <span style={css("font:700 14px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
+        <span style={css("font:700 14px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
           {r.card.businessType}
         </span>
         <div style={css("flex:1")} />
-        <span style={css("flex:none;font:500 10.5px 'Geist Mono',monospace;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
+        {/* 분류가 다 끝났는데도 이 카드가 남아 있는 이유를 카드가 스스로 말한다 —
+            없으면 "처리가 안 끝난 건이 하나 걸려 있다"로 읽힌다 */}
+        {recent && (
+          <span style={css("flex:none;font:600 9.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.3px;color:var(--gray-600);background:var(--gray-100);border-radius:9999px;padding:2.5px 8px")}>
+            최근 처리 결과
+          </span>
+        )}
+        <span style={css("flex:none;font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{fmtTime(r.startedAt)}</span>
       </div>
-      <div style={css("margin-top:7px;font:400 12.5px/1.5 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>
+      <div style={css("margin-top:7px;font:400 12.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")}>
         {r.card.summary}
       </div>
       {/* 이 콜의 프로세스 진행 — 진행 중일 때만 (완료 카드는 조용히) */}
       {live && <MiniPipeline stages={r.stages} />}
       <div style={css("margin-top:9px;display:flex;align-items:center;gap:6px;flex-wrap:wrap")}>
-        <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;background:var(--gray-100);color:var(--gray-900);border-radius:9999px;padding:3px 9px")}>
+        <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);color:var(--gray-900);border-radius:9999px;padding:3px 9px")}>
           {r.department ?? r.card.department}
         </span>
         {r.confidence != null && (
-          <span style={css("font:600 10.5px 'Geist Mono',monospace;background:var(--gray-100);color:var(--gray-800);border-radius:9999px;padding:3px 9px")}>
+          <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);color:var(--gray-800);border-radius:9999px;padding:3px 9px")}>
             확신 {Math.round(r.confidence * 100)}%
           </span>
         )}
         {r.risk === "high" && (
-          <span style={css("display:inline-flex;align-items:center;gap:3px;font:700 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;background:var(--gray-100);color:var(--red-900);border-radius:9999px;padding:3px 9px")}>
+          <span style={css("display:inline-flex;align-items:center;gap:3px;font:700 10.5px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);color:var(--red-900);border-radius:9999px;padding:3px 9px")}>
             <span className="mi" style={css("font-size:12px")}>warning</span>사고징후 높음
           </span>
         )}
         {r.transferTo && (
-          <span style={css("display:inline-flex;align-items:center;gap:3px;font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;background:var(--gray-100);color:var(--blue-900);border-radius:9999px;padding:3px 9px")}>
+          <span style={css("display:inline-flex;align-items:center;gap:3px;font:600 10.5px 'Avenir Next','Pretendard',sans-serif;background:var(--gray-100);color:var(--blue-900);border-radius:9999px;padding:3px 9px")}>
             <span className="mi" style={css("font-size:12px")}>sync_alt</span>이관 → {r.transferTo}
           </span>
         )}
         <div style={css("flex:1")} />
-        <span style={css("font:600 10px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:" + (r.card.source === "backend" ? "var(--green-900)" : "var(--gray-700)"))}>
+        <span style={css("font:600 10px 'Avenir Next','Pretendard',sans-serif;color:" + (r.card.source === "backend" ? "var(--green-900)" : "var(--gray-700)"))}>
           {r.card.source === "backend" ? "실백엔드" : "데모"}
         </span>
-        {!live && <span style={css("font:600 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>· 완료</span>}
+        {!live && <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>· 완료</span>}
       </div>
     </div>
   );
@@ -242,7 +273,7 @@ function TimelineRow({ r, onOpen }: { r: AdminCallRecord; onOpen: () => void }) 
       onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--gray-100)")}
       onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
     >
-      <span style={css("flex:none;width:40px;text-align:right;font:500 10px 'Geist Mono',monospace;color:var(--gray-700)")}>
+      <span style={css("flex:none;width:40px;text-align:right;font:500 10px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>
         {fmtTime(r.startedAt)}
       </span>
       {/* 축 위의 점 — z-index로 헤어라인 위에 올라앉고, 흰 테두리가 선을 살짝 끊는다 */}
@@ -252,19 +283,19 @@ function TimelineRow({ r, onOpen }: { r: AdminCallRecord; onOpen: () => void }) 
             (meta ? meta.bar : "var(--gray-500)")
         )}
       />
-      <span style={css("flex:1;min-width:0;font:500 12px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
+      <span style={css("flex:1;min-width:0;font:500 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
         {r.card ? r.card.businessType : "분류 중…"}
       </span>
       {sge === "S" && (
-        <span style={css("flex:none;display:inline-flex;align-items:center;gap:3px;font:600 9.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--green-900)")}>
+        <span style={css("flex:none;display:inline-flex;align-items:center;gap:3px;font:600 9.5px 'Avenir Next','Pretendard',sans-serif;color:var(--green-900)")}>
           <span className="mi" style={css("font-size:12px")}>smart_toy</span>AI
         </span>
       )}
       {/* 라우팅됐지만 아직 안 끝난 G/E — 부서 대기열에서 대기 중 */}
       {r.endedAt === null && (sge === "G" || sge === "E") && (
-        <span style={css("flex:none;font:600 9.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700)")}>대기</span>
+        <span style={css("flex:none;font:600 9.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>대기</span>
       )}
-      <span style={css("flex:none;font:500 10.5px 'Avenir Next','Geist Sans','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px")}>
+      <span style={css("flex:none;font:500 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px")}>
         {r.department ?? r.card?.department ?? ""}
       </span>
     </div>

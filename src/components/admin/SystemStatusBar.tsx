@@ -47,7 +47,7 @@ export default function SystemStatusBar({
       <BrandSymbol size={19} color="var(--blue-700)" />
       <span>
         <span style={css("display:block;font:700 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);letter-spacing:-.2px;line-height:1.15")}>관제 대시보드</span>
-        <span style={css("display:block;font:500 8.5px 'Geist Mono',monospace;color:var(--gray-700);letter-spacing:.4px")}>LIVE OPERATIONS</span>
+        <span style={css("display:block;font:500 8.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);letter-spacing:.4px")}>LIVE OPERATIONS</span>
       </span>
 
       <span style={css("width:1px;height:20px;background:var(--color-border)")} />
