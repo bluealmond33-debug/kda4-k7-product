@@ -1,0 +1,1018 @@
+<title>KARI-NA 발표 슬라이드 — 2026.07.29 (15분)</title>
+
+<style>
+/* ══════════════════════════════════════════════════════════════
+   KARI-NA 발표 덱 — ONAIR 디자인 언어를 프로젝터 거리로 승격.
+   면은 석고 화이트 한 색, 색은 점·글자·가는 선·값에만, 그라데이션 없음,
+   바운스 없는 모션, 4px 그리드. 라이트 온리(ONAIR 원칙 04).
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  color-scheme: light;
+
+  /* Surfaces — ONAIR */
+  --panel:#f8f9f9;
+  --ground:#e9eaeb;
+
+  /* Ink · cool neutral */
+  --ink:#1b1d20;
+  --ink-2:#4d5156;
+  --ink-3:#6b6f74;
+  --muted:#83878c;
+  --line:#dcdee1;
+  --line-soft:#e4e6e8;
+
+  /* Accents — 로고 블루 = 행동색 */
+  --blue:#2f5fc4;
+  --blue-deep:#284fa3;
+  --blue-pale:#b9cdf1;
+  --amber:#dfa348;
+  --red:#bc3f2b;
+  --green:#3e7a4e;
+
+  --sans:"Avenir Next","Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,"SF Mono","D2Coding",Consolas,monospace;
+}
+/* 프로젝터용 덱 — 뷰어 테마와 무관하게 단일 밝은 환경에 고정 (ONAIR 원칙 04) */
+:root[data-theme="dark"],:root[data-theme="light"]{color-scheme:light}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  letter-spacing:-0.012em;
+  word-break:keep-all;   /* 한국어 어절 중간에서 줄이 끊기지 않게 */
+  overflow:hidden;
+}
+
+/* ── 무대 ─────────────────────────────────────────── */
+.deck{
+  position:fixed;inset:0;
+  overflow-y:auto;overflow-x:hidden;
+  scroll-snap-type:y mandatory;      /* 한 장씩 화면에 딱 맞춰 멈춘다 */
+  scroll-behavior:smooth;
+  scrollbar-width:none;
+}
+.deck::-webkit-scrollbar{display:none}
+.deck.read{scroll-snap-type:y proximity}   /* 읽기 모드 — 자유 스크롤 */
+.stage{display:block}
+.sect{
+  height:100vh;display:grid;place-items:center;overflow:hidden;
+  scroll-snap-align:center;scroll-snap-stop:always;
+}
+
+/* ── 슬라이드 ─────────────────────────────────────── */
+.slide{
+  position:relative;width:1280px;height:720px;flex:none;
+  transform:scale(var(--s,1));transform-origin:center center;
+  background:var(--panel);
+  border-radius:12px;
+  padding:40px 72px 34px;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  row-gap:20px;
+  overflow:hidden;
+}
+@media (prefers-reduced-motion:no-preference){
+  .sect.vis .slide>*{animation:rise .24s cubic-bezier(.2,.7,.3,1) both}
+  .sect.vis .slide>*:nth-child(2){animation-delay:.03s}
+  .sect.vis .slide>*:nth-child(3){animation-delay:.05s}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+}
+
+/* 잉크 반전 — 딱 세 장에만 (문제③ · 랜선 · 클로징) */
+.slide.ink{background:var(--ink);color:#f2f4f6}
+.slide.ink .eyebrow .act,.slide.ink .eyebrow .time,.slide.ink .foot{color:#8f979f}
+.slide.ink .rule{background:rgba(255,255,255,.16)}
+.slide.ink .sub{color:#b9c0c7}
+.slide.ink .mark{background:#f2f4f6;opacity:.5}
+/* 영상·데모 전환용 최소 슬라이드 */
+.slide.cue{background:#101215;color:#e6e9ec}
+.slide.cue .eyebrow .act,.slide.cue .eyebrow .time,.slide.cue .foot{color:#6d757c}
+.slide.cue .mark{background:#e6e9ec;opacity:.35}
+
+/* ── 슬라이드 크롬 ─────────────────────────────────── */
+.eyebrow{display:flex;align-items:baseline;justify-content:space-between;gap:24px}
+.eyebrow .act{
+  font:700 14px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+}
+.eyebrow .act b{color:var(--blue);font-weight:700}
+.slide.ink .eyebrow .act b,.slide.cue .eyebrow .act b{color:var(--blue-pale)}
+.eyebrow .time{font:600 13px/1 var(--mono);color:var(--muted);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+
+.body{min-height:0;display:flex;flex-direction:column;justify-content:center;gap:22px}
+.body.top{justify-content:flex-start;padding-top:4px}
+
+.foot{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  font:600 12px/1 var(--mono);color:var(--muted);letter-spacing:.08em;
+}
+.foot .brand{display:flex;align-items:center;gap:9px}
+.mark{
+  width:15px;height:14px;flex:none;background:var(--blue);opacity:.55;
+  -webkit-mask:url("data:image/png;base64,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") center/contain no-repeat;
+  mask:url("data:image/png;base64,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") center/contain no-repeat;
+}
+.foot .n{font-variant-numeric:tabular-nums}
+
+/* ── 타입 래더 (프로젝터 승격) ─────────────────────── */
+.d{font-size:66px;font-weight:800;line-height:1.08;letter-spacing:-0.038em;margin:0;text-wrap:balance}
+.d.sm{font-size:54px}
+.t{font-size:42px;font-weight:750;line-height:1.14;letter-spacing:-0.03em;margin:0;text-wrap:balance}
+.s{font-size:26px;font-weight:700;line-height:1.3;letter-spacing:-0.022em;margin:0}
+.b{font-size:21px;font-weight:450;line-height:1.62;letter-spacing:-0.01em;margin:0;color:var(--ink-2)}
+.sub{font-size:23px;font-weight:500;line-height:1.5;color:var(--ink-2);margin:0;max-width:58ch;text-wrap:balance}
+.lab{font:700 14px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cap{font:500 14px/1.55 var(--mono);color:var(--muted);letter-spacing:.01em}
+.blue{color:var(--blue)}
+.hl{color:var(--blue);font-weight:750}
+.slide.ink .hl,.slide.cue .hl{color:#9fc0ff}
+.rule{height:1.5px;background:var(--line);border:0;margin:0}
+
+/* ── 커버 ──────────────────────────────────────────── */
+.cover{display:flex;flex-direction:column;justify-content:center;gap:0;height:100%}
+.lockup{height:66px;width:auto;display:block;margin-bottom:34px}
+.cover .tag{font-size:30px;font-weight:600;line-height:1.4;letter-spacing:-0.025em;margin:0;max-width:26ch;text-wrap:balance}
+.cover .expand{margin-top:22px;font:600 15px/1 var(--mono);color:var(--muted);letter-spacing:.03em}
+.cover .expand i{font-style:normal;color:var(--blue);font-weight:700}
+.cover .meta{margin-top:30px;display:flex;gap:30px;flex-wrap:wrap;font-size:16px;color:var(--ink-2)}
+.cover .meta b{color:var(--ink);font-weight:700}
+
+/* ── 2열 ───────────────────────────────────────────── */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:start}
+.cols.w{grid-template-columns:1.15fr 1fr}
+.cols.n{grid-template-columns:.85fr 1fr}
+
+/* ── ARS 트리 ──────────────────────────────────────── */
+.ars{display:flex;flex-direction:column;gap:9px;font-family:var(--mono);font-size:19px;color:var(--ink-2)}
+.ars div{display:flex;gap:14px;align-items:baseline}
+.ars .k{color:var(--blue);font-weight:700;font-variant-numeric:tabular-nums}
+.ars div:nth-child(1){opacity:1}
+.ars div:nth-child(2){opacity:.86}
+.ars div:nth-child(3){opacity:.72}
+.ars div:nth-child(4){opacity:.58}
+.ars div:nth-child(5){opacity:.44}
+.ars div:nth-child(6){opacity:.3}
+.ars .more{opacity:.3;font-size:17px;letter-spacing:.2em}
+
+/* ── 3주체 손실 ────────────────────────────────────── */
+.who{display:grid;gap:18px}
+.who .row{display:grid;grid-template-columns:104px 1fr;gap:20px;align-items:baseline;padding-bottom:16px;border-bottom:1.5px solid var(--line-soft)}
+.who .row:last-child{border-bottom:0;padding-bottom:0}
+.who .r{font-size:20px;font-weight:750;letter-spacing:-0.02em}
+.who .r.c{color:var(--blue)}
+.who .r.a{color:var(--amber)}
+.who .r.f{color:var(--ink-2)}
+.who .d2{font-size:18px;line-height:1.55;color:var(--ink-2)}
+
+/* ── 플로우 ────────────────────────────────────────── */
+.flow{display:flex;align-items:stretch;gap:0;width:100%}
+.node{
+  flex:1;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;
+  padding:18px 16px;display:flex;flex-direction:column;gap:7px;min-width:0;
+}
+.node.key{border-color:var(--blue)}
+.node.pii{border-color:var(--green)}
+.node .nt{font-size:18px;font-weight:750;letter-spacing:-0.02em}
+.node .ns{font:500 13.5px/1.5 var(--mono);color:var(--muted)}
+.node.key .nt{color:var(--blue)}
+.node.pii .nt{color:var(--green)}
+.arrow{flex:none;width:38px;display:grid;place-items:center;color:var(--line);font-size:22px}
+.arrow.dash{color:var(--green)}
+
+/* ── 표 ────────────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:17px}
+.tbl th{
+  text-align:left;font:700 12.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);padding:0 14px 11px 0;border-bottom:1.5px solid var(--line);
+}
+.tbl td{padding:11px 14px 11px 0;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.45;color:var(--ink-2)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td b{color:var(--ink);font-weight:700}
+.tbl td.k{color:var(--blue);font-family:var(--mono);font-weight:700;font-size:15px;white-space:nowrap}
+.tbl td.m{font-family:var(--mono);font-size:15px;color:var(--ink)}
+.tbl .sm{font-size:14px;color:var(--muted);display:block;margin-top:3px}
+.tbl.tight td,.tbl.tight th{padding-top:8px;padding-bottom:8px}
+
+/* ── 수치 ──────────────────────────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.stats .st{padding:0 26px;border-left:1.5px solid var(--line)}
+.stats .st:first-child{padding-left:0;border-left:0}
+.stats .v{font:800 52px/1 var(--sans);letter-spacing:-0.04em;color:var(--blue);font-variant-numeric:tabular-nums}
+.stats .v small{font-size:22px;font-weight:700;color:var(--ink-3);letter-spacing:0}
+.stats .l{margin-top:11px;font-size:16px;color:var(--ink-2);line-height:1.4}
+.bignum{font:800 132px/1 var(--sans);letter-spacing:-0.05em;color:var(--blue);font-variant-numeric:tabular-nums}
+.bignum small{font-size:44px;font-weight:700;color:var(--ink-3);letter-spacing:-0.02em}
+
+/* ── 칩 ────────────────────────────────────────────── */
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.chip{
+  font:600 16px/1 var(--sans);letter-spacing:-0.01em;color:var(--ink-2);
+  border:1.5px solid var(--line);border-radius:9999px;padding:9px 16px;
+}
+.chip.on{border-color:var(--blue);color:var(--blue)}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;font:700 13px/1 var(--mono);letter-spacing:.1em;
+  text-transform:uppercase;border-radius:9999px;padding:7px 14px;border:1.5px solid currentColor;
+}
+.pill.live{color:var(--green)}
+.pill.plan{color:var(--amber)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+
+/* ── 방어 층 ───────────────────────────────────────── */
+.layers{display:grid;gap:13px}
+.layer{display:grid;grid-template-columns:46px 1fr auto;gap:20px;align-items:start;padding-bottom:13px;border-bottom:1px solid var(--line-soft)}
+.layer:last-child{border-bottom:0;padding-bottom:0}
+.layer .ln{font:800 30px/1 var(--sans);color:var(--blue);letter-spacing:-0.04em;font-variant-numeric:tabular-nums}
+.layer.plan .ln{color:var(--amber)}
+.layer .lh{font-size:21px;font-weight:750;letter-spacing:-0.022em}
+.layer .ld{font-size:16.5px;line-height:1.5;color:var(--ink-2);margin-top:5px}
+
+/* ── 되는 것 / 범위 밖 ─────────────────────────────── */
+.scope{display:grid;gap:11px}
+.scope li{list-style:none;display:grid;grid-template-columns:22px 1fr;gap:12px;font-size:19px;line-height:1.45;color:var(--ink-2)}
+.scope li .m{font-weight:700}
+.scope.yes li .m{color:var(--green)}
+.scope.no li .m{color:var(--muted)}
+.scope.no li{color:var(--muted)}
+ul.scope{margin:0;padding:0}
+
+/* ── 로드맵 ────────────────────────────────────────── */
+.road{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.road .rs{border-top:2.5px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:8px}
+.road .rs.now{border-top-color:var(--blue)}
+.road .rn{font:700 13px/1 var(--mono);letter-spacing:.12em;color:var(--muted)}
+.road .rs.now .rn{color:var(--blue)}
+.road .rt{font-size:20px;font-weight:750;letter-spacing:-0.022em}
+.road .rd{font-size:15.5px;line-height:1.5;color:var(--ink-2)}
+
+/* ── 코드 트리 ─────────────────────────────────────── */
+.tree{font:500 16px/1.85 var(--mono);color:var(--ink-2)}
+.tree b{color:var(--ink);font-weight:700}
+.tree .c{color:var(--blue);font-weight:700}
+.tree .g{color:var(--green);font-weight:700}
+.tree .x{color:var(--muted)}
+
+/* ── 출처 각주 ─────────────────────────────────────── */
+.src{font:500 13.5px/1.5 var(--mono);color:var(--muted);letter-spacing:.01em}
+
+/* ── 진행 레일 ─────────────────────────────────────── */
+.rail{
+  position:fixed;left:0;right:0;bottom:0;height:26px;display:flex;gap:2px;
+  padding:0 14px 9px;align-items:flex-end;z-index:5;
+}
+.rail button{
+  flex:1;height:3px;border:0;padding:0;background:rgba(27,29,32,.14);cursor:pointer;
+  border-radius:2px;transition:background .15s,height .15s;
+}
+.rail button:hover{background:rgba(27,29,32,.3);height:6px}
+.rail button.done{background:rgba(47,95,196,.35)}
+.rail button.cur{background:var(--blue);height:6px}
+.rail button:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+
+/* ── 네비 ──────────────────────────────────────────── */
+.nav{position:fixed;bottom:26px;right:20px;display:flex;gap:8px;z-index:6}
+.nav button{
+  width:38px;height:38px;border-radius:9999px;border:1.5px solid var(--line);
+  background:var(--panel);color:var(--ink-2);font-size:16px;cursor:pointer;
+  display:grid;place-items:center;transition:border-color .15s,color .15s;
+}
+.nav button:hover{border-color:var(--blue);color:var(--blue)}
+.nav button:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.hint{
+  position:fixed;bottom:30px;left:20px;z-index:6;
+  font:500 12.5px/1 var(--mono);color:var(--muted);letter-spacing:.05em;
+}
+
+/* ── 목차 오버레이 ─────────────────────────────────── */
+.toc{
+  position:fixed;inset:0;z-index:20;background:rgba(233,234,235,.97);
+  display:none;padding:46px 56px;overflow-y:auto;
+}
+.toc.on{display:block}
+.toc h2{font-size:24px;font-weight:800;letter-spacing:-0.028em;margin:0 0 4px}
+.toc p{margin:0 0 26px;font:500 14px/1 var(--mono);color:var(--muted);letter-spacing:.05em}
+.toc ol{margin:0;padding:0;list-style:none;columns:2;column-gap:52px}
+.toc li{break-inside:avoid}
+.toc button{
+  width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);
+  padding:10px 2px;display:grid;grid-template-columns:34px 1fr auto;gap:14px;align-items:baseline;
+  font-family:var(--sans);font-size:17px;color:var(--ink);cursor:pointer;
+}
+.toc button:hover{color:var(--blue)}
+.toc button .no{font:700 13px/1 var(--mono);color:var(--blue);font-variant-numeric:tabular-nums}
+.toc button .ac{font:500 12.5px/1 var(--mono);color:var(--muted);letter-spacing:.05em}
+.toc button.cur{color:var(--blue);font-weight:700}
+.toc button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* ── 발표자 노트 ───────────────────────────────────── */
+.note{
+  position:fixed;left:20px;right:20px;bottom:44px;z-index:7;display:none;
+  background:var(--ink);color:#e8ebee;border-radius:10px;padding:15px 20px;
+  font-size:16px;line-height:1.55;max-width:1100px;margin:0 auto;
+}
+.note.on{display:block}
+.note b{color:#9fc0ff}
+
+/* ── 내보내기 모드 — ?shot=N 이면 크롬 없이 해당 장만 1280×720 원본 크기로 ── */
+html.shot,html.shot body{overflow:hidden;background:#fff}
+html.shot .deck{position:static;overflow:visible;scroll-snap-type:none;height:720px}
+html.shot .sect{display:none;height:720px;width:1280px;overflow:hidden}
+html.shot .sect.shotone{display:block}
+html.shot .slide{transform:none!important;border-radius:0;width:1280px;height:720px}
+html.shot .rail,html.shot .nav,html.shot .hint,html.shot .toc,html.shot .note{display:none!important}
+
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{overflow:visible;background:#fff;height:auto}
+  .deck{position:static;overflow:visible;scroll-snap-type:none;height:auto}
+  .stage{display:block}
+  .sect{height:720px;width:1280px;display:block;overflow:hidden;page-break-after:always;break-after:page}
+  .sect:last-child{page-break-after:auto;break-after:auto}
+  .slide{transform:none!important;border-radius:0;width:1280px;height:720px}
+  .rail,.nav,.hint,.toc,.note{display:none!important}
+}
+</style>
+
+<div class="deck">
+  <div class="stage" id="stage">
+
+  <!-- ═══ ACT 00 · 오프닝 ═══════════════════════════════════ -->
+  <div class="sect"><section class="slide" data-act="ACT 00 · 오프닝" data-time="0:00" data-toc="표지"
+    data-note="톤은 하나 — <b>설명하러 온 게 아니라 자랑하러 왔다.</b> 인사 후 바로 '돈 잘못 보내본 적 없으세요?'로 넘어간다.">
+    <div class="cover">
+      <img class="lockup" src="data:image/png;base64,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" alt="KARI-NA">
+      <p class="tag">전화를 걸면, AI가 먼저 듣고 준비합니다 — 개인정보는 건드리지 않고, 인터넷 없이.</p>
+      <p class="expand"><i>K</i>iwoom <i>A</i>cademy <i>R</i>esponse <i>I</i>nnovation · <i>N</i>o <i>A</i>RS</p>
+      <div class="meta">
+        <span><b>K7팀</b> · 금융 콜센터 혁신</span>
+        <span>2026. 07. 29 · <b>15분</b></span>
+        <span>발표 <b>김설빈</b></span>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide cue" data-act="ACT 00 · 오프닝" data-time="0:20" data-toc="영상 재생"
+    data-note="영상 재생(40~50초). <b>로컬 파일 + USB 백업.</b> 끝나면 한 박자 쉬고 웃음 → 진지로 전환.">
+    <div class="body" style="align-items:center;text-align:center">
+      <p class="lab" style="color:#6d757c">영상</p>
+      <p class="d">착오송금</p>
+      <p class="cap" style="color:#6d757c">40~50초 · 로컬 재생</p>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT 00 · 오프닝" data-time="1:10" data-toc="하루에도 수천 건"
+    data-note="웃음 뒤에 무게를 싣는 문장. '수천 건'에서 한 박자.">
+    <div class="body">
+      <p class="d">웃기지만, <span class="hl">하루에도 수천 건</span><br>실제로 벌어지는 일입니다.</p>
+      <hr class="rule">
+      <p class="sub">그리고 이런 일이 생기면 우리가 할 수 있는 건 딱 하나 — <b>은행 콜센터에 전화하는 것.</b></p>
+    </div>
+  </section></div>
+
+  <!-- ═══ ACT 01 · 문제 ════════════════════════════════════ -->
+  <div class="sect"><section class="slide" data-act="ACT <b>01</b> · 문제" data-time="1:30" data-toc="ARS 버튼 트리"
+    data-note="빠르게 지나간다. 청중이 이미 아는 고통 — 공감만 얻고 넘어갈 것.">
+    <div class="body">
+      <div class="cols n">
+        <div>
+          <p class="lab">고객이 만나는 첫 벽</p>
+          <p class="t" style="margin-top:14px">1번, 2번, 3번…<br>그래서 몇 번이죠?</p>
+          <p class="b" style="margin-top:20px">원하는 항목은 끝내 나오지 않고,<br>다시 처음 메뉴로 돌아온다.</p>
+        </div>
+        <div class="ars">
+          <div><span class="k">1</span><span>예금·적금 조회</span></div>
+          <div><span class="k">2</span><span>대출 상담</span></div>
+          <div><span class="k">3</span><span>카드 분실 신고</span></div>
+          <div><span class="k">4</span><span>외환·송금</span></div>
+          <div><span class="k">5</span><span>인터넷뱅킹 문의</span></div>
+          <div><span class="k">6</span><span>기타 문의</span></div>
+          <div class="more">· · · · · · · ·</div>
+          <div style="opacity:1;margin-top:10px"><span class="k">0</span><span class="hl">상담원 연결</span></div>
+        </div>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>01</b> · 문제" data-time="1:50" data-toc="맥락 없는 상담"
+    data-note="현직자 인터뷰 근거가 있다는 걸 각주로 보여준다 — 상상이 아니라 조사한 문제.">
+    <div class="body">
+      <div>
+        <p class="lab">겨우 연결되면</p>
+        <p class="t" style="margin-top:12px">상담사는 내가 왜 전화했는지<br>하나도 모른 채 시작한다.</p>
+      </div>
+      <div class="who" style="margin-top:6px">
+        <div class="row">
+          <span class="r c">고객</span>
+          <span class="d2">ARS를 헤매고, 연결되면 처음부터 재설명. 부서가 바뀔 때마다 또 재설명 — 긴급 상황일수록 치명적.</span>
+        </div>
+        <div class="row">
+          <span class="r a">상담사</span>
+          <span class="d2">사전 정보 0에서 화난 고객 응대. 상황 파악 · 매뉴얼 검색 · 오연결 재이관 · 후처리(ACW) 부담.</span>
+        </div>
+        <div class="row">
+          <span class="r f">회사</span>
+          <span class="d2">AHT↑ · 재이관율↑ · 상담사별 품질 편차↑ · 1인당 처리 콜↓.</span>
+        </div>
+      </div>
+      <p class="src" style="margin-top:4px">근거 — 콜센터 현직자 인터뷰(2026-07-13): 후처리·오연결·반복설명·품질편차가 실제 병목으로 확인됨</p>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide ink" data-act="ACT <b>01</b> · 문제" data-time="2:10" data-toc="진짜 벽 — 개인정보"
+    data-note="이 발표의 <b>씨앗</b>. '넘겨도 될까요?'에서 반드시 한 박자 멈춰 청중이 스스로 '안 되지'라고 답하게 한다.">
+    <div class="body">
+      <p class="lab" style="color:#8f979f">그런데 진짜 벽은 세 번째</p>
+      <p class="d">계좌번호, 주민번호, 인증번호.<br><span class="hl">남의 클라우드 AI에<br>그대로 넘겨도 될까요?</span></p>
+      <hr class="rule">
+      <p class="sub">은행 입장에선 <b style="color:#f2f4f6">절대 안 됩니다.</b> 그래서 못 씁니다.<br>이것이 은행이 AI를 쉽게 도입하지 못하는 진짜 이유입니다.</p>
+    </div>
+  </section></div>
+
+  <!-- ═══ ACT 02 · 솔루션 ══════════════════════════════════ -->
+  <div class="sect"><section class="slide" data-act="ACT <b>02</b> · 솔루션" data-time="2:30" data-toc="KARI-NA = No ARS"
+    data-note="이름 풀이는 짧게. 'No ARS'만 확실히 각인시킨다.">
+    <div class="body">
+      <div class="cols">
+        <div>
+          <p class="lab">서비스 이름</p>
+          <p class="d sm" style="margin-top:14px">KARI-NA</p>
+          <p class="expand" style="margin-top:18px;font:600 17px/1.9 var(--mono);color:var(--muted);letter-spacing:.02em">
+            <span class="blue" style="font-weight:700">K</span>iwoom
+            <span class="blue" style="font-weight:700">A</span>cademy<br>
+            <span class="blue" style="font-weight:700">R</span>esponse
+            <span class="blue" style="font-weight:700">I</span>nnovation<br>
+            <span class="blue" style="font-weight:700">N</span>o <span class="blue" style="font-weight:700">A</span>RS
+          </p>
+        </div>
+        <div>
+          <p class="t">버튼 트리를<br>아예 없앴습니다.</p>
+          <p class="b" style="margin-top:22px">고객은 그냥 <b style="color:var(--ink)">평소처럼 말만 하면</b> 됩니다.<br>
+          AI가 실시간으로 알아듣고 — 용건을 요약하고, 부서를 정하고, 위험한 상황인지까지 분석해서
+          <b style="color:var(--ink)">상담사가 전화를 받기도 전에</b> 화면에 띄웁니다.</p>
+        </div>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>02</b> · 솔루션" data-time="2:55" data-toc="솔루션 흐름"
+    data-note="한 장으로 끝낸다. 화살표를 손으로 따라가며 읽어줄 것.">
+    <div class="body">
+      <p class="t">기다리는 콜센터 → <span class="hl">준비되는 콜센터</span></p>
+      <div class="flow" style="margin-top:8px">
+        <div class="node">
+          <span class="nt">전화</span>
+          <span class="ns">ARS 없음</span>
+        </div>
+        <span class="arrow">→</span>
+        <div class="node">
+          <span class="nt">자연어 접수</span>
+          <span class="ns">"편하게 말씀해<br>주세요"</span>
+        </div>
+        <span class="arrow">→</span>
+        <div class="node key">
+          <span class="nt">AI 전처리</span>
+          <span class="ns">STT · 요약 · 업무분류<br>위험도 · 감정 · 규정검색</span>
+        </div>
+        <span class="arrow">→</span>
+        <div class="node key">
+          <span class="nt">상담 준비카드</span>
+          <span class="ns">요약 · 부서 · 사고징후<br>절차 · 첫 응대문장</span>
+        </div>
+        <span class="arrow">→</span>
+        <div class="node">
+          <span class="nt">상담사</span>
+          <span class="ns">이미 알고 시작</span>
+        </div>
+      </div>
+      <p class="src" style="margin-top:10px">AI는 상담사를 대체하지 않습니다 — 최종 판단·인증·사고 조치는 언제나 사람이 합니다.</p>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide ink" data-act="ACT <b>02</b> · 무대 액션" data-time="3:20" data-toc="🔌 랜선 뽑기"
+    data-note="이 발표에서 <b>가장 센 장면.</b> 천천히, 침묵을 두고. 뽑는 건 WAN만 — 로컬망은 유지. 뽑기 전 서버 :8000 / :8100 / :4173 확인.">
+    <div class="body">
+      <p class="lab" style="color:#8f979f">무대 액션</p>
+      <p class="d">지금, <span class="hl">인터넷 선을 뽑겠습니다.</span></p>
+      <hr class="rule">
+      <p class="sub">이제부터 보시는 건 전부 <b style="color:#f2f4f6">이 방 안에서만</b> 돕니다.<br>
+      음성 인식도, 언어모델도, 감정 분석도, 규정 검색도 — 전부 이 안에.</p>
+      <div class="chips" style="margin-top:6px">
+        <span class="chip" style="border-color:rgba(255,255,255,.22);color:#c8cfd6">클라우드 호출 <b class="hl">0번</b></span>
+        <span class="chip" style="border-color:rgba(255,255,255,.22);color:#c8cfd6">글꼴까지 로컬 — 아무것도 안 깨짐</span>
+      </div>
+    </div>
+  </section></div>
+
+  <!-- ═══ ACT 03 · 라이브 데모 ═════════════════════════════ -->
+  <div class="sect"><section class="slide" data-act="ACT <b>03</b> · 라이브 데모" data-time="3:40" data-toc="데모 표지"
+    data-note="화면 3개를 미리 말해두면 관객이 어디를 볼지 안다. 발화는 또박또박, 조금 크게.">
+    <div class="body">
+      <p class="lab">라이브 데모 · 5분</p>
+      <p class="d">전화 한 통이,<br>눈앞에서 처리됩니다.</p>
+      <hr class="rule">
+      <div class="cols" style="gap:32px">
+        <p class="sub" style="font-size:20px">시나리오 — <b>착오송금.</b> 방금 영상 속 그 고객이 되어, 동료가 실제로 전화를 겁니다.</p>
+        <div class="chips" style="align-content:start">
+          <span class="chip on">고객 휴대폰</span>
+          <span class="chip on">상담사 콘솔</span>
+          <span class="chip on">관제 대시보드</span>
+        </div>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide cue" data-act="ACT <b>03</b> · 라이브 데모" data-time="3:50" data-toc="(실제 화면으로 전환)"
+    data-note="여기서 브라우저로 전환. <b>localhost:4173 (프로덕션 빌드) — dev 5173 아님.</b> F12 Network 미리 열어둘 것. 흔들리면 백업 영상으로 즉시 전환.">
+    <div class="body" style="align-items:center;text-align:center">
+      <p class="lab" style="color:#6d757c">라이브</p>
+      <p class="d">▶</p>
+      <p class="cap" style="color:#6d757c">실제 화면으로 전환</p>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>03</b> · 라이브 데모" data-time="8:30" data-toc="데모 7단계 정리"
+    data-note="데모 직후 복귀 슬라이드. 방금 본 것을 한 장으로 되짚어 기억에 박는다.">
+    <div class="body">
+      <p class="t">방금, 이 일곱 가지가 일어났습니다</p>
+      <table class="tbl tight" style="margin-top:6px">
+        <thead><tr><th style="width:44px"></th><th style="width:31%">무슨 일</th><th style="width:30%">화면</th><th>핵심</th></tr></thead>
+        <tbody>
+          <tr><td class="k">①</td><td>통화 시작</td><td>연결 · 파형이 움직임</td><td><b>인터넷 없이</b> 마이크가 로컬로</td></tr>
+          <tr><td class="k">②</td><td>고객이 문의를 말함</td><td>실시간 자막</td><td>버튼 0번 — <b>말만 했는데</b> 알아듣는다</td></tr>
+          <tr><td class="k">③</td><td>계좌번호를 말로 부름</td><td>자막에서 즉시 <b>●●● 마스킹</b></td><td>AI가 받는 글자부터 <b>이미 가려짐</b></td></tr>
+          <tr><td class="k">④</td><td>AI 처리</td><td>사전요약 + <b>계좌보안팀</b> 배정</td><td>상담사가 받기 전에 <b>맥락이 준비</b>됨</td></tr>
+          <tr><td class="k">⑤</td><td>유의사항 카드</td><td>착오송금 반환청구 절차</td><td>환각 아님 — <b>실물 규정에서 검색</b></td></tr>
+          <tr><td class="k">⑥</td><td>본인인증</td><td>요청이 <span style="font-family:var(--mono)">:8100</span> 으로</td><td><b>격리 서버</b> — AI는 접근 불가</td></tr>
+          <tr><td class="k">⑦</td><td>통화 종료</td><td>후처리 요약 자동 작성</td><td>상담사는 <b>확인·보정만</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section></div>
+
+  <!-- ═══ ACT 04 · 아키텍처 ════════════════════════════════ -->
+  <div class="sect"><section class="slide" data-act="ACT <b>04</b> · 아키텍처" data-time="9:00" data-toc="3초에 모델 5종"
+    data-note="'저거 대충 만든 목업 아니야?'라는 의심을 정면으로 받아친다.">
+    <div class="body">
+      <p class="lab">방금 그 3초 안에</p>
+      <p class="d sm"><span class="hl">다섯 개의 AI 모델</span>이<br>이 노트북 한 대에서 동시에 돌았습니다.</p>
+      <div class="chips" style="margin-top:4px">
+        <span class="chip on">음성 → 글자</span>
+        <span class="chip on">내용 요약</span>
+        <span class="chip on">감정 측정</span>
+        <span class="chip on">부서 분류</span>
+        <span class="chip on">규정 검색</span>
+      </div>
+      <hr class="rule">
+      <p class="sub">이게 <b>"AI 좀 써봤어요"</b>와 <b>"AI 파이프라인을 운영합니다"</b>의 차이입니다.<br>그리고 이 전부가 — 클라우드 호출 <b>0번</b>.</p>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>04</b> · 아키텍처" data-time="9:30" data-toc="서비스 흐름도"
+    data-note="점선 화살표(⇢)가 핵심 — 개인정보 서버는 <b>인증 성공 후에만</b> 열린다.">
+    <div class="body">
+      <p class="t">이게 어떻게 도는가</p>
+      <div class="flow" style="margin-top:4px">
+        <div class="node">
+          <span class="nt">고객 · 마이크</span>
+          <span class="ns">?role=customer</span>
+        </div>
+        <span class="arrow">→</span>
+        <div class="node key" style="flex:1.5">
+          <span class="nt">GPU 노트북 (메인)</span>
+          <span class="ns">STT → 감정·분노 →<br>요약·라우팅 → RAG</span>
+        </div>
+        <span class="arrow">→</span>
+        <div class="node">
+          <span class="nt">상담사 콘솔</span>
+          <span class="ns">자막 · 준비카드</span>
+        </div>
+        <span class="arrow dash">⇢</span>
+        <div class="node pii">
+          <span class="nt">pii-service</span>
+          <span class="ns">개인정보 격리<br>:8100</span>
+        </div>
+      </div>
+      <div class="cols" style="gap:32px;margin-top:8px">
+        <p class="b" style="font-size:18px"><b style="color:var(--green)">✈ 인터넷(WAN) 없음 · 외부 호출 0</b><br>전용 공유기 폐쇄망, 모델은 현장 전 로컬에 미리 내려받음.</p>
+        <p class="b" style="font-size:18px">개인정보 서버는 <b style="color:var(--ink)">인증 성공 후에만</b> 열리고,<br><b style="color:var(--green)">AI 서버에는 여기 접근 코드가 0줄.</b></p>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>04</b> · 아키텍처" data-time="10:00" data-toc="기술 스택"
+    data-note="전부 읽지 말 것. <b>세 개만</b> — 오픈소스·로컬 / 모델 5종 동시 / 실물 규정 1,563청크.">
+    <div class="body top">
+      <p class="t">전부 오픈소스 · 로컬 모델 — 클라우드 종속 0</p>
+      <table class="tbl tight" style="margin-top:6px">
+        <thead><tr><th style="width:120px">레이어</th><th style="width:36%">무엇으로</th><th>역할 · 실측</th></tr></thead>
+        <tbody>
+          <tr><td class="k">STT</td><td class="m">faster-whisper large-v3-turbo</td><td>한국어 음성 → 텍스트 (로컬 GPU)</td></tr>
+          <tr><td class="k">언어모델</td><td class="m">EXAONE 3.5 7.8B · Ollama</td><td>요약 · 부서분류 · 위험판단 <span class="sm">LG 한국어 특화, 로컬</span></td></tr>
+          <tr><td class="k">감정온도</td><td class="m">eGeMAPS 88 + LightGBM</td><td>음성 격앙도 <span class="sm">참고 신호 · Macro-F1 0.564 · 14MB CPU</span></td></tr>
+          <tr><td class="k">음성분노</td><td class="m">WavLM 층융합 + MLP</td><td>'냉정한 분노' 보조 <span class="sm">Macro-F1 0.805 · GPU 조건부</span></td></tr>
+          <tr><td class="k">라우팅</td><td class="m">규칙 + scikit-learn</td><td>단순 / 일반 / 사고 3단계 + 부서 분류</td></tr>
+          <tr><td class="k">RAG</td><td class="m">bge-m3(1024d) + 로컬 벡터검색</td><td>실물 규정 <b>1,563청크 · 7분야</b> 검색</td></tr>
+          <tr><td class="k">개인정보</td><td class="m">규칙 11종 + pii-service</td><td>실시간 마스킹 + 별도 서버 격리</td></tr>
+          <tr><td class="k">프론트 · 백</td><td class="m">React 18 · Vite / FastAPI</td><td>실시간 자막 · 카드 / WebSocket 스트리밍 <span class="sm">폰트 동봉 → 오프라인 OK</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>04</b> · 아키텍처" data-time="10:40" data-toc="코드 · 저장소"
+    data-note="ADR 11건이 포인트 — <b>왜 그렇게 만들었는지가 문서로 남아 있다</b>는 게 성숙도로 읽힌다.">
+    <div class="body">
+      <div class="stats">
+        <div class="st"><div class="v">26,635</div><div class="l">코드 줄 수</div></div>
+        <div class="st"><div class="v">111</div><div class="l">테스트 전부 통과</div></div>
+        <div class="st"><div class="v">11<small>건</small></div><div class="l">설계 결정 기록(ADR)</div></div>
+        <div class="st"><div class="v">0</div><div class="l">외부 인터넷 호출</div></div>
+      </div>
+      <hr class="rule">
+      <div class="cols w" style="gap:40px">
+        <div class="tree">
+kda4-k7-product/ <span class="x">← 프론트·백엔드 한 저장소로 단일화</span><br>
+├─ <span class="c">src/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="x">React 18 · Vite · TS</span><br>
+├─ <span class="c">backend/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="x">FastAPI · WebSocket · 파이프라인</span><br>
+│&nbsp;&nbsp;&nbsp;└─ services/&nbsp;<span class="x">STT · 감정 · 라우팅 · RAG ·</span> <span class="g">pii_guard</span><br>
+├─ <span class="g">pii-service/</span>&nbsp;&nbsp;&nbsp;<span class="x">개인정보 격리 서버 (별도 프로세스)</span><br>
+└─ <b>docs/ · ADR ×11</b>&nbsp;<span class="x">왜 이렇게 만들었나</span>
+        </div>
+        <div>
+          <p class="s">저장소를 하나로 합쳤습니다</p>
+          <p class="b" style="margin-top:12px;font-size:19px">프론트·백엔드가 흩어져 있던 걸 <b style="color:var(--ink)">모노레포</b>로 단일화 — 버전이 엇갈리지 않고, 팀원 누구나 통째로 받아 바로 돌립니다.</p>
+        </div>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>04</b> · 아키텍처" data-time="11:00" data-toc="규정 코퍼스"
+    data-note="'근거가 없으면 차라리 비웁니다' — 환각 방어 문장. 여기서 확실히 못박을 것.">
+    <div class="body">
+      <div class="cols n" style="align-items:center">
+        <div>
+          <p class="lab">실물 규정 코퍼스</p>
+          <p class="bignum" style="margin-top:6px">1,563<small> 청크</small></p>
+          <p class="b" style="margin-top:10px;font-size:19px">실제 은행 약관 · 공개 금융 규정에서<br>가져온 <b style="color:var(--ink)">진짜 문서</b>입니다.</p>
+        </div>
+        <div>
+          <p class="s">7개 분야</p>
+          <div class="chips" style="margin-top:16px">
+            <span class="chip on">예금</span><span class="chip on">대출</span><span class="chip on">외환</span>
+            <span class="chip on">연금</span><span class="chip on">전자금융</span><span class="chip on">카드</span>
+            <span class="chip on">사고신고</span>
+          </div>
+          <hr class="rule" style="margin:22px 0">
+          <p class="t" style="font-size:30px">근거가 없으면<br><span class="hl">차라리 비웁니다.</span></p>
+          <p class="b" style="margin-top:12px;font-size:18px">없는 얘기를 지어내지 않습니다. 화면의 절차는 전부 검색된 원문으로 되짚을 수 있습니다.</p>
+        </div>
+      </div>
+    </div>
+  </section></div>
+
+  <!-- ═══ ACT 05 · 보안 ════════════════════════════════════ -->
+  <div class="sect"><section class="slide" data-act="ACT <b>05</b> · 개인정보" data-time="11:30" data-toc="4중 방어"
+    data-note="3층(mTLS·PKI)은 <b>반드시 '실서비스 설계'라고 밝힌다.</b> 라이브라고 하면 무너지고, 정직하게 말하면 성숙도로 읽힌다.">
+    <div class="body">
+      <div class="cols" style="align-items:baseline;gap:24px">
+        <p class="t">한 겹이 아니라 <span class="hl">네 겹</span>으로 막습니다</p>
+        <div class="chips" style="justify-content:flex-end">
+          <span class="pill live"><span class="dot"></span>라이브</span>
+          <span class="pill plan"><span class="dot"></span>실서비스 설계</span>
+        </div>
+      </div>
+      <div class="layers" style="margin-top:8px">
+        <div class="layer">
+          <span class="ln">1</span>
+          <div><div class="lh">실시간 마스킹 11종</div>
+            <div class="ld">말이 글자가 되는 <b style="color:var(--ink)">즉시</b> 계좌·주민·카드번호를 가림. AI가 받는 전사부터 이미 가려져 있음.</div></div>
+          <span class="pill live"><span class="dot"></span>라이브</span>
+        </div>
+        <div class="layer">
+          <span class="ln">2</span>
+          <div><div class="lh">개인정보 격리 — pii-service</div>
+            <div class="ld">계좌 원문·인증값은 별도 프로세스·별도 저장소에. <b style="color:var(--ink)">AI 백엔드 코드엔 이 서버 참조가 0줄.</b></div></div>
+          <span class="pill live"><span class="dot"></span>라이브</span>
+        </div>
+        <div class="layer plan">
+          <span class="ln">3</span>
+          <div><div class="lh">서비스 간 mTLS · 사설 PKI</div>
+            <div class="ld">서비스끼리 상호 인증서 검증 + 암호화, 자체 사설 CA 발급, allowlist 기반. ADR로 설계 문서화 — 데모는 로컬 HTTP.</div></div>
+          <span class="pill plan"><span class="dot"></span>설계</span>
+        </div>
+        <div class="layer">
+          <span class="ln">4</span>
+          <div><div class="lh">완전 망분리 — 온프레미스</div>
+            <div class="ld">외부 인터넷 호출 0건. 랜선을 뽑아 눈앞에서 증명. <b style="color:var(--ink)">데이터가 나갈 경로 자체가 없음.</b></div></div>
+          <span class="pill live"><span class="dot"></span>라이브</span>
+        </div>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>05</b> · 개인정보" data-time="12:00" data-toc="마스킹 11종"
+    data-note="칩을 손으로 훑으며 읽는다. 마지막 문장이 핵심 — AI는 원문을 <b>본 적이 없다.</b>">
+    <div class="body">
+      <p class="lab">1층 — 전사되는 즉시</p>
+      <p class="t" style="margin-top:12px">AI는 애초에 <span class="hl">가려진 글자만</span> 봅니다</p>
+      <div class="chips" style="margin-top:8px">
+        <span class="chip on">계좌번호</span><span class="chip on">전화번호</span><span class="chip on">주민등록번호</span>
+        <span class="chip on">카드번호</span><span class="chip on">여권번호</span><span class="chip on">운전면허번호</span>
+        <span class="chip on">사업자등록번호</span><span class="chip on">생년월일</span>
+        <span class="chip on">인증번호 · OTP · 비밀번호</span><span class="chip on">이메일</span><span class="chip on">이름</span>
+      </div>
+      <hr class="rule">
+      <p class="sub">상담사도, AI도 원문을 못 봅니다. 쉼표를 끼워 넣는 우회 입력까지 <b>테스트로 발견해 막았습니다.</b></p>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>05</b> · 개인정보" data-time="12:20" data-toc="격리 서버 :8100"
+    data-note="데모에서 F12로 이미 보여준 장면의 근거. '코드에 0줄'은 물리적 경계라는 뜻.">
+    <div class="body">
+      <p class="lab">2층 — 구조로 막는다</p>
+      <p class="t" style="margin-top:10px">진짜 개인정보는 AI가 <span class="hl">접근조차 못 하는 곳</span>에 있습니다</p>
+      <div class="flow" style="margin-top:14px">
+        <div class="node key" style="flex:1.2">
+          <span class="nt">AI 백엔드</span>
+          <span class="ns">:8000 · 대화 내용만<br>STT · 요약 · 라우팅 · RAG</span>
+        </div>
+        <span class="arrow" style="width:120px;color:var(--muted);font-size:15px;font-family:var(--mono)">코드 0줄</span>
+        <div class="node pii" style="flex:1.2">
+          <span class="nt">pii-service</span>
+          <span class="ns">:8100 · 별도 프로세스<br>계좌 원문 · 인증값 · 자체 저장소</span>
+        </div>
+      </div>
+      <p class="sub" style="margin-top:14px;font-size:20px">AI 서버 코드에는 이 주소가 <b>단 한 줄도 없습니다.</b> 인증에 성공한 상담사 화면만 문을 엽니다.</p>
+    </div>
+  </section></div>
+
+  <!-- ═══ ACT 06 · 정직한 범위 ═════════════════════════════ -->
+  <div class="sect"><section class="slide" data-act="ACT <b>06</b> · 범위" data-time="12:40" data-toc="되는 것 / 범위 밖"
+    data-note="심사위원이 신뢰하는 건 <b>정확히 어디까지 됐는지</b>다. 과장하지 않는 것이 여기선 무기.">
+    <div class="body">
+      <p class="t">과장하지 않겠습니다</p>
+      <div class="cols" style="margin-top:6px">
+        <div>
+          <p class="lab" style="color:var(--green)">실제로 동작합니다</p>
+          <ul class="scope yes" style="margin-top:16px">
+            <li><span class="m">●</span><span>실시간 통화 · 스트리밍 전사</span></li>
+            <li><span class="m">●</span><span>완전 온프레미스 (외부 호출 0)</span></li>
+            <li><span class="m">●</span><span>개인정보 마스킹 · 격리 서버</span></li>
+            <li><span class="m">●</span><span>업무 분류 · 부서 라우팅</span></li>
+            <li><span class="m">●</span><span>실물 규정 검색 (RAG)</span></li>
+            <li><span class="m">●</span><span>통화 후처리 자동 요약</span></li>
+          </ul>
+        </div>
+        <div>
+          <p class="lab">이번 범위 밖입니다</p>
+          <ul class="scope no" style="margin-top:16px">
+            <li><span class="m">○</span><span>실제 은행 코어망 연동</span></li>
+            <li><span class="m">○</span><span>실제 전화망(CTI/SIP) 연결</span></li>
+            <li><span class="m">○</span><span>지급정지 · 원장 조회 실행</span></li>
+            <li><span class="m">○</span><span>데모 데이터는 전부 가상</span></li>
+          </ul>
+          <p class="src" style="margin-top:20px">감정온도 · 음성분노는 자동 판단이 아니라<br><b style="color:var(--ink-2)">상담사 참고 신호</b>입니다 — 오남용 방지 설계.</p>
+        </div>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>06</b> · 범위" data-time="13:00" data-toc="사투리 — 측정된 한계"
+    data-note="약점을 먼저 꺼내면 공격이 아니라 성숙도가 된다. '조사해보니 업계에도 없더라'가 핵심.">
+    <div class="body">
+      <p class="lab">그리고 사투리</p>
+      <p class="d sm">"해결했습니다"가 아니라<br><span class="hl">"측정했습니다."</span></p>
+      <hr class="rule">
+      <div class="cols" style="gap:40px">
+        <p class="b" style="font-size:19px">직접 조사해보니 <b style="color:var(--ink)">바로 갖다 쓸 온프레미스 방언 모델이 업계에 없었습니다.</b> 유일한 길인 파인튜닝은 데이터 승인·학습 시간 때문에 이번 발표까진 무리였습니다.</p>
+        <p class="b" style="font-size:19px">그래서 근거 없이 부풀리는 대신 <b style="color:var(--ink)">측정된 한계 + 로드맵</b>으로 가져왔습니다. 다음은 방언 데이터 확보 → 파인튜닝, 실시간 위험 신호 고도화, 규정집 전체 연동입니다.</p>
+      </div>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>06</b> · 범위" data-time="13:20" data-toc="로드맵 4단계"
+    data-note="'쓸수록 똑똑해지는 콜센터' — 각 단계가 앞 단계의 데이터를 먹고 자란다는 게 성장성 논거.">
+    <div class="body">
+      <p class="t">AI가 점점 앞으로 나옵니다</p>
+      <div class="road" style="margin-top:10px">
+        <div class="rs now">
+          <span class="rn">01 · 현재</span>
+          <span class="rt">통화 전 준비</span>
+          <span class="rd">접수 요약 → 준비카드. 상담사가 맥락을 갖고 시작한다.</span>
+        </div>
+        <div class="rs">
+          <span class="rn">02</span>
+          <span class="rt">통화 중 동행</span>
+          <span class="rd">스트리밍 요약 · 감정온도 실시간 · 방언 STT.</span>
+        </div>
+        <div class="rs">
+          <span class="rn">03</span>
+          <span class="rt">선제 제안</span>
+          <span class="rd">"이 문의의 다음 질문은 87%가 서류" — 묻기 전에 카드를 낸다.</span>
+        </div>
+        <div class="rs">
+          <span class="rn">04 · 비전</span>
+          <span class="rt">1차 응대 AI</span>
+          <span class="rd">단순 문의는 AI가, 사람은 감독과 복잡 케이스. <b>로컬 실시간 음성 모델 성숙 시.</b></span>
+        </div>
+      </div>
+      <hr class="rule" style="margin-top:16px">
+      <p class="sub" style="font-size:21px">각 단계가 이전 단계의 데이터를 먹고 자랍니다 — <b>쓸수록 똑똑해지는 콜센터.</b></p>
+    </div>
+  </section></div>
+
+  <!-- ═══ ACT 07 · 클로징 ══════════════════════════════════ -->
+  <div class="sect"><section class="slide ink" data-act="ACT <b>07</b> · 클로징" data-time="13:40" data-toc="한 문장"
+    data-note="여기서 <b>랜선을 다시 꽂는다</b> — 오프닝과 수미상관. 천천히 읽고 여운을 둘 것.">
+    <div class="body">
+      <p class="lab" style="color:#8f979f">한 문장으로</p>
+      <p class="d">고객은 <span class="hl">말만</span> 하고,<br>AI는 <span class="hl">준비</span>하고,<br>개인정보는 <span class="hl">건물을 나가지 않습니다.</span></p>
+      <hr class="rule">
+      <p class="sub">저희는 "만들겠습니다"를 설명하러 온 게 아니라, <b style="color:#f2f4f6">"이미 돌아갑니다"를 보여드리러</b> 왔습니다.</p>
+    </div>
+  </section></div>
+
+  <div class="sect"><section class="slide" data-act="ACT <b>07</b> · 클로징" data-time="14:20" data-toc="감사합니다"
+    data-note="랜선을 다시 꽂으며 — &quot;다시 연결하겠습니다. 감사합니다!&quot;">
+    <div class="body" style="justify-content:center">
+      <img class="lockup" src="data:image/png;base64,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" alt="KARI-NA" style="height:58px;margin-bottom:26px">
+      <p class="d sm">감사합니다.</p>
+      <hr class="rule">
+      <div class="cols" style="gap:36px;align-items:baseline">
+        <p class="sub" style="font-size:20px">인터넷 없이도, 개인정보를 지키면서,<br>상담을 더 빠르고 정확하게.</p>
+        <p class="cap" style="text-align:right">K7팀 · 2026. 07. 29<br>Kiwoom Academy Response Innovation · No ARS</p>
+      </div>
+    </div>
+  </section></div>
+
+  </div>
+</div>
+
+<div class="rail" id="rail"></div>
+<nav class="nav">
+  <button id="prev" title="이전 (←)" aria-label="이전 슬라이드">‹</button>
+  <button id="list" title="목차 (O)" aria-label="목차 열기">☰</button>
+  <button id="next" title="다음 (→)" aria-label="다음 슬라이드">›</button>
+</nav>
+<p class="hint" id="hint">← → 이동 · <b>O</b> 목차 · <b>N</b> 노트 · <b>S</b> 읽기 모드</p>
+<div class="note" id="note"></div>
+
+<div class="toc" id="toc" role="dialog" aria-label="슬라이드 목차">
+  <h2>슬라이드 목차</h2>
+  <p>KARI-NA · 15분 발표 · 25장</p>
+  <ol id="toclist"></ol>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var deck   = document.querySelector(".deck");
+  var stage  = document.getElementById("stage");
+  var sects  = Array.prototype.slice.call(stage.querySelectorAll(".sect"));
+  var slides = sects.map(function(s){ return s.querySelector(".slide"); });
+  var rail = document.getElementById("rail");
+  var toc = document.getElementById("toc");
+  var tocList = document.getElementById("toclist");
+  var note = document.getElementById("note");
+  var hint = document.getElementById("hint");
+  var cur = 0, notesOn = false, readMode = false, wheelLock = false;
+
+  /* 슬라이드 크롬(눈썹·꼬리)을 마크업 반복 없이 주입 */
+  slides.forEach(function(s, i){
+    var eb = document.createElement("div");
+    eb.className = "eyebrow";
+    eb.innerHTML = '<span class="act">' + (s.dataset.act || "") + '</span>' +
+                   '<span class="time">' + (s.dataset.time || "") + '</span>';
+    var ft = document.createElement("div");
+    ft.className = "foot";
+    ft.innerHTML = '<span class="brand"><span class="mark"></span>KARI-NA</span>' +
+                   '<span class="n">' + (i + 1) + " / " + slides.length + '</span>';
+    s.insertBefore(eb, s.firstChild);
+    s.appendChild(ft);
+
+    var b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-label", (i + 1) + "번 슬라이드로 이동");
+    b.addEventListener("click", function(){ go(i); });
+    rail.appendChild(b);
+
+    var li = document.createElement("li");
+    var tb = document.createElement("button");
+    tb.type = "button";
+    tb.innerHTML = '<span class="no">' + String(i + 1).padStart(2, "0") + '</span>' +
+                   '<span class="tt">' + (s.dataset.toc || "") + '</span>' +
+                   '<span class="ac">' + (s.dataset.time || "") + '</span>';
+    tb.addEventListener("click", function(){ go(i); closeToc(); });
+    li.appendChild(tb);
+    tocList.appendChild(li);
+  });
+
+  var railBtns = Array.prototype.slice.call(rail.children);
+  var tocBtns = Array.prototype.slice.call(tocList.querySelectorAll("button"));
+
+  /* 이동 — 스크롤 컨테이너를 해당 섹션 위치로 */
+  function go(i, instant){
+    i = Math.max(0, Math.min(sects.length - 1, i));
+    /* CSS scroll-behavior:smooth 때문에 "auto"로는 즉시 이동이 안 된다 — "instant"여야 한다 */
+    deck.scrollTo({ top: i * sects[0].offsetHeight, behavior: instant ? "instant" : "smooth" });
+  }
+
+  /* 현재 장 표시 — 실제 스크롤 위치가 진실 */
+  function mark(i){
+    if (i === cur) return;
+    cur = i;
+    railBtns.forEach(function(b, k){
+      b.classList.toggle("cur", k === cur);
+      b.classList.toggle("done", k < cur);
+    });
+    tocBtns.forEach(function(b, k){ b.classList.toggle("cur", k === cur); });
+    note.innerHTML = slides[cur].dataset.note || "";
+    try { history.replaceState(null, "", "#" + (cur + 1)); } catch (e) {}
+  }
+
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      var i = sects.indexOf(en.target);
+      en.target.classList.toggle("vis", en.isIntersecting);
+      if (en.isIntersecting && en.intersectionRatio > 0.55) mark(i);
+    });
+  }, { root: deck, threshold: [0, .55, .9] });
+  sects.forEach(function(s){ io.observe(s); });
+
+  /* 1280×720 무대를 뷰포트에 맞춘다 */
+  function fit(){
+    var s = Math.min((window.innerWidth - 32) / 1280, (window.innerHeight - 52) / 720);
+    document.documentElement.style.setProperty("--s", s);
+  }
+
+  function closeToc(){ toc.classList.remove("on"); }
+
+  function setRead(on){
+    readMode = on;
+    deck.classList.toggle("read", on);
+    hint.innerHTML = on
+      ? '읽기 모드 — 자유 스크롤 · <b>S</b> 무대 모드로'
+      : '← → 이동 · <b>O</b> 목차 · <b>N</b> 노트 · <b>S</b> 읽기 모드';
+  }
+
+  /* 무대 모드 — 휠 한 제스처당 정확히 한 장. 관성으로 두 장 넘어가는 걸 막는다. */
+  deck.addEventListener("wheel", function(e){
+    if (readMode || toc.classList.contains("on")) return;
+    e.preventDefault();
+    if (wheelLock || Math.abs(e.deltaY) < 6) return;
+    wheelLock = true;
+    setTimeout(function(){ wheelLock = false; }, 620);
+    go(cur + (e.deltaY > 0 ? 1 : -1));
+  }, { passive: false });
+
+  /* 터치 스와이프도 한 장씩 */
+  var ty = null;
+  deck.addEventListener("touchstart", function(e){ ty = e.touches[0].clientY; }, { passive: true });
+  deck.addEventListener("touchend", function(e){
+    if (readMode || ty === null) return;
+    var dy = ty - e.changedTouches[0].clientY;
+    ty = null;
+    if (Math.abs(dy) > 46) go(cur + (dy > 0 ? 1 : -1));
+  }, { passive: true });
+
+  document.getElementById("prev").addEventListener("click", function(){ go(cur - 1); });
+  document.getElementById("next").addEventListener("click", function(){ go(cur + 1); });
+  document.getElementById("list").addEventListener("click", function(){ toc.classList.toggle("on"); });
+  toc.addEventListener("click", function(e){ if (e.target === toc) closeToc(); });
+
+  /* 키보드 · 발표 리모컨(클리커는 화살표/PageUp·Down을 보낸다) */
+  document.addEventListener("keydown", function(e){
+    var k = e.key;
+    if (k === "Escape") { closeToc(); return; }
+    if (k === "ArrowRight" || k === "ArrowDown" || k === "PageDown" || k === " " || k === "Enter") {
+      e.preventDefault(); go(cur + 1);
+    } else if (k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp" || k === "Backspace") {
+      e.preventDefault(); go(cur - 1);
+    } else if (k === "Home") { e.preventDefault(); go(0); }
+    else if (k === "End") { e.preventDefault(); go(sects.length - 1); }
+    else if (k === "o" || k === "O" || k === "ㅐ") { toc.classList.toggle("on"); }
+    else if (k === "n" || k === "N" || k === "ㅜ") { notesOn = !notesOn; note.classList.toggle("on", notesOn); }
+    else if (k === "s" || k === "S" || k === "ㄴ") { setRead(!readMode); }
+  });
+
+  /* 내보내기 모드 — PDF/PPTX 렌더러가 장별로 호출한다 */
+  var shot = parseInt((new URLSearchParams(location.search)).get("shot"), 10);
+  if (!isNaN(shot) && shot >= 1 && shot <= sects.length) {
+    document.documentElement.classList.add("shot");
+    sects[shot - 1].classList.add("shotone", "vis");
+    mark(shot - 1);
+    return;
+  }
+
+  window.addEventListener("resize", function(){ fit(); go(cur, true); });
+  fit();
+  setRead(false);
+
+  var start = parseInt((location.hash || "").slice(1), 10);
+  mark(0);
+  if (!isNaN(start) && start > 1) requestAnimationFrame(function(){ go(start - 1, true); });
+})();
+</script>
