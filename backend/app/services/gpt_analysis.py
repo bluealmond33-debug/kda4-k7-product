@@ -11,6 +11,7 @@ import json
 from openai import OpenAI
 
 from app.config import settings
+from app.routing.taxonomy import normalize_department
 from app.schemas import GptAnalysis, RiskFlags
 
 _SYSTEM_PROMPT = """\
@@ -19,10 +20,10 @@ _SYSTEM_PROMPT = """\
 플래그는 전사문에서 명시적으로 확인되는 경우에만 true로 표시하고,
 확인할 수 없으면 false(모른다는 의미)로 남겨라. 과도한 추측을 하지 마라.
 
-department는 반드시 짧은 팀/부서명(2~8자 내외)으로만 답한다. 절대로 "보이스피싱 대응 금융
-콜센터" 같은 네 역할 설명을 그대로 반복하지 마라. 아래 목록 중 가장 가까운 것을 고르거나,
-목록에 없으면 이 형식("OO팀")을 따라 새로 만들어라:
-보이스피싱대응팀, 카드분실신고팀, 이체오류처리팀, 계좌보안팀, 대출상담팀, 일반상담팀
+department는 반드시 아래 공식 부서명 7개 중 하나를 정확히 그대로 답한다(전형진님 S/G/E
+분류체계와 동일 taxonomy — 임의로 새 이름을 지어내지 마라):
+수신·예적금, 여신·대출, 카드·결제, 외환·수출입, 전자금융·디지털, 연금·신탁·투자, 사고·신고
+(보이스피싱·명의도용·원격제어 등 사고·신고 성격의 긴급 건은 반드시 "사고·신고")
 """
 
 _RISK_FLAGS_SCHEMA = {
@@ -57,7 +58,7 @@ _RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
         "summary": {"type": "string", "description": "상담 내용 2~3문장 요약"},
-        "department": {"type": "string", "description": "담당 부서 (예: 보이스피싱대응팀, 카드분실신고팀, 일반상담팀 등)"},
+        "department": {"type": "string", "description": "담당 부서 (수신·예적금/여신·대출/카드·결제/외환·수출입/전자금융·디지털/연금·신탁·투자/사고·신고 중 하나)"},
         "keywords": {
             "type": "array",
             "items": {"type": "string"},
@@ -86,7 +87,7 @@ def analyze_transcript(client: OpenAI, transcript: str) -> GptAnalysis:
     payload = json.loads(response.choices[0].message.content)
     return GptAnalysis(
         summary=payload["summary"],
-        department=payload["department"],
+        department=normalize_department(payload["department"]),
         keywords=payload["keywords"],
         risk_flags=RiskFlags(**payload["risk_flags"]),
     )

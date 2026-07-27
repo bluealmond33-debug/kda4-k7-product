@@ -18,7 +18,7 @@ class UtteranceSegmenter:
         start_frames: int = 3,
         end_silence_ms: int = 700,
         min_utterance_ms: int = 300,
-        max_utterance_ms: int = 15000,
+        max_utterance_ms: int = 2000,
     ) -> None:
         self.frame_bytes = (sample_rate * frame_ms // 1000) * 2  # int16 = 2 byte
         self.rms_threshold = rms_threshold

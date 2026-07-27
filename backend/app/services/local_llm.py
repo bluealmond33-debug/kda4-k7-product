@@ -13,6 +13,7 @@ import json
 import httpx
 
 from app.config import Settings
+from app.routing.taxonomy import normalize_department
 from app.schemas import GptAnalysis, RiskFlags
 
 
@@ -21,9 +22,10 @@ _SYSTEM_PROMPT = """\
 고객 상담 전사문을 읽고 아래 JSON 스키마 그대로 구조화된 정보를 추출해서 JSON만 출력해라.
 다른 설명 문장은 절대 붙이지 마라.
 
-department는 반드시 짧은 팀/부서명(2~8자 내외)으로만 답한다. 아래 목록 중 가장 가까운 것을 고르거나,
-목록에 없으면 이 형식("OO팀")을 따라 새로 만들어라:
-보이스피싱대응팀, 카드분실신고팀, 이체오류처리팀, 계좌보안팀, 대출상담팀, 일반상담팀
+department는 반드시 아래 공식 부서명 7개 중 하나를 정확히 그대로 답한다(전형진님 S/G/E
+분류체계와 동일 taxonomy — 임의로 새 이름을 지어내지 마라):
+수신·예적금, 여신·대출, 카드·결제, 외환·수출입, 전자금융·디지털, 연금·신탁·투자, 사고·신고
+(보이스피싱·명의도용·원격제어 등 사고·신고 성격의 긴급 건은 반드시 "사고·신고")
 
 JSON 스키마:
 {
@@ -60,6 +62,8 @@ def analyze_transcript_local(settings: Settings, transcript: str) -> GptAnalysis
                 ],
                 "format": "json",
                 "stream": False,
+                # 속도 개선(박정운 피드백) — 요약/부서/키워드/위험플래그 JSON엔 400토큰이면 충분.
+                "options": {"temperature": 0.2, "num_predict": 400},
             },
             timeout=120,
         )
@@ -72,7 +76,7 @@ def analyze_transcript_local(settings: Settings, transcript: str) -> GptAnalysis
         payload = json.loads(content)
         return GptAnalysis(
             summary=payload["summary"],
-            department=payload["department"],
+            department=normalize_department(payload["department"]),
             keywords=payload["keywords"],
             risk_flags=RiskFlags(**payload.get("risk_flags", {})),
         )

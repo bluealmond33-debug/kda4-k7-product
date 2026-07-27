@@ -337,7 +337,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             </div>
 
-            {vm.arsDigits && (
+            {vm.dtmfMasked && (
               <div style={css("margin-top:12px;display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--blue-400);background:var(--blue-50,#eef4ff);border-radius:8px")}>
                 <span className="mi" style={css("font-size:18px;color:var(--blue-700)")}>dialpad</span>
                 <div style={css("flex:1;min-width:0")}>

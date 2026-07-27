@@ -228,16 +228,27 @@ class RagRequest(BaseModel):
 class LegacyAnalyzeRequest(BaseModel):
     text: str
     average_volume: float = 0
+    call_id: str | None = None  # 있으면 그 통화의 실시간 WavLM 음성분노 신호를 감정으로 쓴다
 
 
 class LegacyEmotion(BaseModel):
     label: str
     score: float
+    # 프론트(useCallFlow.ts)가 emotion.status==="completed"일 때만 게이지를 표시한다.
+    # 이 필드가 없으면 항상 "미연결"로 보인다 — 박정운 피드백("감정모델 연동이 안됨")의 원인.
+    status: str = "unavailable"
+    reason: str = ""
 
 
 class LegacyRouting(BaseModel):
     department: str
     reason: str
+    # S/G/E(전형진 classify_routing_safe) — department(GPT 자유형 추측)와 다른 축이라
+    # 병행 신호로 붙인다. 분류 실패/미판정이면 전부 None(프론트는 데모 픽스처로 폴백).
+    task_code: str | None = None
+    task_name: str | None = None
+    classification: str | None = None  # EMERGENCY / SIMPLE / GENERAL
+    handler: str | None = None  # AI_CC / HUMAN
 
 
 class LegacyAnalyzeResponse(BaseModel):

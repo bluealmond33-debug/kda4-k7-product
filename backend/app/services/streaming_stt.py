@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from app.config import Settings
-from app.services.local_stt import _get_model
 from app.services.pii_guard import PiiHit, mask_transcript
 
 
@@ -31,9 +30,10 @@ def transcribe_utterance(settings: Settings, pcm_int16: bytes) -> str:
     마스킹 함수의 내부 단계로만 남긴다.
     """
     audio = utterance_to_float32(pcm_int16)
-    model = _get_model(settings)
-    segments, _info = model.transcribe(audio, language="ko")
-    return "".join(seg.text for seg in segments).strip()
+    # STT 엔진: transformers Whisper(torch/GPU). 이 랩탑은 Smart App Control이 faster-whisper의
+    # ctranslate2/av 네이티브 DLL을 차단하므로 torch 기반으로 대체했다(app/services/transformers_stt.py).
+    from app.services.transformers_stt import transcribe_float32
+    return transcribe_float32(settings, audio)
 
 
 @dataclass(frozen=True)

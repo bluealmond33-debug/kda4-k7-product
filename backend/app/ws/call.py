@@ -54,6 +54,7 @@ class CallSession:
         self.masked_parts: list[str] = []   # 마스킹본 발화 누적(종료 시 분석 입력)
         self.max_anger = 0.0        # 통화 중 최대 음성분노 확률(judge 입력용)
         self.anger_hits = 0         # 분노 감지된 발화 수
+        self.voice_model_calls = 0  # WavLM이 실제로 돈 발화 수(감지 여부와 무관, 모델 가동 확인용)
 
 
 class CallRegistry:
@@ -136,6 +137,7 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     # 누적은 종료 시 카드 분석 입력으로, DB append는 통화 진행 중 전사 영속화로 쓴다.
     session.masked_parts.append(masked)
     if anger:
+        session.voice_model_calls += 1
         session.max_anger = max(session.max_anger, anger.probability)
         if anger.detected:
             session.anger_hits += 1
