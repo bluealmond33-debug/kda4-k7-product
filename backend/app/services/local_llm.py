@@ -101,11 +101,10 @@ def classify_task_with_llm(settings: Settings, transcript: str) -> str | None:
 
     실패하거나 목록에 없는 코드를 답하면 None — 호출부는 기존 규칙기반 결과를 그대로 쓴다.
     """
-    from app.services.routing.ars_catalog import ARS_TASK_KEYWORDS
-    from app.services.routing.classifier import TASK_NAMES
+    from app.services.routing.classifier import TASK_KEYWORDS, TASK_NAMES
 
     def _catalog_line(code: str, name: str) -> str:
-        examples = ARS_TASK_KEYWORDS.get(code)
+        examples = TASK_KEYWORDS.get(code)
         if not examples:
             return f"{code}: {name}"
         return f"{code}: {name} (예: {', '.join(examples[:3])})"

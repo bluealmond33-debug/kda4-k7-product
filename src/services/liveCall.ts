@@ -21,6 +21,11 @@ export interface LiveTranscript {
   audioSeq?: number;
   /** 이 발화에서 백엔드(pii_guard, 11개 항목)가 마스킹한 개인정보 건수 — 화면 배지용 */
   piiMasked?: number;
+  // WavLM 음성분노 신호(ws/call.py의 _emit_transcript가 발화마다 실어 보냄) — 감정온도
+  // 실시간 미리보기(useCallFlow의 liveRecordingAnger)용. 폴백 중이면 서버가 아예 필드를
+  // 안 보내므로 undefined일 수 있다.
+  angerDetected?: boolean;
+  angerProbability?: number;
 }
 
 export interface LiveHandle {
@@ -78,6 +83,8 @@ export async function startLiveCall(
         at?: number;
         speaker?: unknown;
         pii_masked?: number;
+        anger_detected?: boolean;
+        anger_probability?: number | null;
         level?: number;
         status?: string;
         device?: string;
@@ -116,6 +123,12 @@ export async function startLiveCall(
           ...(generation > 0 ? { generation } : {}),
           ...(audioSeq > 0 ? { audioSeq } : {}),
           ...(piiMasked > 0 ? { piiMasked } : {}),
+          ...(typeof message.anger_detected === "boolean"
+            ? { angerDetected: message.anger_detected }
+            : {}),
+          ...(typeof message.anger_probability === "number"
+            ? { angerProbability: message.anger_probability }
+            : {}),
         });
         settleSeqWaiters();
       }

@@ -11,6 +11,14 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 import sys as _sys
 _sys.modules.setdefault("av", None)
 
+# 같은 계열의 또 다른 순서 충돌: opensmile/lightgbm/joblib(감정온도 eGeMAPS+LightGBM,
+# app/services/emotion.py)을 faster-whisper/ctranslate2 계열이 먼저 로드된 뒤에 임포트하면
+# joblib.load()가 세그폴트로 프로세스를 죽인다(macOS 실측, 2026-07-27). KMP_DUPLICATE_LIB_OK만으론
+# 안 막혀서, 위 두 항목과 같은 원칙대로 다른 무거운 라이브러리보다 먼저 임포트해 순서로 회피한다.
+import joblib as _joblib  # noqa: F401
+import lightgbm as _lightgbm  # noqa: F401
+import opensmile as _opensmile  # noqa: F401
+
 import threading
 from contextlib import asynccontextmanager
 
