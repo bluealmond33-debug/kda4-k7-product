@@ -24,6 +24,8 @@ const KEY = "karina-call-snapshot";
 const STALE_MS = 15 * 1000;
 /** 소유자가 칠판을 다시 적는 주기 — STALE_MS의 1/3이면 한 번 걸러도 살아남는다 */
 export const SNAPSHOT_BEAT_MS = 5 * 1000;
+/** 칠판에 남기는 전사 줄 수 — 화면에 보이는 만큼이면 충분하고, 저장소를 부풀리지 않는다 */
+export const SNAPSHOT_MAX_LINES = 40;
 
 export interface CallSnapshot {
   callId: string;
@@ -34,6 +36,10 @@ export interface CallSnapshot {
   updatedAt: number;
   /** 지금 어느 단계인가 — 새로고침한 고객 창이 다이얼이 아니라 통화 화면으로 돌아오게 한다 */
   phase?: string;
+  /** 지금까지의 전사 — 새로고침해도 대화가 이어져 보이게.
+   *  ⚠️ **마스킹된 문장만 담는다.** 원문(계좌번호·생년월일 등)은 저장소에 남기지 않는다 —
+   *  브라우저 저장소는 지우는 사람이 없으면 계속 남고, 시연 노트북은 여러 사람이 만진다. */
+  lines?: { seq: number; text: string; at: number; speaker: string }[];
 }
 
 /** localStorage는 사파리 프라이빗·정책 차단에서 던진다. 시연이 그걸로 멈추면 안 된다. */

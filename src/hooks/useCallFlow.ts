@@ -46,6 +46,7 @@ import {
 } from "../services";
 import {
   SNAPSHOT_BEAT_MS,
+  SNAPSHOT_MAX_LINES,
   clearCallSnapshot,
   readCallSnapshot,
   writeCallSnapshot,
@@ -375,6 +376,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [liveCaptionSpeaker, setLiveCaptionSpeaker] =
     useState<LiveSpeaker>("customer");
   const [liveTranscriptLines, setLiveTranscriptLines] = useState<LiveTranscript[]>([]);
+  /* 하트비트가 최신 전사를 읽는 통로 — state를 effect 의존성에 넣으면 말이 한 줄 늘 때마다
+     5초 타이머가 리셋돼 칠판이 갱신되지 않는다(그러면 15초 뒤 스스로 상한다). */
+  const linesRef = useRef<LiveTranscript[]>([]);
+  linesRef.current = liveTranscriptLines;
   const [captureBySpeaker, setCaptureBySpeaker] = useState<Record<LiveSpeaker, boolean>>({
     customer: false,
     agent: false,
@@ -675,12 +680,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         kind: incomingRef.current,
         startedAtMs: clockOrigin.current,
         phase: phaseRef.current,
+        // 마스킹해서 담는다 — 원문은 저장소에 남기지 않는다(화면에 보이는 것과 같은 문장)
+        lines: linesRef.current.slice(-SNAPSHOT_MAX_LINES).map((l) => ({
+          seq: l.seq,
+          text: maskPii(l.text),
+          at: l.at,
+          speaker: l.speaker,
+        })),
       });
     };
     beat();
     const id = window.setInterval(beat, SNAPSHOT_BEAT_MS);
     return () => window.clearInterval(id);
-  }, [inCallForBeat]);
+    // 말이 한 줄 늘 때마다 즉시 다시 적는다 — 5초 주기만 믿으면 새로고침 직전에 온 말이
+    // 칠판에 없어 복구했을 때 대화가 잘려 보인다(타이머는 다시 감기지만 비용은 없다)
+  }, [inCallForBeat, liveTranscriptLines.length]);
 
   /* 창이 열릴 때 한 번 — 이미 돌고 있는 통화가 있으면 그 통화로 들어간다.
      버스(생방송)를 못 들은 창을 위한 보험이다: 새로고침하거나 시연 도중에 창을 새로 열어도
@@ -702,6 +716,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     /* 칠판을 이어서 살려 둔다 — 복구한 창이 새 주인이다. 안 하면 갱신이 끊겨 15초 뒤
        칠판이 상하고, 그때부터는 아무도(자기 자신도) 이 통화로 못 돌아온다. */
     ownsCallRef.current = true;
+    // 지난 대화도 되돌린다 — 빈 패널로 돌아오면 "통화가 처음부터 다시 시작됐다"로 읽힌다
+    if (snap.lines?.length) {
+      setLiveTranscriptLines(
+        snap.lines.map((l) => ({ seq: l.seq, text: l.text, at: l.at, speaker: l.speaker as LiveSpeaker }))
+      );
+    }
     // connecting(안내 재생 중)으로는 돌리지 않는다 — 안내는 이미 지나갔다
     transitionPhase(back as Phase);
     startClockRef.current();
@@ -718,6 +738,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     clockOrigin.current = snap.startedAtMs;
     joiningRef.current = true;
     startCallRef.current();
+    // startCall이 전사를 비우므로 **그 뒤에** 지난 대화를 얹는다
+    if (snap.lines?.length) {
+      setLiveTranscriptLines(
+        snap.lines.map((l) => ({ seq: l.seq, text: l.text, at: l.at, speaker: l.speaker as LiveSpeaker }))
+      );
+    }
     /* startCall이 안에서 무엇을 하든 **마지막에 원점을 못 박는다.** 시작 경로가 여러 갈래라
        중간에 지금 시각으로 덮이는 길이 남아 있었고(늦게 연 창이 몇 초 뒤부터 세는 증상),
        원점은 여기서 정하는 게 맞다 — 이 창은 남의 통화에 합류하는 중이다.
