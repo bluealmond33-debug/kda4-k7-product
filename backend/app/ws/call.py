@@ -52,7 +52,12 @@ class CallSession:
         # ── 실시간 DB 저장용 누적 상태 ──
         self.db_started = False     # calls 행 생성했는지
         self.masked_parts: list[str] = []   # 마스킹본 발화 누적(종료 시 분석 입력)
-        self.max_anger = 0.0        # 통화 중 최대 음성분노 확률(judge 입력용)
+        self.max_anger = 0.0        # 통화 중 최대 음성분노 확률(judge/후처리 위험판단용 — 절대 안 내려감, 의도된 동작)
+        # 실시간 감정온도 게이지 전용(박정운 피드백: "차분히 말하는데 41도 고정") — max_anger는
+        # "이 통화에서 한 번이라도 격해진 적 있는가"엔 맞는 신호지만, 통화 중 지금 상태를
+        # 보여줘야 하는 게이지에 쓰면 초반 한 번의 스파이크가 남은 통화 내내 고정돼버린다.
+        # 지수이동평균(최근 발화 비중 40%)으로 진정되면 실제로 온도도 내려가게 한다.
+        self.recent_anger = 0.0
         self.anger_hits = 0         # 분노 감지된 발화 수
         self.voice_model_calls = 0  # WavLM이 실제로 돈 발화 수(감지 여부와 무관, 모델 가동 확인용)
 
@@ -139,6 +144,7 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     if anger:
         session.voice_model_calls += 1
         session.max_anger = max(session.max_anger, anger.probability)
+        session.recent_anger = 0.6 * session.recent_anger + 0.4 * anger.probability
         if anger.detected:
             session.anger_hits += 1
     if settings.database_url and session.db_started:

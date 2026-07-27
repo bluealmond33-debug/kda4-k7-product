@@ -68,7 +68,14 @@ export function categoryForDepartment(label: string | undefined | null): string 
   return DEPARTMENT_CATEGORY[label.trim()] ?? null;
 }
 
-export const semanticSearchEnabled = !!API_BASE_URL;
+// 다른 서비스(useCallFlow의 /analyze-text·/ws/call 등)와 같은 폴백 규칙 — .env의
+// VITE_API_BASE_URL이 옛 IP로 남아 있어도(와이파이·장소 이동) 지금 이 페이지를 연 주소로
+// 자동 복구한다. 이 파일만 폴백이 없어서 "다른 건 다 되는데 규정검색만 안 됨" 버그가 났었다.
+const RESOLVED_API_BASE =
+  API_BASE_URL ||
+  (typeof location !== "undefined" ? `${location.protocol}//${location.hostname}:8000` : "");
+
+export const semanticSearchEnabled = !!RESOLVED_API_BASE;
 
 /** 규정 검색 응답을 기다리는 한계(ms) — 넘으면 포기하고 로컬 필터 결과만 보여준다 */
 const SEARCH_TIMEOUT_MS = 8000;
@@ -100,7 +107,7 @@ export async function searchRegulations(
   const timeout = AbortSignal.timeout(SEARCH_TIMEOUT_MS);
   const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
   const res = await fetch(
-    `${API_BASE_URL}${DATA_API_PREFIX}/regulations/search?${params}`,
+    `${RESOLVED_API_BASE}${DATA_API_PREFIX}/regulations/search?${params}`,
     { headers: { Accept: "application/json" }, signal }
   );
   if (!res.ok) throw new Error(`regulation search failed: ${res.status}`);
@@ -179,7 +186,7 @@ export async function fetchRegulationDocument(
   if (!semanticSearchEnabled) return null;
   try {
     const res = await fetch(
-      `${API_BASE_URL}${DATA_API_PREFIX}/regulations/documents/${encodeURIComponent(docId)}`,
+      `${RESOLVED_API_BASE}${DATA_API_PREFIX}/regulations/documents/${encodeURIComponent(docId)}`,
       { signal: opts.signal }
     );
     if (!res.ok) return null;
