@@ -42,6 +42,31 @@ EMERGENCY_DEPARTMENT_LABEL = DEPARTMENTS[EMERGENCY_DEPARTMENT_CODE]
 
 _LABEL_TO_CODE = {label: code for code, label in DEPARTMENTS.items()}
 
+# LLM(EXAONE/GPT)이 프롬프트 지시를 어기고 taxonomy 밖 부서명을 지어내는 경우가 있다
+# (박정운 피드백: "부서코드가 자꾸 틀려"). 키워드로 공식 7개 중 가장 가까운 것에 스냅한다.
+# 아무것도 안 걸리면 원본을 그대로 둔다 — 잘못 우겨 넣는 것보다 원인 파악이 쉽다.
+_DEPARTMENT_KEYWORDS: list[tuple[str, str]] = [
+    ("보이스피싱", "사고·신고"), ("명의도용", "사고·신고"), ("원격제어", "사고·신고"),
+    ("사고", "사고·신고"), ("신고", "사고·신고"), ("분실", "사고·신고"),
+    ("카드", "카드·결제"), ("결제", "카드·결제"),
+    ("대출", "여신·대출"), ("여신", "여신·대출"),
+    ("외환", "외환·수출입"), ("수출입", "외환·수출입"),
+    ("전자금융", "전자금융·디지털"), ("디지털", "전자금융·디지털"), ("이체", "전자금융·디지털"),
+    ("연금", "연금·신탁·투자"), ("신탁", "연금·신탁·투자"), ("투자", "연금·신탁·투자"),
+    ("예적금", "수신·예적금"), ("수신", "수신·예적금"), ("예금", "수신·예적금"),
+]
+
+
+def normalize_department(raw: str) -> str:
+    """LLM이 낸 부서명을 공식 DEPARTMENTS 값으로 스냅한다. 매칭 실패 시 원본 유지."""
+    text = (raw or "").strip()
+    if text in DEPARTMENTS.values():
+        return text
+    for keyword, dept in _DEPARTMENT_KEYWORDS:
+        if keyword in text:
+            return dept
+    return text
+
 # 3층 — 업무코드: code -> (부서코드, ARS 코드, 한글명)
 # 예: 청약 문서는 DEP/subscription, 착오송금은 SG/misremit (kdh registry.csv와 동일)
 BUSINESS_CODES: dict[str, tuple[str, str, str]] = {

@@ -13,6 +13,7 @@ import json
 import httpx
 
 from app.config import Settings
+from app.routing.taxonomy import normalize_department
 from app.schemas import GptAnalysis, RiskFlags
 
 
@@ -62,6 +63,8 @@ def analyze_transcript_local(settings: Settings, transcript: str) -> GptAnalysis
                 ],
                 "format": "json",
                 "stream": False,
+                # 속도 개선(박정운 피드백) — 요약/부서/키워드/위험플래그 JSON엔 400토큰이면 충분.
+                "options": {"temperature": 0.2, "num_predict": 400},
             },
             timeout=120,
         )
@@ -74,7 +77,7 @@ def analyze_transcript_local(settings: Settings, transcript: str) -> GptAnalysis
         payload = json.loads(content)
         return GptAnalysis(
             summary=payload["summary"],
-            department=payload["department"],
+            department=normalize_department(payload["department"]),
             keywords=payload["keywords"],
             risk_flags=RiskFlags(**payload.get("risk_flags", {})),
         )

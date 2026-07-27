@@ -273,6 +273,13 @@ const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; n
 
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
 const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
+// 백엔드 classify_routing_safe의 classification(EMERGENCY/SIMPLE/GENERAL) →
+// deriveSge의 1글자 S/G/E 축으로 변환.
+const CLASSIFICATION_TO_SGE: Record<string, "S" | "G" | "E"> = {
+  EMERGENCY: "E",
+  SIMPLE: "S",
+  GENERAL: "G",
+};
 // 색은 값에 바인딩 — 낮음이 빨갛게, 주의가 늘 앰버로 보이는 거짓말을 막는다
 const EMOTION_COLORS = {
   stable: { fg: "var(--green-900)", bar: "var(--green-700)" },
@@ -836,7 +843,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         demoBus.emit("routing.assigned", {
           callId,
           department: card.department,
-          sge: deriveSge(card.incident_risk, card.department, incomingRef.current),
+          sge: deriveSge(
+            card.incident_risk,
+            card.department,
+            incomingRef.current,
+            card.routing ? CLASSIFICATION_TO_SGE[card.routing.classification] : undefined
+          ),
           confidence: card.routing_confidence,
           risk: card.incident_risk,
         });
@@ -951,7 +963,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, turns, scope, average_volume: 0 }),
+          body: JSON.stringify({
+            text,
+            turns,
+            scope,
+            average_volume: 0,
+            // 있으면 백엔드가 이 통화의 실시간 WavLM 음성분노 신호를 감정으로 쓴다(텍스트만
+            // 있을 때의 가짜 감정 대신 진짜 음성 기반 신호 — 박정운 피드백).
+            call_id: realCallActiveRef.current ? LIVE_CALL_ID : undefined,
+          }),
           signal: controller.signal,
         }
       );
@@ -1037,6 +1057,21 @@ export function useCallFlow(config: CallFlowConfig = {}) {
               typeof data?.routing_confidence === "number"
                 ? data.routing_confidence
                 : 0.9,
+            // S/G/E(전형진 classify_routing_safe) — 실제 배정이 왔으면 그걸 쓰고, 없으면
+            // (분류 실패/보류) 기존 값(데모 픽스처 등) 유지.
+            routing: data?.routing?.task_code
+              ? {
+                  task_code: String(data.routing.task_code),
+                  task_name: String(data.routing.task_name || ""),
+                  classification:
+                    data.routing.classification === "EMERGENCY" ||
+                    data.routing.classification === "SIMPLE" ||
+                    data.routing.classification === "GENERAL"
+                      ? data.routing.classification
+                      : "GENERAL",
+                  handler: data.routing.handler === "HUMAN" ? "HUMAN" : "AI",
+                }
+              : prev.consultation_card.routing,
             emotion: emotionAvailable
               ? {
                   status: "completed",
@@ -2346,6 +2381,84 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const p = phase;
   const inCall = ["connecting", "recording", "confirm", "prep", "active"].includes(p);
   const ended = p === "wrap" || p === "summarizing";
+
+  // 고객폰(?role=customer) 실통화 마이크 — 통화 중일 때만 브라우저 마이크를 잡아
+  // /ws/call/{callId}?role=customer로 16kHz PCM을 스트리밍한다(구 public/customer.html과
+  // 동일 계약). 아이폰 등 WO Mic을 못 쓰는 기기가 이 페이지를 직접 열어 발화할 수 있게 한다.
+  useEffect(() => {
+    // #(또는 *) 로 발화 종료 신호를 보내면(intake_complete) 더 이상 마이크를 보낼 필요가
+    // 없다 — 고객이 계속 말해도 서버로 안 흘려보내고 멈춘다(박정운 피드백).
+    if (!customerLiveMode || !inCall || mobileIntakeComplete) return;
+    // http(비보안 컨텍스트)에선 getUserMedia 자체가 없다(iOS Safari 등) — WO Mic 등
+    // 별도 오디오 경로가 정상 경로이므로, 조용히 건너뛰고 에러 배너를 띄우지 않는다.
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+    let ctx: AudioContext | null = null;
+    let proc: ScriptProcessorNode | null = null;
+    let ws: WebSocket | null = null;
+    (async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true },
+        });
+      } catch (e) {
+        if (!cancelled) setMicErr("마이크 권한이 필요합니다: " + (e as Error).message);
+        return;
+      }
+      if (cancelled) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      const wsBase =
+        (API_BASE_URL || `${location.protocol}//${location.hostname}:8000`).replace(
+          /^http/,
+          "ws"
+        );
+      ws = new WebSocket(`${wsBase}/ws/call/${encodeURIComponent(LIVE_CALL_ID)}?role=customer`);
+      ws.binaryType = "arraybuffer";
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      ctx = new AC({ sampleRate: 16000 });
+      if (ctx.state === "suspended") await ctx.resume();
+      const src = ctx.createMediaStreamSource(stream);
+      proc = ctx.createScriptProcessor(4096, 1, 1);
+      src.connect(proc);
+      proc.connect(ctx.destination);
+      proc.onaudioprocess = (e) => {
+        if (ws?.readyState !== WebSocket.OPEN) return;
+        const f32 = e.inputBuffer.getChannelData(0);
+        const i16 = new Int16Array(f32.length);
+        for (let i = 0; i < f32.length; i++) {
+          const s = Math.max(-1, Math.min(1, f32[i]));
+          i16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+        }
+        ws.send(i16.buffer);
+      };
+    })();
+    return () => {
+      cancelled = true;
+      try {
+        proc && ((proc.onaudioprocess = null), proc.disconnect());
+      } catch {
+        // noop
+      }
+      try {
+        ctx && ctx.close();
+      } catch {
+        // noop
+      }
+      try {
+        stream && stream.getTracks().forEach((t) => t.stop());
+      } catch {
+        // noop
+      }
+      try {
+        ws && ws.close();
+      } catch {
+        // noop
+      }
+    };
+  }, [customerLiveMode, inCall, mobileIntakeComplete]);
   const sim = mode === "sim";
   const nv = !verified;
 
@@ -2837,12 +2950,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     micLevel,
     arsDigits,
     dtmfEvents,
-    dtmfMasked:
-      arsDigits.length > 0
-        ? `${"•".repeat(Math.max(0, arsDigits.replace(/[^0-9]/g, "").length - 4))}${arsDigits
-            .replace(/[^0-9]/g, "")
-            .slice(-4)}${arsDigits.endsWith("#") ? " #" : ""}`
-        : "",
+    dtmfMasked: (() => {
+      // #(발화 종료 신호)는 숫자가 아니라 제어 신호라 화면엔 표시하지 않는다(박정운 피드백).
+      const numeric = arsDigits.replace(/[^0-9]/g, "");
+      return numeric.length > 0
+        ? `${"•".repeat(Math.max(0, numeric.length - 4))}${numeric.slice(-4)}`
+        : "";
+    })(),
     dtmfPersisted: dtmfEvents.length === 0 || dtmfEvents.every((event) => event.persisted),
     arsMobileConnected,
     mobileServerConnected,
@@ -2941,9 +3055,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       ? "실제 고객 발화를 기준으로 업무 유형과 담당 부서를 대조하고 있습니다"
       : card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
     // 라우팅 메타 — 카드가 '자동 라우팅되어 온 것'임을 어필: 부서(2층)·SGE(1층)·업무유형(3층)
-    prepSge: deriveSge(card.incident_risk, card.department, incoming),
+    prepSge: deriveSge(
+      card.incident_risk,
+      card.department,
+      incoming,
+      card.routing ? CLASSIFICATION_TO_SGE[card.routing.classification] : undefined
+    ),
     prepBusinessType: card.business_type || "업무 유형 분석 중",
-    // 3층 라우팅 체인 표시용 — 업무코드(3층)와 핵심 니즈 태그
     // 3층 업무코드 — **분류 결과(card.routing)에서 그대로 읽는다.**
     // 예전엔 콜 유형별 상수(PREP_BUSINESS_CODE)를 찍어서, 백엔드가 분류에 실패해(routing=null)
     // 아무것도 못 줘도 화면엔 늘 코드가 떠 있었다. "업무코드가 계속 G002"의 정체가 이거였다 —

@@ -5,6 +5,12 @@ import os
 # 다른 라이브러리 import 전에 설정해야 효과가 있다. (온프레미스 모드에서만 실제로 문제됨)
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
+# 이 랩탑은 Smart App Control이 av/ctranslate2 네이티브 DLL을 차단한다. STT는 transformers
+# Whisper(torch)로 대체했고(app/services/transformers_stt.py), transformers가 av(영상 파이프라인)
+# 를 로드하려다 차단 DLL에 걸리지 않게 av를 '미설치'로 위장한다. 다른 import 전에 설정해야 한다.
+import sys as _sys
+_sys.modules.setdefault("av", None)
+
 import threading
 from contextlib import asynccontextmanager
 
@@ -18,6 +24,7 @@ from app.rag import RegulationSearchUnavailable, embedder, initialize_rag
 from app.routers.mvp import router as mvp_router
 from app.routers.pipeline import router as pipeline_router
 from app.routers.regulations import router as regulations_router
+from app.ws.ars import router as ars_router
 from app.ws.call import router as ws_router
 
 
@@ -60,6 +67,7 @@ app.include_router(pipeline_router)
 app.include_router(mvp_router)
 app.include_router(regulations_router)  # 규정 지식베이스 /api/v1/regulations/*
 app.include_router(ws_router)           # 실시간 통화 WebSocket /ws/call/{call_id}
+app.include_router(ars_router)          # 전화 시작/수락/종료 제어 WebSocket /ws/ars/{call_id}
 
 
 # ── 분류기 개선 피드백 루프 — 상담사가 후처리 화면에서 AI 분류 판정을 검수/교정한다.

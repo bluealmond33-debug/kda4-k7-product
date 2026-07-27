@@ -124,6 +124,10 @@ def generate_consult_guide(
                 ],
                 "format": "json",
                 "stream": False,
+                # 속도 개선(박정운 피드백: "요약 시간 너무 오래 걸림") — 옵션 없으면 기본값이
+                # 사실상 무제한이라 필요 이상으로 길게 생성한다. 4단계 스크립트+후속조치+
+                # 결과라벨 JSON엔 600토큰이면 충분하다.
+                "options": {"temperature": 0.2, "num_predict": 600},
             },
             timeout=120,
         )

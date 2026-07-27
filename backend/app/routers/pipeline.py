@@ -10,6 +10,7 @@ from app.config import settings
 from app.routing import taxonomy
 from app.services.pii_guard import PII_SCOPE, mask_transcript
 from app.schemas import (
+    AnalysisSource,
     AnalyzeResult,
     AttentionReasonCode,
     BriefingCard,
@@ -255,8 +256,30 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
     """demo_live.html용 어댑터 — 브라우저 STT로 이미 뽑힌 텍스트를 받아
     api_contract.md 스키마(summary/category/emotion/urgency_score/routing/keywords)로 응답한다."""
     gpt_result = _analyze(body.text)
-    emotion_result = analyze_emotion(body.text.encode("utf-8"))
+
+    # 감정 — call_id가 있으면 그 통화 중 실시간으로 이미 돈 WavLM 음성분노 신호(진짜 음성
+    # 기반 모델)를 쓴다. 텍스트를 가짜 WAV로 감싸 analyze_emotion에 넣던 예전 방식은 음향
+    # 모델이 텍스트를 못 읽어 항상 스텁으로 떨어졌다(박정운 피드백 "감정모델 연동 안됨"의 원인).
+    live_session = None
+    if body.call_id:
+        from app.ws.call import registry as _call_registry
+
+        live_session = _call_registry._sessions.get(body.call_id)
+    emotion_is_live = bool(live_session and live_session.voice_model_calls > 0)
+    if emotion_is_live:
+        anger_p = min(1.0, max(0.0, live_session.max_anger))
+        emotion_result = EmotionResult(
+            anger_probability=anger_p, anxiety_probability=anger_p,
+            neutral_probability=max(0.0, 1.0 - anger_p), uncertainty=0.0,
+            analysis_source=AnalysisSource.REAL_MODEL,
+        )
+    else:
+        emotion_result = analyze_emotion(body.text.encode("utf-8"))
     judgement = run_judge(gpt_result.risk_flags, emotion_result)
+
+    # S/G/E 업무분리(전형진 classify_routing_safe) — department(GPT 자유형 추측)와 다른
+    # 축이라 병행 신호로 붙인다. 보조 신호라 실패해도 None만 되고 분석 자체는 안 막힌다.
+    routing_result = classify_routing_safe(body.text)
 
     reason_labels = [_REASON_LABELS[code] for code in judgement.reason_codes]
     emotion_label, emotion_score = emotion_label_and_score(emotion_result)
@@ -306,11 +329,24 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
         call_id=str(uuid.uuid4()),
         summary=gpt_result.summary,
         category=gpt_result.department,
-        emotion=LegacyEmotion(label=emotion_label, score=emotion_score),
+        emotion=LegacyEmotion(
+            label=emotion_label,
+            score=round(emotion_score * 100, 1),
+            status="completed" if emotion_is_live else "unavailable",
+            reason=(
+                f"실시간 음성분노(WavLM) 신호 · 발화 {live_session.voice_model_calls}건 분석"
+                if emotion_is_live
+                else "실시간 음성 신호 없음(텍스트만 전달됨)"
+            ),
+        ),
         urgency_score=urgency_score_for(judgement.attention_level),
         routing=LegacyRouting(
             department=gpt_result.department,
             reason=routing_reason(reason_labels, gpt_result.department),
+            task_code=routing_result.task_code if routing_result else None,
+            task_name=routing_result.task_name if routing_result else None,
+            classification=routing_result.classification if routing_result else None,
+            handler=routing_result.handler if routing_result else None,
         ),
         keywords=gpt_result.keywords,
         references=references,
