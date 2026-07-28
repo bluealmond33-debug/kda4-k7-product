@@ -8,7 +8,11 @@ CREATE TABLE IF NOT EXISTS calls (
     source_channel text NOT NULL DEFAULT 'voice' CHECK (source_channel = 'voice'),
     audio_filename text NOT NULL,
     CONSTRAINT calls_audio_filename_not_blank_chk CHECK (btrim(audio_filename) <> ''),
-    created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- 본인인증 완료 여부만 남긴다. 입력한 생년월일 원문은 어디에도 저장하지 않는다
+    -- (프로젝트 전체의 마스킹 원칙 — pii_guard.py 등과 동일 기준).
+    auth_verified boolean NOT NULL DEFAULT false,
+    auth_verified_at timestamptz
 );
 
 CREATE TABLE IF NOT EXISTS transcripts (
@@ -177,6 +181,17 @@ BEGIN
                 )
                 OR (emotion_score > 66 AND emotion_level = 'elevated')
             );
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'calls'
+          AND column_name = 'auth_verified'
+    ) THEN
+        ALTER TABLE calls ADD COLUMN auth_verified boolean NOT NULL DEFAULT false;
+        ALTER TABLE calls ADD COLUMN auth_verified_at timestamptz;
     END IF;
 END
 $migration$;

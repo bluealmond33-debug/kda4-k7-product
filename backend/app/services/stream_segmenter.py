@@ -18,7 +18,11 @@ class UtteranceSegmenter:
         start_frames: int = 3,
         end_silence_ms: int = 700,
         min_utterance_ms: int = 300,
-        max_utterance_ms: int = 2000,
+        # 자연스러운 한 문장은 2초를 쉽게 넘긴다 — 이전 2000ms 상한은 침묵 없이 이어지는
+        # 발화를 문장 중간에서 강제로 잘라 전사가 "관련해서 문의드릴게" / "있어서"처럼
+        # 조각나게 만들었다(실측). end_silence_ms(자연스러운 쉼)가 여전히 주 종료 조건이고,
+        # 이 상한은 침묵 없이 계속 말할 때만 걸리는 안전장치다.
+        max_utterance_ms: int = 8000,
     ) -> None:
         self.frame_bytes = (sample_rate * frame_ms // 1000) * 2  # int16 = 2 byte
         self.rms_threshold = rms_threshold

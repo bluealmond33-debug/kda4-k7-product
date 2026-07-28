@@ -204,8 +204,12 @@ def finalize_live_call(
     call_id: UUID,
     card: ConsultationCard,
     raw_model_result: dict,
+    auth_verified: bool = False,
 ) -> None:
-    """통화 종료 — 상담카드 저장 + calls를 ready로. 카드는 멱등 upsert."""
+    """통화 종료 — 상담카드 저장 + calls를 ready로. 카드는 멱등 upsert.
+
+    auth_verified는 ars.py의 인메모리 상태를 종료 시점에 읽어온 스냅숏이다 — 입력한
+    생년월일 원문은 여기에도, 어디에도 저장하지 않는다(완료 여부/시각만)."""
     with psycopg.connect(_database_url(settings)) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
@@ -249,8 +253,14 @@ def finalize_live_call(
                 ),
             )
             cursor.execute(
-                "UPDATE calls SET status = 'ready' WHERE call_id = %s",
-                (call_id,),
+                """
+                UPDATE calls
+                SET status = 'ready',
+                    auth_verified = %s,
+                    auth_verified_at = CASE WHEN %s THEN CURRENT_TIMESTAMP ELSE NULL END
+                WHERE call_id = %s
+                """,
+                (auth_verified, auth_verified, call_id),
             )
 
 

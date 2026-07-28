@@ -101,6 +101,23 @@ def _should_end_after_grace(call_id: str, role: str) -> bool:
     return _states[call_id].active and not _role_connected(call_id, role)
 
 
+def get_auth_verified(call_id: str) -> bool:
+    """통화 종료 시점의 본인인증 완료 여부 — call.py가 DB 저장 직전에 읽어간다."""
+    return _states[call_id].auth_verified
+
+
+async def trigger_auth_if_required(call_id: str) -> None:
+    """call.py가 발화 도착 즉시(키워드 기반, LLM 대기 없이) 호출한다 — auth_start 클라이언트
+    메시지 핸들러와 동일 로직이지만 서버가 먼저 판단해서 능동적으로 시작한다는 점만 다르다.
+    이미 대기 중이거나 완료됐거나 통화가 아직 active가 아니면 조용히 무시(멱등)."""
+    state = _states[call_id]
+    if not state.active or state.awaiting_auth or state.auth_verified:
+        return
+    state.awaiting_auth = True
+    state.auth_digits = ""
+    await _broadcast(call_id, {"type": "auth_start", "generation": state.generation})
+
+
 async def _end_call_after_grace(call_id: str, role: str) -> None:
     try:
         await asyncio.sleep(_DISCONNECT_GRACE_SECONDS)

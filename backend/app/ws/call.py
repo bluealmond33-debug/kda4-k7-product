@@ -23,9 +23,11 @@ from app.database import (
     finalize_live_call,
     mark_live_call_failed,
 )
+from app.services.routing_classifier import fast_auth_policy
 from app.services.stream_segmenter import UtteranceSegmenter
 from app.services.streaming_stt import transcribe_utterance_masked
 from app.services.voice_anger import analyze_voice_anger
+from app.ws import ars
 
 router = APIRouter()
 logger = logging.getLogger("karina.call")
@@ -65,6 +67,7 @@ class CallSession:
         self.recent_anger = 0.0
         self.anger_hits = 0         # 분노 감지된 발화 수
         self.voice_model_calls = 0  # WavLM이 실제로 돈 발화 수(감지 여부와 무관, 모델 가동 확인용)
+        self.auth_trigger_sent = False  # 키워드 기반 본인인증 트리거를 이미 보냈는지(중복 방지)
 
 
 class CallRegistry:
@@ -161,6 +164,20 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     # 누적은 종료 시 카드 분석 입력으로, DB append는 통화 진행 중 전사 영속화로 쓴다.
     session.masked_parts.append(masked)
     session.raw_audio_chunks.append(utterance)
+
+    # 본인인증 빠른 트리거 — /analyze-text(로컬 LLM 포함, 수 초)를 기다리지 않고 규칙
+    # 키워드만으로 즉시 판정한다. 상담사 연결(agent_connected)이 접수완료 직후 곧바로
+    # 오는 경우가 많아, LLM 왕복을 기다리면 인증 창을 놓친다(실측으로 확인된 문제).
+    if not session.auth_trigger_sent:
+        accumulated = " ".join(p for p in session.masked_parts if p).strip()
+        try:
+            policy = fast_auth_policy(accumulated)
+        except Exception:
+            policy = "NOT_REQUIRED"
+            logger.warning("[통화 %s] 빠른 인증정책 판정 실패(무시)", session.call_id, exc_info=True)
+        if policy == "REQUIRED":
+            session.auth_trigger_sent = True
+            await ars.trigger_auth_if_required(session.call_id)
     if anger:
         session.voice_model_calls += 1
         session.max_anger = max(session.max_anger, anger.probability)
@@ -234,11 +251,16 @@ async def _finalize_call(session: CallSession) -> None:
         return
     try:
         card, raw = await run_in_threadpool(_build_live_card, session, full)
-        await run_in_threadpool(finalize_live_call, settings, session.db_call_id, card, raw)
+        # ars.py의 인메모리 본인인증 상태를 종료 시점 스냅숏으로 읽어온다 — 입력한
+        # 생년월일 원문이 아니라 완료 여부만(위 finalize_live_call 독스트링 참고).
+        auth_verified = ars.get_auth_verified(session.call_id)
+        await run_in_threadpool(
+            finalize_live_call, settings, session.db_call_id, card, raw, auth_verified
+        )
         logger.info(
-            "[통화 %s] 상담카드 저장 완료 — db_call_id=%s · 발화 %d건 · 부서=%s · 위험=%s",
+            "[통화 %s] 상담카드 저장 완료 — db_call_id=%s · 발화 %d건 · 부서=%s · 위험=%s · 본인인증=%s",
             session.call_id, session.db_call_id, len(session.masked_parts),
-            card.department, card.incident_risk.value,
+            card.department, card.incident_risk.value, auth_verified,
         )
     except Exception:
         logger.warning("[통화 %s] 상담카드 확정 실패(무시) — failed 표기 시도", session.call_id, exc_info=True)

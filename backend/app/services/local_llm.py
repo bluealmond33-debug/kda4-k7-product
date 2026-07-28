@@ -95,22 +95,31 @@ def analyze_transcript_local(settings: Settings, transcript: str) -> GptAnalysis
 
 
 def classify_task_with_llm(settings: Settings, transcript: str) -> str | None:
-    """S/G/E 업무코드 분류의 LLM 보완 경로 — routing_classifier.py의 키워드 규칙이
+    """G0xx(+E00x) 업무코드 분류의 LLM 보완 경로 — routing_classifier.py의 키워드 규칙이
     "기타"(G004)로만 떨어졌을 때만 호출된다(현장 피드백: "카드를 잃어버렸어요"처럼
     키워드 목록에 없는 자연어 표현은 못 잡음). 매 통화 부르지 않으므로 속도에 영향 없다.
 
+    후보를 GENERAL_TASK_NAMES(G0xx + E00x)로 제한한다. 예전엔 TASK_NAMES(S/G/E 전체)를
+    후보로 줬는데, 그중 우리카드 ARS 전용 카탈로그(S101~127)만 예시 문구가 붙어 있어
+    (ARS_TASK_KEYWORDS 출신) 애매한 발화일수록 LLM이 그쪽으로 쏠렸다 — 은행 계좌 자동이체
+    문의("다른 계좌에서 빠져나가도록 변경")가 카드 자동납부 S126으로 잘못 분류된 사고
+    (2026-07-28 Windows 시연 보고)의 원인. SIMPLE(S) 코드는 도메인 자체가 달라(카드 ARS
+    전용) 후보에서 뺐지만, EMERGENCY(E00x)는 남겨뒀다 — 규칙 기반 긴급 판정이 "보내라고
+    해요"처럼 자연어 표현을 놓쳐 G004로 떨어뜨린 사건성 발화를, 여기서라도 다시 건져올릴
+    수 있는 유일한 경로이기 때문이다(2026-07-28 추가 검토). 예시는 TASK_KEYWORDS(G0xx·
+    E00x 키워드까지 포함)에서 뽑아, 카드 카탈로그에만 예시가 있던 비대칭도 함께 없앤다.
+
     실패하거나 목록에 없는 코드를 답하면 None — 호출부는 기존 규칙기반 결과를 그대로 쓴다.
     """
-    from app.services.routing.ars_catalog import ARS_TASK_KEYWORDS
-    from app.services.routing.classifier import TASK_NAMES
+    from app.services.routing.classifier import GENERAL_TASK_NAMES, TASK_KEYWORDS
 
     def _catalog_line(code: str, name: str) -> str:
-        examples = ARS_TASK_KEYWORDS.get(code)
+        examples = TASK_KEYWORDS.get(code)
         if not examples:
             return f"{code}: {name}"
         return f"{code}: {name} (예: {', '.join(examples[:3])})"
 
-    catalog = "\n".join(_catalog_line(code, name) for code, name in TASK_NAMES.items())
+    catalog = "\n".join(_catalog_line(code, name) for code, name in GENERAL_TASK_NAMES.items())
     system_prompt = (
         "너는 금융 콜센터 업무 분류기다. 아래 업무 목록 중 고객 발화에 가장 가까운 업무 "
         "코드 하나를 골라라. 애매하거나 목록에 맞는 게 전혀 없으면 NONE이라고만 답해라. "
@@ -135,4 +144,4 @@ def classify_task_with_llm(settings: Settings, transcript: str) -> str | None:
         return None
 
     code = response.json().get("message", {}).get("content", "").strip().upper()
-    return code if code in TASK_NAMES else None
+    return code if code in GENERAL_TASK_NAMES else None

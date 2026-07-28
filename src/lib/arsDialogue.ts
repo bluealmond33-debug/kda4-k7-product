@@ -35,10 +35,37 @@ function audioUrl(line: { id: string; audio?: string }) {
 // 가 서로 모른 채 각자 new Audio()를 만들다 보니, 타이밍이 겹치면 두 안내가 동시에 들렸다
 // ("가장 최근 것만 나오게 해달라" 피드백). 새 안내가 시작될 때 이전 걸 여기서 멈춘다 —
 // 두 재생 경로 모두 이 함수를 거쳐야 한다.
+//
+// "나중에 온 게 무조건 이긴다"만으로는 부족했다 — 본인인증 안내가 재생되는 도중에 접수 큐
+// (연결·확인·인계)가 다음 줄로 넘어가며 끼어들면 인증 안내가 중간에 잘렸다("8자리 입력
+// 안내가 짤림"). 본인인증 쪽엔 priority를 줘서, 인증 오디오가 재생 중일 때는 비우선 호출을
+// 아예 재생하지 않고 건너뛰게 한다(재생 후 순서를 바꾸는 게 아니라 그 줄 자체를 스킵) —
+// 인증 완료(auth-done) 안내 직후 상담사 연결 시 다른 안내가 겹쳐 들리는 문제도 같은 이유였다.
 let currentArsAudio: HTMLAudioElement | null = null;
-export function takeOverArsAudio(audio: HTMLAudioElement): void {
+let authAudioActive = false;
+
+/** @returns 실제로 재생을 시작했으면 true, 인증 우선순위에 밀려 건너뛰었으면 false. */
+export function takeOverArsAudio(
+  audio: HTMLAudioElement,
+  opts: { priority?: boolean } = {}
+): boolean {
+  if (authAudioActive && !opts.priority) return false;
   if (currentArsAudio && currentArsAudio !== audio) currentArsAudio.pause();
   currentArsAudio = audio;
+  if (opts.priority) {
+    authAudioActive = true;
+    // pause 이벤트는 브라우저가 큐에 넣어 비동기로 쏘므로("HTML 미디어 태스크"), A를 멈추고
+    // B(둘 다 priority)가 곧바로 이어받은 뒤에야 A의 지난 pause가 도착할 수 있다. 그때 이
+    // release가 무조건 authAudioActive를 꺼버리면 B가 잠근 락을 A가 잘못 풀어버린다 — 그래서
+    // "내가 여전히 currentArsAudio일 때만" 푼다(그새 다른 오디오가 이어받았으면 손대지 않음).
+    const release = () => {
+      if (currentArsAudio === audio) authAudioActive = false;
+    };
+    audio.addEventListener("ended", release, { once: true });
+    audio.addEventListener("error", release, { once: true });
+    audio.addEventListener("pause", release, { once: true });
+  }
+  return true;
 }
 
 /**
@@ -118,7 +145,12 @@ export function useConversationStream(
       audio.addEventListener("ended", next);
       // 파일 없음·디코드 실패 → 그 줄만 대본 길이로 넘긴다(다음 줄엔 소리가 있을 수 있다)
       audio.addEventListener("error", bySec);
-      takeOverArsAudio(audio); // 다른 안내(본인인증 등)가 재생 중이면 여기서 멈춘다
+      // 본인인증 안내가 재생 중이면(priority) 이 줄은 아예 재생하지 않는다 — 대사(말풍선)는
+      // 남기되 소리 없이 곧장 다음 줄로 넘어간다(재생을 기다리다 인증 안내와 겹치는 대신).
+      if (!takeOverArsAudio(audio)) {
+        next();
+        return;
+      }
       audio.play().catch(bySec); // 자동재생 차단도 같은 처리
     };
 

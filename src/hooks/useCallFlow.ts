@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { getMicLevel } from "../lib/mic";
 import {
   SCRIPTS,
   REG_RECOS,
@@ -297,10 +298,10 @@ const CLASSIFICATION_TO_SGE: Record<string, "S" | "G" | "E"> = {
 function playArsAudio(line: ArsLine) {
   try {
     const audio = new Audio("/demo/" + (line.audio ?? `ars/${line.id}.mp3`));
-    // 접수 큐(arsDialogue.useConversationStream)와 같은 소유권 슬롯을 공유 — 타이밍이
-    // 겹치면(예: # 직후 인증 안내가 접수 인계 안내와 부딪힘) 방금 시작한 이 안내만 남기고
-    // 먼저 재생 중이던 걸 멈춘다("가장 최근 것만 나오게" 피드백).
-    takeOverArsAudio(audio);
+    // 접수 큐(arsDialogue.useConversationStream)와 같은 소유권 슬롯을 공유하되, 본인인증
+    // 쪽엔 priority를 준다 — 재생 중엔 접수 큐가 끼어들지 못하고(요청 8자리 안내가 짤리는
+    // 문제), 인증 성공(auth-done) 안내 중에도 다른 안내가 겹쳐 들리지 않는다.
+    takeOverArsAudio(audio, { priority: true });
     void audio.play().catch(() => {});
   } catch {
     // noop
@@ -590,6 +591,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 본인인증(생년월일 8자리) — 한 통화당 한 번만 시작하도록 가드.
   const authTriggeredRef = useRef(false);
   const authHardTimerRef = useRef<number | null>(null);
+  // 본인인증 대기 중 마이크 무음 추적 — 키패드 입력 자체는 원래 조용하므로(발화가 아니니까)
+  // "무음=포기"로 오판하지 않도록, 실제 판정은 이 값을 쓰는 쪽(재생 여부 게이트)에서
+  // 10초 문턱과 함께 적용한다. null이면 아직 무음 시작 시각을 모른다(=재생 허용).
+  const authMicSilentSinceRef = useRef<number | null>(null);
   const [awaitingAuth, setAwaitingAuth] = useState(false);
   const [authVerified, setAuthVerified] = useState(false);
   // 고객폰 인증 화면의 "N/8" 진행 표시용 — 서버 auth_progress 카운트를 그대로 반영한다.
@@ -2122,7 +2127,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         authHardTimerRef.current = null;
         setAwaitingAuth(false);
         setAuthDigitCount(0);
-        playArsAudio(ARS_AUTH_HARD);
+        playArsAudioUnlessMicSilent(ARS_AUTH_HARD);
       }, 30000);
     };
     const control = startMobileArsControl(LIVE_CALL_ID, {
@@ -2158,7 +2163,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setAwaitingAuth(true);
         setAuthVerified(false);
         setAuthDigitCount(0);
-        playArsAudio(ARS_AUTH_REQUEST);
+        playArsAudioUnlessMicSilent(ARS_AUTH_REQUEST);
         armAuthHardTimer();
       },
       // 자리 입력마다 서버가 보내는 카운트를 그대로 반영 — Phone.tsx가 8칸 진행 표시(*)를 그린다.
@@ -2171,15 +2176,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setAwaitingAuth(false);
         setAuthVerified(true);
         setAuthDigitCount(8);
-        playArsAudio(ARS_AUTH_DONE);
+        playArsAudioUnlessMicSilent(ARS_AUTH_DONE);
       },
-      onAuthIncomplete: () => playArsAudio(ARS_AUTH_ALL8),
+      onAuthIncomplete: () => playArsAudioUnlessMicSilent(ARS_AUTH_ALL8),
       onAuthMismatch: () => {
         setAuthDigitCount(0);
         armAuthHardTimer();
-        playArsAudio(ARS_AUTH_MISMATCH);
-        // mismatch 재생이 끝난 뒤 짧은 재입력 안내로 이어 붙인다(동시 재생 방지).
-        window.setTimeout(() => playArsAudio(ARS_AUTH_BIRTHDATE_RETRY), ARS_AUTH_MISMATCH.sec * 1000);
+        playArsAudioUnlessMicSilent(ARS_AUTH_MISMATCH);
+        // mismatch 재생이 끝난 뒤 짧은 재입력 안내로 이어 붙인다(동시 재생 방지). 이 시점에도
+        // 다시 한번 무음 여부를 확인한다 — MISMATCH 재생 중 대기하는 몇 초 사이에 10초
+        // 문턱을 넘길 수 있다.
+        window.setTimeout(
+          () => playArsAudioUnlessMicSilent(ARS_AUTH_BIRTHDATE_RETRY),
+          ARS_AUTH_MISMATCH.sec * 1000
+        );
       },
       onState: (state) => {
         setArsDigits(state.digits);
@@ -2921,12 +2931,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const micLevel = Math.max(levelBySpeaker.customer, levelBySpeaker.agent);
   const card = consultationResponse.consultation_card;
 
-  // 본인인증 시작 — prep 진입 + auth_policy=REQUIRED일 때 한 통화당 한 번만 트리거.
-  // useAuthTriggered 가드는 call_start/reset에서 풀린다(아래 clearAll 참고).
+  // 본인인증 시작 — prep 또는 active 단계에서 auth_policy=REQUIRED가 되면 한 통화당
+  // 한 번만 트리거. useAuthTriggered 가드는 call_start/reset에서 풀린다(아래 clearAll 참고).
+  // prep만 보던 이전 조건은 실전에서 거의 항상 놓쳤다: agent_connected(→active 전환)가
+  // intake_complete 직후 거의 즉시 오는데, auth_policy를 알아내는 /analyze-text 분석(로컬
+  // LLM 호출 포함)은 그보다 늦게 끝나는 경우가 흔해서 REQUIRED가 도착했을 땐 이미 active로
+  // 넘어가 있었다(실측: 라우팅은 자동이체로 맞게 됐는데 인증 화면이 안 뜨는 문제로 발견).
   useEffect(() => {
     if (
       isCustomerSurface &&
-      phase === "prep" &&
+      (phase === "prep" || phase === "active") &&
       card.routing?.authPolicy === "REQUIRED" &&
       !authTriggeredRef.current
     ) {
@@ -2934,6 +2948,34 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       mobileArsRef.current?.startAuth();
     }
   }, [isCustomerSurface, phase, card.routing?.authPolicy]);
+
+  // 본인인증 대기 중 마이크 레벨 폴링 — mic.ts가 통화 내내(Phone.tsx의 useMic(inCall)) 이미
+  // 열어 둔 스트림을 그대로 읽는다. 새로 acquireMic()하지 않는다(권한 재요청·이중 스트림 방지).
+  // awaitingAuth에 들어올 때마다 무음 시작 시각을 리셋하고, 실제 소리가 잡힐 때만 갱신한다.
+  useEffect(() => {
+    if (!awaitingAuth) {
+      authMicSilentSinceRef.current = null;
+      return;
+    }
+    authMicSilentSinceRef.current = Date.now();
+    const id = window.setInterval(() => {
+      const level = getMicLevel();
+      if (level != null && level >= SPEECH_LEVEL_THRESHOLD) {
+        authMicSilentSinceRef.current = Date.now();
+      }
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [awaitingAuth]);
+
+  // 10초 이상 마이크에서 아무 소리도 안 잡혔으면 안내 음성을 재생하지 않는다 — 고객이
+  // 자리를 뜨거나 음소거된 상태로 추정되는데 계속 안내를 재생하는 걸 막는다(요청 반영).
+  // 키패드 입력 자체는 원래 조용하므로, 이건 "완전한 무음"만 걸러낸다(숫자 누르는 동안의
+  // 정상적인 조용함까지 재생을 막지는 않는다 — 10초는 그보다 넉넉한 문턱).
+  const playArsAudioUnlessMicSilent = useCallback((line: ArsLine) => {
+    const since = authMicSilentSinceRef.current;
+    if (since != null && Date.now() - since >= 10_000) return;
+    playArsAudio(line);
+  }, []);
   const explicitSummaryPending = Boolean(EXPLICIT_LIVE_CALL_ID && summaryPending);
   const capturedTranscript = liveTranscriptLines
     .filter((line) => line.speaker === "customer" && line.text.trim())

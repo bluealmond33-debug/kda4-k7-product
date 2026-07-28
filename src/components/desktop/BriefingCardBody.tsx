@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
 import TypingAnimation from "../ui/TypingAnimation";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
@@ -26,9 +27,28 @@ export default function BriefingCardBody({
    *  통화 화면에서는 카드가 이미 자리에 있으므로 켜지 않는다 — 매번 깜빡이면 잔소리가 된다. */
   arriving?: boolean;
 }) {
-  // 부서 → 업무코드 순으로 켜진다. 카드 이동이 끝나갈 무렵(0.5s)부터 차례로.
+  // AI 요약이 막 끝난 순간(summaryPending: true→false) 잠깐(justRouted) 켜서
+  // "방금 이 부서로 라우팅됐다"는 걸 몸으로 느끼게 한다 — arriving(카드가 날아와
+  // 안착하는 접수 화면 전용)과는 다른 트리거다. 통화 화면은 카드가 이미 자리에
+  // 있으니 arriving을 못 쓰고, 대신 이 순간을 잡는다.
+  const wasPending = useRef(vm.summaryPending);
+  const [justRouted, setJustRouted] = useState(false);
+  useEffect(() => {
+    if (wasPending.current && !vm.summaryPending) {
+      setJustRouted(true);
+      const t = window.setTimeout(() => setJustRouted(false), 1100);
+      wasPending.current = vm.summaryPending;
+      return () => window.clearTimeout(t);
+    }
+    wasPending.current = vm.summaryPending;
+  }, [vm.summaryPending]);
+
+  // 부서 → 업무코드 순으로 켜진다. 카드 이동이 끝나갈 무렵(0.5s)부터, 또는 방금
+  // 라우팅이 끝난 순간부터 차례로.
   const chain = (order: number) =>
-    arriving ? ";animation:chainLight .5s ease-out " + (0.5 + order * 0.16) + "s both" : "";
+    arriving || justRouted
+      ? ";animation:chainLight .5s ease-out " + (0.5 + order * 0.16) + "s both"
+      : "";
   const reservedDept = vm.transferReserved ? vm.transferTarget ?? vm.suggestedDept : null;
   const confPct = vm.prepConfidencePct ?? 0;
 
@@ -114,10 +134,45 @@ export default function BriefingCardBody({
               />
             </div>
 
+            {/* 진행 점 3개(접수→분석→라우팅) — 카드가 "만들어졌다"에서 끝나지 않고
+                "그래서 이 부서로 갔다"는 흐름을 잠깐 보여준다. summaryPending 동안만
+                또는 방금 끝난 직후(justRouted)만 뜨고, 평소엔 부서 박스만 조용히 있다. */}
+            {(vm.summaryPending || justRouted) && (
+              <div style={css("display:flex;align-items:center;gap:5px;padding:0 2px")}>
+                <span style={css("width:5px;height:5px;border-radius:9999px;flex:none;background:var(--green-700)")} />
+                <span style={css("font:600 9px " + FONT + ";color:var(--gray-600);white-space:nowrap")}>접수</span>
+                <span style={css("width:9px;height:1px;flex:none;background:var(--gray-300)")} />
+                <span
+                  style={css(
+                    "width:5px;height:5px;border-radius:9999px;flex:none;background:" +
+                      (vm.summaryPending ? "var(--blue-700)" : "var(--green-700)") +
+                      (vm.summaryPending ? ";animation:recBlink 1.1s infinite" : "")
+                  )}
+                />
+                <span style={css("font:600 9px " + FONT + ";color:var(--gray-600);white-space:nowrap")}>분석</span>
+                <span style={css("width:9px;height:1px;flex:none;background:var(--gray-300)")} />
+                <span
+                  style={css(
+                    "width:5px;height:5px;border-radius:9999px;flex:none;background:" +
+                      (vm.summaryPending ? "var(--gray-300)" : "var(--green-700)") +
+                      (justRouted ? ";animation:chainLight .4s ease-out .16s both" : "")
+                  )}
+                />
+                <span style={css("font:600 9px " + FONT + ";color:var(--gray-600);white-space:nowrap")}>라우팅</span>
+              </div>
+            )}
+
             {/* 배정 부서 → 업무코드 — 감정온도 아래. 읽기 전용이다:
                 이관은 별도 버튼(접수=하단 '이관', 통화=음소거 왼쪽 원형 버튼)이 맡는다.
                 예약이 걸리면 여기가 파랗게 채워져 '어디로 갈지'를 보여준다. */}
             <div style={css("position:relative")}>
+              {justRouted && (
+                <div
+                  style={css(
+                    "position:absolute;inset:0;border-radius:10px;pointer-events:none;animation:ringSettle .7s ease-out both"
+                  )}
+                />
+              )}
               <div title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "AI 배정 결과"} style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)"))}>
                 <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:4px")}>
                   <div style={css("display:flex;align-items:baseline;gap:7px")}>

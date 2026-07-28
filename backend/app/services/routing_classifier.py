@@ -42,6 +42,35 @@ def _auth_policy_for(task_code: str, classification: str) -> str:
     return "NOT_REQUIRED"
 
 
+# G004(기타)는 "무슨 용건인지 끝까지 알 수 없었다"는 뜻으로 REQUIRED가 기본값인데,
+# call.py는 이 함수를 발화가 들어올 때마다(첫 마디부터) 누적 전사로 반복 호출한다.
+# "안녕하세요" 한마디도 규칙 매칭이 다 실패해 G004로 떨어지므로, 길이 문턱 없이 그대로
+# 쓰면 고객이 용건을 말하기도 전에 인증부터 뜬다(2026-07-28 실측 확인 — 의도한 동작
+# 아님). 실제 용건이 담긴 키워드로 매칭된 코드(G004가 아닌 나머지)는 문장이 짧아도
+# 신뢰할 수 있으니 이 문턱을 적용하지 않는다 — 애매함(G004)에만 "아직 판단하기엔
+# 이르다"는 유예를 준다. 통화가 이어져 누적 길이가 문턱을 넘으면 같은 함수가 다음
+# 발화에서 다시 불려 그때는 정상적으로 REQUIRED를 낸다.
+_MIN_CHARS_FOR_AMBIGUOUS_AUTH = 8
+
+
+def fast_auth_policy(transcript: str) -> str:
+    """규칙 키워드 매칭만으로(로컬 LLM 호출 없이) auth_policy를 즉시 판정한다.
+
+    classify_routing()은 키워드가 G004(기타)로만 떨어지면 로컬 LLM(EXAONE)에게 한 번 더
+    물어보는데, 그 호출이 수 초 걸린다. 실시간 통화 중 본인인증은 상담사 연결 전에
+    끝나야 의미가 있어서(연결까지 종종 10초 이내) LLM 왕복을 기다릴 여유가 없다 — 여기서는
+    순수 규칙 계층(classify_transcript)만 써서 즉시 답한다. 정밀도는 classify_routing보다
+    낮을 수 있지만(LLM 보정 없음), 인증 필요 여부만 빠르게 걸러내는 용도라 충분하다.
+    """
+    from app.services.routing.classifier import classify_transcript
+
+    result = classify_transcript(transcript)
+    code = result["code"]
+    if code == "G004" and len(transcript.strip()) < _MIN_CHARS_FOR_AMBIGUOUS_AUTH:
+        return "NOT_REQUIRED"
+    return _auth_policy_for(code, result["classification"])
+
+
 def classify_routing(transcript: str, settings=None) -> RoutingResult:
     from app.services.routing.classifier import TASKS_BY_CODE, classify_transcript
 
