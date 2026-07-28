@@ -173,7 +173,7 @@ export default function BriefingCardBody({
                   )}
                 />
               )}
-              <div title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "AI 배정 결과"} style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)"))}>
+              <div title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "AI 배정 결과"} style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)") + (justRouted ? ";animation:routeStamp .5s cubic-bezier(0.2,0.8,0.2,1) both" : ""))}>
                 <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:4px")}>
                   <div style={css("display:flex;align-items:baseline;gap:7px")}>
                     <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>부서</span>

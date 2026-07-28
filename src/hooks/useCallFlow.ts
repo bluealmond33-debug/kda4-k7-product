@@ -452,6 +452,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   useEffect(() => {
     mobileIntakeCompleteRef.current = mobileIntakeComplete;
   }, [mobileIntakeComplete]);
+  // #(intake_complete) 순간의 근거 발화 스냅샷 — liveTranscriptLines는 그 뒤로도 계속
+  // 자란다(통화 연결 후 대화 등), 그런데 카드의 "근거 발화"는 접수 시점 발화만 보여줘야
+  // 한다. 이 ref가 없으면 카드가 살아있는 동안 이후 음성이 그대로 새어 들어와 문구가
+  // 계속 바뀐다.
+  const frozenIntakeTranscriptRef = useRef<string | null>(null);
   const [mobileIntakePending, setMobileIntakePending] = useState(false);
   const [mobileAgentConnected, setMobileAgentConnected] = useState(false);
 
@@ -1574,6 +1579,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setArsDigits("");
     setDtmfEvents([]);
     setMobileIntakeComplete(false);
+    frozenIntakeTranscriptRef.current = null;
     setMobileIntakePending(false);
     setMobileAgentConnected(false);
     startClock();
@@ -1739,6 +1745,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setArsDigits("");
     setDtmfEvents([]);
     setMobileIntakeComplete(false);
+    frozenIntakeTranscriptRef.current = null;
     setMobileIntakePending(false);
     setMobileAgentConnected(false);
     realCallActiveRef.current = false;
@@ -1791,6 +1798,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           }
           setMobileIntakePending(false);
           setMobileIntakeComplete(true);
+          // 근거 발화를 지금 시점 값으로 동결 — 이후 들어오는 발화(통화 연결 뒤 대화 등)는
+          // liveTranscriptLines엔 계속 쌓이지만 카드의 "근거 발화"엔 더 이상 반영 안 한다.
+          frozenIntakeTranscriptRef.current = linesRef.current
+            .filter((line) => line.speaker === "customer" && line.text.trim())
+            .map((line) => line.text.trim())
+            .join(" ")
+            .trim();
           if (["connecting", "recording", "confirm"].includes(phaseRef.current)) {
             timers.current.forEach(clearTimeout);
             timers.current = [];
@@ -1849,6 +1863,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             setClock(0);
             setMobileIntakePending(false);
             setMobileIntakeComplete(false);
+            frozenIntakeTranscriptRef.current = null;
             setMobileAgentConnected(false);
             selfEndRef.current = true;
             window.setTimeout(() => {
@@ -2984,7 +2999,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     .trim();
   // 분석 요청이 진행 중이어도 이전 데모 fixture를 근거 발화로 잠깐 노출하지 않는다.
   // 현재 콜에서 실제로 수신한 문장이 있으면 그것이 언제나 표시의 기준이다.
-  const groundedTranscript = capturedTranscript || consultationResponse.transcript.text.trim();
+  // 접수(#)가 끝났으면 그 순간 동결된 값을 쓴다 — liveTranscriptLines는 통화 연결 뒤
+  // 대화로 계속 자라지만, 카드의 "근거 발화"는 접수 시점 그대로 고정돼야 한다.
+  const groundedTranscript =
+    (mobileIntakeComplete ? frozenIntakeTranscriptRef.current : null) ||
+    capturedTranscript ||
+    consultationResponse.transcript.text.trim();
   // 통화 중 드리프트가 있으면 실시간 값이 카드 초기값을 덮는다
   // 통화 중 드리프트한 감정온도는 종료 후(후처리)에도 유지 — 마지막 실측이 초기 카드값으로 되돌아가지 않게
   const liveRecordingScore = liveRecordingAnger == null ? null : Math.round(liveRecordingAnger * 100);
