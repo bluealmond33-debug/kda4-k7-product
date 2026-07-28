@@ -12,6 +12,9 @@ const FONT = "'Avenir Next','Pretendard',sans-serif";
 /** 카드를 띄워 놓고 전화를 받지 않는 사고를 막는 안전장치 — 이 초가 지나면 자동 연결된다.
  *  동시에 상담사에게 "이 안에 카드를 읽고 들어가야 한다"는 리듬을 준다. */
 const AUTO_CONNECT_SEC = 600;
+/** 긴급(보이스피싱·이상거래) 콜은 10분씩 기다릴 여유가 없다 — 지금 송금이 진행 중일 수
+ *  있어 대기 자체가 사고다(2026-07-28 현장 지적). 카드를 볼 짧은 틈만 주고 바로 연결한다. */
+const AUTO_CONNECT_SEC_EMERGENCY = 15;
 
 /** 자동 연결 카운트다운 — 준비 카드가 떠 있는 동안만 돈다.
  *
@@ -22,7 +25,8 @@ const AUTO_CONNECT_SEC = 600;
  *  연결 불가 상태(체크 미완·요약 대기)에서는 세지 않고 멈춰 기다린다 — 그때 0이 되면
  *  answerCall이 조용히 무시돼 '자동 연결됐다고 착각하는' 더 나쁜 사고가 된다. */
 function useAutoConnect(vm: CallFlowVM) {
-  const [left, setLeft] = useState(AUTO_CONNECT_SEC);
+  const max = vm.isEmergency ? AUTO_CONNECT_SEC_EMERGENCY : AUTO_CONNECT_SEC;
+  const [left, setLeft] = useState(max);
   /* 고객이 이미 끊었으면 세지 않는다 — 세어 봐야 없는 사람에게 거는 것이고,
      시연에서는 폰이 종료 화면인데 콘솔이 통화로 넘어가는 최악의 그림이 된다. */
   const canConnect = vm.canConnect && !vm.customerEnded;
@@ -47,7 +51,7 @@ function useAutoConnect(vm: CallFlowVM) {
   return {
     left: Math.max(0, left),
     /** 남은 비율 0~1 — 버튼 안에서 줄어드는 띠의 길이 */
-    pct: Math.max(0, Math.min(1, left / AUTO_CONNECT_SEC)),
+    pct: Math.max(0, Math.min(1, left / max)),
     /** 마지막 5초 — 서두르라는 신호 */
     urgent: left <= 5,
     counting: canConnect,

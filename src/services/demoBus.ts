@@ -208,6 +208,12 @@ export function createHybridTransport(
   let ready = false;
   let stopped = false;
   let maxEventBytes = DEFAULT_MAX_EVENT_BYTES;
+  /* 재연결 지수 백오프 — 릴레이가 죽어 있으면(백엔드에 /ws/demo 라우트가 없는 등)
+   *  고정 1.2초 간격으로 영원히 재시도해 로그가 초당 여러 건씩 쌓였다(현장 관측,
+   *  2026-07-28). 성공(ready)하면 다시 기본값으로 돌아온다. */
+  const RETRY_BASE_MS = 1_200;
+  const RETRY_MAX_MS = 30_000;
+  let retryDelay = RETRY_BASE_MS;
 
   const deliver = (envelope: DemoEnvelope) => {
     if (!seen.remember(demoEnvelopeKey(envelope))) return false;
@@ -311,6 +317,7 @@ export function createHybridTransport(
           maxEventBytes = Math.min(DEFAULT_MAX_EVENT_BYTES, advertisedLimit);
         }
         ready = true;
+        retryDelay = RETRY_BASE_MS;
         flush();
         return;
       }
@@ -320,7 +327,10 @@ export function createHybridTransport(
     socket.onclose = () => {
       ready = false;
       socket = null;
-      if (!stopped) retryTimer = window.setTimeout(connect, 1_200);
+      if (!stopped) {
+        retryTimer = window.setTimeout(connect, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
+      }
     };
   };
 

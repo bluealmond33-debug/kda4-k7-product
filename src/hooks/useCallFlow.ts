@@ -3613,6 +3613,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // undefined(데모 픽스처 등 안전한 기본은 화면에서 REQUIRED로 취급). NO_INPUT·UNAVAILABLE은
     // 오늘 범위에서는 PENDING으로 합쳐 보여준다(연결 게이트에는 어차피 영향 없음).
     authPolicy: card.routing?.authPolicy,
+    // 긴급(보이스피싱·이상거래) 여부 — PrepCard의 자동연결 카운트다운을 짧게 잡는 데 쓴다.
+    isEmergency: card.routing?.classification === "EMERGENCY",
     authStatus: (
       card.routing?.authPolicy === "NOT_REQUIRED" ? "NOT_REQUIRED"
       : card.routing?.authPolicy === "EXEMPT" ? "EXEMPT"

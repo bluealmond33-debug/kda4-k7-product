@@ -9,11 +9,19 @@ import type { SheetData } from "../data/demoContent";
 
 const env = import.meta.env;
 
-/** pii-service 베이스 URL. 명시 env 우선 → 없으면 AI API 호스트의 8100 포트 → 없으면 localhost. */
+/** pii-service 베이스 URL. 명시 env 우선 → 없으면 AI API 호스트의 8100 포트 → 없으면
+ *  **지금 이 페이지를 연 주소**(location)의 8100 포트로 자동 유도한다.
+ *
+ *  옛날엔 마지막 폴백이 하드코딩된 "http://localhost:8100"였다 — LAN IP로 접속한
+ *  다른 기기(폰·형진님 랩탑)에서는 localhost가 자기 자신을 가리켜 애초에 안 붙었고,
+ *  이 페이지가 https(자체서명 인증서)일 땐 http 요청 자체가 브라우저 mixed-content
+ *  정책에 막혀 조용히 실패했다(콘솔에도 잘 안 보여 원인 찾기 어려운 버그였다).
+ *  regulationSearch.ts·liveCall.ts와 같은 원칙 — 페이지 주소를 그대로 따라간다. */
 function resolveBase(): string {
   const explicit = String(env.VITE_PII_API_BASE_URL ?? "").replace(/\/$/, "");
   if (explicit) return explicit;
   if (API_BASE_URL) return API_BASE_URL.replace(/:\d+$/, ":8100");
+  if (typeof location !== "undefined") return `${location.protocol}//${location.hostname}:8100`;
   return "http://localhost:8100";
 }
 

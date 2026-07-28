@@ -168,7 +168,12 @@ async def _emit_transcript(session: CallSession, utterance: bytes) -> None:
     # 본인인증 빠른 트리거 — /analyze-text(로컬 LLM 포함, 수 초)를 기다리지 않고 규칙
     # 키워드만으로 즉시 판정한다. 상담사 연결(agent_connected)이 접수완료 직후 곧바로
     # 오는 경우가 많아, LLM 왕복을 기다리면 인증 창을 놓친다(실측으로 확인된 문제).
-    if not session.auth_trigger_sent:
+    #
+    # 접수(#/*) 게이트(2026-07-28 현장 피드백): 예전엔 이 판정이 발화 도중 매 문장마다
+    # 돌아서, "자동이체" 같은 키워드 하나만 걸려도 고객이 말을 채 끝내기 전에 본인인증
+    # 안내가 끼어들었다. ars.py의 intake_complete(고객이 #/*를 눌러 접수를 마쳤다는
+    # 명시적 신호)가 켜진 뒤에만 판정한다 — LLM을 안 기다리는 속도 이점은 그대로 유지.
+    if not session.auth_trigger_sent and ars.get_intake_complete(session.call_id):
         accumulated = " ".join(p for p in session.masked_parts if p).strip()
         try:
             policy = fast_auth_policy(accumulated)

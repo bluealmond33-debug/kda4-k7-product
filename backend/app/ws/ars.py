@@ -16,6 +16,8 @@ from dataclasses import dataclass
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.services.routing_classifier import fast_auth_policy
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -104,6 +106,33 @@ def _should_end_after_grace(call_id: str, role: str) -> bool:
 def get_auth_verified(call_id: str) -> bool:
     """통화 종료 시점의 본인인증 완료 여부 — call.py가 DB 저장 직전에 읽어간다."""
     return _states[call_id].auth_verified
+
+
+def get_intake_complete(call_id: str) -> bool:
+    """접수(#/*) 완료 여부 — call.py가 발화 도착마다 빠른 인증 트리거를 걸지 판단할 때 읽는다."""
+    return _states[call_id].intake_complete
+
+
+async def _check_intake_auth(call_id: str) -> None:
+    """접수완료(#/*) 순간 접수 발화 전체를 한 번에 규칙 기반으로 판정해 필요하면 인증을
+    시작한다. call.py를 임포트해야 하는데 call.py가 이미 이 모듈(ars)을 임포트하므로,
+    순환 임포트를 피하려고 함수 안에서만 지연 임포트한다."""
+    from app.ws import call as call_module
+
+    session = call_module.registry._sessions.get(call_id)
+    if session is None:
+        return
+    accumulated = " ".join(p for p in session.masked_parts if p).strip()
+    if not accumulated:
+        return
+    try:
+        policy = fast_auth_policy(accumulated)
+    except Exception:
+        logger.warning("[통화 %s] 접수완료 인증정책 판정 실패(무시)", call_id, exc_info=True)
+        return
+    if policy == "REQUIRED":
+        session.auth_trigger_sent = True
+        await trigger_auth_if_required(call_id)
 
 
 async def trigger_auth_if_required(call_id: str) -> None:
@@ -259,6 +288,12 @@ async def ars_socket(websocket: WebSocket, call_id: str, role: str = "mobile") -
                                 "drained": True,
                             },
                         )
+                        # 본인인증 판정은 여기, 접수완료 순간 딱 한 번만 한다(2026-07-28 현장
+                        # 피드백: "말 다 끝나고 본인인증으로 넘어가야 하는데" — call.py의 발화
+                        # 도착마다 도는 빠른 트리거는 #를 누르면 실기기 마이크를 더 안 잡아서
+                        # (시뮬레이션 대화로 전환) 그 뒤로 아예 안 불린다. 여기서 접수 발화
+                        # 전체를 한 번에 판정해야 실제로 걸린다.
+                        await _check_intake_auth(call_id)
             elif mtype == "agent_connected" and state.active:
                 state.agent_connected = True
                 state.intake_complete = True

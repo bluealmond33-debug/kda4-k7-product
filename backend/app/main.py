@@ -118,5 +118,9 @@ async def health() -> dict:
     return {
         "status": "ok",
         "database": "connected" if ping_database(settings) else "not_connected",
-        "contract_version": "mvp-1.0",
+        "contract_version": "mvp-1.1",
+        "pipeline_mode": "local" if settings.use_local_models else "cloud",
+        # transformers_stt.py가 faster-whisper를 대체했다(Windows Smart App Control이
+        # ctranslate2 네이티브 DLL을 차단해서) — 이 필드는 실제 구동 중인 엔진을 그대로 보고한다.
+        "stt_provider": "transformers",
     }

@@ -161,7 +161,9 @@ class HealthResponse(BaseModel):
 
     status: str
     database: str
-    contract_version: str = "mvp-1.0"
+    contract_version: str = "mvp-1.1"
+    pipeline_mode: str = "local"
+    stt_provider: str = "transformers"
 
 
 # ── 실행 엔진 호환 별칭 (ADR-0012 이식) ──────────────────────────────────

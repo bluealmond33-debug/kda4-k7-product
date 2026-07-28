@@ -187,7 +187,7 @@ export default function BriefingCardBody({
                     <span style={css("font:800 12px " + FONT + ";letter-spacing:.3px;flex:none;color:" + (reservedDept ? "#fff" : vm.prepBusinessCode ? "var(--gray-1000)" : "var(--gray-600)") + chain(1))}>
                       {vm.prepBusinessCode ?? "미분류"}
                     </span>
-                    <span style={css("font:600 10.5px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
+                    <span style={css("font:600 10.5px " + FONT + ";flex:1;min-width:0;word-break:keep-all;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
                       {vm.prepBusinessCodeLabel ?? "자동 분류 실패 · 직접 확인"}
                     </span>
                   </div>

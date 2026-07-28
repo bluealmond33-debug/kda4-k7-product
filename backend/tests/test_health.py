@@ -11,7 +11,7 @@ def test_health_exposes_contract_and_database_state() -> None:
     assert response.json()["contract_version"] == "mvp-1.1"
     assert response.json()["database"] in {"connected", "not_connected"}
     assert response.json()["pipeline_mode"] in {"cloud", "local"}
-    assert response.json()["stt_provider"] in {"openai", "faster_whisper"}
+    assert response.json()["stt_provider"] in {"openai", "faster_whisper", "transformers"}
     assert response.json()["analysis_provider"] in {"openai", "ollama"}
 
 
