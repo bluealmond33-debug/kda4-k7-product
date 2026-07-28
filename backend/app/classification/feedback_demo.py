@@ -280,9 +280,13 @@ def save_feedback(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("text와 verdict(correct/incorrect)가 필요합니다")
 
     correction = payload.get("correction") if verdict == "incorrect" else None
-    if verdict == "incorrect":
+    # correction은 선택 사항이다 — wrap-up 피드백(ClassifierFeedback.tsx)은 태그·코멘트만
+    # 보내고 correction을 안 보낸다(교정 드롭다운 UI가 없음). 그런 호출을 correction 필수로
+    # 막으면 오답 사례가 하나도 저장 안 된다(2026-07-28 발견). correction을 실제로 보낸
+    # 호출부(예: 교정 드롭다운이 있는 별도 검토 도구)에 한해서만 기존 검증을 적용한다.
+    if verdict == "incorrect" and correction is not None:
         if not isinstance(correction, dict):
-            raise ValueError("잘못된 판정에는 correction이 필요합니다")
+            raise ValueError("correction은 객체여야 합니다")
         routing = correction.get("routing")
         task_code = str(correction.get("task_code") or "G004").upper()
         if routing not in VALID_ROUTINGS:
