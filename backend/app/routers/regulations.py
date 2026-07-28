@@ -62,9 +62,19 @@ def _hit(doc, meta: dict | None) -> dict:
     }
 
 
+_HANGUL_RE = re.compile(r"[가-힣]")
+
+
 def _short_label(doc) -> str:
-    """RagDocument → 추천 칩용 짧은 라벨. 프론트 regulationSearch.ts의 shortLabel()과 동일 규칙."""
-    raw = (doc.subcategory or doc.title or "").strip()
+    """RagDocument → 추천 칩용 짧은 라벨. 프론트 regulationSearch.ts의 shortLabel()과 동일 규칙.
+
+    subcategory가 taxonomy 내부 코드(예: "subscription")일 때가 있어 그대로 쓰면 칩에
+    영어가 그대로 노출됐다(현장 피드백, 2026-07-28). 한글이 하나도 없으면 내부 코드로
+    보고 title로 대체한다.
+    """
+    raw = (doc.subcategory or "").strip()
+    if not raw or not _HANGUL_RE.search(raw):
+        raw = (doc.title or "").strip()
     cleaned = _SECTION_PREFIX_RE.sub("", raw)
     return re.sub(r"\s+", " ", cleaned).strip()[:20]
 

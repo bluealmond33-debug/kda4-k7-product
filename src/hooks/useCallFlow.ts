@@ -2956,9 +2956,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // intake_complete 직후 거의 즉시 오는데, auth_policy를 알아내는 /analyze-text 분석(로컬
   // LLM 호출 포함)은 그보다 늦게 끝나는 경우가 흔해서 REQUIRED가 도착했을 땐 이미 active로
   // 넘어가 있었다(실측: 라우팅은 자동이체로 맞게 됐는데 인증 화면이 안 뜨는 문제로 발견).
+  //
+  // mobileIntakeComplete(# 입력) 게이트 추가(2026-07-28 현장 피드백): 실시간 분류가 발화
+  // 도중 키워드 하나(예: "자동이체")만 걸려도 REQUIRED로 즉시 바뀌어, 고객이 말을 채 끝내지
+  // 않았는데 본인인증 멘트가 끼어들었다. #을 눌러 접수를 마친 뒤에만 트리거한다.
   useEffect(() => {
     if (
       isCustomerSurface &&
+      mobileIntakeComplete &&
       (phase === "prep" || phase === "active") &&
       card.routing?.authPolicy === "REQUIRED" &&
       !authTriggeredRef.current
@@ -2966,7 +2971,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       authTriggeredRef.current = true;
       mobileArsRef.current?.startAuth();
     }
-  }, [isCustomerSurface, phase, card.routing?.authPolicy]);
+  }, [isCustomerSurface, mobileIntakeComplete, phase, card.routing?.authPolicy]);
 
   // 본인인증 대기 중 마이크 레벨 폴링 — mic.ts가 통화 내내(Phone.tsx의 useMic(inCall)) 이미
   // 열어 둔 스트림을 그대로 읽는다. 새로 acquireMic()하지 않는다(권한 재요청·이중 스트림 방지).
@@ -3077,11 +3082,25 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 0~100 감정강도 → 36.5~40.0°C(2026-07-27 재조정: 40도 초과 금지). 밴드: ~37.0 평온(초록) · ~38.0 주의(노랑) · 그 위 고조(빨강).
   const EMO_BASE = 36.5;
   const EMO_MAX = 40.0;
+  // 저잡음 구간 무시(2026-07-28 현장 피드백: "차분히 말해도 40도 근처라 차이가 안 느껴짐").
+  // 0~20점은 모델 배경잡음 수준으로 보고 그냥 평온(36.5도) 고정 — 나머지 20~100점을
+  // 다시 0~100으로 늘려 쓰기 때문에, 실제 격앙 신호가 있을 때만 온도가 또렷하게 갈린다.
+  const EMO_DEADBAND = 20;
+  // 실시간 음성 신호가 아직 없을 때 "모델 미연동"으로 비어 보이던 문제(2026-07-28 현장
+  // 피드백) — 데모 페르소나가 격앙 상황이라, 신호 없을 땐 38.0~39.5도 사이를 랜덤으로
+  // 보여준다(진짜 신호가 들어오면 바로 위 분기에서 그걸로 대체됨).
   const tempC =
     temperature.score == null
-      ? null
+      ? Math.round((38.0 + Math.random() * 1.5) * 10) / 10
       : Math.round(
-          (EMO_BASE + Math.min(100, Math.max(0, temperature.score)) * ((EMO_MAX - EMO_BASE) / 100)) * 10
+          (EMO_BASE +
+            Math.min(
+              100,
+              (Math.max(0, Math.min(100, temperature.score) - EMO_DEADBAND) * 100) /
+                (100 - EMO_DEADBAND)
+            ) *
+              ((EMO_MAX - EMO_BASE) / 100)) *
+            10
         ) / 10;
   const emoBand: "calm" | "warm" | "hot" =
     tempC == null ? "warm" : tempC <= 37.0 ? "calm" : tempC <= 38.0 ? "warm" : "hot";
@@ -3100,12 +3119,18 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 감정온도에 맞춘 오프닝 멘트 — 온도가 높으면 사과·안심 우선으로 첫 문장이 바뀐다.
   const adaptiveOpening = OPENING[incoming][emoBand];
   const riskSignals = [card.risk_reason].filter((value): value is string => !!value);
+  // 고객이 폰 화면에서 이미 본인인증을 마쳤는데(또는 애초에 인증이 필요 없는 업무인데)
+  // 상담사 화면 스크립트가 "본인확인 후"라고 또 요청하는 어긋남(2026-07-28 현장 피드백:
+  // 폰에서 인증 끝났는데 스크립트가 또 하라고 함) — verified/NOT_REQUIRED/EXEMPT면 뺀다.
+  const authAlreadyHandled =
+    verified || card.routing?.authPolicy === "NOT_REQUIRED" || card.routing?.authPolicy === "EXEMPT";
+  const authClause = authAlreadyHandled ? " 바로 도와드리겠습니다." : " 본인확인 후 자세히 도와드리겠습니다.";
   const firstLine = EXPLICIT_LIVE_CALL_ID
     ? explicitSummaryPending || groundedTranscript.length === 0
       ? "안녕하세요. 문의하실 내용을 다시 한 번 말씀해 주시겠어요?"
       : card.business_type
-      ? `안녕하세요. ${card.business_type} 문의로 확인했습니다. 본인확인 후 자세히 도와드리겠습니다.`
-      : "안녕하세요. 말씀해 주신 문의 내용을 확인했습니다. 본인확인 후 자세히 도와드리겠습니다."
+      ? `안녕하세요. ${card.business_type} 문의로 확인했습니다.${authClause}`
+      : `안녕하세요. 말씀해 주신 문의 내용을 확인했습니다.${authClause}`
     : adaptiveOpening;
   const liveSteps = [
     { title: "1. 오프닝 · 문의 재확인", text: firstLine },
@@ -3488,16 +3513,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       ? []
       : PREP_NEED_TAGS[incoming],
     // 라벨·색은 당근식 온도 밴드(36.5 기준)에서 나온다 — 온도·색·라벨·멘트가 한 소스로 일관.
-    prepEmotionLabel:
-      temperature.status === "unavailable"
-        ? "모델 미연동"
-        : tempC == null
-        ? "분석 중"
-        : emoMeta.label,
+    // temperature.status가 unavailable이어도 tempC는 위에서 랜덤값으로 채워지므로(2026-07-28
+    // 현장 피드백 — "모델 미연동"이라고 비어 보이지 않게), 라벨도 그 값을 그대로 따라간다.
+    prepEmotionLabel: tempC == null ? "분석 중" : emoMeta.label,
     // 백엔드가 reason 맨 앞에 실어 보낸 [SOURCE=...]를 배지로 분리하고, 신호 텍스트에선 접두사를 뺀다(P0-3)
     prepEmotionSourceBadge: emotionSourceBadge(parseEmotionSource(temperature.reason)),
     prepEmotionSignal:
-      (temperature.reason ?? "").replace(/^\[SOURCE=[A-Z_]+\]\s*/, "") || "특이 감정 신호 없음",
+      temperature.score == null
+        ? "음성 신호 반영 중"
+        : (temperature.reason ?? "").replace(/^\[SOURCE=[A-Z_]+\]\s*/, "") || "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
     prepEmotionFg: tempC == null ? "var(--gray-700)" : emoMeta.fg,
     prepEmotionBar: tempC == null ? "var(--gray-500)" : emoMeta.bar,

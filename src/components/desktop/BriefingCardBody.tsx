@@ -231,8 +231,10 @@ export default function BriefingCardBody({
             <div style={css("font:700 17px/1.35 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>
               <TypingAnimation text={maskPii(vm.prepHeadline)} enabled={typeHeadline} continuous={false} speed={34} />
             </div>
-            {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선 */}
-            <div style={css("font:400 11.5px/1.4 " + FONT + ";color:var(--gray-700);margin-top:2px;padding-bottom:8px;border-bottom:1px solid var(--gray-200)")}>
+            {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선.
+                통화가 이어지며 계속 길어져 카드를 잠식하는 문제(현장 피드백, 2026-07-28)라
+                최대 5줄로 자른다 — 원문(vm.transcriptQuote)은 그대로 두고 화면 표시만 자른다. */}
+            <div style={css("font:400 11.5px/1.4 " + FONT + ";color:var(--gray-700);margin-top:2px;padding-bottom:8px;border-bottom:1px solid var(--gray-200);display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden")}>
               근거 발화 · <span style={css("font-style:italic;color:var(--gray-900)")}>“{maskPii(vm.transcriptQuote)}”</span>
             </div>
             {/* STT 요약 불릿 — 이 박스의 주인공. 크고 또렷하게 */}
