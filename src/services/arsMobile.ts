@@ -34,7 +34,8 @@ export interface MobileArsHandlers {
 export interface MobileArsHandle {
   startCall(): void;
   pressDigit(digit: string): boolean;
-  startAuth(): void;
+  /** 소켓이 아직 준비 안 됐으면(와이파이 재연결 중 등) false — 호출부가 재시도 여부를 안다. */
+  startAuth(): boolean;
   endCall(): void;
   stop(options?: { hangup?: boolean }): void;
 }
@@ -345,9 +346,9 @@ export function startMobileArsControl(
     },
     startAuth() {
       if (!state.active || state.awaitingAuth || !hydrated || socket?.readyState !== WebSocket.OPEN) {
-        return;
+        return false;
       }
-      send("auth_start");
+      return send("auth_start");
     },
     endCall() {
       pendingStart = false;

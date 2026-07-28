@@ -64,10 +64,12 @@ class Settings(BaseSettings):
             self.frontend_origin,
             "http://localhost:5173",
             "http://127.0.0.1:5173",
+            "http://192.168.0.2:5173",
             "http://192.168.11.135:5173",
             # vite preview(프로덕션 빌드) — dev StrictMode/HMR 회피용 안정 서버
             "http://localhost:4173",
             "http://127.0.0.1:4173",
+            "http://192.168.0.2:4173",
             "http://192.168.11.135:4173",
             "http://localhost:5500",
             "http://127.0.0.1:5500",

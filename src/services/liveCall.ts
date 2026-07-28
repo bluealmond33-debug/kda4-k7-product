@@ -19,6 +19,10 @@ export interface LiveTranscript {
   speaker: LiveSpeaker;
   generation?: number;
   audioSeq?: number;
+  /** false면 문장이 아직 안 끝난 인터림 미리보기(0.5초 간격) — 같은 seq로 또 온다.
+   *  생략되거나 true면 확정(문장 끝 무음 감지 또는 세션 종료 flush) — 인터림을 모르는
+   *  다른 생성 경로(대화 시뮬레이션 등)와 하위호환되게 기본은 "확정"으로 둔다. */
+  isFinal?: boolean;
   /** 이 발화에서 백엔드(pii_guard, 11개 항목)가 마스킹한 개인정보 건수 — 화면 배지용 */
   piiMasked?: number;
   // WavLM 음성분노 신호(ws/call.py의 _emit_transcript가 발화마다 실어 보냄) — 감정온도
@@ -82,6 +86,7 @@ export async function startLiveCall(
         text?: string;
         at?: number;
         speaker?: unknown;
+        isFinal?: boolean;
         pii_masked?: number;
         anger_detected?: boolean;
         anger_probability?: number | null;
@@ -112,7 +117,10 @@ export async function startLiveCall(
         }
         const audioSeq = Math.max(0, Number(message.audio_seq) || 0);
         const seq = Math.max(0, Number(message.seq ?? audioSeq) || 0);
-        if (seq > 0 && seq <= lastSeq) return;
+        // 인터림(isFinal=false)은 같은 문장이 끝날 때까지 같은 seq로 여러 번 온다 — 엄격히
+        // '<'로만 걸러야 그 반복(및 뒤이은 확정)이 살아남는다. '<='였다면 두 번째 틱부터
+        // 전부 막혀 인터림이 한 번밖에 안 보였다.
+        if (seq > 0 && seq < lastSeq) return;
         lastSeq = Math.max(lastSeq, seq);
         const piiMasked = Math.max(0, Number(message.pii_masked) || 0);
         handlers.onTranscript?.({
@@ -120,6 +128,7 @@ export async function startLiveCall(
           text: message.text ?? "",
           at: Number(message.at) || Date.now(),
           speaker,
+          isFinal: message.isFinal !== false,
           ...(generation > 0 ? { generation } : {}),
           ...(audioSeq > 0 ? { audioSeq } : {}),
           ...(piiMasked > 0 ? { piiMasked } : {}),

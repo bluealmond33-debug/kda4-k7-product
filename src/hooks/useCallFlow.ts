@@ -1120,6 +1120,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           transcript: { ...prev.transcript, text },
           consultation_card: {
             ...prev.consultation_card,
+            // reset()의 초기 카드는 데모 픽스처(mvp_call_response.example.json, 주담대
+            // 시나리오)에서 온다. 예전엔 이 병합이 required_actions·knowledge_references
+            // 같은 배열 필드를 명시적으로 안 건드려서, 실통화가 와도 "본인확인 우선 진행"/
+            // "대출 만기정보 확인" 같은 픽스처 문구가 그대로 남아있었다(맥락 불일치 버그,
+            // 2026-07-28 현장 보고 — 보이스피싱 콜인데 대출 유의사항이 뜸). 실통화 응답이
+            // 이 필드들을 안 주면 빈 배열로 — 화면은 PREP_ITEMS[incoming] 폴백으로 자연스럽게
+            // 넘어간다(위 prepDefinitions 주석 참고).
+            required_actions: [],
+            customer_requests: [],
+            missing_information: [],
+            knowledge_references: [],
             summary: headline,
             business_type: String(data?.category || prev.consultation_card.business_type),
             department,

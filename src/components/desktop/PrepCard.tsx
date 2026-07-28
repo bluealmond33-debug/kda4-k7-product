@@ -11,7 +11,7 @@ const FONT = "'Avenir Next','Pretendard',sans-serif";
 
 /** 카드를 띄워 놓고 전화를 받지 않는 사고를 막는 안전장치 — 이 초가 지나면 자동 연결된다.
  *  동시에 상담사에게 "이 안에 카드를 읽고 들어가야 한다"는 리듬을 준다. */
-const AUTO_CONNECT_SEC = 15;
+const AUTO_CONNECT_SEC = 600;
 
 /** 자동 연결 카운트다운 — 준비 카드가 떠 있는 동안만 돈다.
  *
@@ -251,7 +251,7 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               </span>
             </div>
             {/* 문장 — 이 패널의 주인공. 폭을 다 쓰게 두고 크기를 키운다 */}
-            <div style={css("font:500 15px/1.65 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000);word-break:keep-all")}>{vm.firstLine}</div>
+            <div style={css("font:500 15px/1.65 " + FONT + ";color:var(--gray-1000);word-break:keep-all")}>{vm.firstLine}</div>
           </div>
           {scriptOpen && (
             <div style={css("padding:4px 20px 18px;display:flex;flex-direction:column;max-height:300px;overflow:auto")}>

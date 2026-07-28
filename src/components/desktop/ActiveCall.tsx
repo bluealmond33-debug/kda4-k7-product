@@ -666,7 +666,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <div style={css("padding:0 16px 13px;display:flex;flex-direction:column;gap:5px")}>
                 <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-600)")}>첫 응대 문장</span>
                 {/* 카드 요약 다음 순서로 쳐 내려간다 — 요약(무슨 일인가) → 첫 문장(뭐라고 말할까) */}
-                <div style={css("font:500 14px/1.6 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000);word-break:keep-all")}>
+                <div style={css("font:500 14px/1.6 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);word-break:keep-all")}>
                   <TypingAnimation text={vm.firstLine} continuous={false} speed={30} />
                 </div>
               </div>
@@ -790,8 +790,24 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   onChange={vm.onRegSearch}
                   onFocus={vm.openManual}
                   placeholder={vm.regQuery || "규정 검색  (예: 만기 or 재약정)"}
+                  list="reg-search-autocomplete"
                   style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}
                 />
+                {/* 자동완성 — 네이티브 datalist라 별도 드롭다운 UI 없이 브라우저가 그려준다.
+                    AI 추천 용어(현재 통화 맥락) + 방금 검색된 문서의 제목·섹션(코퍼스 전체
+                    범위)을 합쳐서, 타이핑하는 동안 규정 코퍼스에 실제로 있는 표현으로
+                    유도한다(사용자 피드백: "규정 정보 많은데 검색이 안 됨" — 정확한 표현을
+                    몰라서 헛도는 경우가 많았다). */}
+                <datalist id="reg-search-autocomplete">
+                  {Array.from(
+                    new Set([
+                      ...vm.regSuggests.map((s) => s.term),
+                      ...vm.semHits.flatMap((h) => [h.title, h.section].filter((v): v is string => !!v)),
+                    ])
+                  ).map((term) => (
+                    <option key={term} value={term} />
+                  ))}
+                </datalist>
                 {vm.semLoading ? (
                   <Spinner size={15} speedMs={750} />
                 ) : vm.regSearch ? (
@@ -1009,7 +1025,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                               {highlight(r.cells[regPlan.content]?.text ?? "", vm.regSearch)}
                             </span>
                             {ment && (
-                              <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
+                              <span style={css("display:block;margin-top:4px;font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
                             )}
                           </span>
                         </div>

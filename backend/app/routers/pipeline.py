@@ -320,7 +320,12 @@ async def analyze_text_endpoint(body: LegacyAnalyzeRequest) -> LegacyAnalyzeResp
         # 한 번으로 고객이 진정돼도 온도가 41도에 계속 고정된다(박정운 피드백).
         # max_anger는 통화 종료 후 판단(judge)에서는 그대로 쓴다 — "한 번이라도
         # 격했는가"는 위험판단엔 여전히 유효한 신호라 거기선 안 바꾼다.
-        anger_p = min(1.0, max(0.0, live_session.recent_anger))
+        # effective_recent_anger()는 접수 종료 후 마이크가 끊겨 새 음성이 없을 때
+        # (현장 요청) 마지막 값에 박제되지 않도록 경과시간만큼 중립으로 감쇠시킨다
+        # (2026-07-27 리허설 피드백: "차분히 말하는데 40도 그대로").
+        from app.ws.call import effective_recent_anger
+
+        anger_p = min(1.0, max(0.0, effective_recent_anger(live_session)))
         emotion_result = EmotionResult(
             anger_probability=anger_p, anxiety_probability=anger_p,
             neutral_probability=max(0.0, 1.0 - anger_p), uncertainty=0.0,
@@ -432,7 +437,8 @@ async def simulate_continuation_endpoint(body: ContinuationRequest) -> Continuat
     스트리밍한다. 실패하면 빈 turns를 돌려 프론트가 조용히 건너뛴다(화면이 안 깨지게)."""
     try:
         return generate_continuation(
-            settings, body.opening_text, body.summary, body.keywords, body.department
+            settings, body.opening_text, body.summary, body.keywords, body.department,
+            body.prior_turns, body.conclude,
         )
     except Exception as exc:
         logger.warning("대화 시뮬레이션 생성 실패", exc_info=True)

@@ -298,6 +298,11 @@ class ContinuationRequest(BaseModel):
     summary: str = ""
     keywords: list[str] = []
     department: str = ""
+    # 20분 실시간 재생을 여러 배치로 이어 생성할 때, 직전까지 오간 대화(최근 일부) —
+    # 없으면 반복·모순 없이 자연스럽게 이어 쓸 근거가 없어 매 배치가 처음부터 다시 인사한다.
+    prior_turns: list[DialogueTurn] = []
+    # True면 이 배치를 상담원의 마무리 인사로 끝맺는다(남은 시간이 얼마 안 남았을 때만 서버가 지정).
+    conclude: bool = False
 
 
 class ContinuationResponse(BaseModel):

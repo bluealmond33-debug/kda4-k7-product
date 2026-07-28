@@ -31,10 +31,11 @@ DB_PATH = Path(__file__).resolve().parent / "pii.db"
 CORS_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://192.168.0.2:5173",
     "http://192.168.11.135:5173",
-    "http://192.168.137.1:5173",  # 핫스팟 전환 대비
     "http://localhost:4173",       # vite preview(프로덕션 빌드)
     "http://127.0.0.1:4173",
+    "http://192.168.0.2:4173",
     "http://192.168.11.135:4173",
 ]
 
@@ -142,6 +143,13 @@ app = FastAPI(title="KARI-NA pii-service (개인정보 격리 서버)", lifespan
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    # 사설 IP 대역(LAN 시연) 전체 허용 — 메인 백엔드(app/main.py)와 같은 원칙.
+    # 시연 와이파이가 바뀔 때마다 IP를 하나씩 추가하는 방식은 계속 깨진다.
+    allow_origin_regex=(
+        r"https?://(192\.168\.\d{1,3}\.\d{1,3}"
+        r"|10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+        r"|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?"
+    ),
     allow_methods=["*"],
     allow_headers=["*"],
 )

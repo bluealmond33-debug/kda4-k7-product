@@ -29,7 +29,7 @@ export default function ScriptTimeline({ steps }: { steps: { title: string; text
               </div>
               <div style={css("display:flex;gap:8px;align-items:flex-start")}>
                 <span className="mi" style={css("font-size:15px;color:var(--gray-400);flex:none;margin-top:2px")}>format_quote</span>
-                <div style={css("flex:1;min-width:0;font:500 13.5px/1.6 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000)")}>{say}</div>
+                <div style={css("flex:1;min-width:0;font:500 13.5px/1.6 " + FONT + ";color:var(--gray-1000)")}>{say}</div>
               </div>
             </div>
           </div>

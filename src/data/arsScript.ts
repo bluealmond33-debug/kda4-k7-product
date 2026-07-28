@@ -64,19 +64,15 @@ export const ARS_CONFIRM: ArsLine[] = [
   },
 ];
 
-/** 요약·전달 완료(prep) — 일반 상담. 실제 녹음 3줄(들었음→정리중→전달완료)로 진행 상황을 순서대로 알린다. */
+/** 요약·전달 완료(prep) — 일반 상담. 실제 녹음 2줄(들었음→전달완료)로 진행 상황을 순서대로 알린다.
+ *  원래 3줄이었으나 handoff-1·handoff-2가 둘 다 "잠시만 기다려 주세요"로 끝나 같은 말이
+ *  두 번 들렸다(현장 피드백) — handoff-2를 빼서 중복을 없앴다. */
 export const ARS_HANDOFF: ArsLine[] = [
   {
     id: "handoff-1",
     text: "고객님께서 말씀하신 내용 잘 들었습니다, 잠시만 기다려 주세요.",
     sec: 5,
     audio: "ars/handoff-1.wav",
-  },
-  {
-    id: "handoff-2",
-    text: "말씀하신 내용을 정리하고 있습니다, 잠시만 기다려 주세요.",
-    sec: 4,
-    audio: "ars/handoff-2.wav",
   },
   {
     id: "handoff-3",
