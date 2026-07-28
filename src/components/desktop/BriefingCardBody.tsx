@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import { css } from "../../lib/css";
 import TypingAnimation from "../ui/TypingAnimation";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
@@ -27,28 +26,9 @@ export default function BriefingCardBody({
    *  통화 화면에서는 카드가 이미 자리에 있으므로 켜지 않는다 — 매번 깜빡이면 잔소리가 된다. */
   arriving?: boolean;
 }) {
-  // AI 요약이 막 끝난 순간(summaryPending: true→false) 잠깐(justRouted) 켜서
-  // "방금 이 부서로 라우팅됐다"는 걸 몸으로 느끼게 한다 — arriving(카드가 날아와
-  // 안착하는 접수 화면 전용)과는 다른 트리거다. 통화 화면은 카드가 이미 자리에
-  // 있으니 arriving을 못 쓰고, 대신 이 순간을 잡는다.
-  const wasPending = useRef(vm.summaryPending);
-  const [justRouted, setJustRouted] = useState(false);
-  useEffect(() => {
-    if (wasPending.current && !vm.summaryPending) {
-      setJustRouted(true);
-      const t = window.setTimeout(() => setJustRouted(false), 1100);
-      wasPending.current = vm.summaryPending;
-      return () => window.clearTimeout(t);
-    }
-    wasPending.current = vm.summaryPending;
-  }, [vm.summaryPending]);
-
-  // 부서 → 업무코드 순으로 켜진다. 카드 이동이 끝나갈 무렵(0.5s)부터, 또는 방금
-  // 라우팅이 끝난 순간부터 차례로.
+  // 부서 → 업무코드 순으로 켜진다. 카드 이동이 끝나갈 무렵(0.5s)부터 차례로.
   const chain = (order: number) =>
-    arriving || justRouted
-      ? ";animation:chainLight .5s ease-out " + (0.5 + order * 0.16) + "s both"
-      : "";
+    arriving ? ";animation:chainLight .5s ease-out " + (0.5 + order * 0.16) + "s both" : "";
   const reservedDept = vm.transferReserved ? vm.transferTarget ?? vm.suggestedDept : null;
   const confPct = vm.prepConfidencePct ?? 0;
 
@@ -134,46 +114,11 @@ export default function BriefingCardBody({
               />
             </div>
 
-            {/* 진행 점 3개(접수→분석→라우팅) — 카드가 "만들어졌다"에서 끝나지 않고
-                "그래서 이 부서로 갔다"는 흐름을 잠깐 보여준다. summaryPending 동안만
-                또는 방금 끝난 직후(justRouted)만 뜨고, 평소엔 부서 박스만 조용히 있다. */}
-            {(vm.summaryPending || justRouted) && (
-              <div style={css("display:flex;align-items:center;gap:5px;padding:0 2px")}>
-                <span style={css("width:5px;height:5px;border-radius:9999px;flex:none;background:var(--green-700)")} />
-                <span style={css("font:600 9px " + FONT + ";color:var(--gray-600);white-space:nowrap")}>접수</span>
-                <span style={css("width:9px;height:1px;flex:none;background:var(--gray-300)")} />
-                <span
-                  style={css(
-                    "width:5px;height:5px;border-radius:9999px;flex:none;background:" +
-                      (vm.summaryPending ? "var(--blue-700)" : "var(--green-700)") +
-                      (vm.summaryPending ? ";animation:recBlink 1.1s infinite" : "")
-                  )}
-                />
-                <span style={css("font:600 9px " + FONT + ";color:var(--gray-600);white-space:nowrap")}>분석</span>
-                <span style={css("width:9px;height:1px;flex:none;background:var(--gray-300)")} />
-                <span
-                  style={css(
-                    "width:5px;height:5px;border-radius:9999px;flex:none;background:" +
-                      (vm.summaryPending ? "var(--gray-300)" : "var(--green-700)") +
-                      (justRouted ? ";animation:chainLight .4s ease-out .16s both" : "")
-                  )}
-                />
-                <span style={css("font:600 9px " + FONT + ";color:var(--gray-600);white-space:nowrap")}>라우팅</span>
-              </div>
-            )}
-
             {/* 배정 부서 → 업무코드 — 감정온도 아래. 읽기 전용이다:
                 이관은 별도 버튼(접수=하단 '이관', 통화=음소거 왼쪽 원형 버튼)이 맡는다.
                 예약이 걸리면 여기가 파랗게 채워져 '어디로 갈지'를 보여준다. */}
             <div style={css("position:relative")}>
-              {justRouted && (
-                <div
-                  style={css(
-                    "position:absolute;inset:0;border-radius:10px;pointer-events:none;animation:ringSettle .7s ease-out both"
-                  )}
-                />
-              )}
-              <div title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "AI 배정 결과"} style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)") + (justRouted ? ";animation:routeStamp .5s cubic-bezier(0.2,0.8,0.2,1) both" : ""))}>
+              <div title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "AI 배정 결과"} style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)"))}>
                 <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:4px")}>
                   <div style={css("display:flex;align-items:baseline;gap:7px")}>
                     <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>부서</span>
@@ -187,7 +132,7 @@ export default function BriefingCardBody({
                     <span style={css("font:800 12px " + FONT + ";letter-spacing:.3px;flex:none;color:" + (reservedDept ? "#fff" : vm.prepBusinessCode ? "var(--gray-1000)" : "var(--gray-600)") + chain(1))}>
                       {vm.prepBusinessCode ?? "미분류"}
                     </span>
-                    <span style={css("font:600 10.5px " + FONT + ";flex:1;min-width:0;word-break:keep-all;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
+                    <span style={css("font:600 10.5px " + FONT + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:" + (reservedDept ? "rgba(255,255,255,.85)" : "var(--gray-700)"))}>
                       {vm.prepBusinessCodeLabel ?? "자동 분류 실패 · 직접 확인"}
                     </span>
                   </div>
@@ -231,10 +176,8 @@ export default function BriefingCardBody({
             <div style={css("font:700 17px/1.35 " + FONT + ";letter-spacing:-.3px;color:var(--gray-1000)")}>
               <TypingAnimation text={maskPii(vm.prepHeadline)} enabled={typeHeadline} continuous={false} speed={34} />
             </div>
-            {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선.
-                통화가 이어지며 계속 길어져 카드를 잠식하는 문제(현장 피드백, 2026-07-28)라
-                최대 5줄로 자른다 — 원문(vm.transcriptQuote)은 그대로 두고 화면 표시만 자른다. */}
-            <div style={css("font:400 11.5px/1.4 " + FONT + ";color:var(--gray-700);margin-top:2px;padding-bottom:8px;border-bottom:1px solid var(--gray-200);display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden")}>
+            {/* 근거 발화 — 제목 바로 밑에 간격 없이(이탤릭 유지), 아래 구분선 */}
+            <div style={css("font:400 11.5px/1.4 " + FONT + ";color:var(--gray-700);margin-top:2px;padding-bottom:8px;border-bottom:1px solid var(--gray-200)")}>
               근거 발화 · <span style={css("font-style:italic;color:var(--gray-900)")}>“{maskPii(vm.transcriptQuote)}”</span>
             </div>
             {/* STT 요약 불릿 — 이 박스의 주인공. 크고 또렷하게 */}

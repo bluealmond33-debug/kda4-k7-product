@@ -28,10 +28,6 @@ export interface ArsStateSnapshot extends ArsLifecycleEvent {
   intakeComplete: boolean;
   agentConnected: boolean;
   dtmfCount: number;
-  // 본인인증(생년월일 8자리) — 접수용 digits/intakeComplete와 별개 축.
-  awaitingAuth: boolean;
-  authDigitCount: number;
-  authVerified: boolean;
 }
 
 export interface ArsDtmfEvent {
@@ -52,24 +48,12 @@ export interface ArsControlHandlers {
   onState?(state: ArsStateSnapshot): void;
   onMobileStatus?(connected: boolean): void;
   onError?(message: string): void;
-  /** 고객이 키패드로 생년월일 8자리를 다 입력했을 때 — 상담사 화면 본인인증란
-   *  자동입력용. digits는 8자리 숫자 문자열 그대로(마스킹은 화면에서 한다). */
-  onAuthComplete?(digits: string): void;
 }
 
 export interface ArsControlHandle {
   stop(): void;
   agentConnected(): void;
   endCall(): void;
-  /** 실제 분류 결과(부서·업무코드)를 고객 폰에 반영시킨다 — /analyze-text가 끝나는 대로
-   *  호출한다. 고객 폰은 이 분석을 직접 안 돌리므로, 안 보내면 접수 시점 픽스처값(예:
-   *  "주택담보대출 만기연장")에 계속 머문다(후처리 문자 등에 노출, 2026-07-28 현장 피드백). */
-  sendRoutingUpdate(routing: {
-    department?: string | null;
-    businessType?: string | null;
-    taskCode?: string | null;
-    taskName?: string | null;
-  }): void;
 }
 
 /** Counselor-side ARS lifecycle control. */
@@ -184,9 +168,6 @@ export function startArsControl(
         phase?: "intake" | "waiting_for_agent" | "active";
         captured_at_ms?: number;
         persisted?: boolean;
-        awaiting_auth?: boolean;
-        auth_digit_count?: number;
-        auth_verified?: boolean;
       };
       try {
         message = JSON.parse(event.data as string);
@@ -237,9 +218,6 @@ export function startArsControl(
       if (message.type === "peer_status" && message.role === "mobile") {
         handlers.onMobileStatus?.(Boolean(message.connected));
       }
-      if (message.type === "auth_complete" && typeof message.digits === "string") {
-        handlers.onAuthComplete?.(message.digits);
-      }
       if (message.type === "ars_state") {
         const state: ArsStateSnapshot = {
           ...lifecycleEvent(message),
@@ -248,9 +226,6 @@ export function startArsControl(
           intakeComplete: Boolean(message.intake_complete),
           agentConnected: Boolean(message.agent_connected),
           dtmfCount: Math.max(0, Number(message.dtmf_count) || 0),
-          awaitingAuth: Boolean(message.awaiting_auth),
-          authDigitCount: Math.max(0, Number(message.auth_digit_count) || 0),
-          authVerified: Boolean(message.auth_verified),
         };
         hydrated = true;
         latestState = state;
@@ -278,18 +253,6 @@ export function startArsControl(
   connect();
 
   return {
-    sendRoutingUpdate(routing) {
-      if (socket?.readyState !== WebSocket.OPEN) return;
-      socket.send(
-        JSON.stringify({
-          type: "routing_update",
-          department: routing.department ?? null,
-          business_type: routing.businessType ?? null,
-          task_code: routing.taskCode ?? null,
-          task_name: routing.taskName ?? null,
-        })
-      );
-    },
     agentConnected() {
       if (generation <= 0) {
         handlers.onError?.("활성 통화 세대를 확인한 뒤 다시 연결해 주세요.");

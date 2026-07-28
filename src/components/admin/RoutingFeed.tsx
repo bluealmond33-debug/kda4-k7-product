@@ -139,13 +139,7 @@ export default function RoutingFeed({
                 전부 같은 낮은 그림자로 둔다 — 맨 위만 들리면 그 한 장이 잘못된 것처럼 어둡게 보인다.
                 (ONAIR: 초점은 하나이거나 없다) */}
             {heroes.map((r) => (
-              <FrontCard
-                key={r.callId}
-                r={r}
-                lifted={heroes.length === 1}
-                recent={pipelineLive.length === 0}
-                onOpen={() => onOpenCard(r)}
-              />
+              <FrontCard key={r.callId} r={r} lifted={heroes.length === 1} recent={pipelineLive.length === 0} />
             ))}
           </div>
         )}
@@ -178,14 +172,11 @@ function FrontCard({
   r,
   lifted = true,
   recent = false,
-  onOpen,
 }: {
   r: AdminCallRecord;
   lifted?: boolean;
   /** 도는 콜이 하나도 없어서 '가장 최근 결과'로 남아 있는 카드 */
   recent?: boolean;
-  /** 카드를 눌러 상담카드 상세를 연다 — 아래 타임라인 행과 같은 동작 */
-  onOpen?: () => void;
 }) {
   const lift = lifted ? "var(--sh-focus)" : "var(--sh-near)";
   const sge = r.sge;
@@ -199,16 +190,7 @@ function FrontCard({
          갓 들어온 카드가 회색으로 파인 구멍처럼 보였다 — 지금 가장 살아있는 카드가
          가장 죽어 보이는 셈. 진행 중이라는 건 면 색이 아니라 스피너·진행 점·그림자가 말한다.
          (ONAIR 문법: 면은 한 색, 위계는 그림자) */
-      /*
-        분류가 끝나기 전에도 누를 수 있다. 아직 카드가 없으니 상세에는 "분류 중"만 뜨지만,
-        **눌러도 아무 일도 안 일어나는 자리를 만들지 않는다** — 한 번 안 눌리면 사람은
-        그 뒤로 안 누른다.
-      */
-      <div
-        onClick={onOpen}
-        title="클릭하면 상담카드 상세"
-        style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:" + lift + ";padding:14px 16px;overflow:hidden;cursor:pointer;animation:cardDeal .34s var(--ease-out)")}
-      >
+      <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:" + lift + ";padding:14px 16px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
         <div style={css("display:flex;align-items:center;gap:9px")}>
           <Spinner size={16} speedMs={800} />
           <span style={css("font:700 13px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>분류 중…</span>
@@ -224,19 +206,7 @@ function FrontCard({
   }
 
   return (
-    /*
-      **피드의 카드는 전부 눌린다.**
-
-      아래 타임라인 행만 눌리고 이 카드는 안 눌렸다. 그런데 이 카드가 피드에서 가장 크고
-      가장 위에 있는 것이라, 상세를 보려는 사람이 제일 먼저 누르는 자리다. 거기서 아무
-      일도 안 일어나면 아래 행도 눌릴 거라고 생각하지 않는다 — **가장 눈에 띄는 것이
-      죽어 있으면 나머지도 죽은 것으로 읽힌다.**
-    */
-    <div
-      onClick={onOpen}
-      title="클릭하면 상담카드 상세"
-      style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:" + lift + ";padding:13px 16px 14px;overflow:hidden;cursor:pointer;animation:cardDeal .34s var(--ease-out)")}
-    >
+    <div style={css("position:relative;border-radius:12px;background:var(--onair-surface);box-shadow:" + lift + ";padding:13px 16px 14px;overflow:hidden;animation:cardDeal .34s var(--ease-out)")}>
       <div style={css("display:flex;align-items:center;gap:8px")}>
         {/* S/G/E 신호 — 틴트·색 바 없이 점 + 잉크 (ONAIR: 색은 점·글자에만) */}
         <span style={css("flex:none;display:inline-flex;align-items:center;gap:6px;font:700 12px 'Avenir Next','Pretendard',sans-serif;color:" + meta.fg)}>

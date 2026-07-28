@@ -96,7 +96,6 @@ export default function LiveDemo({
         id: `${line.generation ?? 0}-${line.audioSeq ?? line.seq}-${line.speaker}-${line.at}`,
         text: line.text,
         who: line.speaker,
-        piiMasked: line.piiMasked,
       }))
     : bus.lines.map((line) => ({ id: line.id, text: line.text, who: line.speaker }));
   // AI(KARI-NA) 안내를 발화와 한 줄기로 섞는다 — 고객이 무엇을 듣고 무엇을 답했는지가
@@ -331,24 +330,6 @@ export default function LiveDemo({
               <span className="mi" style={css("font-size:18px;color:var(--gray-700)")}>restart_alt</span>
             </span>
             {/* 관리자 버튼 제거 — 부서별 대기열은 관제 대시보드(?role=admin)에서 본다 */}
-          </div>
-          )}
-
-          {/* 온프레미스·보안 구동 상태 표시(박정운 피드백) — 경고·인장 느낌이 아니라 "생방송
-              중" 표시등처럼 가볍게. 검은 캔버스 위 오른쪽(관련 규정 패널 상단 여백)에 배경
-              없이 텍스트만 떠 있고, 초록 점 하나가 "정상 가동 중" 상태를 조용히 알린다.
-              깜빡임·글로우 없음(프로젝트 원칙 — 그림자 깊이로만 초점, 빛 연출 없음). */}
-          {view !== "phone" && (
-          <div style={css("width:100%;display:flex;justify-content:flex-end;padding-right:26px;margin-top:6px")}>
-            <span
-              title="온프레미스·보안 구동"
-              style={css(
-                "display:inline-flex;align-items:center;gap:7px;white-space:nowrap;cursor:default;font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:rgba(255,255,255,.72)"
-              )}
-            >
-              <span style={css("width:6px;height:6px;border-radius:9999px;background:var(--green-700);flex:none")} />
-              고객정보 외부 유출 없는 폐쇄망에서 실행 중
-            </span>
           </div>
           )}
 

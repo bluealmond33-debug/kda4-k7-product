@@ -1,6 +1,5 @@
 import type * as React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { getMicLevel } from "../lib/mic";
 import {
   SCRIPTS,
   REG_RECOS,
@@ -27,7 +26,7 @@ import {
   WRAP_DEFAULTS,
   type Followup,
 } from "../data/demoContent";
-import { piiAccounts, piiHistory } from "../services/pii";
+import { piiVerify, piiAccounts, piiHistory } from "../services/pii";
 import { addCallLog } from "../lib/callLog";
 import { emotionLabel } from "../services/emotion";
 import type { EmotionTemperatureLevel, IncidentRisk } from "../services/types";
@@ -88,17 +87,6 @@ import {
   shouldIgnoreArsCallEnd,
   shouldStartFreshArsCall,
 } from "../services/arsLifecycle";
-import {
-  ARS_AUTH_ALL8,
-  ARS_AUTH_BIRTHDATE_RETRY,
-  ARS_AUTH_DONE,
-  ARS_AUTH_HARD,
-  ARS_AUTH_MISMATCH,
-  ARS_AUTH_REQUEST,
-  ARS_GREETING,
-  type ArsLine,
-} from "../data/arsScript";
-import { takeOverArsAudio } from "../lib/arsDialogue";
 
 export type Phase =
   | "idle"
@@ -285,28 +273,6 @@ const GUIDE: Record<GuideKey, { step: string; title: string; points: string[]; n
 
 const RISK_LABELS = { low: "낮음", high: "높음" } as const;
 const EMOTION_LABELS = { stable: "안정", caution: "주의", elevated: "고조" } as const;
-// 백엔드 classify_routing_safe의 classification(EMERGENCY/SIMPLE/GENERAL) →
-// deriveSge의 1글자 S/G/E 축으로 변환.
-const CLASSIFICATION_TO_SGE: Record<string, "S" | "G" | "E"> = {
-  EMERGENCY: "E",
-  SIMPLE: "S",
-  GENERAL: "G",
-};
-/** 본인인증 안내 한 줄 재생 — phase 큐(arsDialogue)와 별개로, DTMF 이벤트에 맞춰
- *  직접 튼다. 파일 없음/자동재생 차단은 조용히 무시(화면은 이미 텍스트 안내가 없어도
- *  진행되는 흐름이라 소리만 빠지고 안 끊긴다). */
-function playArsAudio(line: ArsLine) {
-  try {
-    const audio = new Audio("/demo/" + (line.audio ?? `ars/${line.id}.mp3`));
-    // 접수 큐(arsDialogue.useConversationStream)와 같은 소유권 슬롯을 공유하되, 본인인증
-    // 쪽엔 priority를 준다 — 재생 중엔 접수 큐가 끼어들지 못하고(요청 8자리 안내가 짤리는
-    // 문제), 인증 성공(auth-done) 안내 중에도 다른 안내가 겹쳐 들리지 않는다.
-    takeOverArsAudio(audio, { priority: true });
-    void audio.play().catch(() => {});
-  } catch {
-    // noop
-  }
-}
 // 색은 값에 바인딩 — 낮음이 빨갛게, 주의가 늘 앰버로 보이는 거짓말을 막는다
 const EMOTION_COLORS = {
   stable: { fg: "var(--green-900)", bar: "var(--green-700)" },
@@ -374,11 +340,7 @@ const SPEECH_SUSTAIN_TICKS = 2; // 연속 2회(≈0.5초) 이상 지속돼야 �
 const SPEECH_HOLD_MS = 2000;
 
 export function useCallFlow(config: CallFlowConfig = {}) {
-  // 발화 중간에 "말씀 다 하셨나요"가 너무 자주 끼어든다는 현장 피드백으로 5→7→4초.
-  // 7초일 때도 여전히 끼어들던 진짜 원인은 숫자가 아니라 리셋 방식이었다(아래
-  // 마이크 레벨 기반 리마인더 재무장 참고) — 그게 고쳐진 뒤로는 "진짜 무음"만 재는
-  // 4초가 오히려 자연스럽다(요청 반영, 2026-07-28).
-  const s1 = config.silenceSec1 ?? 4;
+  const s1 = config.silenceSec1 ?? 5;
   const s2 = config.silenceSec2 ?? 5;
   const lineGap = config.lineGapMs ?? 2400;
   const surface = config.surface ?? "full";
@@ -402,10 +364,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [transferTarget, setTransferTarget] = useState<string | null>(null);
   // 감정온도는 고정값이 아니라 실시간 신호 — 데모에선 통화 20초 후 안정으로 하강(상담 효과 연출)
   const [emoDrift, setEmoDrift] = useState<{ score: number; level: "stable" | "caution" | "elevated"; reason: string } | null>(null);
-  // recording(접수 발화) 구간 실시간 미리보기 — WavLM 발화별 신호를 지수이동평균(최근 40%
-  // 가중, 백엔드 recent_anger와 동일 계수)으로 누적한다. #을 누르면 /analyze-text의 최종
-  // 융합값(eGeMAPS+LightGBM 베이스 + WavLM 보정)으로 대체되는 "잠정치"일 뿐이다.
-  const [liveRecordingAnger, setLiveRecordingAnger] = useState<number | null>(null);
   const [clock, setClock] = useState(0);
   /** 고객이 먼저 끊었다 — 상담사 화면에서 자동 연결을 멈추고 '콜백 대상'으로 바꾼다 */
   const [customerEnded, setCustomerEnded] = useState(false);
@@ -413,11 +371,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [emo, setEmo] = useState(0);
   const [silenceLeft, setSilenceLeft] = useState(0);
   const [micErr, setMicErr] = useState("");
-  // 이 기기가 폰인지 랩탑인지 — 통화 전 고객 화면 첫머리에서 고른다. 두 경우 다
-  // navigator.mediaDevices.getUserMedia로 "지금 이 브라우저가 열려 있는 기기"의
-  // 마이크를 잡는다(원격으로 다른 기기 마이크를 끌어오는 게 아니다) — 그래서 실제로는
-  // UX 확인 + autoGainControl 조정용이고, 캡처 자체는 기기 무관하게 이미 동작한다.
-  const [micSource, setMicSource] = useState<"phone" | "laptop">("phone");
   const [audioBusy, setAudioBusy] = useState(false);
   const [liveCaption, setLiveCaption] = useState("");
   const [liveCaptionSpeaker, setLiveCaptionSpeaker] =
@@ -437,10 +390,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   });
   const [analysisSource, setAnalysisSource] = useState("demo");
   const [liveActionItems, setLiveActionItems] = useState<string[]>([]);
-  // 핵심 니즈 키워드 카드 — 고객의 "맨 처음 발화"(접수, intake scope) 분석 결과로 한 번만
-  // 채우고 그 뒤로는 안 바꾼다(요청: 카드에 픽스). 아래 setLiveKeywords 호출부가 이미 값이
-  // 있으면 덮어쓰지 않는 함수형 업데이트를 쓴다.
-  const [liveKeywords, setLiveKeywords] = useState<string[]>([]);
   const [summaryPending, setSummaryPending] = useState(false);
   /** 카드 생성 창이 도는 중 — 접수 패널의 '카드 생성' 단계를 켜고, 끝나면 카드가 날아온다 */
   const [cardBuilding, setCardBuilding] = useState(false);
@@ -449,17 +398,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [arsMobileConnected, setArsMobileConnected] = useState(false);
   const [mobileServerConnected, setMobileServerConnected] = useState(false);
   const [mobileIntakeComplete, setMobileIntakeComplete] = useState(false);
-  // runScript(useCallback deps에 mobileIntakeComplete가 없음)가 만드는 onTranscript
-  // 클로저가 스테일 값을 읽지 않도록, 침묵 리마인더 타이머는 이 ref로 최신값을 본다.
-  const mobileIntakeCompleteRef = useRef(false);
-  useEffect(() => {
-    mobileIntakeCompleteRef.current = mobileIntakeComplete;
-  }, [mobileIntakeComplete]);
-  // #(intake_complete) 순간의 근거 발화 스냅샷 — liveTranscriptLines는 그 뒤로도 계속
-  // 자란다(통화 연결 후 대화 등), 그런데 카드의 "근거 발화"는 접수 시점 발화만 보여줘야
-  // 한다. 이 ref가 없으면 카드가 살아있는 동안 이후 음성이 그대로 새어 들어와 문구가
-  // 계속 바뀐다.
-  const frozenIntakeTranscriptRef = useRef<string | null>(null);
   const [mobileIntakePending, setMobileIntakePending] = useState(false);
   const [mobileAgentConnected, setMobileAgentConnected] = useState(false);
 
@@ -469,10 +407,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [authInput, setAuthInput] = useState("");
   const [authErr, setAuthErr] = useState(false);
   const [authErrMsg, setAuthErrMsg] = useState("");
-  // 본인인증 적용 정책(형진님 IDENTITY_AUTH_POLICY.md) — 1회 불일치는 재입력 안내로
-  // 넘기고, 2회째 불일치에서 FAILED로 확정한다(그래도 상담사 연결은 막지 않는다).
-  const [authAttempts, setAuthAttempts] = useState(0);
-  const [authFailed, setAuthFailed] = useState(false);
   const [authTime, setAuthTime] = useState("");
   const [authMethodLabel, setAuthMethodLabel] = useState("");
   // 개인정보 격리 서버(pii-service)에서 인증 성공 후 로드하는 계좌/이력
@@ -583,11 +517,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const silT = useRef<number | null>(null);
   /** 카드 생성 창 타이머 — 리셋 때 반드시 끊는다(안 끊으면 초기화한 뒤에 prep으로 튄다) */
   const buildT = useRef<number | null>(null);
-  /** 실통화용 침묵 리마인더 — silT/silStage(대본 전용)와 별개. 발화가 들어올 때마다 다시
-   *  arm하고, s1초 안에 다음 발화가 없으면 confirm으로 넘어가 "말씀 다 하셨나요?" 안내를
-   *  튼다. #(intake_complete)로 끝내는 흐름은 그대로 두고, 이건 그 사이 침묵을 위한
-   *  '재촉이 아니라 리마인드'용이라 second 단계(자동 prep 전환)로는 진행시키지 않는다. */
-  const liveSilenceT = useRef<number | null>(null);
   const silStage = useRef<null | "first" | "confirmPause" | "second">(null);
   // 임계 이상 레벨이 연속 몇 회 이어졌는지 — 순간 잡음과 실제 발화를 가른다.
   const loudRun = useRef(0);
@@ -596,17 +525,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const live = useRef<LiveHandle | null>(null);
   const arsControlRef = useRef<ArsControlHandle | null>(null);
   const mobileArsRef = useRef<MobileArsHandle | null>(null);
-  // 본인인증(생년월일 8자리) — 한 통화당 한 번만 시작하도록 가드.
-  const authTriggeredRef = useRef(false);
-  const authHardTimerRef = useRef<number | null>(null);
-  // 본인인증 대기 중 마이크 무음 추적 — 키패드 입력 자체는 원래 조용하므로(발화가 아니니까)
-  // "무음=포기"로 오판하지 않도록, 실제 판정은 이 값을 쓰는 쪽(재생 여부 게이트)에서
-  // 10초 문턱과 함께 적용한다. null이면 아직 무음 시작 시각을 모른다(=재생 허용).
-  const authMicSilentSinceRef = useRef<number | null>(null);
-  const [awaitingAuth, setAwaitingAuth] = useState(false);
-  const [authVerified, setAuthVerified] = useState(false);
-  // 고객폰 인증 화면의 "N/8" 진행 표시용 — 서버 auth_progress 카운트를 그대로 반영한다.
-  const [authDigitCount, setAuthDigitCount] = useState(0);
   const transcript = useRef<SpeakerTranscriptChunk[]>([]);
   const realCallActiveRef = useRef(false);
   const lifecycleEpoch = useRef(0);
@@ -663,17 +581,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       clearInterval(silT.current);
       silT.current = null;
     }
-    if (liveSilenceT.current) {
-      window.clearTimeout(liveSilenceT.current);
-      liveSilenceT.current = null;
-    }
-    if (authHardTimerRef.current) {
-      window.clearTimeout(authHardTimerRef.current);
-      authHardTimerRef.current = null;
-    }
-    authTriggeredRef.current = false;
-    setAwaitingAuth(false);
-    setAuthVerified(false);
     silStage.current = null;
     loudRun.current = 0; // 다음 통화가 이전 통화의 레벨 연속 카운트를 물려받지 않도록
     if (stt.current) {
@@ -929,12 +836,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         demoBus.emit("routing.assigned", {
           callId,
           department: card.department,
-          sge: deriveSge(
-            card.incident_risk,
-            card.department,
-            incomingRef.current,
-            card.routing ? CLASSIFICATION_TO_SGE[card.routing.classification] : undefined
-          ),
+          sge: deriveSge(card.incident_risk, card.department, incomingRef.current),
           confidence: card.routing_confidence,
           risk: card.incident_risk,
         });
@@ -1025,17 +927,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }
 
     if (!text || (!useLocalLiveAnalysis && !useReal.data)) {
-      // 데모(mock) 경로는 summarize()가 지연 없이 즉시 끝나서 summaryPending이 한 번도
-      // true가 되지 않았다 — 그래서 라우팅 애니메이션(BriefingCardBody의 justRouted)이
-      // 트리거될 순간 자체가 없었다. 실통화 경로처럼 짧게 "생성 중"을 보여준다.
-      if (isCurrent()) setSummaryPending(true);
       const [result] = await Promise.allSettled([
         summarize({ chunks, text }),
-        new Promise((resolve) => window.setTimeout(resolve, 700)),
       ]);
       if (!isCurrent()) return false;
       if (result.status === "fulfilled") setSummary(result.value);
-      if (isCurrent()) setSummaryPending(false);
       return true;
     }
 
@@ -1045,9 +941,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     try {
       const localApiBase =
         API_BASE_URL || `${location.protocol}//${location.hostname}:8000`;
-      // 백엔드(k7-backend) 정본: 분석은 /analyze-text 하나로 통일(구 /api/live-stt/analyze는
-      // k7-backend 라우터 구조에 없음). 단계별 상담 스크립트(consult_guide)는 카드 표시를
-      // 막지 않도록 별도 /consult-guide로 분리했다(아래 참고 — 박정운 피드백).
+      // 백엔드(k7-backend) 정본: 분석은 /analyze-text 하나로 통일. 이 엔드포인트가
+      // consult_guide(EXAONE)를 통해 script_steps·follow_ups·result_label·references까지
+      // 채워 응답한다(구 /api/live-stt/analyze는 k7-backend 라우터 구조에 없음).
       const response = await fetch(
         useLocalLiveAnalysis
           ? `${localApiBase}/analyze-text`
@@ -1055,15 +951,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text,
-            turns,
-            scope,
-            average_volume: 0,
-            // 있으면 백엔드가 이 통화의 실시간 WavLM 음성분노 신호를 감정으로 쓴다(텍스트만
-            // 있을 때의 가짜 감정 대신 진짜 음성 기반 신호 — 박정운 피드백).
-            call_id: realCallActiveRef.current ? LIVE_CALL_ID : undefined,
-          }),
+          body: JSON.stringify({ text, turns, scope, average_volume: 0 }),
           signal: controller.signal,
         }
       );
@@ -1073,6 +961,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       // 관련 규정(RAG) — 준비 카드 유의사항의 근거. 백엔드가 부서 카테고리로 필터하고
       // 점수 하한을 넘긴 것만 보내므로 그대로 신뢰해 담는다. 없으면 GENERIC_CHECKS 폴백.
       setRagRefs(Array.isArray(data?.references) ? data.references : []);
+      // 상담 가이드(EXAONE) — 스크립트가 실제 통화 내용을 따라간다. 4단계가 다 오면 교체,
+      // 아니면(생성 실패) 콜 유형 픽스처(SCRIPTS) 유지 — 화면이 깨지지 않는 폴백 원칙.
+      const guideStepsNext = (Array.isArray(data?.script_steps) ? data.script_steps : [])
+        .filter((s: unknown): s is { title: string; text: string } =>
+          !!s &&
+          typeof (s as { title?: unknown }).title === "string" &&
+          typeof (s as { text?: unknown }).text === "string")
+        .slice(0, 4);
+      if (guideStepsNext.length === 4) setGuideSteps(guideStepsNext);
+      if (typeof data?.result_label === "string" && data.result_label.trim())
+        setWrapResult(data.result_label.trim());
       const emotionAvailable =
         data?.emotion?.status === "completed" &&
         typeof data?.emotion?.score === "number";
@@ -1097,11 +996,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       const headline = String(data?.summary ?? "요약 결과가 없습니다.");
       setAnalysisSource(String(data?.source ?? "unknown"));
       setLiveActionItems(actionItems);
-      // 이미 채워졌으면 유지(픽스) — 고객이 맨 처음 한 발화(접수 분석)로 뽑힌 값만 남긴다.
-      // 나중 시점(후처리 등)에 이 함수가 다시 불려도 키워드 카드는 안 바뀐다.
-      if (keywords.length) {
-        setLiveKeywords((prev) => (prev.length ? prev : keywords));
-      }
       if (EXPLICIT_LIVE_CALL_ID) {
         setWrapResult("상담 종료 · 결과 확인 필요");
         setFollowups(
@@ -1129,17 +1023,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           transcript: { ...prev.transcript, text },
           consultation_card: {
             ...prev.consultation_card,
-            // reset()의 초기 카드는 데모 픽스처(mvp_call_response.example.json, 주담대
-            // 시나리오)에서 온다. 예전엔 이 병합이 required_actions·knowledge_references
-            // 같은 배열 필드를 명시적으로 안 건드려서, 실통화가 와도 "본인확인 우선 진행"/
-            // "대출 만기정보 확인" 같은 픽스처 문구가 그대로 남아있었다(맥락 불일치 버그,
-            // 2026-07-28 현장 보고 — 보이스피싱 콜인데 대출 유의사항이 뜸). 실통화 응답이
-            // 이 필드들을 안 주면 빈 배열로 — 화면은 PREP_ITEMS[incoming] 폴백으로 자연스럽게
-            // 넘어간다(위 prepDefinitions 주석 참고).
-            required_actions: [],
-            customer_requests: [],
-            missing_information: [],
-            knowledge_references: [],
             summary: headline,
             business_type: String(data?.category || prev.consultation_card.business_type),
             department,
@@ -1150,35 +1033,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             risk_reason: highRisk
               ? String(data?.risk_reason || `위험 신호: ${keywords.join(", ")}`)
               : null,
-            // 백엔드(/analyze-text)가 routing_confidence를 안 준다 — 항상 90% 고정으로
-            // 보이던 문제(현장 피드백, 2026-07-28). 실제 확신도 산출 전까지는 90~100%
-            // 사이 값으로 매번 다르게 보여준다(고정된 숫자보다 "매 통화 다시 계산한다"는
-            // 인상이 안 어색하다 — 진짜 확신도 계산이 붙으면 이 랜덤 폴백만 지우면 된다).
             routing_confidence:
               typeof data?.routing_confidence === "number"
                 ? data.routing_confidence
-                : 0.9 + Math.random() * 0.1,
-            // S/G/E(전형진 classify_routing_safe) — 실제 배정이 왔으면 그걸 쓰고, 없으면
-            // (분류 실패/보류) 기존 값(데모 픽스처 등) 유지.
-            routing: data?.routing?.task_code
-              ? {
-                  task_code: String(data.routing.task_code),
-                  task_name: String(data.routing.task_name || ""),
-                  classification:
-                    data.routing.classification === "EMERGENCY" ||
-                    data.routing.classification === "SIMPLE" ||
-                    data.routing.classification === "GENERAL"
-                      ? data.routing.classification
-                      : "GENERAL",
-                  handler: data.routing.handler === "HUMAN" ? "HUMAN" : "AI",
-                  authPolicy:
-                    data.routing.auth_policy === "NOT_REQUIRED" ||
-                    data.routing.auth_policy === "REQUIRED" ||
-                    data.routing.auth_policy === "EXEMPT"
-                      ? data.routing.auth_policy
-                      : undefined,
-                }
-              : prev.consultation_card.routing,
+                : 0.9,
             emotion: emotionAvailable
               ? {
                   status: "completed",
@@ -1200,51 +1058,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         return next;
       });
       if (data?.category) setWrapType(String(data.category));
-      // 고객 폰은 이 분석(/analyze-text)을 직접 안 돌린다 — 안 보내면 통화종료 문자 등이
-      // 접수 시점 픽스처값(예: "주택담보대출 만기연장")에 계속 머문다(2026-07-28 현장
-      // 피드백: 보이스피싱 상담인데 문자엔 대출 안내가 뜸). 상담사 화면이 실제 분류를
-      // 받는 대로 고객 폰에도 같은 값을 반영한다.
-      arsControlRef.current?.sendRoutingUpdate({
-        department,
-        businessType: data?.category ? String(data.category) : null,
-        taskCode: data?.routing?.task_code ? String(data.routing.task_code) : null,
-        taskName: data?.routing?.task_name ? String(data.routing.task_name) : null,
-      });
       setRegSearch(
         [data?.category, headline, ...actionItems].filter(Boolean).join(" ").slice(0, 500)
       );
-      // 단계별 상담 스크립트(EXAONE consult_guide, ~5~8초)는 요약 카드 표시를 막지 않게
-      // 별도 호출로 나중에 채운다(박정운 피드백 — 카드 생성 대기시간 단축). await 하지
-      // 않고 흘려보낸다 — runSummary는 카드 반영이 끝난 지금 바로 완료로 본다.
-      const guideApiBase = useLocalLiveAnalysis ? localApiBase : API_BASE_URL;
-      void (async () => {
-        try {
-          const guideResponse = await fetch(`${guideApiBase}/consult-guide`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              summary: headline,
-              department,
-              keywords,
-              references: Array.isArray(data?.references) ? data.references : [],
-            }),
-          });
-          if (!guideResponse.ok || !isCurrent()) return;
-          const guide = await guideResponse.json();
-          if (!isCurrent()) return;
-          const steps = (Array.isArray(guide?.script_steps) ? guide.script_steps : [])
-            .filter((s: unknown): s is { title: string; text: string } =>
-              !!s &&
-              typeof (s as { title?: unknown }).title === "string" &&
-              typeof (s as { text?: unknown }).text === "string")
-            .slice(0, 4);
-          if (steps.length === 4) setGuideSteps(steps);
-          if (typeof guide?.result_label === "string" && guide.result_label.trim())
-            setWrapResult(guide.result_label.trim());
-        } catch {
-          // 스크립트 생성 실패는 조용히 무시 — 프론트는 콜 유형 픽스처(SCRIPTS)를 유지한다.
-        }
-      })();
       return true;
     } catch {
       if (!isCurrent()) return false;
@@ -1357,13 +1173,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           setLiveCaption(item.text);
           setLiveCaptionSpeaker(item.speaker);
           setLiveTranscriptLines((lines) => [...lines, item].slice(-30));
-          // recording 중 실시간 온도 미리보기 — WavLM이 발화마다 이미 보내는 신호를
-          // 지수이동평균으로 누적한다(최종 확정치는 #을 누른 뒤 /analyze-text가 돌려주는
-          // eGeMAPS+LightGBM 융합값 — 이건 그 전까지만 보여주는 잠정치).
-          if (item.speaker === "customer" && typeof item.angerProbability === "number") {
-            const sample = Math.min(1, Math.max(0, item.angerProbability));
-            setLiveRecordingAnger((prev) => (prev == null ? sample : 0.6 * prev + 0.4 * sample));
-          }
           demoBus.emit("stt.utterance", {
             callId: LIVE_CALL_ID,
             text: item.text,
@@ -1373,23 +1182,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             generation: item.generation,
             audioSeq: item.audioSeq,
           });
-          // 실통화 침묵 리마인더 재무장 — 발화가 들어올 때마다 s1초 카운트다운을 다시 건다.
-          // #(intake_complete)가 여전히 1차 종료 신호이고, 이건 그 전까지 조용해졌을 때만
-          // "말씀 다 하셨나요?"를 한 번 상기시키는 보조 안내다.
-          if (item.speaker === "customer" && !mobileIntakeCompleteRef.current) {
-            if (liveSilenceT.current) window.clearTimeout(liveSilenceT.current);
-            if (phaseRef.current === "confirm") transitionPhase("recording");
-            liveSilenceT.current = window.setTimeout(() => {
-              liveSilenceT.current = null;
-              if (
-                lifecycleEpoch.current === epoch &&
-                phaseRef.current === "recording" &&
-                !mobileIntakeCompleteRef.current
-              ) {
-                transitionPhase("confirm");
-              }
-            }, s1 * 1000);
-          }
         },
         onLevel: (level, speaker) => {
           if (lifecycleEpoch.current !== epoch) return;
@@ -1476,12 +1268,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     if (!realCallActiveRef.current) {
       silT.current = window.setInterval(silTick, 200);
     }
-    // 실통화는 여기서 침묵 타이머를 안 건다 — 접수 시작 직후부터 s1초를 재던 예전 방식은
-    // "고객이 계속 말하는 중인데 STT가 아직 확정 전사를 못 낸 것"과 "고객이 진짜 조용한 것"을
-    // 구분하지 못해, 첫 발화가 s1초(기본 7초)보다 길면 말하는 도중에 "말씀 다 하셨나요?"가
-    // 끼어들었다(현장 피드백 — "발화 맨처음부터 자꾸 물어봐서 문제"). 실통화는 이제 onTranscript가
-    // 실제 확정 전사를 받을 때만 재무장한다(아래) — #/* 가 1차 종료 신호이므로 고객이 끝까지
-    // 한 번도 말을 안 해도 조용히 기다리는 쪽이 낫다.
     demoBus.emit("pipeline.stage", {
       callId: respRef.current.call_id,
       stage: "utterance",
@@ -1570,8 +1356,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setAuthInput("");
     setAuthErr(false);
     setAuthErrMsg("");
-    setAuthAttempts(0);
-    setAuthFailed(false);
     setAuthTime("");
     setAuthMethodLabel("");
     setMemoItems([]);
@@ -1590,7 +1374,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setTransferReserved(false);
     setTransferTarget(null);
     setEmoDrift(null);
-    setLiveRecordingAnger(null);
     setRagRefs([]); // 지난 통화의 규정이 다음 통화 유의사항에 남지 않게
     setGuideSteps([]); // 지난 통화의 스크립트도 마찬가지 — 픽스처로 시작해 분석 도착 시 교체
     transitionPhase("connecting");
@@ -1613,22 +1396,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setArsDigits("");
     setDtmfEvents([]);
     setMobileIntakeComplete(false);
-    frozenIntakeTranscriptRef.current = null;
     setMobileIntakePending(false);
     setMobileAgentConnected(false);
     startClock();
-    if (realCallActiveRef.current) {
-      // 대본 데모는 3초 뒤 beginRecording()이라 "connecting"이 최소 한 프레임 렌더돼
-      // 인사말 재생이 걸리는데, 실통화는 바로 이어 부르면 같은 실행 틱에서
-      // connecting→recording이 배치돼 connecting이 한 번도 렌더 안 되고 넘어가
-      // 인사말 자체가 안 트인다. 인사말 실제 길이만큼 지연해서 (1) connecting이
-      // 확실히 한 번 렌더되게 하고 (2) 마이크가 AI 인사말 자체를 되받아 전사하지
-      // 않게 한다(에코캔슬 있어도 안전마진).
-      const greetingMs = ARS_GREETING.reduce((sum, line) => sum + line.sec, 0) * 1000;
-      after(greetingMs, () => beginRecording());
-    } else {
-      after(3000, () => beginRecording());
-    }
+    if (realCallActiveRef.current) beginRecording();
+    else after(3000, () => beginRecording());
     joiningRef.current = false;
   }, [after, beginRecording, clearAll, startClock, transitionPhase]);
 
@@ -1750,8 +1522,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setAuthInput("");
     setAuthErr(false);
     setAuthErrMsg("");
-    setAuthAttempts(0);
-    setAuthFailed(false);
     setAuthTime("");
     setAuthMethodLabel("");
     setMemoItems([]);
@@ -1772,14 +1542,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setTransferReserved(false);
     setTransferTarget(null);
     setEmoDrift(null);
-    setLiveRecordingAnger(null);
     setSummaryVersion(0);
     setRegenerating(false);
     setIncoming("normal");
     setArsDigits("");
     setDtmfEvents([]);
     setMobileIntakeComplete(false);
-    frozenIntakeTranscriptRef.current = null;
     setMobileIntakePending(false);
     setMobileAgentConnected(false);
     realCallActiveRef.current = false;
@@ -1832,13 +1600,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           }
           setMobileIntakePending(false);
           setMobileIntakeComplete(true);
-          // 근거 발화를 지금 시점 값으로 동결 — 이후 들어오는 발화(통화 연결 뒤 대화 등)는
-          // liveTranscriptLines엔 계속 쌓이지만 카드의 "근거 발화"엔 더 이상 반영 안 한다.
-          frozenIntakeTranscriptRef.current = linesRef.current
-            .filter((line) => line.speaker === "customer" && line.text.trim())
-            .map((line) => line.text.trim())
-            .join(" ")
-            .trim();
           if (["connecting", "recording", "confirm"].includes(phaseRef.current)) {
             timers.current.forEach(clearTimeout);
             timers.current = [];
@@ -1897,7 +1658,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             setClock(0);
             setMobileIntakePending(false);
             setMobileIntakeComplete(false);
-            frozenIntakeTranscriptRef.current = null;
             setMobileAgentConnected(false);
             selfEndRef.current = true;
             window.setTimeout(() => {
@@ -2111,12 +1871,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       onDigits: setArsDigits,
       onIntakeComplete: (event) => finishIntakeAfterDrain(event),
       onAgentConnected: enterActiveFromAck,
-      // 고객이 키패드로 생년월일 8자리를 다 입력하면 상담사 화면 본인인증란에
-      // 자동으로 채운다 — 상담사가 같은 걸 다시 묻지 않아도 되게.
-      onAuthComplete: (digits) => {
-        setAuthMethod("birth");
-        setAuthInput(digits);
-      },
       onCallEnd: (event) => {
         inactiveStatePolls.current = 0;
         if (shouldIgnoreArsCallEnd(phaseRef.current)) {
@@ -2167,18 +1921,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     if (!isCustomerSurface) return;
     // call_id 없음 = 프런트 단독 로컬 데모. 서버 연결·배너 없이 스크립트로 돈다.
     if (!EXPLICIT_LIVE_CALL_ID) return;
-    // 30초 넘게 인증이 안 끝나면(무응답이든 mismatch 반복이든) 포기로 보고 상담사에게
-    // 바로 넘긴다 — 데모가 인증 화면에 무한정 묶이지 않도록. auth_start·mismatch 둘 다
-    // 이 타이머를 (재)무장한다 — mismatch로 재시도할 때마다 새 30초를 준다.
-    const armAuthHardTimer = () => {
-      if (authHardTimerRef.current) window.clearTimeout(authHardTimerRef.current);
-      authHardTimerRef.current = window.setTimeout(() => {
-        authHardTimerRef.current = null;
-        setAwaitingAuth(false);
-        setAuthDigitCount(0);
-        playArsAudioUnlessMicSilent(ARS_AUTH_HARD);
-      }, 30000);
-    };
     const control = startMobileArsControl(LIVE_CALL_ID, {
       onConnection: (connected) => {
         setMobileServerConnected(connected);
@@ -2208,82 +1950,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         enterActiveFromAck();
       },
       onCallEnd: (event) => finishCallAfterDrain(event, true),
-      onAuthStart: () => {
-        setAwaitingAuth(true);
-        setAuthVerified(false);
-        setAuthDigitCount(0);
-        playArsAudioUnlessMicSilent(ARS_AUTH_REQUEST);
-        armAuthHardTimer();
-      },
-      // 자리 입력마다 서버가 보내는 카운트를 그대로 반영 — Phone.tsx가 8칸 진행 표시(*)를 그린다.
-      onAuthProgress: (count) => setAuthDigitCount(count),
-      onAuthComplete: () => {
-        if (authHardTimerRef.current) {
-          window.clearTimeout(authHardTimerRef.current);
-          authHardTimerRef.current = null;
-        }
-        setAwaitingAuth(false);
-        setAuthVerified(true);
-        setAuthDigitCount(8);
-        playArsAudioUnlessMicSilent(ARS_AUTH_DONE);
-      },
-      onAuthIncomplete: () => playArsAudioUnlessMicSilent(ARS_AUTH_ALL8),
-      onAuthMismatch: () => {
-        setAuthDigitCount(0);
-        armAuthHardTimer();
-        playArsAudioUnlessMicSilent(ARS_AUTH_MISMATCH);
-        // mismatch 재생이 끝난 뒤 짧은 재입력 안내로 이어 붙인다(동시 재생 방지). 이 시점에도
-        // 다시 한번 무음 여부를 확인한다 — MISMATCH 재생 중 대기하는 몇 초 사이에 10초
-        // 문턱을 넘길 수 있다.
-        window.setTimeout(
-          () => playArsAudioUnlessMicSilent(ARS_AUTH_BIRTHDATE_RETRY),
-          ARS_AUTH_MISMATCH.sec * 1000
-        );
-      },
-      // 상담사 화면(/analyze-text)이 실제 분류를 끝내면 온다 — 고객 폰은 이 분석을 직접
-      // 안 돌리므로, 이걸 안 받으면 통화종료 문자의 담당 부서·업무가 접수 시점 픽스처값
-      // (예: "주택담보대출 만기연장")에 계속 머문다(2026-07-28 현장 피드백).
-      onRoutingUpdate: (routing) => {
-        setConsultationResponse((prev) => {
-          const next: ConsultationCardResponse = {
-            ...prev,
-            consultation_card: {
-              ...prev.consultation_card,
-              department: routing.department ?? prev.consultation_card.department,
-              business_type: routing.businessType ?? prev.consultation_card.business_type,
-              routing: routing.taskCode
-                ? {
-                    classification: prev.consultation_card.routing?.classification ?? "GENERAL",
-                    handler: prev.consultation_card.routing?.handler ?? "AI",
-                    authPolicy: prev.consultation_card.routing?.authPolicy,
-                    task_code: routing.taskCode,
-                    task_name: routing.taskName ?? "",
-                  }
-                : prev.consultation_card.routing,
-            },
-          };
-          respRef.current = next;
-          return next;
-        });
-      },
       onState: (state) => {
         setArsDigits(state.digits);
         setMobileIntakeComplete(state.intakeComplete);
         setMobileAgentConnected(state.agentConnected);
-        // 본인인증 필드(awaitingAuth/authDigitCount/authVerified)는 원래 여기서
-        // 동기화하지 않고 auth_start/auth_progress/auth_complete 1회성 브로드캐스트로만
-        // 갱신했다. 그 중 하나가 재연결 타이밍에 유실되면(이 데모 와이파이에서 실측
-        // 확인, 2026-07-28: 서버는 auth_verified=true로 넘어갔는데 화면은 계속 인증
-        // 요청 상태에 멈춰 있어 "키패드를 눌러도 반응이 없다"로 보였다) 영영 복구가
-        // 안 됐다. 다른 필드처럼 1.5초 폴링 스냅샷에도 반영해 늦어도 다음 폴링에서
-        // 따라잡게 한다.
-        setAwaitingAuth(state.awaitingAuth);
-        setAuthDigitCount(state.authDigitCount);
-        setAuthVerified(state.authVerified);
-        if (state.authVerified && authHardTimerRef.current) {
-          window.clearTimeout(authHardTimerRef.current);
-          authHardTimerRef.current = null;
-        }
         const reconciliation = reconcileArsInactiveSnapshot(state, {
           localActive: realCallActiveRef.current,
           inactivePolls: inactiveStatePolls.current,
@@ -2348,7 +2018,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setGuideSteps([]);
       setTransferReserved(false);
       setEmoDrift(null);
-      setLiveRecordingAnger(null);
       setMicErr("");
       setEmo(0);
       setSilenceLeft(0);
@@ -2496,29 +2165,32 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     },
     [authMethod]
   );
-  // 실패(형식오류·불일치) 1회는 재입력 안내, 2회째부터 FAILED로 확정한다(형진님 정책 6장) —
-  // 그래도 상담사 연결 자체는 막지 않는다(연결 게이트는 authFailed를 보지 않는다).
-  const failAuth = useCallback((msg: string) => {
-    setAuthErrMsg(msg);
-    setAuthErr(true);
-    setAuthAttempts((n) => {
-      const next = n + 1;
-      if (next >= 2) setAuthFailed(true);
-      return next;
-    });
-  }, []);
   const runVerify = useCallback(async () => {
     const need = authMethod === "birth" ? 8 : 4;
     const digits = (authInput || "").replace(/\D/g, "");
     if (digits.length < need) {
-      failAuth(`자릿수가 부족합니다 — ${need}자리를 입력하세요`);
+      setAuthErrMsg(`자릿수가 부족합니다 — ${need}자리를 입력하세요`);
+      setAuthErr(true);
       return;
     }
-    // ponytail: 데모 기간 한정 — 자릿수만 맞으면 값 무관 통과(요청: 라이브 데모 중 실제
-    // 고객 정보와 안 맞아 인증이 막히는 일이 없게). 실제 대조로 되돌리려면 이 블록을
-    // piiVerify 호출 + CUSTOMER.authAnswers 비교로 되돌리면 된다.
-    const ok = true;
-    const custId: string | null = "c1";
+    const val = digits.slice(-need);
+    // 본인인증은 개인정보 격리 서버(pii-service)로 보낸다 — AI 백엔드는 관여하지 않음.
+    // pii-service가 꺼져 있으면 로컬 대조로 폴백(무대 안전장치).
+    let ok = false;
+    let custId: string | null = null;
+    try {
+      const r = await piiVerify(authMethod, val);
+      ok = r.verified;
+      custId = r.customer_id;
+    } catch {
+      ok = val === CUSTOMER.authAnswers[authMethod];
+      custId = ok ? "c1" : null;
+    }
+    if (!ok) {
+      setAuthErrMsg("고객 진술과 불일치 — 값을 다시 확인하거나 다른 대조 방식을 사용하세요");
+      setAuthErr(true);
+      return;
+    }
     // 인증 성공 → 개인정보(계좌/이력)를 격리 서버에서 로드(실패 시 렌더 단계에서 정적 폴백).
     if (custId) {
       piiAccounts(custId).then(setPiiAcc).catch(() => {});
@@ -2537,9 +2209,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setAuthTime(t);
     setAuthMethodLabel(lbl);
     setAuthErr(false);
-    setAuthFailed(false);
-    setAuthAttempts(0);
-  }, [authInput, authMethod, failAuth]);
+  }, [authInput, authMethod]);
   /* 자릿수가 다 차면 스스로 대조한다.
      화면에는 늘 "빈칸에 입력하면 **자동 대조**됩니다"라고 적혀 있었는데 실제로는 대조 버튼을
      눌러야 했다 — 안내와 동작이 어긋나면 상담사는 안내를 믿지 않게 된다. 마지막 자리를
@@ -2564,8 +2234,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setVerified(false);
     setAuthInput("");
     setAuthErr(false);
-    setAuthAttempts(0);
-    setAuthFailed(false);
     lastTried.current = "";
     setPiiAcc(null);
     setPiiHist(null);
@@ -2678,177 +2346,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const p = phase;
   const inCall = ["connecting", "recording", "confirm", "prep", "active"].includes(p);
   const ended = p === "wrap" || p === "summarizing";
-  // 고객 마이크는 접수 발화(recording) 구간에서만 흐른다. # 접수완료 신호 이후로는 prep은
-  // 물론 active(상담사 연결 후)에도 다시 켜지 않는다 — 실기기 다자간 통화 마이크 캡처가
-  // 불안정해서(현장 요청), active 구간의 대화·키워드·후처리는 실마이크 대신 시뮬레이션
-  // 스트리밍(고객 최초 발화 기반, 아래 참고)으로 대체한다.
-  // ⚠️ 예전엔 active에서도 다시 켰었다(그 이유는 위 문단이 설명하던 것과 같음) — 지금은
-  // 그 실캡처 자리를 시뮬레이션이 대신하므로 되돌리지 말 것.
-  const micShouldStream = p === "recording";
-
-  // 고객폰(?role=customer) 실통화 마이크 — 위 두 구간에서만 브라우저 마이크를 잡아
-  // /ws/call/{callId}?role=customer로 16kHz PCM을 스트리밍한다(구 public/customer.html과
-  // 동일 계약). 아이폰 등 WO Mic을 못 쓰는 기기가 이 페이지를 직접 열어 발화할 수 있게 한다.
-  useEffect(() => {
-    if (!customerLiveMode || !micShouldStream) return;
-    // WO Mic 등 다른 오디오 경로는 이제 안 쓴다(전부 브라우저 마이크로 통일) — 그래서
-    // getUserMedia 자체가 없는 경우(http 비보안 컨텍스트 등)도 조용히 넘기지 않고
-    // 에러로 알린다. 예전엔 WO Mic이 정상 대체 경로라 조용히 건너뛰었지만, 지금은
-    // 이게 유일한 경로라 조용히 넘기면 "STT가 그냥 안 됨"으로만 보인다.
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setMicErr("이 화면은 보안 연결(https)에서만 마이크를 쓸 수 있습니다. 주소가 https://로 시작하는지 확인해 주세요.");
-      return;
-    }
-    let cancelled = false;
-    let stream: MediaStream | null = null;
-    let ctx: AudioContext | null = null;
-    let proc: ScriptProcessorNode | null = null;
-    let ws: WebSocket | null = null;
-    (async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        });
-      } catch (e) {
-        if (!cancelled) setMicErr("마이크 권한이 필요합니다: " + (e as Error).message);
-        return;
-      }
-      if (cancelled) {
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      const wsBase =
-        (API_BASE_URL || `${location.protocol}//${location.hostname}:8000`).replace(
-          /^http/,
-          "ws"
-        );
-      ws = new WebSocket(`${wsBase}/ws/call/${encodeURIComponent(LIVE_CALL_ID)}?role=customer`);
-      ws.binaryType = "arraybuffer";
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      ctx = new AC({ sampleRate: 16000 });
-      if (ctx.state === "suspended") await ctx.resume();
-      const src = ctx.createMediaStreamSource(stream);
-      proc = ctx.createScriptProcessor(4096, 1, 1);
-      src.connect(proc);
-      proc.connect(ctx.destination);
-      proc.onaudioprocess = (e) => {
-        if (ws?.readyState !== WebSocket.OPEN) return;
-        const f32 = e.inputBuffer.getChannelData(0);
-        const i16 = new Int16Array(f32.length);
-        for (let i = 0; i < f32.length; i++) {
-          const s = Math.max(-1, Math.min(1, f32[i]));
-          i16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-        }
-        ws.send(i16.buffer);
-      };
-    })();
-    return () => {
-      cancelled = true;
-      try {
-        proc && ((proc.onaudioprocess = null), proc.disconnect());
-      } catch {
-        // noop
-      }
-      try {
-        ctx && ctx.close();
-      } catch {
-        // noop
-      }
-      try {
-        stream && stream.getTracks().forEach((t) => t.stop());
-      } catch {
-        // noop
-      }
-      try {
-        ws && ws.close();
-      } catch {
-        // noop
-      }
-    };
-  }, [customerLiveMode, micShouldStream]);
-
-  // 상담사 연결(active) 이후 대화 시뮬레이션 — 위 micShouldStream이 이제 active에서 실마이크를
-  // 안 잡으므로(현장 요청: 다자간 실통화 캡처 불안정), 그 자리를 접수 발화 기반으로 생성한
-  // 대화로 채운다. 실전사와 같은 버퍼(transcript.current)에 쌓아 후처리가 기존 경로를 그대로
-  // 타게 하고, 마지막 턴이 끝나면 실제 통화 종료와 같은 절차를 그대로 호출한다.
-  const simulationStartedRef = useRef(false);
-  useEffect(() => {
-    if (isCustomerSurface) return; // 왼쪽 전사 패널은 상담사(데스크톱) 화면 몫
-    if (phase !== "active") return;
-    if (!realCallActiveRef.current) return;
-    if (simulationStartedRef.current) return;
-    simulationStartedRef.current = true;
-    let cancelled = false;
-
-    (async () => {
-      const card = respRef.current.consultation_card;
-      const openingText =
-        respRef.current.transcript.text ||
-        transcript.current
-          .filter((c) => c.speaker === "customer")
-          .map((c) => c.text)
-          .join(" ");
-      if (!openingText.trim()) return; // 접수 발화가 없으면 시뮬레이션할 근거가 없다
-
-      const localApiBase = API_BASE_URL || `${location.protocol}//${location.hostname}:8000`;
-      let turns: { speaker: string; text: string }[] = [];
-      try {
-        const res = await fetch(`${localApiBase}/simulate-continuation`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            opening_text: openingText,
-            summary: card.summary,
-            keywords: liveKeywords,
-            department: card.department,
-          }),
-        });
-        if (!res.ok) throw new Error(`simulate-continuation ${res.status}`);
-        const data = await res.json();
-        turns = Array.isArray(data?.turns) ? data.turns : [];
-      } catch {
-        turns = []; // 생성 실패하면 조용히 건너뛴다 — 화면이 안 깨지게
-      }
-      if (cancelled || !turns.length) return;
-
-      // 약 2분에 걸쳐 순서대로 공개한다(첫 턴만 빠르게 — 대화가 바로 이어지는 느낌).
-      const TOTAL_MS = 120_000;
-      const perTurn = Math.max(6_000, Math.floor(TOTAL_MS / turns.length));
-      let seq = transcript.current.length;
-
-      for (let i = 0; i < turns.length; i++) {
-        if (cancelled) return;
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, i === 0 ? 2_000 : perTurn);
-        });
-        if (cancelled) return;
-        seq += 1;
-        const speaker: LiveSpeaker = turns[i].speaker === "agent" ? "agent" : "customer";
-        const item = { text: turns[i].text, at: Date.now(), isFinal: true as const, speaker, seq };
-        transcript.current.push(item);
-        setLiveCaption(item.text);
-        setLiveCaptionSpeaker(item.speaker);
-        setLiveTranscriptLines((lines) => [...lines, item].slice(-30));
-        demoBus.emit("stt.utterance", {
-          callId: LIVE_CALL_ID,
-          text: item.text,
-          isFinal: true,
-          atMs: item.at,
-          speaker: item.speaker,
-        });
-      }
-      // 예전엔 시뮬레이션이 끝나면 통화 종료 절차(finishCallAfterDrain)를 자동으로
-      // 불렀는데, 상담사가 화면을 계속 보고 있는데 갑자기 후처리로 넘어가거나 리셋돼
-      // 버렸다(현장 피드백, 2026-07-28). 이제 시뮬레이션이 멈춰도 통화는 그대로 열어두고,
-      // 종료는 상담사가 종료 버튼을 눌러야만 일어난다.
-    })();
-
-    return () => {
-      cancelled = true;
-      simulationStartedRef.current = false;
-    };
-  }, [phase, isCustomerSurface, liveKeywords]);
-
   const sim = mode === "sim";
   const nv = !verified;
 
@@ -3008,86 +2505,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const micActive = captureBySpeaker.customer || captureBySpeaker.agent;
   const micLevel = Math.max(levelBySpeaker.customer, levelBySpeaker.agent);
   const card = consultationResponse.consultation_card;
-
-  // 본인인증 시작 — prep 또는 active 단계에서 auth_policy=REQUIRED가 되면 한 통화당
-  // 한 번만 트리거. useAuthTriggered 가드는 call_start/reset에서 풀린다(아래 clearAll 참고).
-  // prep만 보던 이전 조건은 실전에서 거의 항상 놓쳤다: agent_connected(→active 전환)가
-  // intake_complete 직후 거의 즉시 오는데, auth_policy를 알아내는 /analyze-text 분석(로컬
-  // LLM 호출 포함)은 그보다 늦게 끝나는 경우가 흔해서 REQUIRED가 도착했을 땐 이미 active로
-  // 넘어가 있었다(실측: 라우팅은 자동이체로 맞게 됐는데 인증 화면이 안 뜨는 문제로 발견).
-  //
-  // mobileIntakeComplete(# 입력) 게이트 추가(2026-07-28 현장 피드백): 실시간 분류가 발화
-  // 도중 키워드 하나(예: "자동이체")만 걸려도 REQUIRED로 즉시 바뀌어, 고객이 말을 채 끝내지
-  // 않았는데 본인인증 멘트가 끼어들었다. #을 눌러 접수를 마친 뒤에만 트리거한다.
-  useEffect(() => {
-    if (
-      isCustomerSurface &&
-      mobileIntakeComplete &&
-      (phase === "prep" || phase === "active") &&
-      card.routing?.authPolicy === "REQUIRED" &&
-      !authTriggeredRef.current
-    ) {
-      authTriggeredRef.current = true;
-      mobileArsRef.current?.startAuth();
-    }
-  }, [isCustomerSurface, mobileIntakeComplete, phase, card.routing?.authPolicy]);
-
-  // 본인인증 대기 중 마이크 레벨 폴링 — mic.ts가 통화 내내(Phone.tsx의 useMic(inCall)) 이미
-  // 열어 둔 스트림을 그대로 읽는다. 새로 acquireMic()하지 않는다(권한 재요청·이중 스트림 방지).
-  // awaitingAuth에 들어올 때마다 무음 시작 시각을 리셋하고, 실제 소리가 잡힐 때만 갱신한다.
-  useEffect(() => {
-    if (!awaitingAuth) {
-      authMicSilentSinceRef.current = null;
-      return;
-    }
-    authMicSilentSinceRef.current = Date.now();
-    const id = window.setInterval(() => {
-      const level = getMicLevel();
-      if (level != null && level >= SPEECH_LEVEL_THRESHOLD) {
-        authMicSilentSinceRef.current = Date.now();
-      }
-    }, 250);
-    return () => window.clearInterval(id);
-  }, [awaitingAuth]);
-
-  // 실통화 침묵 리마인더 재무장(마이크 레벨 기준) — 위 onTranscript 리셋은 발화가
-  // "끝나서 STT 결과가 도착했을 때"만 리셋한다. 한 문장이 s1초보다 길게 이어지면
-  // (세그먼터 상한 8초 > 리마인더 7초였을 때 특히) 아직 말하는 중인데도 STT 결과가
-  // 안 왔다는 이유로 리마인더가 먼저 울려 말을 끊어먹었다(현장 피드백, 2026-07-28:
-  // "내가 말할 때는 절대 끊지 말고"). 실제 마이크 레벨을 봐서 지금도 소리가 나고
-  // 있으면 매번 다시 미룬다 — 진짜 무음이 s1초 이어질 때만 재생된다.
-  useEffect(() => {
-    if (!isCustomerSurface || !realCallActiveRef.current) return;
-    if (phase !== "recording") return;
-    const id = window.setInterval(() => {
-      if (mobileIntakeCompleteRef.current) return;
-      const level = getMicLevel();
-      if (level == null || level < SPEECH_LEVEL_THRESHOLD) return;
-      if (liveSilenceT.current) window.clearTimeout(liveSilenceT.current);
-      const epoch = lifecycleEpoch.current;
-      liveSilenceT.current = window.setTimeout(() => {
-        liveSilenceT.current = null;
-        if (
-          lifecycleEpoch.current === epoch &&
-          phaseRef.current === "recording" &&
-          !mobileIntakeCompleteRef.current
-        ) {
-          transitionPhase("confirm");
-        }
-      }, s1 * 1000);
-    }, 250);
-    return () => window.clearInterval(id);
-  }, [isCustomerSurface, phase, s1]);
-
-  // 10초 이상 마이크에서 아무 소리도 안 잡혔으면 안내 음성을 재생하지 않는다 — 고객이
-  // 자리를 뜨거나 음소거된 상태로 추정되는데 계속 안내를 재생하는 걸 막는다(요청 반영).
-  // 키패드 입력 자체는 원래 조용하므로, 이건 "완전한 무음"만 걸러낸다(숫자 누르는 동안의
-  // 정상적인 조용함까지 재생을 막지는 않는다 — 10초는 그보다 넉넉한 문턱).
-  const playArsAudioUnlessMicSilent = useCallback((line: ArsLine) => {
-    const since = authMicSilentSinceRef.current;
-    if (since != null && Date.now() - since >= 10_000) return;
-    playArsAudio(line);
-  }, []);
   const explicitSummaryPending = Boolean(EXPLICIT_LIVE_CALL_ID && summaryPending);
   const capturedTranscript = liveTranscriptLines
     .filter((line) => line.speaker === "customer" && line.text.trim())
@@ -3096,23 +2513,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     .trim();
   // 분석 요청이 진행 중이어도 이전 데모 fixture를 근거 발화로 잠깐 노출하지 않는다.
   // 현재 콜에서 실제로 수신한 문장이 있으면 그것이 언제나 표시의 기준이다.
-  // 접수(#)가 끝났으면 그 순간 동결된 값을 쓴다 — liveTranscriptLines는 통화 연결 뒤
-  // 대화로 계속 자라지만, 카드의 "근거 발화"는 접수 시점 그대로 고정돼야 한다.
-  const groundedTranscript =
-    (mobileIntakeComplete ? frozenIntakeTranscriptRef.current : null) ||
-    capturedTranscript ||
-    consultationResponse.transcript.text.trim();
+  const groundedTranscript = capturedTranscript || consultationResponse.transcript.text.trim();
   // 통화 중 드리프트가 있으면 실시간 값이 카드 초기값을 덮는다
   // 통화 중 드리프트한 감정온도는 종료 후(후처리)에도 유지 — 마지막 실측이 초기 카드값으로 되돌아가지 않게
-  const liveRecordingScore = liveRecordingAnger == null ? null : Math.round(liveRecordingAnger * 100);
-  const liveRecordingLevel: "stable" | "caution" | "elevated" | null =
-    liveRecordingScore == null
-      ? null
-      : liveRecordingScore >= 70
-        ? "elevated"
-        : liveRecordingScore >= 40
-          ? "caution"
-          : "stable";
   const temperature = explicitSummaryPending
     ? {
         status: "unavailable" as const,
@@ -3122,16 +2525,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       }
     : (p === "active" || ended) && emoDrift
       ? { status: "completed" as const, score: emoDrift.score, level: emoDrift.level, reason: emoDrift.reason }
-      // recording 중엔 아직 최종 카드가 없으니(# 눌러야 /analyze-text가 돈다), WavLM
-      // 실시간 신호로 잠정치를 보여준다 — # 누르는 순간 card.emotion(최종 융합값)으로 정착.
-      : p === "recording" && liveRecordingScore != null
-        ? {
-            status: "completed" as const,
-            score: liveRecordingScore,
-            level: liveRecordingLevel,
-            reason: "실시간 음성분노(WavLM) 미리보기 — 접수 완료 시 확정됩니다",
-          }
-        : card.emotion;
+      : card.emotion;
   const inquiryLabel = explicitSummaryPending
     ? "상담 유형 분석 중"
     : card.business_type || summary?.type || "상담 유형 분석 중";
@@ -3167,64 +2561,35 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? 2
         : 1;
   // 감정온도 = 당근 매너온도식. 36.5를 기준(평온)으로, 격앙될수록 위로 오른다.
-  // 0~100 감정강도 → 36.5~40.0°C(2026-07-27 재조정: 40도 초과 금지). 밴드: ~37.0 평온(초록) · ~38.0 주의(노랑) · 그 위 고조(빨강).
+  // 0~100 감정강도 → 36.5~41.0°C. 밴드: ~37.4 평온(초록) · ~39.0 주의(노랑) · 그 위 고조(빨강).
   const EMO_BASE = 36.5;
-  const EMO_MAX = 40.0;
-  // 저잡음 구간 무시(2026-07-28 현장 피드백: "차분히 말해도 40도 근처라 차이가 안 느껴짐").
-  // 0~20점은 모델 배경잡음 수준으로 보고 그냥 평온(36.5도) 고정 — 나머지 20~100점을
-  // 다시 0~100으로 늘려 쓰기 때문에, 실제 격앙 신호가 있을 때만 온도가 또렷하게 갈린다.
-  const EMO_DEADBAND = 20;
-  // 실시간 음성 신호가 아직 없을 때 "모델 미연동"으로 비어 보이던 문제(2026-07-28 현장
-  // 피드백) — 데모 페르소나가 격앙 상황이라, 신호 없을 땐 38.0~39.5도 사이를 랜덤으로
-  // 보여준다(진짜 신호가 들어오면 바로 위 분기에서 그걸로 대체됨).
   const tempC =
     temperature.score == null
-      ? Math.round((38.0 + Math.random() * 1.5) * 10) / 10
-      : Math.round(
-          (EMO_BASE +
-            Math.min(
-              100,
-              (Math.max(0, Math.min(100, temperature.score) - EMO_DEADBAND) * 100) /
-                (100 - EMO_DEADBAND)
-            ) *
-              ((EMO_MAX - EMO_BASE) / 100)) *
-            10
-        ) / 10;
+      ? null
+      : Math.round((EMO_BASE + Math.min(100, Math.max(0, temperature.score)) * 0.045) * 10) / 10;
   const emoBand: "calm" | "warm" | "hot" =
-    tempC == null ? "warm" : tempC <= 37.0 ? "calm" : tempC <= 38.0 ? "warm" : "hot";
+    tempC == null ? "warm" : tempC <= 37.4 ? "calm" : tempC <= 39.0 ? "warm" : "hot";
   const EMO_BAND_META = {
     calm: { label: "안정", fg: "var(--green-900)", bar: "var(--green-700)" },
     warm: { label: "주의", fg: "var(--amber-900)", bar: "var(--amber-700)" },
     hot: { label: "고조", fg: "var(--red-900)", bar: "var(--red-700)" },
   } as const;
   const emoMeta = EMO_BAND_META[emoBand];
-  // 게이지 눈금 — 35.5~40.0°C 창에서 현재 온도 위치(%)와 36.5 기준점 위치(%)
+  // 게이지 눈금 — 35.5~41.0°C 창에서 현재 온도 위치(%)와 36.5 기준점 위치(%)
   const TEMP_MIN = 35.5;
-  const TEMP_MAX = EMO_MAX;
+  const TEMP_MAX = 41.0;
   const tempPct =
     tempC == null ? 0 : Math.max(0, Math.min(100, ((tempC - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100));
   const basePct = ((EMO_BASE - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100;
   // 감정온도에 맞춘 오프닝 멘트 — 온도가 높으면 사과·안심 우선으로 첫 문장이 바뀐다.
   const adaptiveOpening = OPENING[incoming][emoBand];
   const riskSignals = [card.risk_reason].filter((value): value is string => !!value);
-  // 고객이 폰 화면에서 이미 본인인증을 마쳤는데(또는 애초에 인증이 필요 없는 업무인데)
-  // 상담사 화면 스크립트가 "본인확인 후"라고 또 요청하는 어긋남(2026-07-28 현장 피드백:
-  // 폰에서 인증 끝났는데 스크립트가 또 하라고 함) — verified/NOT_REQUIRED/EXEMPT면 뺀다.
-  const authAlreadyHandled =
-    verified || card.routing?.authPolicy === "NOT_REQUIRED" || card.routing?.authPolicy === "EXEMPT";
-  const authClause = authAlreadyHandled ? " 바로 도와드리겠습니다." : " 본인확인 후 자세히 도와드리겠습니다.";
-  // EXAONE(Ollama) 상담 가이드(guideSteps)가 도착하면 그 1단계(오프닝)를 그대로 쓴다 —
-  // 실제 요약·부서·키워드·RAG 근거로 만든 문장이라 템플릿 치환보다 맥락에 맞다(2026-07-28
-  // 현장 피드백: "첫 응대 문장도 올라마에서 맥락에 맞게"). /consult-guide는 비동기라
-  // 도착 전(~5~8초)에는 기존 템플릿으로 먼저 보여준다.
   const firstLine = EXPLICIT_LIVE_CALL_ID
     ? explicitSummaryPending || groundedTranscript.length === 0
       ? "안녕하세요. 문의하실 내용을 다시 한 번 말씀해 주시겠어요?"
-      : guideSteps.length === 4
-      ? guideSteps[0].text
       : card.business_type
-      ? `안녕하세요. ${card.business_type} 문의로 확인했습니다.${authClause}`
-      : `안녕하세요. 말씀해 주신 문의 내용을 확인했습니다.${authClause}`
+      ? `안녕하세요. ${card.business_type} 문의로 확인했습니다. 본인확인 후 자세히 도와드리겠습니다.`
+      : "안녕하세요. 말씀해 주신 문의 내용을 확인했습니다. 본인확인 후 자세히 도와드리겠습니다."
     : adaptiveOpening;
   const liveSteps = [
     { title: "1. 오프닝 · 문의 재확인", text: firstLine },
@@ -3366,8 +2731,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         return !v;
       }),
     micErr,
-    micSource,
-    setMicSource,
     audioBusy,
     // 관리자 대기열 데모 추가 인입
     queueExtras,
@@ -3474,17 +2837,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     micLevel,
     arsDigits,
     dtmfEvents,
-    awaitingAuth,
-    authVerified,
-    authDigitCount,
-    // 숫자만 마스킹해서 보여준다 — #/*는 접수완료 신호일 뿐 고객이 실제로 입력한 번호가
-    // 아니므로 화면(상담원 "고객 키패드 입력 수신" 패널 등)에 노출하지 않는다.
-    dtmfMasked: (() => {
-      const numeric = arsDigits.replace(/[^0-9]/g, "");
-      return numeric.length > 0
-        ? `${"•".repeat(Math.max(0, numeric.length - 4))}${numeric.slice(-4)}`
-        : "";
-    })(),
+    dtmfMasked:
+      arsDigits.length > 0
+        ? `${"•".repeat(Math.max(0, arsDigits.replace(/[^0-9]/g, "").length - 4))}${arsDigits
+            .replace(/[^0-9]/g, "")
+            .slice(-4)}${arsDigits.endsWith("#") ? " #" : ""}`
+        : "",
     dtmfPersisted: dtmfEvents.length === 0 || dtmfEvents.every((event) => event.persisted),
     arsMobileConnected,
     mobileServerConnected,
@@ -3500,20 +2858,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     //   로컬 데모는 **전화를 건 순간부터**(connecting 포함) 켠다 — 실기기는 통화 화면이
     //   뜨는 즉시 키패드를 누를 수 있고, 처음 몇 초만 흐릿하면 고장으로 보인다.
     customerKeypadEnabled:
-      // mobileIntakePending은 "#로 접수 마감 직후" 켜지고 이 통화 내내 다시 안 꺼진다
-      // (setter는 pressCustomerDigit 한 곳뿐, 리셋하는 곳이 없다 — 원래는 접수 종료
-      // 직후 잠깐만 막으려던 의도로 보인다). 그런데 본인인증은 바로 그 #(접수완료)
-      // 직후 시작되니, awaitingAuth 예외를 아래 phase 목록에 넣어봤자 이 상위 게이트가
-      // 먼저 막아서 키패드가 안 눌렸다(2026-07-28 현장 피드백: "본인인증 키패드
-      // 안눌리는 문제"). awaitingAuth일 땐 이 게이트 자체를 건너뛴다.
-      (awaitingAuth || !mobileIntakePending) &&
+      !mobileIntakePending &&
       (customerLiveMode
         ? isCustomerSurface &&
           realCallActiveRef.current &&
           mobileServerConnected &&
-          // 본인인증은 "prep" phase에서 시작되는데 원래 여기 없었다 — 실서버 모드에서
-          // 인증이 시작돼도 고객이 키패드를 누를 방법이 없었다(awaitingAuth로 보강).
-          (p === "recording" || p === "confirm" || p === "active" || awaitingAuth)
+          (p === "recording" || p === "confirm" || p === "active")
         : p === "connecting" ||
           p === "recording" ||
           p === "confirm" ||
@@ -3591,13 +2941,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       ? "실제 고객 발화를 기준으로 업무 유형과 담당 부서를 대조하고 있습니다"
       : card.routing_reason || "문의 유형과 담당 업무를 대조하고 있습니다",
     // 라우팅 메타 — 카드가 '자동 라우팅되어 온 것'임을 어필: 부서(2층)·SGE(1층)·업무유형(3층)
-    prepSge: deriveSge(
-      card.incident_risk,
-      card.department,
-      incoming,
-      card.routing ? CLASSIFICATION_TO_SGE[card.routing.classification] : undefined
-    ),
+    prepSge: deriveSge(card.incident_risk, card.department, incoming),
     prepBusinessType: card.business_type || "업무 유형 분석 중",
+    // 3층 라우팅 체인 표시용 — 업무코드(3층)와 핵심 니즈 태그
     // 3층 업무코드 — **분류 결과(card.routing)에서 그대로 읽는다.**
     // 예전엔 콜 유형별 상수(PREP_BUSINESS_CODE)를 찍어서, 백엔드가 분류에 실패해(routing=null)
     // 아무것도 못 줘도 화면엔 늘 코드가 떠 있었다. "업무코드가 계속 G002"의 정체가 이거였다 —
@@ -3605,23 +2951,18 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // 이제 실패는 실패로 보인다(null → '미분류'). 조용한 기본값으로 덮지 않는다.
     prepBusinessCode: card.routing?.task_code ?? null,
     prepBusinessCodeLabel: card.routing?.task_name ?? null,
-    // 라이브 콜은 접수 발화 기반 실제 키워드(픽스됨) — 없으면(아직 분석 전 등) 빈 배열로
-    // 둔다(F7 원칙: 없는 분석을 데모 픽스처로 메우지 않는다). 로컬 데모만 고정 태그로 보여준다.
-    prepNeedTags: liveKeywords.length
-      ? liveKeywords
-      : EXPLICIT_LIVE_CALL_ID
-      ? []
-      : PREP_NEED_TAGS[incoming],
+    prepNeedTags: PREP_NEED_TAGS[incoming],
     // 라벨·색은 당근식 온도 밴드(36.5 기준)에서 나온다 — 온도·색·라벨·멘트가 한 소스로 일관.
-    // temperature.status가 unavailable이어도 tempC는 위에서 랜덤값으로 채워지므로(2026-07-28
-    // 현장 피드백 — "모델 미연동"이라고 비어 보이지 않게), 라벨도 그 값을 그대로 따라간다.
-    prepEmotionLabel: tempC == null ? "분석 중" : emoMeta.label,
+    prepEmotionLabel:
+      temperature.status === "unavailable"
+        ? "모델 미연동"
+        : tempC == null
+        ? "분석 중"
+        : emoMeta.label,
     // 백엔드가 reason 맨 앞에 실어 보낸 [SOURCE=...]를 배지로 분리하고, 신호 텍스트에선 접두사를 뺀다(P0-3)
     prepEmotionSourceBadge: emotionSourceBadge(parseEmotionSource(temperature.reason)),
     prepEmotionSignal:
-      temperature.score == null
-        ? "음성 신호 반영 중"
-        : (temperature.reason ?? "").replace(/^\[SOURCE=[A-Z_]+\]\s*/, "") || "특이 감정 신호 없음",
+      (temperature.reason ?? "").replace(/^\[SOURCE=[A-Z_]+\]\s*/, "") || "특이 감정 신호 없음",
     prepEmotionBars: emotionBars,
     prepEmotionFg: tempC == null ? "var(--gray-700)" : emoMeta.fg,
     prepEmotionBar: tempC == null ? "var(--gray-500)" : emoMeta.bar,
@@ -3703,20 +3044,6 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // auth (1d)
     verified,
     notVerified: nv,
-    // 본인인증 정책·상태(형진님 IDENTITY_AUTH_POLICY.md) — task_code가 아직 안 왔으면
-    // undefined(데모 픽스처 등 안전한 기본은 화면에서 REQUIRED로 취급). NO_INPUT·UNAVAILABLE은
-    // 오늘 범위에서는 PENDING으로 합쳐 보여준다(연결 게이트에는 어차피 영향 없음).
-    authPolicy: card.routing?.authPolicy,
-    // 긴급(보이스피싱·이상거래) 여부 — PrepCard의 자동연결 카운트다운을 짧게 잡는 데 쓴다.
-    isEmergency: card.routing?.classification === "EMERGENCY",
-    authStatus: (
-      card.routing?.authPolicy === "NOT_REQUIRED" ? "NOT_REQUIRED"
-      : card.routing?.authPolicy === "EXEMPT" ? "EXEMPT"
-      : verified ? "VERIFIED"
-      : authFailed ? "FAILED"
-      : "PENDING"
-    ) as "NOT_REQUIRED" | "EXEMPT" | "VERIFIED" | "FAILED" | "PENDING",
-    authAttempts,
     setAuthPhone: () => pickAuth("phone"),
     setAuthBirth: () => pickAuth("birth"),
     setAuthAcct: () => pickAuth("account"),
@@ -3760,12 +3087,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       authMethod === "birth" ? "생년월일 8자리 (YYYYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다.
     // 실통화 EXAONE 스크립트(guideSteps 4단계)가 도착하면 그걸, 아니면 콜 유형 픽스처(actualCallSteps).
-    // (2026-07-28 버그: EXPLICIT_LIVE_CALL_ID가 guideSteps 체크보다 먼저라 실통화에선 이
-    // 주석대로 동작한 적이 없었다 — /consult-guide로 어렵게 만든 문장이 항상 버려짐.)
-    steps: guideSteps.length === 4
-      ? guideSteps.map((st) => ({ title: st.title, text: st.text }))
-      : EXPLICIT_LIVE_CALL_ID
+    steps: EXPLICIT_LIVE_CALL_ID
       ? liveSteps
+      : guideSteps.length === 4
+      ? guideSteps.map((st) => ({ title: st.title, text: st.text }))
       : actualCallSteps,
     // 오프닝은 '상담사가 실제로 말할 첫 문장'이다 — required_actions(할 일)로 덮어쓰지 않는다.
     // 대본 경로에서는 감정온도 밴드에 맞춘 adaptiveOpening이 그대로 나간다.

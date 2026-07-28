@@ -89,9 +89,6 @@ export interface MvpRoutingResult {
   task_name: string;
   classification: "EMERGENCY" | "SIMPLE" | "GENERAL";
   handler: "HUMAN" | "AI";
-  // 본인인증 정책(형진님 KARI-NA 본인확인 적용 정책, IDENTITY_AUTH_POLICY.md).
-  // 구버전 백엔드는 안 보낼 수 있어 옵셔널.
-  authPolicy?: "NOT_REQUIRED" | "REQUIRED" | "EXEMPT";
 }
 
 export interface MvpTextEmotionResult {

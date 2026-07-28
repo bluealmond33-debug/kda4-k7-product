@@ -438,7 +438,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             </div>
 
-            {vm.dtmfMasked && (
+            {vm.arsDigits && (
               <div style={css("margin-top:12px;display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--blue-400);background:var(--blue-50,#eef4ff);border-radius:8px")}>
                 <span className="mi" style={css("font-size:18px;color:var(--blue-700)")}>dialpad</span>
                 <div style={css("flex:1;min-width:0")}>
@@ -481,16 +481,10 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             ) : (
               <div style={css("margin-top:13px;background:var(--gray-100);border:1px solid var(--gray-300);border-radius:8px;padding:12px")}>
-                {/* 대기 상태 — 틴트 없이 중립(잉크·그레이). 점으로 '진행 필요' 신호.
-                    task_code가 인증 불필요/긴급(EXEMPT)이면 '미완료'가 아니라 정책 자체를
-                    보여준다 — 형진님 정책상 이 업무는 애초에 인증을 요구하지 않는다. */}
+                {/* 대기 상태 — 틴트 없이 중립(잉크·그레이). 점으로 '진행 필요' 신호 */}
                 <div style={css("display:flex;align-items:center;gap:6px;font:700 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);margin-bottom:3px")}>
-                  <span style={css("width:7px;height:7px;border-radius:9999px;background:" + (vm.authStatus === "NOT_REQUIRED" || vm.authStatus === "EXEMPT" ? "var(--green-700)" : "var(--gray-500)"))} />
-                  {vm.authStatus === "NOT_REQUIRED"
-                    ? "본인확인 · 이 업무는 불필요"
-                    : vm.authStatus === "EXEMPT"
-                    ? "본인확인 · 긴급 우선 연결(생략)"
-                    : "본인확인 · 미완료"}
+                  <span style={css("width:7px;height:7px;border-radius:9999px;background:var(--gray-500)")} />
+                  본인확인 · 미완료
                 </div>
                 <div style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:11px")}>
                   고객이 말한 <span style={css("font-weight:700;color:var(--blue-900)")}>{vm.authPrompt.what}</span>{vm.authPrompt.hint}를 빈칸에 입력하면 자동 대조됩니다
@@ -666,7 +660,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <div style={css("padding:0 16px 13px;display:flex;flex-direction:column;gap:5px")}>
                 <span style={css("font:600 10.5px 'Avenir Next','Pretendard',sans-serif;letter-spacing:.2px;color:var(--gray-600)")}>첫 응대 문장</span>
                 {/* 카드 요약 다음 순서로 쳐 내려간다 — 요약(무슨 일인가) → 첫 문장(뭐라고 말할까) */}
-                <div style={css("font:500 14px/1.6 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);word-break:keep-all")}>
+                <div style={css("font:500 14px/1.6 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-1000);word-break:keep-all")}>
                   <TypingAnimation text={vm.firstLine} continuous={false} speed={30} />
                 </div>
               </div>
@@ -790,24 +784,8 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                   onChange={vm.onRegSearch}
                   onFocus={vm.openManual}
                   placeholder={vm.regQuery || "규정 검색  (예: 만기 or 재약정)"}
-                  list="reg-search-autocomplete"
                   style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}
                 />
-                {/* 자동완성 — 네이티브 datalist라 별도 드롭다운 UI 없이 브라우저가 그려준다.
-                    AI 추천 용어(현재 통화 맥락) + 방금 검색된 문서의 제목·섹션(코퍼스 전체
-                    범위)을 합쳐서, 타이핑하는 동안 규정 코퍼스에 실제로 있는 표현으로
-                    유도한다(사용자 피드백: "규정 정보 많은데 검색이 안 됨" — 정확한 표현을
-                    몰라서 헛도는 경우가 많았다). */}
-                <datalist id="reg-search-autocomplete">
-                  {Array.from(
-                    new Set([
-                      ...vm.regSuggests.map((s) => s.term),
-                      ...vm.semHits.flatMap((h) => [h.title, h.section].filter((v): v is string => !!v)),
-                    ])
-                  ).map((term) => (
-                    <option key={term} value={term} />
-                  ))}
-                </datalist>
                 {vm.semLoading ? (
                   <Spinner size={15} speedMs={750} />
                 ) : vm.regSearch ? (
@@ -867,20 +845,20 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               <div style={css("display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--gray-200);background:var(--gray-100)")}>
                 <span className="mi" style={css("font-size:15px;color:var(--gray-500)")}>filter_alt</span>
                 <select
-                  value={vm.regDeptFilter ?? ""}
-                  onChange={(e) => vm.setRegDeptFilter(e.target.value || null)}
-                  style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:var(--onair-surface);border:1px solid " + (vm.regDeptFilter ? "var(--blue-400)" : "var(--gray-300)") + ";border-radius:9999px;padding:4px 8px;cursor:pointer;outline:none")}
-                >
-                  <option value="">부서 전체 · 카드 자동</option>
-                  {REG_DEPT_OPTS.map((d) => (<option key={d.code} value={d.code}>{d.label}</option>))}
-                </select>
-                <select
                   value={vm.regDocType ?? ""}
                   onChange={(e) => vm.setRegDocType(e.target.value || null)}
                   style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:var(--onair-surface);border:1px solid " + (vm.regDocType ? "var(--blue-400)" : "var(--gray-300)") + ";border-radius:9999px;padding:4px 8px;cursor:pointer;outline:none")}
                 >
                   <option value="">문서유형 전체</option>
                   {REG_DOC_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+                </select>
+                <select
+                  value={vm.regDeptFilter ?? ""}
+                  onChange={(e) => vm.setRegDeptFilter(e.target.value || null)}
+                  style={css("font:600 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);background:var(--onair-surface);border:1px solid " + (vm.regDeptFilter ? "var(--blue-400)" : "var(--gray-300)") + ";border-radius:9999px;padding:4px 8px;cursor:pointer;outline:none")}
+                >
+                  <option value="">부서 전체 · 카드 자동</option>
+                  {REG_DEPT_OPTS.map((d) => (<option key={d.code} value={d.code}>{d.label}</option>))}
                 </select>
                 <select
                   value={vm.regEffFrom ?? ""}
@@ -1025,7 +1003,7 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
                               {highlight(r.cells[regPlan.content]?.text ?? "", vm.regSearch)}
                             </span>
                             {ment && (
-                              <span style={css("display:block;margin-top:4px;font:400 12px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
+                              <span style={css("display:block;margin-top:4px;font:400 12px/1.5 Georgia,'Noto Serif KR','Apple SD Gothic Neo',serif;color:var(--gray-700)")}>{highlight(ment, vm.regSearch)}</span>
                             )}
                           </span>
                         </div>
@@ -1105,10 +1083,7 @@ const XL_GUT = "#f5f5f6"; // 행번호 거터 — 중립 그레이(초록 아님
 /** 청크 원문의 내부 하드 줄바꿈을 공백으로 정규화 — "4호다목\n에"처럼 단어가 끊겨 보이는 것 방지.
  *  단, 빈 줄(문단 구분)은 살린다(줄바꿈 2개 이상 → 문단). */
 function cleanChunk(t: string): string {
-  // 청크 text엔 "[문서명 > p1 > 섹션]" 맥락 헤더가 맨 앞줄에 박혀 있다(임베딩용).
-  // 화면에선 "섹션" 컬럼이 이미 같은 정보를 보여주므로, 내용 칸에서는 빼서 줄글을 줄인다.
-  const withoutHeader = t.replace(/^\[[^\]]*\]\n?/, "");
-  return withoutHeader
+  return t
     .split(/\n{2,}/)
     .map((p) => p.replace(/\s*\n\s*/g, " ").replace(/[ \t]{2,}/g, " ").trim())
     .filter(Boolean)
@@ -1133,30 +1108,9 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
   const chunks = doc?.chunks ?? [];
   const hitIdx = chunks.findIndex((c) => c.chunk_id === vm.regDocChunk);
   const WIN = 2; // 히트 앞뒤 맥락 줄 수
-
-  // 문서 안 세부 검색 — 상단 "관련 규정" 검색창과 별개. 열려 있는 이 문서 안에서만
-  // 단어를 찾아 그 줄로 스크롤한다. 비워두면 원래 동작(± 맥락 2줄)으로 돌아간다.
-  const [localQuery, setLocalQuery] = useState("");
-  useEffect(() => setLocalQuery(""), [vm.regDoc]);
-  const localTokens = localQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const localMatchIdx = localTokens.length
-    ? chunks.findIndex((c) => {
-        const low = c.text.toLowerCase();
-        return localTokens.some((t) => low.includes(t));
-      })
-    : -1;
-  const localHitRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (localTokens.length) setShowAll(true);
-  }, [localQuery]);
-  useEffect(() => {
-    if (localMatchIdx >= 0) localHitRef.current?.scrollIntoView({ block: "center" });
-  }, [localMatchIdx]);
-
   const windowed = !showAll && hitIdx >= 0 && chunks.length > 2 * WIN + 1;
   const from = windowed ? Math.max(0, hitIdx - WIN) : 0;
   const to = windowed ? Math.min(chunks.length, hitIdx + WIN + 1) : chunks.length;
-  const effectiveQuery = localTokens.length ? localQuery : vm.regSearch;
   return (
     <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
       <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
@@ -1169,25 +1123,6 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
           <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);flex:none")}>· {doc.version} · {doc.chunks.length}행</span>
         )}
         <span style={css("margin-left:auto;flex:none;font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px")}>{doc?.source_file ?? ""}</span>
-      </div>
-      {/* 문서 내 세부 검색 — 상단 "관련 규정" 검색창과 별개. 여기 입력하면 이 문서 안에서만
-          찾아서 그 줄로 스크롤 + 하이라이트한다(전체 코퍼스 재검색 아님). */}
-      <div style={css("display:flex;align-items:center;gap:6px;padding:7px 14px;border-bottom:1px dashed var(--gray-300);background:var(--onair-surface)")}>
-        <span className="mi" style={css("font-size:15px;color:var(--gray-500)")}>manage_search</span>
-        <input
-          value={localQuery}
-          onChange={(e) => setLocalQuery(e.target.value)}
-          placeholder="이 문서 안에서 세부 내용 찾기 (예: 중도상환수수료)"
-          style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}
-        />
-        {localQuery && (
-          <span className="mi" onClick={() => setLocalQuery("")} style={css("font-size:15px;color:var(--gray-500);cursor:pointer;flex:none")}>close</span>
-        )}
-        {localTokens.length > 0 && (
-          <span style={css("flex:none;font:400 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>
-            {localMatchIdx >= 0 ? (localMatchIdx + 1) + "행에서 찾음" : "일치 없음"}
-          </span>
-        )}
       </div>
       <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
         {!doc ? (
@@ -1210,17 +1145,17 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
             )}
             {chunks.slice(from, to).map((c, li) => {
               const ri = from + li;
-              const hit = localTokens.length ? ri === localMatchIdx : c.chunk_id === vm.regDocChunk;
+              const hit = c.chunk_id === vm.regDocChunk;
               const bg = xlRowBg(hit, ri);
               return (
-                <div key={c.chunk_id} ref={hit ? (localTokens.length ? localHitRef : hitRef) : undefined} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--blue-700);position:relative;z-index:1" : ""))}>
+                <div key={c.chunk_id} ref={hit ? hitRef : undefined} style={css("display:flex" + (hit ? ";box-shadow:inset 0 0 0 1.5px var(--blue-700);position:relative;z-index:1" : ""))}>
                   <span style={{ ...css("width:40px;flex:none;padding:9px 0;text-align:center;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:" + (hit ? "700" : "400") + " 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-500)"), background: hit ? bg : XL_GUT }}>{ri + 1}</span>
                   <span style={{ ...css("width:160px;flex:none;padding:9px 10px;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:" + (hit ? "700" : "600") + " 11.5px/1.5 'Avenir Next','Pretendard',sans-serif;color:var(--gray-800);overflow:hidden;text-overflow:ellipsis"), background: bg }}>{c.section ?? ""}</span>
                   <div style={{ ...css("flex:1;min-width:0;padding:9px 12px;border-bottom:1px solid " + XL_GRID), background: bg }}>
                     {c.kind === "table" ? (
-                      <MiniTable raw={c.text} q={effectiveQuery} />
+                      <MiniTable raw={c.text} q={vm.regSearch} />
                     ) : (
-                      <span style={css("font:" + (hit ? "600" : "400") + " 12.5px/1.7 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);white-space:pre-wrap")}>{highlight(cleanChunk(c.text), effectiveQuery)}</span>
+                      <span style={css("font:" + (hit ? "600" : "400") + " 12.5px/1.7 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);white-space:pre-wrap")}>{highlight(cleanChunk(c.text), vm.regSearch)}</span>
                     )}
                   </div>
                 </div>
@@ -1252,64 +1187,23 @@ function RegDocSheet({ vm }: { vm: CallFlowVM }) {
 /** 실제 코퍼스 검색 결과 시트 — 펼친 상태에서 검색어가 있으면 32개 문서 전체를 대상으로 한
  *  하이브리드 검색 결과를 엑셀 룩으로. 행 클릭 = 그 문서 원문 열람. */
 function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
-  // 세부 검색 — "주택 담보 대출" 결과 안에서 "만기이자"처럼 더 좁혀 찾는다. 백엔드 재호출
-  // 없이 이미 받아온 vm.semHits를 클라이언트에서 한 번 더 거른다(빠름, 즉시 반영).
-  const [refineQuery, setRefineQuery] = useState("");
-  useEffect(() => setRefineQuery(""), [vm.regSearch]);
-  const refineTokens = refineQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const filteredHits = refineTokens.length
-    ? vm.semHits.filter((h) => {
-        const low = (h.title + " " + h.excerpt).toLowerCase();
-        return refineTokens.every((t) => low.includes(t));
-      })
-    : vm.semHits;
-  const highlightQuery = refineTokens.length ? vm.regSearch + " " + refineQuery : vm.regSearch;
-
-  // 문서 단위로 추리기 — 같은 문서에서 여러 조항이 걸리면 청크마다 줄을 반복하지 않고,
-  // 문서당 한 줄(가장 점수 높은 조항을 대표로)만 보여준다. 상세 조항 검색은 문서를 연
-  // 다음 RegDocSheet의 "이 문서 안에서 세부 내용 찾기"가 담당한다(2단계).
-  const groupedDocs: { doc_id: string; title: string; best: (typeof filteredHits)[number]; count: number }[] = [];
-  {
-    const byDoc = new Map<string, (typeof filteredHits)[number][]>();
-    for (const h of filteredHits) {
-      const arr = byDoc.get(h.doc_id);
-      if (arr) arr.push(h);
-      else byDoc.set(h.doc_id, [h]);
-    }
-    for (const [doc_id, hits] of byDoc) {
-      const best = hits.reduce((a, b) => (b.score > a.score ? b : a), hits[0]);
-      groupedDocs.push({ doc_id, title: best.title, best, count: hits.length });
-    }
-    groupedDocs.sort((a, b) => b.best.score - a.best.score);
-  }
-
   // 검색 결과에 걸린 서로 다른 파일들 — 하단에 엑셀 시트탭처럼 깔아 "여러 파일에서 나왔음"을 보여준다
-  const files = groupedDocs;
+  const files: typeof vm.semHits = [];
+  const seen = new Set<string>();
+  for (const h of vm.semHits) {
+    if (!seen.has(h.doc_id)) {
+      seen.add(h.doc_id);
+      files.push(h);
+    }
+  }
   return (
     <div style={css("width:640px;flex:1;min-height:0;display:flex;flex-direction:column;animation:fadeIn .25s ease-out")}>
       {/* 검색 input은 패널 헤더에 상주 — 여기선 제목·건수만 (remount 방지) */}
       <div style={css("display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--gray-100);color:var(--gray-1000);border-bottom:1px solid var(--gray-300)")}>
         <span className="mi" style={css("font-size:18px")}>manage_search</span>
         <span style={css("font:600 12.5px 'Avenir Next','Pretendard',sans-serif")}>“{vm.regSearch}” 검색 결과</span>
-        <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>
-          {vm.semLoading ? "· 검색 중…" : "· 문서 " + groupedDocs.length + "건" + (refineTokens.length ? " (전체 " + new Set(vm.semHits.map((h) => h.doc_id)).size + "건 중 좁힘)" : "") + " · 조항 " + filteredHits.length + "개"}
-        </span>
+        <span style={css("font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>{vm.semLoading ? "· 검색 중…" : "· " + vm.semHits.length + "건 · 파일 " + files.length + "개"}</span>
       </div>
-      {/* 결과 안에서 세부 검색 — "주택 담보 대출" 결과를 "만기이자"로 한 번 더 좁힌다 */}
-      {vm.semHits.length > 0 && (
-        <div style={css("display:flex;align-items:center;gap:6px;padding:7px 14px;border-bottom:1px dashed var(--gray-300);background:var(--onair-surface)")}>
-          <span className="mi" style={css("font-size:15px;color:var(--gray-500)")}>filter_alt</span>
-          <input
-            value={refineQuery}
-            onChange={(e) => setRefineQuery(e.target.value)}
-            placeholder={"이 " + vm.semHits.length + "건 결과 안에서 세부 검색 (예: 만기이자)"}
-            style={css("flex:1;min-width:0;border:none;outline:none;background:transparent;font:400 12px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}
-          />
-          {refineQuery && (
-            <span className="mi" onClick={() => setRefineQuery("")} style={css("font-size:15px;color:var(--gray-500);cursor:pointer;flex:none")}>close</span>
-          )}
-        </div>
-      )}
       <div style={css("flex:1;min-height:0;overflow-y:auto;background:#fff")}>
         {vm.semLoading && vm.semHits.length === 0 ? (
           <div style={css("padding:40px 0;display:flex;flex-direction:column;align-items:center;gap:12px")}>
@@ -1318,8 +1212,6 @@ function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
           </div>
         ) : vm.semHits.length === 0 ? (
           <div style={css("padding:36px 0;text-align:center;font:400 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>“{vm.regSearch}” 검색 결과 없음</div>
-        ) : filteredHits.length === 0 ? (
-          <div style={css("padding:36px 0;text-align:center;font:400 12.5px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-600)")}>“{refineQuery}” 세부 검색 결과 없음 — 원래 {vm.semHits.length}건은 남아있어요</div>
         ) : (
         <div style={css("display:flex;flex-direction:column")}>
           {/* 엑셀 헤더 — 초록. 컬럼: 행번호 · 문서 · 내용 (p·구분 제거) */}
@@ -1328,18 +1220,13 @@ function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
               <span key={i} style={{ ...css((w ? "width:" + w + "px;flex:none" : "flex:1;min-width:0") + ";padding:8px 10px;border-right:1px solid " + XL_GRID + ";font:700 12px 'Avenir Next','Pretendard',sans-serif"), background: XL_HEAD, color: XL_HEAD_FG }}>{l}</span>
             ))}
           </div>
-          {groupedDocs.map((g, ri) => {
+          {vm.semHits.map((h, ri) => {
             const bg = ri % 2 === 1 ? XL_BAND : "#fff";
             return (
-            <div key={g.doc_id} onClick={() => vm.openRegDocReal(g.doc_id, g.best.chunk_id)} style={css("display:flex;cursor:pointer")}>
+            <div key={h.chunk_id} onClick={() => vm.openRegDocReal(h.doc_id, h.chunk_id)} style={css("display:flex;cursor:pointer")}>
               <span style={{ ...css("width:40px;flex:none;padding:9px 0;text-align:center;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:400 11px 'Avenir Next','Pretendard',sans-serif;color:var(--gray-500)"), background: XL_GUT }}>{ri + 1}</span>
-              <span style={{ ...css("width:180px;flex:none;padding:9px 10px;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:600 11.5px/1.45 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis"), background: bg }}>{g.title}</span>
-              <div style={{ ...css("flex:1;min-width:0;padding:9px 12px;border-bottom:1px solid " + XL_GRID), background: bg }}>
-                <span style={css("font:400 12.5px/1.65 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)")}>{highlight(stripPipes(g.best.excerpt), highlightQuery)}</span>
-                {g.count > 1 && (
-                  <span style={css("display:block;margin-top:3px;font:600 10.5px 'Avenir Next','Pretendard',sans-serif;color:var(--blue-700)")}>이 문서에서 {g.count}개 조항 일치 · 열어서 전부 보기</span>
-                )}
-              </div>
+              <span style={{ ...css("width:180px;flex:none;padding:9px 10px;border-right:1px solid " + XL_GRID + ";border-bottom:1px solid " + XL_GRID + ";font:600 11.5px/1.45 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000);overflow:hidden;text-overflow:ellipsis"), background: bg }}>{h.title}</span>
+              <span style={{ ...css("flex:1;min-width:0;padding:9px 12px;border-bottom:1px solid " + XL_GRID + ";font:400 12.5px/1.65 'Avenir Next','Pretendard',sans-serif;color:var(--gray-1000)"), background: bg }}>{highlight(stripPipes(h.excerpt), vm.regSearch)}</span>
             </div>
             );
           })}
@@ -1353,7 +1240,7 @@ function RegCorpusSearchSheet({ vm }: { vm: CallFlowVM }) {
         {files.map((f) => (
           <span
             key={f.doc_id}
-            onClick={() => vm.openRegDocReal(f.doc_id, f.best.chunk_id)}
+            onClick={() => vm.openRegDocReal(f.doc_id, f.chunk_id)}
             title={f.title + " 원문 열기"}
             style={css("flex:none;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 11px 'Avenir Next','Pretendard',sans-serif;background:#fff;border:1px solid " + XL_GRID + ";border-bottom:none;border-radius:5px 5px 0 0;padding:5px 12px;color:var(--gray-1000);cursor:pointer")}
           >
