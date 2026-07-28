@@ -41,6 +41,14 @@ def test_business_codes_map_to_valid_departments() -> None:
         assert is_valid_business_code(kdh_code)
 
 
+def test_subscription_pension_card_business_codes_are_not_swapped() -> None:
+    """G011(주택청약)·G012(연금·IRP)이 한때 서로 반대로(subscription↔G012, pension↔G011)
+    연결돼 있었다(2026-07-27 발견) — 재발 방지용 고정 회귀 테스트."""
+    assert BUSINESS_CODES["subscription"] == ("DEP", "G011", "주택청약")
+    assert BUSINESS_CODES["pension"] == ("INV", "G012", "연금·IRP")
+    assert BUSINESS_CODES["card"] == ("CRD", "G013", "카드이용")
+
+
 def test_emergency_department_is_sg() -> None:
     assert DEPARTMENTS["SG"] == EMERGENCY_DEPARTMENT_LABEL == "사고·신고"
 

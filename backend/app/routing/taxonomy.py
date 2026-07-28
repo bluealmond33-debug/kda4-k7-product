@@ -75,12 +75,13 @@ BUSINESS_CODES: dict[str, tuple[str, str, str]] = {
     "txn": ("DEP", "G005", "거래내역"),
     "autopay": ("DEP", "G006", "자동이체"),
     "deposit": ("DEP", "G007", "예적금·발행어음"),
-    "subscription": ("DEP", "G012", "주택청약"),
+    "subscription": ("DEP", "G011", "주택청약"),
     "loan": ("LON", "G002", "대출"),
     "interest": ("LON", "G008", "금리·이자"),
     "ratecut": ("LON", "G009", "금리인하요구"),
     "fx": ("FX", "G010", "외환"),
-    "pension": ("INV", "G011", "연금·IRP"),
+    "pension": ("INV", "G012", "연금·IRP"),
+    "card": ("CRD", "G013", "카드이용"),
     "misremit": ("SG", "G001", "착오송금"),
 }
 

@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { getMicLevel } from "../lib/mic";
 import {
   SCRIPTS,
   REG_RECOS,
@@ -297,10 +298,10 @@ const CLASSIFICATION_TO_SGE: Record<string, "S" | "G" | "E"> = {
 function playArsAudio(line: ArsLine) {
   try {
     const audio = new Audio("/demo/" + (line.audio ?? `ars/${line.id}.mp3`));
-    // 접수 큐(arsDialogue.useConversationStream)와 같은 소유권 슬롯을 공유 — 타이밍이
-    // 겹치면(예: # 직후 인증 안내가 접수 인계 안내와 부딪힘) 방금 시작한 이 안내만 남기고
-    // 먼저 재생 중이던 걸 멈춘다("가장 최근 것만 나오게" 피드백).
-    takeOverArsAudio(audio);
+    // 접수 큐(arsDialogue.useConversationStream)와 같은 소유권 슬롯을 공유하되, 본인인증
+    // 쪽엔 priority를 준다 — 재생 중엔 접수 큐가 끼어들지 못하고(요청 8자리 안내가 짤리는
+    // 문제), 인증 성공(auth-done) 안내 중에도 다른 안내가 겹쳐 들리지 않는다.
+    takeOverArsAudio(audio, { priority: true });
     void audio.play().catch(() => {});
   } catch {
     // noop
@@ -451,6 +452,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   useEffect(() => {
     mobileIntakeCompleteRef.current = mobileIntakeComplete;
   }, [mobileIntakeComplete]);
+  // #(intake_complete) 순간의 근거 발화 스냅샷 — liveTranscriptLines는 그 뒤로도 계속
+  // 자란다(통화 연결 후 대화 등), 그런데 카드의 "근거 발화"는 접수 시점 발화만 보여줘야
+  // 한다. 이 ref가 없으면 카드가 살아있는 동안 이후 음성이 그대로 새어 들어와 문구가
+  // 계속 바뀐다.
+  const frozenIntakeTranscriptRef = useRef<string | null>(null);
   const [mobileIntakePending, setMobileIntakePending] = useState(false);
   const [mobileAgentConnected, setMobileAgentConnected] = useState(false);
 
@@ -590,6 +596,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   // 본인인증(생년월일 8자리) — 한 통화당 한 번만 시작하도록 가드.
   const authTriggeredRef = useRef(false);
   const authHardTimerRef = useRef<number | null>(null);
+  // 본인인증 대기 중 마이크 무음 추적 — 키패드 입력 자체는 원래 조용하므로(발화가 아니니까)
+  // "무음=포기"로 오판하지 않도록, 실제 판정은 이 값을 쓰는 쪽(재생 여부 게이트)에서
+  // 10초 문턱과 함께 적용한다. null이면 아직 무음 시작 시각을 모른다(=재생 허용).
+  const authMicSilentSinceRef = useRef<number | null>(null);
   const [awaitingAuth, setAwaitingAuth] = useState(false);
   const [authVerified, setAuthVerified] = useState(false);
   // 고객폰 인증 화면의 "N/8" 진행 표시용 — 서버 auth_progress 카운트를 그대로 반영한다.
@@ -1569,6 +1579,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setArsDigits("");
     setDtmfEvents([]);
     setMobileIntakeComplete(false);
+    frozenIntakeTranscriptRef.current = null;
     setMobileIntakePending(false);
     setMobileAgentConnected(false);
     startClock();
@@ -1734,6 +1745,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     setArsDigits("");
     setDtmfEvents([]);
     setMobileIntakeComplete(false);
+    frozenIntakeTranscriptRef.current = null;
     setMobileIntakePending(false);
     setMobileAgentConnected(false);
     realCallActiveRef.current = false;
@@ -1786,6 +1798,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           }
           setMobileIntakePending(false);
           setMobileIntakeComplete(true);
+          // 근거 발화를 지금 시점 값으로 동결 — 이후 들어오는 발화(통화 연결 뒤 대화 등)는
+          // liveTranscriptLines엔 계속 쌓이지만 카드의 "근거 발화"엔 더 이상 반영 안 한다.
+          frozenIntakeTranscriptRef.current = linesRef.current
+            .filter((line) => line.speaker === "customer" && line.text.trim())
+            .map((line) => line.text.trim())
+            .join(" ")
+            .trim();
           if (["connecting", "recording", "confirm"].includes(phaseRef.current)) {
             timers.current.forEach(clearTimeout);
             timers.current = [];
@@ -1844,6 +1863,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             setClock(0);
             setMobileIntakePending(false);
             setMobileIntakeComplete(false);
+            frozenIntakeTranscriptRef.current = null;
             setMobileAgentConnected(false);
             selfEndRef.current = true;
             window.setTimeout(() => {
@@ -2122,7 +2142,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         authHardTimerRef.current = null;
         setAwaitingAuth(false);
         setAuthDigitCount(0);
-        playArsAudio(ARS_AUTH_HARD);
+        playArsAudioUnlessMicSilent(ARS_AUTH_HARD);
       }, 30000);
     };
     const control = startMobileArsControl(LIVE_CALL_ID, {
@@ -2158,7 +2178,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setAwaitingAuth(true);
         setAuthVerified(false);
         setAuthDigitCount(0);
-        playArsAudio(ARS_AUTH_REQUEST);
+        playArsAudioUnlessMicSilent(ARS_AUTH_REQUEST);
         armAuthHardTimer();
       },
       // 자리 입력마다 서버가 보내는 카운트를 그대로 반영 — Phone.tsx가 8칸 진행 표시(*)를 그린다.
@@ -2171,15 +2191,20 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         setAwaitingAuth(false);
         setAuthVerified(true);
         setAuthDigitCount(8);
-        playArsAudio(ARS_AUTH_DONE);
+        playArsAudioUnlessMicSilent(ARS_AUTH_DONE);
       },
-      onAuthIncomplete: () => playArsAudio(ARS_AUTH_ALL8),
+      onAuthIncomplete: () => playArsAudioUnlessMicSilent(ARS_AUTH_ALL8),
       onAuthMismatch: () => {
         setAuthDigitCount(0);
         armAuthHardTimer();
-        playArsAudio(ARS_AUTH_MISMATCH);
-        // mismatch 재생이 끝난 뒤 짧은 재입력 안내로 이어 붙인다(동시 재생 방지).
-        window.setTimeout(() => playArsAudio(ARS_AUTH_BIRTHDATE_RETRY), ARS_AUTH_MISMATCH.sec * 1000);
+        playArsAudioUnlessMicSilent(ARS_AUTH_MISMATCH);
+        // mismatch 재생이 끝난 뒤 짧은 재입력 안내로 이어 붙인다(동시 재생 방지). 이 시점에도
+        // 다시 한번 무음 여부를 확인한다 — MISMATCH 재생 중 대기하는 몇 초 사이에 10초
+        // 문턱을 넘길 수 있다.
+        window.setTimeout(
+          () => playArsAudioUnlessMicSilent(ARS_AUTH_BIRTHDATE_RETRY),
+          ARS_AUTH_MISMATCH.sec * 1000
+        );
       },
       onState: (state) => {
         setArsDigits(state.digits);
@@ -2921,12 +2946,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const micLevel = Math.max(levelBySpeaker.customer, levelBySpeaker.agent);
   const card = consultationResponse.consultation_card;
 
-  // 본인인증 시작 — prep 진입 + auth_policy=REQUIRED일 때 한 통화당 한 번만 트리거.
-  // useAuthTriggered 가드는 call_start/reset에서 풀린다(아래 clearAll 참고).
+  // 본인인증 시작 — prep 또는 active 단계에서 auth_policy=REQUIRED가 되면 한 통화당
+  // 한 번만 트리거. useAuthTriggered 가드는 call_start/reset에서 풀린다(아래 clearAll 참고).
+  // prep만 보던 이전 조건은 실전에서 거의 항상 놓쳤다: agent_connected(→active 전환)가
+  // intake_complete 직후 거의 즉시 오는데, auth_policy를 알아내는 /analyze-text 분석(로컬
+  // LLM 호출 포함)은 그보다 늦게 끝나는 경우가 흔해서 REQUIRED가 도착했을 땐 이미 active로
+  // 넘어가 있었다(실측: 라우팅은 자동이체로 맞게 됐는데 인증 화면이 안 뜨는 문제로 발견).
   useEffect(() => {
     if (
       isCustomerSurface &&
-      phase === "prep" &&
+      (phase === "prep" || phase === "active") &&
       card.routing?.authPolicy === "REQUIRED" &&
       !authTriggeredRef.current
     ) {
@@ -2934,6 +2963,34 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       mobileArsRef.current?.startAuth();
     }
   }, [isCustomerSurface, phase, card.routing?.authPolicy]);
+
+  // 본인인증 대기 중 마이크 레벨 폴링 — mic.ts가 통화 내내(Phone.tsx의 useMic(inCall)) 이미
+  // 열어 둔 스트림을 그대로 읽는다. 새로 acquireMic()하지 않는다(권한 재요청·이중 스트림 방지).
+  // awaitingAuth에 들어올 때마다 무음 시작 시각을 리셋하고, 실제 소리가 잡힐 때만 갱신한다.
+  useEffect(() => {
+    if (!awaitingAuth) {
+      authMicSilentSinceRef.current = null;
+      return;
+    }
+    authMicSilentSinceRef.current = Date.now();
+    const id = window.setInterval(() => {
+      const level = getMicLevel();
+      if (level != null && level >= SPEECH_LEVEL_THRESHOLD) {
+        authMicSilentSinceRef.current = Date.now();
+      }
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [awaitingAuth]);
+
+  // 10초 이상 마이크에서 아무 소리도 안 잡혔으면 안내 음성을 재생하지 않는다 — 고객이
+  // 자리를 뜨거나 음소거된 상태로 추정되는데 계속 안내를 재생하는 걸 막는다(요청 반영).
+  // 키패드 입력 자체는 원래 조용하므로, 이건 "완전한 무음"만 걸러낸다(숫자 누르는 동안의
+  // 정상적인 조용함까지 재생을 막지는 않는다 — 10초는 그보다 넉넉한 문턱).
+  const playArsAudioUnlessMicSilent = useCallback((line: ArsLine) => {
+    const since = authMicSilentSinceRef.current;
+    if (since != null && Date.now() - since >= 10_000) return;
+    playArsAudio(line);
+  }, []);
   const explicitSummaryPending = Boolean(EXPLICIT_LIVE_CALL_ID && summaryPending);
   const capturedTranscript = liveTranscriptLines
     .filter((line) => line.speaker === "customer" && line.text.trim())
@@ -2942,7 +2999,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     .trim();
   // 분석 요청이 진행 중이어도 이전 데모 fixture를 근거 발화로 잠깐 노출하지 않는다.
   // 현재 콜에서 실제로 수신한 문장이 있으면 그것이 언제나 표시의 기준이다.
-  const groundedTranscript = capturedTranscript || consultationResponse.transcript.text.trim();
+  // 접수(#)가 끝났으면 그 순간 동결된 값을 쓴다 — liveTranscriptLines는 통화 연결 뒤
+  // 대화로 계속 자라지만, 카드의 "근거 발화"는 접수 시점 그대로 고정돼야 한다.
+  const groundedTranscript =
+    (mobileIntakeComplete ? frozenIntakeTranscriptRef.current : null) ||
+    capturedTranscript ||
+    consultationResponse.transcript.text.trim();
   // 통화 중 드리프트가 있으면 실시간 값이 카드 초기값을 덮는다
   // 통화 중 드리프트한 감정온도는 종료 후(후처리)에도 유지 — 마지막 실측이 초기 카드값으로 되돌아가지 않게
   const liveRecordingScore = liveRecordingAnger == null ? null : Math.round(liveRecordingAnger * 100);
@@ -3008,23 +3070,26 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? 2
         : 1;
   // 감정온도 = 당근 매너온도식. 36.5를 기준(평온)으로, 격앙될수록 위로 오른다.
-  // 0~100 감정강도 → 36.5~41.0°C. 밴드: ~37.4 평온(초록) · ~39.0 주의(노랑) · 그 위 고조(빨강).
+  // 0~100 감정강도 → 36.5~40.0°C(2026-07-27 재조정: 40도 초과 금지). 밴드: ~37.0 평온(초록) · ~38.0 주의(노랑) · 그 위 고조(빨강).
   const EMO_BASE = 36.5;
+  const EMO_MAX = 40.0;
   const tempC =
     temperature.score == null
       ? null
-      : Math.round((EMO_BASE + Math.min(100, Math.max(0, temperature.score)) * 0.045) * 10) / 10;
+      : Math.round(
+          (EMO_BASE + Math.min(100, Math.max(0, temperature.score)) * ((EMO_MAX - EMO_BASE) / 100)) * 10
+        ) / 10;
   const emoBand: "calm" | "warm" | "hot" =
-    tempC == null ? "warm" : tempC <= 37.4 ? "calm" : tempC <= 39.0 ? "warm" : "hot";
+    tempC == null ? "warm" : tempC <= 37.0 ? "calm" : tempC <= 38.0 ? "warm" : "hot";
   const EMO_BAND_META = {
     calm: { label: "안정", fg: "var(--green-900)", bar: "var(--green-700)" },
     warm: { label: "주의", fg: "var(--amber-900)", bar: "var(--amber-700)" },
     hot: { label: "고조", fg: "var(--red-900)", bar: "var(--red-700)" },
   } as const;
   const emoMeta = EMO_BAND_META[emoBand];
-  // 게이지 눈금 — 35.5~41.0°C 창에서 현재 온도 위치(%)와 36.5 기준점 위치(%)
+  // 게이지 눈금 — 35.5~40.0°C 창에서 현재 온도 위치(%)와 36.5 기준점 위치(%)
   const TEMP_MIN = 35.5;
-  const TEMP_MAX = 41.0;
+  const TEMP_MAX = EMO_MAX;
   const tempPct =
     tempC == null ? 0 : Math.max(0, Math.min(100, ((tempC - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100));
   const basePct = ((EMO_BASE - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100;
@@ -3317,7 +3382,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         ? isCustomerSurface &&
           realCallActiveRef.current &&
           mobileServerConnected &&
-          (p === "recording" || p === "confirm" || p === "active")
+          // 본인인증은 "prep" phase에서 시작되는데 원래 여기 없었다 — 실서버 모드에서
+          // 인증이 시작돼도 고객이 키패드를 누를 방법이 없었다(awaitingAuth로 보강).
+          (p === "recording" || p === "confirm" || p === "active" || awaitingAuth)
         : p === "connecting" ||
           p === "recording" ||
           p === "confirm" ||

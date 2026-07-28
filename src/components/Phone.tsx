@@ -576,6 +576,11 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
   useEffect(() => {
     if (vm.phEnded) setKeypadOpen(false);
   }, [vm.phEnded]);
+  // 본인인증이 시작되면 고객이 직접 '키패드'를 탭하지 않아도 자동으로 인증 화면으로
+  // 넘어간다 — 음성 안내만 믿고 화면 전환을 맡기면 놓치기 쉽다(현장 시연 보고 원인).
+  useEffect(() => {
+    if (vm.awaitingAuth) setKeypadOpen(true);
+  }, [vm.awaitingAuth]);
 
   // 합본 화면(clean=false)에서도 열리게 한다 — 실기기엔 없는 제약이고, 시연 중 어느 창에서든
   // 키패드를 눌러 볼 수 있어야 한다.
@@ -688,6 +693,40 @@ function InCallScreen({ vm, clean = false }: { vm: CallFlowVM; clean?: boolean }
   );
 }
 
+/** 본인인증 자리수(생년월일 8자리, YYYYMMDD) — 서버 정책(routing_classifier.py의
+ *  _auth_policy_for)과 맞춘 상수. 진행 표시 칸 수로 쓴다. */
+const AUTH_DIGIT_LEN = 8;
+
+/** 본인인증 진행 표시 — 누른 자리마다 칸이 *로 채워진다(원문 숫자는 화면에 안 남긴다).
+ *  done이면 8칸 전부 채운 채로 완료 톤(초록)으로 바뀐다. */
+function AuthProgressBoxes({ filled, done }: { filled: number; done: boolean }) {
+  return (
+    <div style={css("display:flex;gap:7px;justify-content:center")}>
+      {Array.from({ length: AUTH_DIGIT_LEN }).map((_, i) => {
+        const isFilled = done || i < filled;
+        return (
+          <div
+            key={i}
+            style={css(
+              "width:25px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;" +
+                "font-size:19px;font-weight:700;line-height:1;color:" +
+                (done ? "#31d158" : ON_WARM) +
+                ";transition:background .12s,border-color .12s;" +
+                (done
+                  ? "background:rgba(49,209,88,.16);border:1.5px solid rgba(49,209,88,.65)"
+                  : isFilled
+                  ? "background:rgba(255,255,255,.22);border:1.5px solid rgba(255,255,255,.55)"
+                  : "background:rgba(255,255,255,.08);border:1.5px dashed rgba(255,255,255,.32)")
+            )}
+          >
+            {isFilled ? "*" : ""}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CustomerKeypadScreen({
   vm,
   close,
@@ -703,7 +742,23 @@ function CustomerKeypadScreen({
     // 실서버 모드에선 #이 '발화 종료(접수 완료)' 신호라 의미가 달라 건드리지 않는다.
     if (digit === END_CALL_DIGIT && !vm.customerLiveMode) vm.endCall();
   };
-  const prompt = vm.mobileAgentConnected
+
+  // 인증이 끝나자마자(awaitingAuth=false) 화면이 바로 원래 프롬프트로 돌아가면 8칸이 다
+  // 채워진 순간을 볼 수 없다 — 완료 표시를 잠깐(2.5초) 유지한 뒤 되돌린다.
+  const [showAuthDone, setShowAuthDone] = useState(false);
+  useEffect(() => {
+    if (!vm.authVerified) return;
+    setShowAuthDone(true);
+    const timer = window.setTimeout(() => setShowAuthDone(false), 2500);
+    return () => window.clearTimeout(timer);
+  }, [vm.authVerified]);
+
+  const inAuth = vm.awaitingAuth || showAuthDone;
+  const prompt = showAuthDone
+    ? "본인인증이 완료되었습니다"
+    : vm.awaitingAuth
+    ? "본인인증 · 생년월일 8자리를 입력해주세요 (YYYYMMDD)"
+    : vm.mobileAgentConnected
     ? "상담원 통화 중 · 번호를 입력하세요"
     : vm.mobileIntakePending
     ? "마지막 발화를 처리하고 있습니다"
@@ -723,11 +778,18 @@ function CustomerKeypadScreen({
       <div style={css("text-align:center;margin-top:52px;padding:0 24px")}>
         <div style={css("font-size:23px;font-weight:400;letter-spacing:.5px;color:" + ON_WARM_SUB)}>{vm.phoneClockStr}</div>
         <div style={css("font-size:27px;font-weight:700;letter-spacing:-.4px;margin-top:4px;color:" + ON_WARM)}>키움은행 고객센터</div>
-        <div style={css("font-size:13.5px;margin-top:7px;color:" + ON_WARM_SUB)}>{prompt}</div>
+        <div style={css("font-size:13.5px;margin-top:7px;color:" + (inAuth ? "#ffd166" : ON_WARM_SUB) + ";font-weight:" + (inAuth ? "700" : "400"))}>{prompt}</div>
       </div>
-      {/* 누른 번호 — 실기기는 상대 정보 자리에 입력이 크게 쌓인다 */}
-      <div style={css("height:46px;display:flex;align-items:center;justify-content:center;font-size:29px;font-weight:400;letter-spacing:8px;text-indent:8px;color:" + ON_WARM)}>
-        {vm.arsDigits || " "}
+      {/* 누른 번호 — 인증 중에는 원문 대신 *로 채워지는 8칸 진행 표시, 평소엔 실기기처럼
+          상대 정보 자리에 입력이 그대로 쌓인다. */}
+      <div style={css("min-height:46px;display:flex;align-items:center;justify-content:center;margin-top:2px")}>
+        {inAuth ? (
+          <AuthProgressBoxes filled={vm.authDigitCount} done={showAuthDone} />
+        ) : (
+          <div style={css("font-size:29px;font-weight:400;letter-spacing:8px;text-indent:8px;color:" + ON_WARM)}>
+            {vm.arsDigits || " "}
+          </div>
+        )}
       </div>
       {/* 키패드는 화면 중간보다 조금 아래에 앉는다 — 실기기 비율은 상대 정보와 키패드 사이가
           키패드와 종료 버튼 사이보다 두 배쯤 넓다(2:1). 위쪽에 붙여 두면 화면 아래가 텅 빈

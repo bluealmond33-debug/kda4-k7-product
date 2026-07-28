@@ -53,12 +53,17 @@ def _get_pipe(settings: Settings):
         from transformers import pipeline
 
         model_id = getattr(settings, "transformers_whisper_model", None) or _MODEL_ID_DEFAULT
+        # CUDA만 확인하면 Apple Silicon Mac은 매번 CPU로 빠진다 — 이 랩탑엔 GPU가 없는 게
+        # 아니라 MPS(Metal)를 안 봤을 뿐이다. fp16은 MPS에서 아직 불안정한 경우가 있어
+        # CUDA에서만 쓰고, MPS는 fp32로 돌린다(정확도 우선).
         use_cuda = bool(torch.cuda.is_available())
+        use_mps = (not use_cuda) and torch.backends.mps.is_available()
+        device = "cuda:0" if use_cuda else ("mps" if use_mps else "cpu")
         _pipe = pipeline(
             "automatic-speech-recognition",
             model=model_id,
             dtype=torch.float16 if use_cuda else torch.float32,
-            device="cuda:0" if use_cuda else "cpu",
+            device=device,
         )
     return _pipe
 

@@ -551,6 +551,25 @@ a:hover {
   }
 }
 
+/* 부서 배지 도장(stamp) — 위에서 살짝 떨어져 들어오며 한 번 크게 찍혔다 가라앉는다.
+   cardArrive와 같은 원칙(바운스 없음, 오버슈트는 한 번만): 58%에서 살짝 커졌다가
+   그대로 1.00으로 가라앉지, 다시 튀어 오르지 않는다. "방금 이 부서로 도장 찍혔다"를
+   순간적인 크기·위치 변화로 전달한다. */
+@keyframes routeStamp {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.92);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(1px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* 토스트 — 아래에서 올라와 잠깐 머물다 사라진다.
    상태가 **내 조작 없이** 바뀌었을 때(코칭 진입 → 자동 휴식) 그 사실을 알리는 용도다.
    조용히 바뀌면 큐에서 빠진 걸 모른 채 앉아 있게 된다. */
