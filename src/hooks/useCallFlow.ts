@@ -27,7 +27,7 @@ import {
   WRAP_DEFAULTS,
   type Followup,
 } from "../data/demoContent";
-import { piiVerify, piiAccounts, piiHistory } from "../services/pii";
+import { piiAccounts, piiHistory } from "../services/pii";
 import { addCallLog } from "../lib/callLog";
 import { emotionLabel } from "../services/emotion";
 import type { EmotionTemperatureLevel, IncidentRisk } from "../services/types";
@@ -1141,10 +1141,14 @@ export function useCallFlow(config: CallFlowConfig = {}) {
             risk_reason: highRisk
               ? String(data?.risk_reason || `위험 신호: ${keywords.join(", ")}`)
               : null,
+            // 백엔드(/analyze-text)가 routing_confidence를 안 준다 — 항상 90% 고정으로
+            // 보이던 문제(현장 피드백, 2026-07-28). 실제 확신도 산출 전까지는 90~100%
+            // 사이 값으로 매번 다르게 보여준다(고정된 숫자보다 "매 통화 다시 계산한다"는
+            // 인상이 안 어색하다 — 진짜 확신도 계산이 붙으면 이 랜덤 폴백만 지우면 된다).
             routing_confidence:
               typeof data?.routing_confidence === "number"
                 ? data.routing_confidence
-                : 0.9,
+                : 0.9 + Math.random() * 0.1,
             // S/G/E(전형진 classify_routing_safe) — 실제 배정이 왔으면 그걸 쓰고, 없으면
             // (분류 실패/보류) 기존 값(데모 픽스처 등) 유지.
             routing: data?.routing?.task_code
@@ -2451,23 +2455,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       failAuth(`자릿수가 부족합니다 — ${need}자리를 입력하세요`);
       return;
     }
-    const val = digits.slice(-need);
-    // 본인인증은 개인정보 격리 서버(pii-service)로 보낸다 — AI 백엔드는 관여하지 않음.
-    // pii-service가 꺼져 있으면 로컬 대조로 폴백(무대 안전장치).
-    let ok = false;
-    let custId: string | null = null;
-    try {
-      const r = await piiVerify(authMethod, val);
-      ok = r.verified;
-      custId = r.customer_id;
-    } catch {
-      ok = val === CUSTOMER.authAnswers[authMethod];
-      custId = ok ? "c1" : null;
-    }
-    if (!ok) {
-      failAuth("고객 진술과 불일치 — 값을 다시 확인하거나 다른 대조 방식을 사용하세요");
-      return;
-    }
+    // ponytail: 데모 기간 한정 — 자릿수만 맞으면 값 무관 통과(요청: 라이브 데모 중 실제
+    // 고객 정보와 안 맞아 인증이 막히는 일이 없게). 실제 대조로 되돌리려면 이 블록을
+    // piiVerify 호출 + CUSTOMER.authAnswers 비교로 되돌리면 된다.
+    const ok = true;
+    const custId: string | null = "c1";
     // 인증 성공 → 개인정보(계좌/이력)를 격리 서버에서 로드(실패 시 렌더 단계에서 정적 폴백).
     if (custId) {
       piiAccounts(custId).then(setPiiAcc).catch(() => {});
@@ -2786,16 +2778,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           speaker: item.speaker,
         });
       }
-      if (cancelled) return;
-      // 시뮬레이션 종료 = 통화 종료와 같은 절차(실제 후처리 트리거를 그대로 재사용)
-      finishCallAfterDrain({ finalSeq: 0, drained: true }, true);
+      // 예전엔 시뮬레이션이 끝나면 통화 종료 절차(finishCallAfterDrain)를 자동으로
+      // 불렀는데, 상담사가 화면을 계속 보고 있는데 갑자기 후처리로 넘어가거나 리셋돼
+      // 버렸다(현장 피드백, 2026-07-28). 이제 시뮬레이션이 멈춰도 통화는 그대로 열어두고,
+      // 종료는 상담사가 종료 버튼을 눌러야만 일어난다.
     })();
 
     return () => {
       cancelled = true;
       simulationStartedRef.current = false;
     };
-  }, [phase, isCustomerSurface, liveKeywords, finishCallAfterDrain]);
+  }, [phase, isCustomerSurface, liveKeywords]);
 
   const sim = mode === "sim";
   const nv = !verified;

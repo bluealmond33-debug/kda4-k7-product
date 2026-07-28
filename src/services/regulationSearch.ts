@@ -119,6 +119,12 @@ export async function searchRegulations(
 /**
  * 실시간 추천 검색어 — 통화 전사를 백엔드 RAG(pgvector)에 흘려, 백엔드가 '관련 있다'고
  * 판단한 규정을 짧은 라벨로 돌려준다. 어떤 용어를 띄울지는 프런트가 아니라 백엔드가 결정한다.
+ *
+ * search()와 별개 엔드포인트(/suggest)를 쓴다 — 백엔드가 후보를 넉넉히 뽑은 뒤 로컬
+ * LLM(EXAONE)으로 지금 발화와 관련된 것만 추리고 순서를 매긴다. 예전엔 여기서 상위 5개
+ * 문서의 제목을 그대로 잘라 썼는데, 문서 제목이 우연히 걸리느냐에 따라 매번 다르게 나왔다
+ * (현장 피드백: "어떤 건 나오고 어떤 건 안 나와").
+ *
  * 백엔드가 꺼져 있거나(available:false) 실패하면 null — 호출부가 로컬 키워드 매칭으로 폴백한다.
  */
 export interface RegSuggestion {
@@ -127,34 +133,30 @@ export interface RegSuggestion {
   score: number;
 }
 
-function shortLabel(hit: RegulationHit): string {
-  const raw = (hit.section && hit.section.trim()) || hit.title || "";
-  // 절/조항 접두 제거하고 20자 내로 — 알약에 들어갈 길이
-  return raw.replace(/^제?\s*\d+\s*[조절항]\s*[.·]?\s*/, "").replace(/\s+/g, " ").trim().slice(0, 20);
-}
-
 export async function fetchRegSuggests(
   transcript: string,
   opts: { category?: string | null; signal?: AbortSignal } = {}
 ): Promise<RegSuggestion[] | null> {
   const q = transcript.trim().slice(-600); // 최근 발화 위주
   if (!q || !semanticSearchEnabled) return null;
+  const params = new URLSearchParams({ q });
+  if (opts.category) params.set("category", opts.category);
+  const timeout = AbortSignal.timeout(SEARCH_TIMEOUT_MS);
+  const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
   try {
-    const res = await searchRegulations(q, { category: opts.category, k: 8, signal: opts.signal });
-    if (!res.available || res.documents.length === 0) return null;
-    const seen = new Set<string>();
-    const out: RegSuggestion[] = [];
-    for (const h of res.documents) {
-      const term = shortLabel(h);
-      if (term && !seen.has(term)) {
-        seen.add(term);
-        out.push({ term, docId: h.doc_id, score: h.score });
-      }
-      if (out.length >= 5) break;
-    }
-    return out;
+    const res = await fetch(
+      `${RESOLVED_API_BASE}${DATA_API_PREFIX}/regulations/suggest?${params}`,
+      { headers: { Accept: "application/json" }, signal }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      available: boolean;
+      terms: { term: string; doc_id: string; score: number }[];
+    };
+    if (!data.available || !data.terms?.length) return null;
+    return data.terms.map((t) => ({ term: t.term, docId: t.doc_id, score: t.score }));
   } catch {
-    return null; // 취소·오류 — 폴백
+    return null; // 취소·오류·타임아웃 — 폴백
   }
 }
 

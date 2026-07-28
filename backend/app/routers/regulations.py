@@ -15,6 +15,7 @@
 """
 
 import logging
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -27,6 +28,8 @@ from app.services import rag
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/regulations", tags=["regulations"])
+
+_SECTION_PREFIX_RE = re.compile(r"^제?\s*\d+\s*[조절항]\s*[.·]?\s*")
 
 
 def _hit(doc, meta: dict | None) -> dict:
@@ -57,6 +60,56 @@ def _hit(doc, meta: dict | None) -> dict:
         # None으로 나가고 화면은 excerpt로 폴백한다 — 재적재 없이도 검색은 계속 돈다.
         "structured": meta.get("structured"),
     }
+
+
+def _short_label(doc) -> str:
+    """RagDocument → 추천 칩용 짧은 라벨. 프론트 regulationSearch.ts의 shortLabel()과 동일 규칙."""
+    raw = (doc.subcategory or doc.title or "").strip()
+    cleaned = _SECTION_PREFIX_RE.sub("", raw)
+    return re.sub(r"\s+", " ", cleaned).strip()[:20]
+
+
+@router.get("/suggest")
+def suggest_regulation_terms(q: str, category: str | None = None) -> dict:
+    """관련 규정 추천 칩(자동완성) — search()와 별개 엔드포인트다.
+
+    후보를 넉넉히(top_k=12) 뽑은 뒤 로컬 LLM(EXAONE)이 지금 발화와 관련된 것만 추리고
+    순서를 매긴다 — 상위 5개를 그대로 보여주던 예전 방식은 문서 제목이 우연히 걸리느냐에
+    따라 매번 다르게 나왔다(현장 피드백: "어떤 건 나오고 어떤 건 안 나와"). LLM이 실패하거나
+    설치 안 됐으면 의미검색 점수순 그대로 폴백한다 — 화면은 항상 뭔가 뜬다.
+    """
+    query = q.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="q is required")
+    if category is not None and category not in rag.TAXONOMY:
+        raise HTTPException(status_code=400, detail=f"unknown category: {category}")
+
+    try:
+        docs = rag.search_procedures(
+            settings, query, top_k=12, categories=[category] if category else None,
+        )
+    except Exception:
+        logger.warning("규정 추천 검색 실패 — available=false로 강등", exc_info=True)
+        return {"query": query, "category": category, "available": False, "terms": []}
+
+    seen: set[str] = set()
+    candidates: list[dict] = []
+    for d in docs:
+        label = _short_label(d)
+        if label and label not in seen:
+            seen.add(label)
+            candidates.append({"term": label, "doc_id": d.doc_id, "score": d.score})
+
+    if not candidates:
+        return {"query": query, "category": category, "available": True, "terms": []}
+
+    from app.services.local_llm import suggest_reg_terms_with_llm
+
+    picked = suggest_reg_terms_with_llm(settings, query, [c["term"] for c in candidates])
+    by_term = {c["term"]: c for c in candidates}
+    terms = [by_term[t] for t in picked if t in by_term] if picked else candidates[:5]
+
+    return {"query": query, "category": category, "available": True, "terms": terms[:5]}
 
 
 @router.get("/search")

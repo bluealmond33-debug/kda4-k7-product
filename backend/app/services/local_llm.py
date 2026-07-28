@@ -145,3 +145,57 @@ def classify_task_with_llm(settings: Settings, transcript: str) -> str | None:
 
     code = response.json().get("message", {}).get("content", "").strip().upper()
     return code if code in GENERAL_TASK_NAMES else None
+
+
+def suggest_reg_terms_with_llm(
+    settings: Settings, transcript: str, candidates: list[str]
+) -> list[str] | None:
+    """관련 규정 추천 칩(자동완성) — 후보 중 지금 발화와 관련 있는 것만 골라 순서를 매긴다.
+
+    후보는 이미 의미검색(BGE-M3)으로 뽑힌 것들이라 다 그럴듯해 보이지만, 발화 전체를
+    그대로 쿼리로 써서 상위 5개만 그대로 보여주던 예전 방식은 어떤 문서 제목이 우연히
+    걸리느냐에 따라 매번 다르게 나왔다(현장 피드백: "어떤 건 나오고 어떤 건 안 나와").
+    후보를 넉넉히 받아 LLM이 실제로 지금 대화와 맞는 것만 추리고 순서를 매기게 한다.
+
+    실패하거나 답을 못 골라내면 None — 호출부는 의미검색 점수순으로 그대로 폴백한다.
+    """
+    if not candidates:
+        return None
+    numbered = "\n".join(f"{i + 1}. {c}" for i, c in enumerate(candidates))
+    system_prompt = (
+        "너는 금융 콜센터 상담 화면에 띄울 '관련 규정' 추천 용어를 고르는 도우미다. "
+        "user 메시지는 지금 통화에서 실제로 나온 내용이다. 아래 후보 용어 목록 중 그 "
+        "내용과 관련 있는 것만, 관련도가 높은 순서로 최대 5개까지 번호를 골라라. "
+        "번호만 쉼표로 구분해서 출력해라(예: 3,1,5). 관련 있는 게 하나도 없으면 "
+        "NONE이라고만 답해라. 다른 설명은 붙이지 마라.\n\n"
+        f"후보 목록:\n{numbered}"
+    )
+    try:
+        response = httpx.post(
+            f"{settings.ollama_base_url}/api/chat",
+            json={
+                "model": settings.ollama_model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": transcript[-600:]},
+                ],
+                "stream": False,
+                "options": {"temperature": 0.1, "num_predict": 20},
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+    except httpx.HTTPError:
+        return None
+
+    raw = response.json().get("message", {}).get("content", "").strip().upper()
+    if raw == "NONE":
+        return []
+    picked: list[str] = []
+    for part in raw.replace(" ", "").split(","):
+        if not part.isdigit():
+            continue
+        idx = int(part) - 1
+        if 0 <= idx < len(candidates) and candidates[idx] not in picked:
+            picked.append(candidates[idx])
+    return picked or None
