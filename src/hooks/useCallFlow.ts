@@ -374,8 +374,11 @@ const SPEECH_SUSTAIN_TICKS = 2; // 연속 2회(≈0.5초) 이상 지속돼야 �
 const SPEECH_HOLD_MS = 2000;
 
 export function useCallFlow(config: CallFlowConfig = {}) {
-  // 발화 중간에 "말씀 다 하셨나요"가 너무 자주 끼어든다는 현장 피드백으로 5→7초.
-  const s1 = config.silenceSec1 ?? 7;
+  // 발화 중간에 "말씀 다 하셨나요"가 너무 자주 끼어든다는 현장 피드백으로 5→7→4초.
+  // 7초일 때도 여전히 끼어들던 진짜 원인은 숫자가 아니라 리셋 방식이었다(아래
+  // 마이크 레벨 기반 리마인더 재무장 참고) — 그게 고쳐진 뒤로는 "진짜 무음"만 재는
+  // 4초가 오히려 자연스럽다(요청 반영, 2026-07-28).
+  const s1 = config.silenceSec1 ?? 4;
   const s2 = config.silenceSec2 ?? 5;
   const lineGap = config.lineGapMs ?? 2400;
   const surface = config.surface ?? "full";
@@ -1197,6 +1200,16 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         return next;
       });
       if (data?.category) setWrapType(String(data.category));
+      // 고객 폰은 이 분석(/analyze-text)을 직접 안 돌린다 — 안 보내면 통화종료 문자 등이
+      // 접수 시점 픽스처값(예: "주택담보대출 만기연장")에 계속 머문다(2026-07-28 현장
+      // 피드백: 보이스피싱 상담인데 문자엔 대출 안내가 뜸). 상담사 화면이 실제 분류를
+      // 받는 대로 고객 폰에도 같은 값을 반영한다.
+      arsControlRef.current?.sendRoutingUpdate({
+        department,
+        businessType: data?.category ? String(data.category) : null,
+        taskCode: data?.routing?.task_code ? String(data.routing.task_code) : null,
+        taskName: data?.routing?.task_name ? String(data.routing.task_name) : null,
+      });
       setRegSearch(
         [data?.category, headline, ...actionItems].filter(Boolean).join(" ").slice(0, 500)
       );
@@ -2227,10 +2240,50 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           ARS_AUTH_MISMATCH.sec * 1000
         );
       },
+      // 상담사 화면(/analyze-text)이 실제 분류를 끝내면 온다 — 고객 폰은 이 분석을 직접
+      // 안 돌리므로, 이걸 안 받으면 통화종료 문자의 담당 부서·업무가 접수 시점 픽스처값
+      // (예: "주택담보대출 만기연장")에 계속 머문다(2026-07-28 현장 피드백).
+      onRoutingUpdate: (routing) => {
+        setConsultationResponse((prev) => {
+          const next: ConsultationCardResponse = {
+            ...prev,
+            consultation_card: {
+              ...prev.consultation_card,
+              department: routing.department ?? prev.consultation_card.department,
+              business_type: routing.businessType ?? prev.consultation_card.business_type,
+              routing: routing.taskCode
+                ? {
+                    classification: prev.consultation_card.routing?.classification ?? "GENERAL",
+                    handler: prev.consultation_card.routing?.handler ?? "AI",
+                    authPolicy: prev.consultation_card.routing?.authPolicy,
+                    task_code: routing.taskCode,
+                    task_name: routing.taskName ?? "",
+                  }
+                : prev.consultation_card.routing,
+            },
+          };
+          respRef.current = next;
+          return next;
+        });
+      },
       onState: (state) => {
         setArsDigits(state.digits);
         setMobileIntakeComplete(state.intakeComplete);
         setMobileAgentConnected(state.agentConnected);
+        // 본인인증 필드(awaitingAuth/authDigitCount/authVerified)는 원래 여기서
+        // 동기화하지 않고 auth_start/auth_progress/auth_complete 1회성 브로드캐스트로만
+        // 갱신했다. 그 중 하나가 재연결 타이밍에 유실되면(이 데모 와이파이에서 실측
+        // 확인, 2026-07-28: 서버는 auth_verified=true로 넘어갔는데 화면은 계속 인증
+        // 요청 상태에 멈춰 있어 "키패드를 눌러도 반응이 없다"로 보였다) 영영 복구가
+        // 안 됐다. 다른 필드처럼 1.5초 폴링 스냅샷에도 반영해 늦어도 다음 폴링에서
+        // 따라잡게 한다.
+        setAwaitingAuth(state.awaitingAuth);
+        setAuthDigitCount(state.authDigitCount);
+        setAuthVerified(state.authVerified);
+        if (state.authVerified && authHardTimerRef.current) {
+          window.clearTimeout(authHardTimerRef.current);
+          authHardTimerRef.current = null;
+        }
         const reconciliation = reconcileArsInactiveSnapshot(state, {
           localActive: realCallActiveRef.current,
           inactivePolls: inactiveStatePolls.current,
@@ -2997,6 +3050,35 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     return () => window.clearInterval(id);
   }, [awaitingAuth]);
 
+  // 실통화 침묵 리마인더 재무장(마이크 레벨 기준) — 위 onTranscript 리셋은 발화가
+  // "끝나서 STT 결과가 도착했을 때"만 리셋한다. 한 문장이 s1초보다 길게 이어지면
+  // (세그먼터 상한 8초 > 리마인더 7초였을 때 특히) 아직 말하는 중인데도 STT 결과가
+  // 안 왔다는 이유로 리마인더가 먼저 울려 말을 끊어먹었다(현장 피드백, 2026-07-28:
+  // "내가 말할 때는 절대 끊지 말고"). 실제 마이크 레벨을 봐서 지금도 소리가 나고
+  // 있으면 매번 다시 미룬다 — 진짜 무음이 s1초 이어질 때만 재생된다.
+  useEffect(() => {
+    if (!isCustomerSurface || !realCallActiveRef.current) return;
+    if (phase !== "recording") return;
+    const id = window.setInterval(() => {
+      if (mobileIntakeCompleteRef.current) return;
+      const level = getMicLevel();
+      if (level == null || level < SPEECH_LEVEL_THRESHOLD) return;
+      if (liveSilenceT.current) window.clearTimeout(liveSilenceT.current);
+      const epoch = lifecycleEpoch.current;
+      liveSilenceT.current = window.setTimeout(() => {
+        liveSilenceT.current = null;
+        if (
+          lifecycleEpoch.current === epoch &&
+          phaseRef.current === "recording" &&
+          !mobileIntakeCompleteRef.current
+        ) {
+          transitionPhase("confirm");
+        }
+      }, s1 * 1000);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [isCustomerSurface, phase, s1]);
+
   // 10초 이상 마이크에서 아무 소리도 안 잡혔으면 안내 음성을 재생하지 않는다 — 고객이
   // 자리를 뜨거나 음소거된 상태로 추정되는데 계속 안내를 재생하는 걸 막는다(요청 반영).
   // 키패드 입력 자체는 원래 조용하므로, 이건 "완전한 무음"만 걸러낸다(숫자 누르는 동안의
@@ -3131,9 +3213,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const authAlreadyHandled =
     verified || card.routing?.authPolicy === "NOT_REQUIRED" || card.routing?.authPolicy === "EXEMPT";
   const authClause = authAlreadyHandled ? " 바로 도와드리겠습니다." : " 본인확인 후 자세히 도와드리겠습니다.";
+  // EXAONE(Ollama) 상담 가이드(guideSteps)가 도착하면 그 1단계(오프닝)를 그대로 쓴다 —
+  // 실제 요약·부서·키워드·RAG 근거로 만든 문장이라 템플릿 치환보다 맥락에 맞다(2026-07-28
+  // 현장 피드백: "첫 응대 문장도 올라마에서 맥락에 맞게"). /consult-guide는 비동기라
+  // 도착 전(~5~8초)에는 기존 템플릿으로 먼저 보여준다.
   const firstLine = EXPLICIT_LIVE_CALL_ID
     ? explicitSummaryPending || groundedTranscript.length === 0
       ? "안녕하세요. 문의하실 내용을 다시 한 번 말씀해 주시겠어요?"
+      : guideSteps.length === 4
+      ? guideSteps[0].text
       : card.business_type
       ? `안녕하세요. ${card.business_type} 문의로 확인했습니다.${authClause}`
       : `안녕하세요. 말씀해 주신 문의 내용을 확인했습니다.${authClause}`
@@ -3412,7 +3500,13 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     //   로컬 데모는 **전화를 건 순간부터**(connecting 포함) 켠다 — 실기기는 통화 화면이
     //   뜨는 즉시 키패드를 누를 수 있고, 처음 몇 초만 흐릿하면 고장으로 보인다.
     customerKeypadEnabled:
-      !mobileIntakePending &&
+      // mobileIntakePending은 "#로 접수 마감 직후" 켜지고 이 통화 내내 다시 안 꺼진다
+      // (setter는 pressCustomerDigit 한 곳뿐, 리셋하는 곳이 없다 — 원래는 접수 종료
+      // 직후 잠깐만 막으려던 의도로 보인다). 그런데 본인인증은 바로 그 #(접수완료)
+      // 직후 시작되니, awaitingAuth 예외를 아래 phase 목록에 넣어봤자 이 상위 게이트가
+      // 먼저 막아서 키패드가 안 눌렸다(2026-07-28 현장 피드백: "본인인증 키패드
+      // 안눌리는 문제"). awaitingAuth일 땐 이 게이트 자체를 건너뛴다.
+      (awaitingAuth || !mobileIntakePending) &&
       (customerLiveMode
         ? isCustomerSurface &&
           realCallActiveRef.current &&
@@ -3666,10 +3760,12 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       authMethod === "birth" ? "생년월일 8자리 (YYYYMMDD)" : authMethod === "account" ? "계좌 뒤 4자리" : "연락처 뒤 4자리",
     // script + memo — 스크립트·규정은 콜 유형과 같은 사건을 말한다.
     // 실통화 EXAONE 스크립트(guideSteps 4단계)가 도착하면 그걸, 아니면 콜 유형 픽스처(actualCallSteps).
-    steps: EXPLICIT_LIVE_CALL_ID
-      ? liveSteps
-      : guideSteps.length === 4
+    // (2026-07-28 버그: EXPLICIT_LIVE_CALL_ID가 guideSteps 체크보다 먼저라 실통화에선 이
+    // 주석대로 동작한 적이 없었다 — /consult-guide로 어렵게 만든 문장이 항상 버려짐.)
+    steps: guideSteps.length === 4
       ? guideSteps.map((st) => ({ title: st.title, text: st.text }))
+      : EXPLICIT_LIVE_CALL_ID
+      ? liveSteps
       : actualCallSteps,
     // 오프닝은 '상담사가 실제로 말할 첫 문장'이다 — required_actions(할 일)로 덮어쓰지 않는다.
     // 대본 경로에서는 감정온도 밴드에 맞춘 adaptiveOpening이 그대로 나간다.

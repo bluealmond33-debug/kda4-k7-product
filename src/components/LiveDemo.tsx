@@ -334,6 +334,24 @@ export default function LiveDemo({
           </div>
           )}
 
+          {/* 온프레미스·보안 구동 상태 표시(박정운 피드백) — 경고·인장 느낌이 아니라 "생방송
+              중" 표시등처럼 가볍게. 검은 캔버스 위 오른쪽(관련 규정 패널 상단 여백)에 배경
+              없이 텍스트만 떠 있고, 초록 점 하나가 "정상 가동 중" 상태를 조용히 알린다.
+              깜빡임·글로우 없음(프로젝트 원칙 — 그림자 깊이로만 초점, 빛 연출 없음). */}
+          {view !== "phone" && (
+          <div style={css("width:100%;display:flex;justify-content:flex-end;padding-right:26px;margin-top:6px")}>
+            <span
+              title="온프레미스·보안 구동"
+              style={css(
+                "display:inline-flex;align-items:center;gap:7px;white-space:nowrap;cursor:default;font:600 11.5px 'Avenir Next','Pretendard',sans-serif;color:rgba(255,255,255,.72)"
+              )}
+            >
+              <span style={css("width:6px;height:6px;border-radius:9999px;background:var(--green-700);flex:none")} />
+              고객정보 외부 유출 없는 폐쇄망에서 실행 중
+            </span>
+          </div>
+          )}
+
           {/* 연결 상태(서버 미연결·call_id 안내·STT 채널 오류)는 화면에 띄우지 않는다.
               무대에 서는 건 상담 장면이지 배관이 아니고, 연결은 백엔드가 알아서 한다.
               진단이 필요하면 vm.micErr을 콘솔·개발 도구에서 본다. */}

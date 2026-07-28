@@ -29,6 +29,15 @@ export interface MobileArsHandlers {
   onAuthIncomplete?(count: number): void;
   /** 8자리는 채웠지만 형식이 유효한 생년월일이 아닐 때 — 재입력 요청. */
   onAuthMismatch?(): void;
+  /** 직원 화면(/analyze-text)이 실제 분류를 끝내면 온다 — 고객 폰은 이 분석을 직접 안
+   *  돌리므로, 안 받으면 접수 시점 픽스처값(예: "주택담보대출 만기연장")이 통화종료
+   *  문자 등에 계속 노출된다(2026-07-28 현장 피드백). */
+  onRoutingUpdate?(routing: {
+    department: string | null;
+    businessType: string | null;
+    taskCode: string | null;
+    taskName: string | null;
+  }): void;
 }
 
 export interface MobileArsHandle {
@@ -230,6 +239,10 @@ export function startMobileArsControl(
         end_reason?: string;
         ended_by?: string;
         count?: number;
+        department?: string;
+        business_type?: string;
+        task_code?: string;
+        task_name?: string;
       };
       try {
         message = JSON.parse(event.data as string);
@@ -288,6 +301,14 @@ export function startMobileArsControl(
         state = { ...state, authDigitCount: 0 };
         handlers.onAuthMismatch?.();
       }
+      if (message.type === "routing_update") {
+        handlers.onRoutingUpdate?.({
+          department: typeof message.department === "string" ? message.department : null,
+          businessType: typeof message.business_type === "string" ? message.business_type : null,
+          taskCode: typeof message.task_code === "string" ? message.task_code : null,
+          taskName: typeof message.task_name === "string" ? message.task_name : null,
+        });
+      }
       if (message.type === "ars_state") applySnapshot(message);
     };
     socket.onerror = () => handlers.onError?.("통화 서버에 연결할 수 없습니다.");
@@ -324,7 +345,12 @@ export function startMobileArsControl(
         !VALID_DIGIT.test(digit) ||
         !state.active ||
         pendingEndGeneration !== null ||
-        pendingIntakeGeneration !== null ||
+        // pendingIntakeGeneration guards against sending stray DTMF while the
+        // #-triggered intake_complete ack is still in flight. Auth digits are
+        // unrelated to that handshake, so they must not wait on it — otherwise
+        // a slow/lost ack (flaky WiFi) leaves the auth keypad permanently dead
+        // even though the server already moved on to awaiting_auth.
+        (pendingIntakeGeneration !== null && !state.awaitingAuth) ||
         !hydrated ||
         socket?.readyState !== WebSocket.OPEN
       ) {
@@ -332,6 +358,14 @@ export function startMobileArsControl(
       }
       if (!send("dtmf", { digit })) return false;
       state = { ...state, digits: (state.digits + digit).slice(-24) };
+      // 본인인증 자리 입력은 원래 서버 왕복(auth_progress 브로드캐스트)이 와야 화면 칸이
+      // 채워졌다 — 와이파이가 느리면 누른 게 바로 안 보여 "안 눌린다"로 느껴졌다(2026-07-28
+      // 현장 피드백). 누른 즉시 로컬로 먼저 한 칸 채우고, 서버 값이 도착하면(onAuthProgress·
+      // onState 둘 다 authDigitCount를 그대로 덮어쓴다) 그걸로 보정한다 — 8자리는 값 무관
+      // 통과라 mismatch로 어긋날 일이 사실상 없다.
+      if (state.awaitingAuth && /^[0-9]$/.test(digit)) {
+        state = { ...state, authDigitCount: Math.min(8, state.authDigitCount + 1) };
+      }
       handlers.onState?.(state);
       // # only completes the pre-call intake. During the counselor call it is
       // an ordinary DTMF digit and can never end or re-complete the call.

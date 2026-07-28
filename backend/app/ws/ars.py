@@ -28,14 +28,11 @@ router = APIRouter()
 # 기반 정교한 판정이 필요해지면 그때 교체.
 _DISCONNECT_GRACE_SECONDS = 6.0
 
-# 본인인증 — 대조할 실제 고객원장이 없어(데모 전용) 8자리가 유효한 생년월일(YYYYMMDD)
-# "형식"인지만 본다. 진짜 신원 대조는 아니지만, 명백히 말이 안 되는 입력(13월·32일 등)은
-# 걸러서 mismatch/재입력 흐름을 실제로 시연할 수 있게 한다.
+# 본인인증 — ponytail: 데모 기간 한정, 8자리만 채우면 값 무관 통과(요청: 라이브 데모 중
+# 실제 생년월일이 아니면 인증이 막히는 일이 없게, 2026-07-28). 원래는 YYYYMMDD 형식
+# 타당성만 봤다(mismatch/재입력 흐름 시연용) — 되돌리려면 날짜 범위 검증만 복원하면 된다.
 def _is_plausible_birthdate(digits: str) -> bool:
-    if len(digits) != 8 or not digits.isdigit():
-        return False
-    year, month, day = int(digits[:4]), int(digits[4:6]), int(digits[6:8])
-    return 1900 <= year <= 2026 and 1 <= month <= 12 and 1 <= day <= 31
+    return len(digits) == 8 and digits.isdigit()
 
 
 @dataclass
@@ -55,6 +52,15 @@ class _ArsState:
     awaiting_auth: bool = False
     auth_digits: str = ""
     auth_verified: bool = False
+    # 실제 라우팅 결과(부서·업무코드) — 직원 화면(/analyze-text, 로컬 LLM 포함)에서만
+    # 계산되는데, 고객 폰은 이 분석을 직접 돌리지 않아 접수 시점 픽스처값(예: "주택담보대출
+    # 만기연장")에 계속 머물러 있었다(2026-07-28 현장 피드백: 후처리 문자 내용이 실제 상담과
+    # 안 맞음). 직원 화면이 계산되는 대로 여기로 보내면, 고객 폰(통화종료 문자 등)도 같은
+    # 값을 그대로 쓸 수 있다.
+    department: str | None = None
+    business_type: str | None = None
+    task_code: str | None = None
+    task_name: str | None = None
 
 
 _states: dict[str, _ArsState] = defaultdict(_ArsState)
@@ -79,6 +85,10 @@ def _payload(state: _ArsState) -> dict:
         "awaiting_auth": state.awaiting_auth,
         "auth_digit_count": len(state.auth_digits),
         "auth_verified": state.auth_verified,
+        "department": state.department,
+        "business_type": state.business_type,
+        "task_code": state.task_code,
+        "task_name": state.task_name,
     }
 
 
@@ -198,7 +208,30 @@ async def ars_socket(websocket: WebSocket, call_id: str, role: str = "mobile") -
                 state.awaiting_auth = False
                 state.auth_digits = ""
                 state.auth_verified = False
+                state.department = None
+                state.business_type = None
+                state.task_code = None
+                state.task_name = None
                 await _broadcast(call_id, {"type": "call_start", "generation": state.generation})
+            elif mtype == "routing_update" and state.active:
+                # 직원 화면(/analyze-text 완료 후)이 실제 분류 결과를 보내면 고객 폰에도
+                # 같은 값을 반영한다 — 후처리 문자·화면이 접수 시점 픽스처가 아니라 실제
+                # 상담 내용을 따라가게 한다(2026-07-28 현장 피드백).
+                state.department = str(message.get("department") or "") or None
+                state.business_type = str(message.get("business_type") or "") or None
+                state.task_code = str(message.get("task_code") or "") or None
+                state.task_name = str(message.get("task_name") or "") or None
+                await _broadcast(
+                    call_id,
+                    {
+                        "type": "routing_update",
+                        "department": state.department,
+                        "business_type": state.business_type,
+                        "task_code": state.task_code,
+                        "task_name": state.task_name,
+                        "generation": state.generation,
+                    },
+                )
             elif mtype == "auth_start" and state.active and not state.awaiting_auth:
                 # 본인인증 생년월일 수집 시작 — 접수 종료(digits/intake_complete)와는
                 # 별도 버퍼(auth_digits)로 받는다. 분석 결과 auth_policy=REQUIRED일 때

@@ -22,26 +22,27 @@ const GAP = 14; // 스팟라이트 ↔ 말풍선 간격
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
-/** 시작 선택 — 투어 가이드를 따라갈지, 자유롭게 체험할지 사용자가 고른다 */
+/** 시작 선택 — 업무를 시작할지, 퇴근할지 사용자가 고른다(2026-07-28: 투어 안내 문구 대신
+ *  실제 상담사 출퇴근처럼 보이도록 요청받아 교체 — 둘 다 안내 없이 바로 화면으로 들어간다). */
 export function TourChooser({ onPick }: { onPick: (tour: boolean) => void }) {
   return (
     <div style={css("position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;background:rgba(6,6,7,.62)")}>
       <div style={css("width:440px;background:var(--onair-surface);border-radius:16px;box-shadow:var(--sh-modal);padding:24px 24px 20px;animation:coachIn .3s var(--ease-out);font-family:" + FONT)}>
         <div style={css("display:flex;align-items:center;gap:8px;margin-bottom:14px")}>
           <span className="mi" style={css("font-size:20px;color:var(--blue-700)")}>tips_and_updates</span>
-          <span style={css("font:700 13px " + FONT + ";color:var(--gray-1000)")}>데모 안내</span>
+          <span style={css("font:700 13px " + FONT + ";color:var(--gray-1000)")}>K7 콜센터</span>
         </div>
         <div style={css("font:700 19px/1.35 " + FONT + ";letter-spacing:-.2px;color:var(--gray-1000);margin-bottom:16px")}>
-          어떻게 둘러볼까요?
+          어떻게 하시겠어요?
         </div>
         <div
-          onClick={() => onPick(true)}
+          onClick={() => onPick(false)}
           style={css("display:flex;align-items:center;gap:12px;background:var(--blue-700);color:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;margin-bottom:8px")}
         >
-          <span className="mi" style={css("font-size:22px")}>tour</span>
+          <span className="mi" style={css("font-size:22px")}>login</span>
           <span style={css("flex:1")}>
-            <span style={css("display:block;font:700 14px " + FONT)}>투어 가이드 따라가기 — 추천</span>
-            <span style={css("font:400 11.5px " + FONT + ";opacity:.85")}>영역별 설명을 따라 접수→후처리 한 바퀴를 체험합니다</span>
+            <span style={css("display:block;font:700 14px " + FONT)}>업무 시작하기</span>
+            <span style={css("font:400 11.5px " + FONT + ";opacity:.85")}>상담 화면으로 들어갑니다</span>
           </span>
           <span className="mi" style={css("font-size:18px")}>arrow_forward</span>
         </div>
@@ -49,14 +50,11 @@ export function TourChooser({ onPick }: { onPick: (tour: boolean) => void }) {
           onClick={() => onPick(false)}
           style={css("display:flex;align-items:center;gap:12px;background:var(--gray-100);color:var(--gray-1000);border-radius:12px;padding:14px 16px;cursor:pointer")}
         >
-          <span className="mi" style={css("font-size:22px;color:var(--gray-700)")}>explore</span>
+          <span className="mi" style={css("font-size:22px;color:var(--gray-700)")}>logout</span>
           <span style={css("flex:1")}>
-            <span style={css("display:block;font:700 14px " + FONT)}>자유롭게 체험하기</span>
-            <span style={css("font:400 11.5px " + FONT + ";color:var(--gray-600)")}>안내 없이 직접 눌러보며 둘러봅니다</span>
+            <span style={css("display:block;font:700 14px " + FONT)}>퇴근하기</span>
+            <span style={css("font:400 11.5px " + FONT + ";color:var(--gray-600)")}>오늘 업무를 마칩니다</span>
           </span>
-        </div>
-        <div style={css("font:400 11px/1.5 " + FONT + ";color:var(--gray-500);margin-top:14px")}>
-          투어는 Esc로 언제든 종료할 수 있고, 상단 단계(대기~후처리)를 누르면 지금 화면 투어를 다시 켤 수 있어요.
         </div>
       </div>
     </div>

@@ -1,62 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { css } from "../../lib/css";
 import type { CallFlowVM } from "../../hooks/useCallFlow";
 import DesktopShell from "./DesktopShell";
 import BriefingCardBody from "./BriefingCardBody";
 import ScriptTimeline from "./ScriptTimeline";
 import { KEYS, KeyHint, useShortcuts } from "../../lib/shortcuts";
-import AnimatedCircularProgress from "../ui/AnimatedCircularProgress";
 
 const FONT = "'Avenir Next','Pretendard',sans-serif";
-
-/** 카드를 띄워 놓고 전화를 받지 않는 사고를 막는 안전장치 — 이 초가 지나면 자동 연결된다.
- *  동시에 상담사에게 "이 안에 카드를 읽고 들어가야 한다"는 리듬을 준다. */
-const AUTO_CONNECT_SEC = 600;
-/** 긴급(보이스피싱·이상거래) 콜은 10분씩 기다릴 여유가 없다 — 지금 송금이 진행 중일 수
- *  있어 대기 자체가 사고다(2026-07-28 현장 지적). 카드를 볼 짧은 틈만 주고 바로 연결한다. */
-const AUTO_CONNECT_SEC_EMERGENCY = 15;
-
-/** 자동 연결 카운트다운 — 준비 카드가 떠 있는 동안만 돈다.
- *
- *  왜 자동으로 연결하나: 카드가 올라왔는데 상담사가 통화 연결을 잊으면 고객은 계속 기다린다.
- *  그건 이 제품이 없애려는 바로 그 손실이라 사람 손에만 맡기지 않는다.
- *  왜 남은 초를 보여주나: 보이면 "지금 읽고 들어가야 한다"가 몸으로 느껴진다.
- *
- *  연결 불가 상태(체크 미완·요약 대기)에서는 세지 않고 멈춰 기다린다 — 그때 0이 되면
- *  answerCall이 조용히 무시돼 '자동 연결됐다고 착각하는' 더 나쁜 사고가 된다. */
-function useAutoConnect(vm: CallFlowVM) {
-  const max = vm.isEmergency ? AUTO_CONNECT_SEC_EMERGENCY : AUTO_CONNECT_SEC;
-  const [left, setLeft] = useState(max);
-  /* 고객이 이미 끊었으면 세지 않는다 — 세어 봐야 없는 사람에게 거는 것이고,
-     시연에서는 폰이 종료 화면인데 콘솔이 통화로 넘어가는 최악의 그림이 된다. */
-  const canConnect = vm.canConnect && !vm.customerEnded;
-
-  /* answerCall을 ref로 들고 있는다 — 이 훅의 의존성에 vm을 넣으면 안 된다.
-     vm은 useCallFlow가 매 렌더 새로 만드는 객체라, 의존성에 두면 **렌더마다 effect가 다시
-     돌아 1초 타이머가 계속 리셋된다.** 이 화면은 시계·마이크 레벨 때문에 초당 여러 번
-     리렌더되므로 타이머가 한 번도 끝나지 못하고, 카운트다운이 영원히 멈춰 있었다. */
-  const answerRef = useRef(vm.answerCall);
-  answerRef.current = vm.answerCall;
-
-  useEffect(() => {
-    if (!canConnect) return; // 연결 가능해질 때까지 남은 초를 그대로 붙잡고 기다린다
-    if (left <= 0) {
-      answerRef.current();
-      return;
-    }
-    const id = window.setTimeout(() => setLeft((s) => s - 1), 1000);
-    return () => window.clearTimeout(id);
-  }, [canConnect, left]);
-
-  return {
-    left: Math.max(0, left),
-    /** 남은 비율 0~1 — 버튼 안에서 줄어드는 띠의 길이 */
-    pct: Math.max(0, Math.min(1, left / max)),
-    /** 마지막 5초 — 서두르라는 신호 */
-    urgent: left <= 5,
-    counting: canConnect,
-  };
-}
 
 /** 상담 준비 카드 — 전화 받기 전 KARI-NA 브리핑.
  *  상단: 로고(좌) · 라우팅 단계 부서→업무코드(우, 클릭=부서 이관).
@@ -68,7 +18,6 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
   const [scriptOpen, setScriptOpen] = useState(false);
   const [transferMenu, setTransferMenu] = useState(false);
   const reservedDept = vm.transferReserved ? vm.transferTarget ?? vm.suggestedDept : null;
-  const auto = useAutoConnect(vm);
 
   /* 준비 카드 단축키 — 통화 연결(C)과 이관(T). 전화를 받기 직전이라 손이 마우스에
      가 있지 않을 수 있다. 연결 불가 상태에서는 C를 먹지 않는다(조용히 무시되면
@@ -176,13 +125,9 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               data-tour="prep-connect"
               className="keyreveal"
               onClick={vm.answerCall}
-              title={
-                auto.counting
-                  ? `${auto.left}초 뒤 자동으로 연결됩니다`
-                  : "요약·확인이 끝나면 자동 연결 카운트다운이 시작됩니다"
-              }
+              title={vm.canConnect ? "통화를 연결합니다" : "요약·확인이 끝나면 연결할 수 있습니다"}
               style={css(
-                "position:relative;overflow:hidden;padding:10px 14px 10px 22px;background:" +
+                "position:relative;overflow:hidden;padding:10px 20px;background:" +
                   vm.connectBg +
                   ";color:" +
                   vm.connectFg +
@@ -198,33 +143,6 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               {/* 단축키 배지 — 연결 가능할 때만. 못 누르는 상태에서 키를 알려 주면
                   눌러 보고 아무 일도 안 일어나 더 헷갈린다. */}
               {vm.canConnect && <KeyHint k={KEYS.connect} tone="on" />}
-              {/* 남은 시간 — 숫자를 원형 게이지가 감싼다. 숫자는 "몇 초"를, 호는 "얼마나 남았나"를
-                  말한다: 급할 때 사람은 숫자를 읽기 전에 줄어드는 호를 먼저 본다.
-                  게이지는 **버튼 안**에 있다 — 밖에 링을 두면 눈이 버튼과 링으로 갈린다.
-                  바닥 띠를 다시 두지 않는 이유도 같다(장식이 둘이면 숫자가 묻힌다).
-                  마지막 5초만 숫자가 굵고 밝아진다. */}
-              <AnimatedCircularProgress
-                value={auto.left}
-                max={AUTO_CONNECT_SEC}
-                size={26}
-                stroke={2.6}
-                primary={vm.connectFg}
-                secondary="rgba(255,255,255,.26)"
-                transitionMs={auto.counting ? 950 : 200}
-              >
-                <span
-                  style={css(
-                    "font-variant-numeric:tabular-nums;letter-spacing:-.2px;transition:opacity .3s,font-size .3s;font-size:" +
-                      (auto.urgent ? "13px" : "11.5px") +
-                      ";font-weight:" +
-                      (auto.urgent ? "700" : "600") +
-                      ";opacity:" +
-                      (auto.counting ? (auto.urgent ? "1" : ".78") : ".45")
-                  )}
-                >
-                  {auto.left}
-                </span>
-              </AnimatedCircularProgress>
             </span>
           </div>
           </div>

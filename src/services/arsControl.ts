@@ -61,6 +61,15 @@ export interface ArsControlHandle {
   stop(): void;
   agentConnected(): void;
   endCall(): void;
+  /** 실제 분류 결과(부서·업무코드)를 고객 폰에 반영시킨다 — /analyze-text가 끝나는 대로
+   *  호출한다. 고객 폰은 이 분석을 직접 안 돌리므로, 안 보내면 접수 시점 픽스처값(예:
+   *  "주택담보대출 만기연장")에 계속 머문다(후처리 문자 등에 노출, 2026-07-28 현장 피드백). */
+  sendRoutingUpdate(routing: {
+    department?: string | null;
+    businessType?: string | null;
+    taskCode?: string | null;
+    taskName?: string | null;
+  }): void;
 }
 
 /** Counselor-side ARS lifecycle control. */
@@ -269,6 +278,18 @@ export function startArsControl(
   connect();
 
   return {
+    sendRoutingUpdate(routing) {
+      if (socket?.readyState !== WebSocket.OPEN) return;
+      socket.send(
+        JSON.stringify({
+          type: "routing_update",
+          department: routing.department ?? null,
+          business_type: routing.businessType ?? null,
+          task_code: routing.taskCode ?? null,
+          task_name: routing.taskName ?? null,
+        })
+      );
+    },
     agentConnected() {
       if (generation <= 0) {
         handlers.onError?.("활성 통화 세대를 확인한 뒤 다시 연결해 주세요.");

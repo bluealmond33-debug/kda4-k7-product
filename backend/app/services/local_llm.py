@@ -42,17 +42,17 @@ JSON 스키마:
   "summary": "상담 내용 2~3문장 요약",
   "department": "담당 부서",
   "keywords": ["핵심 키워드 3~6개"],
-  "risk_flags": {
-    "actual_damage_occurred": bool, "credential_exposed": bool,
-    "remote_app_installed": bool, "control_lost": bool,
-    "protection_measures_incomplete": bool, "damage_amount_unknown": bool,
-    "transfer_time_unknown": bool, "payment_hold_status_unknown": bool,
-    "protection_status_unknown": bool, "other_critical_info_missing": bool,
-    "multiple_issues_present": bool, "multiple_procedures_applicable": bool,
-    "repeat_contact_same_case": bool, "prior_resolution_failed": bool
-  }
+  "risk_flags": { }
 }
-플래그는 전사문에서 명시적으로 확인되는 경우에만 true, 확인 불가하면 false로 남겨라.
+risk_flags는 아래 14개 중 전사문에서 **명시적으로 true인 것만** key: true로 넣어라(생략된
+플래그는 자동으로 false 처리된다 — 안 넣는 게 정답이다. 사고 정황이 없는 일반 문의는
+"risk_flags": {}로 비워 둔다. 이유: 매번 14개를 다 나열하면 출력이 불필요하게 길어져
+느려진다 — 2026-07-28 현장 피드백).
+가능한 키: actual_damage_occurred, credential_exposed, remote_app_installed, control_lost,
+protection_measures_incomplete, damage_amount_unknown, transfer_time_unknown,
+payment_hold_status_unknown, protection_status_unknown, other_critical_info_missing,
+multiple_issues_present, multiple_procedures_applicable, repeat_contact_same_case,
+prior_resolution_failed
 """
 
 
