@@ -1022,11 +1022,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }
 
     if (!text || (!useLocalLiveAnalysis && !useReal.data)) {
+      // 데모(mock) 경로는 summarize()가 지연 없이 즉시 끝나서 summaryPending이 한 번도
+      // true가 되지 않았다 — 그래서 라우팅 애니메이션(BriefingCardBody의 justRouted)이
+      // 트리거될 순간 자체가 없었다. 실통화 경로처럼 짧게 "생성 중"을 보여준다.
+      if (isCurrent()) setSummaryPending(true);
       const [result] = await Promise.allSettled([
         summarize({ chunks, text }),
+        new Promise((resolve) => window.setTimeout(resolve, 700)),
       ]);
       if (!isCurrent()) return false;
       if (result.status === "fulfilled") setSummary(result.value);
+      if (isCurrent()) setSummaryPending(false);
       return true;
     }
 
