@@ -815,12 +815,25 @@ export function useCallFlow(config: CallFlowConfig = {}) {
           callId,
           summary: card.summary,
           businessType: card.business_type,
+          businessCode: card.routing?.task_code ?? undefined,
+          businessCodeLabel: card.routing?.task_name ?? null,
           department: card.department,
           routingReason: card.routing_reason,
           incidentRisk: card.incident_risk,
           riskReason: card.risk_reason,
           confidence: card.routing_confidence,
           emotionLevel: card.emotion.level,
+          /* 관제도 상담사와 **같은 카드**를 그린다 — 그러려면 같은 재료가 가야 한다.
+             여기서 안 보내면 관제 쪽은 자기만의 조판을 다시 만들 수밖에 없고, 그러면
+             같은 통화가 두 화면에서 다르게 생기게 된다.
+
+             verified는 카드가 만들어지는 시점에는 아직 모른다(본인인증은 연결 뒤에 일어난다).
+             관제 피드가 routing.assigned로 따로 받아 두므로 여기서는 비운다 — 모르는 것을
+             false로 채우면 "인증 실패"로 읽힌다. */
+          transcriptQuote: groundedTranscript || null,
+          summaryPoints: card.customer_requests ?? [],
+          needTags: [...PREP_NEED_TAGS[incomingRef.current]],
+          verified: null,
           source,
         });
         demoBus.emit("pipeline.stage", { callId, stage: "route", status: "start" });

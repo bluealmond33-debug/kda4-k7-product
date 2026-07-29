@@ -55,6 +55,26 @@ export interface DemoEventMap {
     riskReason: string | null;
     confidence: number | null;
     emotionLevel: EmotionTemperatureLevel | null;
+    /*
+      아래 넷은 **상담사 준비카드와 같은 카드를 관제에서도 그리기 위한** 값이다.
+
+      관제의 상담카드 상세는 오래 자기만의 조판을 갖고 있었다 — 같은 통화인데 상담사가 보는
+      카드와 관리자가 보는 카드가 서로 다르게 생겼다는 뜻이다. 시연에서 두 화면을 나란히 켜면
+      그게 바로 드러나고, "같은 카드가 세 화면에서 동시에"라는 이 제품의 주장과도 어긋난다.
+
+      카드를 하나로 맞추려면 관제 쪽에도 같은 재료가 있어야 한다. 발화 인용·요구사항 불릿·
+      핵심 니즈·업무코드 이름이 그것이다. 없으면 그리지 않는다(전부 선택값).
+    */
+    /** 요약의 근거가 된 고객 발화 한 토막 */
+    transcriptQuote?: string | null;
+    /** AI가 발화에서 분해한 요구사항 — 없으면 빈 배열 */
+    summaryPoints?: string[];
+    /** 핵심 니즈 칩 */
+    needTags?: string[];
+    /** 업무코드 이름 (G002 → "주택담보대출") */
+    businessCodeLabel?: string | null;
+    /** 본인인증 완료 여부 — 카드 왼쪽 아래 자물쇠 */
+    verified?: boolean | null;
     /** demo = 픽스처 시뮬레이션 · backend = 실제 POST /api/v1/calls 응답 */
     source: "demo" | "backend";
   };
