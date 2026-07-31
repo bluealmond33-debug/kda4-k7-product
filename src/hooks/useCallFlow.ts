@@ -1025,10 +1025,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       // 데모(mock) 경로는 summarize()가 지연 없이 즉시 끝나서 summaryPending이 한 번도
       // true가 되지 않았다 — 그래서 라우팅 애니메이션(BriefingCardBody의 justRouted)이
       // 트리거될 순간 자체가 없었다. 실통화 경로처럼 짧게 "생성 중"을 보여준다.
+      //
+      // 길이는 CARD_BUILD_MS보다 **길어야** 한다: 카드(BriefingCardBody)는 카드 생성 창이
+      // 끝나고 prep으로 넘어가야 비로소 마운트되는데, 그전에 pending이 false로 끝나 버리면
+      // 카드는 "생성중 → 완료" 전환을 한 번도 못 보고(마운트 시점엔 이미 false) 애니메이션이
+      // 영영 안 뜬다. 두 타이머가 따로 놀지 않도록 같은 상수에서 파생시킨다.
       if (isCurrent()) setSummaryPending(true);
       const [result] = await Promise.allSettled([
         summarize({ chunks, text }),
-        new Promise((resolve) => window.setTimeout(resolve, 700)),
+        new Promise((resolve) => window.setTimeout(resolve, CARD_BUILD_MS + 500)),
       ]);
       if (!isCurrent()) return false;
       if (result.status === "fulfilled") setSummary(result.value);

@@ -49,6 +49,11 @@ export default function BriefingCardBody({
     arriving || justRouted
       ? ";animation:chainLight .5s ease-out " + (0.5 + order * 0.16) + "s both"
       : "";
+  // 도장이 찍히는 순간 — 두 경우 모두다. 카드가 날아와 안착하는 접수 화면(arriving)과,
+  // 이미 자리에 있는 카드 위에서 라우팅이 확정되는 통화 화면(justRouted).
+  // arriving일 때는 카드 도착 모션(cardArrive .9s)이 끝나갈 무렵에 찍혀야 한 동작으로 읽힌다.
+  const stamped = arriving || justRouted;
+  const stampDelay = arriving ? ".55s" : "0s";
   const reservedDept = vm.transferReserved ? vm.transferTarget ?? vm.suggestedDept : null;
   const confPct = vm.prepConfidencePct ?? 0;
 
@@ -166,14 +171,14 @@ export default function BriefingCardBody({
                 이관은 별도 버튼(접수=하단 '이관', 통화=음소거 왼쪽 원형 버튼)이 맡는다.
                 예약이 걸리면 여기가 파랗게 채워져 '어디로 갈지'를 보여준다. */}
             <div style={css("position:relative")}>
-              {justRouted && (
+              {stamped && (
                 <div
                   style={css(
-                    "position:absolute;inset:0;border-radius:10px;pointer-events:none;animation:ringSettle .7s ease-out both"
+                    "position:absolute;inset:0;border-radius:10px;pointer-events:none;animation:ringSettle .7s ease-out " + stampDelay + " both"
                   )}
                 />
               )}
-              <div title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "AI 배정 결과"} style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)") + (justRouted ? ";animation:routeStamp .5s cubic-bezier(0.2,0.8,0.2,1) both" : ""))}>
+              <div title={reservedDept ? "이관 예약됨 — 종료 시 " + reservedDept + "로" : "AI 배정 결과"} style={css("display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;border:1px solid " + (reservedDept ? "var(--blue-700)" : "var(--gray-300)") + ";background:" + (reservedDept ? "var(--blue-700)" : "var(--onair-surface)") + (stamped ? ";animation:routeStamp .5s cubic-bezier(0.2,0.8,0.2,1) " + stampDelay + " both" : ""))}>
                 <div style={css("flex:1;min-width:0;display:flex;flex-direction:column;gap:4px")}>
                   <div style={css("display:flex;align-items:baseline;gap:7px")}>
                     <span style={css("font:600 8.5px " + FONT + ";letter-spacing:.4px;flex:none;width:28px;color:" + (reservedDept ? "rgba(255,255,255,.7)" : "var(--gray-600)"))}>부서</span>

@@ -1,0 +1,398 @@
+<title>KARI-NA · 감정 모델 역할 분담 (발표 슬라이드 1장)</title>
+
+<style>
+/* ══════════════════════════════════════════════════════════════
+   KARI-NA 발표 덱 삽입용 1장 — deck.html의 ONAIR 디자인 언어를 그대로 상속.
+   면은 석고 화이트 한 색, 색은 점·글자·가는 선에만, 그라데이션 없음, 4px 그리드.
+   라이트 온리(ONAIR 원칙 04 — 프로젝터 고정 환경).
+
+   레이아웃 원칙: 높이를 손으로 계산하지 않는다.
+   슬라이드(720px 고정) → 본문(1fr) → 도해(1fr)로 남는 공간을 흘려보내
+   글 길이가 변해도 하단이 겹치지 않는다.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  color-scheme: light;
+
+  --panel:#f8f9f9;
+  --ground:#e9eaeb;
+
+  --ink:#1b1d20;
+  --ink-2:#4d5156;
+  --ink-3:#6b6f74;
+  --muted:#83878c;
+  --line:#dcdee1;
+  --line-soft:#e4e6e8;
+
+  --blue:#2f5fc4;
+  --blue-deep:#284fa3;
+  --amber:#dfa348;
+  --amber-deep:#77571a;
+}
+:root[data-theme="dark"],:root[data-theme="light"]{color-scheme:light}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Avenir Next","Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  letter-spacing:-0.012em;
+  word-break:keep-all;
+  display:flex;flex-direction:column;align-items:center;gap:18px;
+  padding:22px 16px 40px;
+}
+.mono{font-family:"Geist Mono",ui-monospace,SFMono-Regular,"SF Mono","D2Coding",Consolas,monospace}
+
+/* ── 뷰어용 축소 래퍼 (원본은 항상 1280×720) ────────── */
+.stage{width:100%;max-width:1280px;aspect-ratio:1280/720;display:grid;place-items:center;overflow:hidden}
+.scaler{width:1280px;height:720px;flex:none;transform:scale(var(--s,1));transform-origin:center center}
+
+/* ── 슬라이드 (deck.html .slide 규격) ──────────────── */
+/* 아이브로우·푸터 없이 본문만 — 슬라이드 전체를 내용에 내준다. */
+.slide{
+  width:1280px;height:720px;
+  background:var(--panel);
+  border-radius:12px;
+  padding:54px 72px;
+  display:grid;
+  overflow:hidden;
+  box-shadow:0 3px 8px -3px rgba(15,18,24,.25),0 1px 2px rgba(15,18,24,.10);
+}
+
+/* ── 본문 ──────────────────────────────────────────── */
+.body{
+  min-height:0;
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  row-gap:24px;
+}
+
+.head{display:grid;grid-template-columns:1fr 400px;gap:56px;align-items:start}
+.head h1{font-size:48px;font-weight:800;line-height:1.1;letter-spacing:-0.038em;margin:0;text-wrap:balance}
+/* 리드 한 줄 + 받는 줄. 받는 줄의 세로 막대는 덱 문법 그대로 — 색은 가는 선에만. */
+.stand{margin:5px 0 0;display:flex;flex-direction:column;gap:11px}
+.stand .lead{
+  margin:0;font-size:17.5px;font-weight:750;line-height:1.5;letter-spacing:-0.024em;
+  color:var(--ink);text-wrap:pretty;
+}
+.stand .sup{
+  margin:0;padding-left:13px;border-left:2px solid var(--blue);
+  font-size:15.5px;font-weight:500;line-height:1.6;color:var(--ink-2);text-wrap:pretty;
+}
+
+/* ── 3분할 — 연결기호가 관계를 인코딩한다 ───────────
+   01·02는 순서가 아니라 동시에 도는 병렬 신호(+)이고, 둘이 함께 03으로 수렴(→)한다.
+   화살표를 3연속으로 쓰면 없는 순서를 만들어내므로 쓰지 않는다.
+   도해 행(1fr)과 글 행(auto)을 분리해 연결기호가 도해 정중앙에 오게 한다. */
+.trio{
+  min-height:0;
+  display:grid;
+  grid-template-columns:1fr 40px 1fr 40px 1fr;
+  grid-template-rows:minmax(0,1fr) auto;
+  row-gap:14px;
+}
+.c1{grid-column:1}
+.c2{grid-column:3}
+.c3{grid-column:5}
+.trio>.viz{grid-row:1}
+.trio>.txt{grid-row:2}
+
+.joint{
+  grid-row:1;display:grid;place-items:center;
+  font-weight:400;font-size:22px;line-height:1;color:var(--muted);
+}
+.joint.plus{grid-column:2;color:var(--ink-3);font-weight:500}
+.joint.to{grid-column:4}
+
+/* ── 도해 패널 ─────────────────────────────────────── */
+.viz{
+  position:relative;min-height:0;
+  background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+}
+.viz.human{background:var(--ink);border-color:var(--ink)}
+
+.badge{
+  position:absolute;left:14px;bottom:14px;z-index:3;
+  width:30px;height:30px;border-radius:9999px;
+  background:var(--blue);color:#fff;display:grid;place-items:center;
+  font-weight:700;font-size:12px;line-height:1;letter-spacing:.02em;font-variant-numeric:tabular-nums;
+}
+.viz.human .badge{background:#fff;color:var(--ink)}
+
+.tag{
+  position:absolute;right:12px;top:12px;z-index:3;
+  font-weight:700;font-size:10.5px;line-height:1;letter-spacing:.09em;text-transform:uppercase;
+  padding:5px 9px;border-radius:9999px;
+}
+.tag.hot{background:rgba(47,95,196,.10);color:var(--blue-deep)}
+.tag.cold{background:rgba(223,163,72,.16);color:var(--amber-deep)}
+.tag.human{background:rgba(255,255,255,.13);color:#e6e9ec}
+
+/* ── 카드 글 ───────────────────────────────────────── */
+.txt .kind{
+  display:block;font-weight:700;font-size:11.5px;line-height:1;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:8px;
+}
+.txt.human .kind{color:var(--ink-3)}
+.txt .name{margin:0;font-size:26px;font-weight:750;line-height:1.2;letter-spacing:-0.028em}
+/* 03 카드는 이 줄이 비어 있다 — 그래도 자리는 남겨야 세 카드의 설명글이 같은 높이에서 시작한다. */
+.txt .tech{
+  margin:8px 0 0;min-height:1.45em;
+  font-weight:500;font-size:12px;line-height:1.45;color:var(--muted);letter-spacing:.01em;
+}
+.txt .desc{margin:10px 0 0;font-size:15.5px;line-height:1.56;color:var(--ink-2);text-wrap:pretty}
+.txt .desc b{color:var(--ink);font-weight:650}
+
+/* ── 도해 01 · 격한 파형 ───────────────────────────── */
+.wave{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 22px}
+.wave i{display:block;width:4px;border-radius:2px;flex:none;background:var(--blue);opacity:.6}
+.viz.quiet .wave i{background:var(--ink-3);opacity:.36}
+.viz.quiet .wave{padding-bottom:104px}
+
+.thresh{position:absolute;left:0;right:0;top:36%;z-index:2;border-top:1.5px dashed var(--blue);opacity:.55}
+.thresh span{
+  position:absolute;right:14px;top:-8px;background:#fff;padding:0 6px;
+  font-weight:700;font-size:10px;line-height:1;letter-spacing:.08em;color:var(--blue);
+}
+
+/* ── 도해 02 · 4개 층 ──────────────────────────────── */
+/* 왼쪽 56px은 02 배지 자리로 비워 둔다 — 층 번호(9·12)가 배지 밑에 깔리던 것을 막는다.
+   03 카드의 마지막 줄과 같은 규칙(배지는 왼쪽 여백에, 내용은 그 오른쪽). */
+.layers{
+  position:absolute;left:0;right:0;bottom:0;z-index:2;
+  padding:14px 22px 16px 56px;display:flex;flex-direction:column;gap:6px;
+  border-top:1px solid var(--line-soft);background:#fff;
+}
+.layers .cap{
+  font-weight:700;font-size:9.5px;line-height:1;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;
+}
+.lay{display:flex;align-items:center;gap:9px}
+.lay .n{width:18px;flex:none;text-align:right;font-weight:600;font-size:10px;line-height:1;color:var(--muted);font-variant-numeric:tabular-nums}
+.lay .bar{height:6px;border-radius:3px;background:var(--line)}
+.lay.on .bar{background:var(--blue)}
+
+/* ── 도해 03 · 상담사가 보는 화면 ───────────────────
+   제품 UI(useCallFlow.ts:3083-3105 · BriefingCardBody.tsx)의 "당근 매너온도식"을 그대로.
+   36.5°C가 평온 기준, 최대 40.0°C, 게이지 창 35.5~40.0.
+   밴드: ~37.0 안정(초록) · ~38.0 주의(앰버) · 그 위 고조(빨강).
+   감정온도와 주의등급은 서로 다른 축이다 — 보조 신호는 주의등급만 올릴 뿐
+   감정온도 값을 덮어쓰지 않는다(코드 동작과 동일). */
+.decide{
+  position:absolute;inset:0;padding:20px 22px;
+  display:flex;flex-direction:column;justify-content:center;gap:12px;color:#f2f4f6;
+}
+
+/* 상담사 화면에 실제로 뜨는 감정온도 카드 — BriefingCardBody.tsx의 그 카드 그대로.
+   흰 면으로 띄워 "이게 상담사 모니터에 뜨는 UI"임을 드러낸다. */
+.tcard{
+  background:#fff;border:1px solid var(--line);border-radius:10px;
+  padding:11px 12px;display:flex;flex-direction:column;gap:7px;
+}
+.tcard .cap{font-weight:600;font-size:10px;line-height:1;letter-spacing:.2px;color:#83878c}
+.tcard .read{display:flex;align-items:center;gap:8px}
+.tcard .read svg{display:block;flex:none}
+.tcard .val{
+  font-weight:600;font-size:29px;line-height:1;letter-spacing:-1.1px;font-variant-numeric:tabular-nums;
+}
+.tcard .val i{font-style:normal;font-size:16px;font-weight:500;margin-left:1px}
+.tcard .band{font-weight:700;font-size:11.5px;line-height:1}
+
+/* 감정온도 축 — EmotionBar.tsx와 동일한 그라데이션·잉크 페이더 썸.
+   축이 이미 색을 다 쓰므로 마커는 색을 보태지 않고 가장 어두운 잉크로 대비만 준다. */
+.ebar{
+  position:relative;height:7px;border-radius:9999px;
+  background:linear-gradient(90deg,#3e7a4e 0%,#3e7a4e 26%,#dfa348 58%,#bc3f2b 100%);
+}
+.ebar .thumb{
+  position:absolute;top:50%;box-sizing:border-box;
+  width:5px;height:17px;border-radius:9999px;
+  background:#1b1d20;border:1.5px solid #fff;
+  box-shadow:0 1px 3px rgba(16,24,40,.35);
+  transform:translate(-50%,-50%);
+}
+
+/* 주의등급 — 감정온도와 별개 축이다 */
+.att{display:flex;align-items:center;gap:9px}
+.att .k{font-weight:700;font-size:10px;line-height:1;letter-spacing:.09em;text-transform:uppercase;color:#8f979f}
+.chip{font-weight:700;font-size:11px;line-height:1;letter-spacing:.06em;padding:5px 10px;border-radius:9999px}
+.chip.med{background:var(--amber);color:#231a06}
+
+/* 마지막 줄은 03 배지 오른쪽으로 비켜 앉는다 — 배지(왼쪽 14px, 지름 30px)가
+   글자 위에 겹치지 않게 하고, 동시에 배지가 이 결론 문장의 말머리처럼 읽히게 한다. */
+.decide .final{padding-left:34px;font-size:15px;font-weight:650;letter-spacing:-0.02em}
+
+/* ── 하단 한 줄 ────────────────────────────────────── */
+.note{
+  padding:12px 18px;border-radius:8px;
+  background:rgba(47,95,196,.055);border:1px solid rgba(47,95,196,.16);
+  font-size:15px;font-weight:700;line-height:1.5;color:var(--ink);text-wrap:pretty;
+}
+
+/* ── 뷰어 캡션 (슬라이드 밖) ───────────────────────── */
+.viewer-note{
+  max-width:1280px;width:100%;margin:0;
+  font-size:12.5px;line-height:1.6;color:var(--ink-3);letter-spacing:.01em;
+  display:flex;flex-wrap:wrap;gap:6px 20px;
+}
+.viewer-note b{color:var(--ink);font-weight:600}
+
+@media (prefers-reduced-motion:no-preference){
+  .body>*{animation:rise .26s cubic-bezier(.2,.7,.3,1) both}
+  .body>*:nth-child(2){animation-delay:.05s}
+  .body>*:nth-child(3){animation-delay:.09s}
+  @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+}
+</style>
+
+<div class="stage">
+<div class="scaler" id="scaler">
+<section class="slide">
+
+  <div class="body">
+
+    <div class="head">
+      <h1>목소리는 두 번 읽고,<br>결정은 사람이 합니다.</h1>
+      <div class="stand">
+        <p class="lead">화난 고객이 늘 목소리를 높이진 않습니다.</p>
+        <p class="sup">격앙된 분노, 조용한 분노 &mdash; 신호가 달라 모델을 두 개 겹쳤습니다. 하나가 놓쳐도 나머지가 잡습니다.</p>
+      </div>
+    </div>
+
+    <div class="trio">
+
+      <!-- ── 01 · 감정온도 ─────────────────────────── -->
+      <div class="viz c1">
+        <span class="tag hot mono">주 판정</span>
+        <div class="wave" data-wave="hot"></div>
+        <div class="thresh"><span class="mono">고조</span></div>
+        <span class="badge mono">01</span>
+      </div>
+
+      <div class="joint plus mono" aria-hidden="true">+</div>
+
+      <!-- ── 02 · WavLM ────────────────────────────── -->
+      <div class="viz quiet c2">
+        <span class="tag cold mono">보조</span>
+        <div class="wave" data-wave="cold"></div>
+        <div class="layers">
+          <div class="cap mono">듣는 깊이</div>
+          <div class="lay"><span class="n mono">3</span><span class="bar" style="width:34%"></span></div>
+          <div class="lay on"><span class="n mono">6</span><span class="bar" style="width:62%"></span></div>
+          <div class="lay"><span class="n mono">9</span><span class="bar" style="width:48%"></span></div>
+          <div class="lay"><span class="n mono">12</span><span class="bar" style="width:40%"></span></div>
+        </div>
+        <span class="badge mono">02</span>
+      </div>
+
+      <div class="joint to mono" aria-hidden="true">→</div>
+
+      <!-- ── 03 · 상담사 ───────────────────────────── -->
+      <div class="viz human c3">
+        <span class="tag human mono">최종 판단</span>
+        <div class="decide">
+
+          <!-- 상담사 화면에 실제로 뜨는 카드 그대로.
+               39.0° = 고조(빨강). tempC > 38.0 → hot 밴드(useCallFlow.ts:3094).
+               게이지 창 35.5~40.0 기준 위치 = (39.0-35.5)/4.5 = 77.8%. -->
+          <div class="tcard" style="color:#bc3f2b">
+            <div class="cap">고객 감정온도</div>
+            <div class="read">
+              <svg viewBox="0 0 40 40" width="27" height="27" aria-hidden="true">
+                <circle cx="20" cy="20" r="17.4" fill="none" stroke="currentColor" stroke-width="2.6"/>
+                <circle cx="14.2" cy="16.8" r="2.1" fill="currentColor"/>
+                <circle cx="25.8" cy="16.8" r="2.1" fill="currentColor"/>
+                <path d="M13.6 28Q20 23.9 26.4 28" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+              </svg>
+              <span class="val">39.0<i>°</i></span>
+            </div>
+            <div class="band">고조</div>
+            <div class="ebar"><span class="thumb" style="left:77.8%"></span></div>
+          </div>
+
+          <div class="att">
+            <span class="k mono">주의등급</span>
+            <span class="chip med mono">MEDIUM</span>
+          </div>
+
+          <div class="final">상담사가 보고 판단합니다</div>
+        </div>
+        <span class="badge mono">03</span>
+      </div>
+
+      <!-- ── 카드 글 ───────────────────────────────── -->
+      <div class="txt c1">
+        <span class="kind mono">뜨거운 분노</span>
+        <p class="name">감정온도</p>
+        <p class="tech mono">eGeMAPS 음향특징 → LightGBM</p>
+        <p class="desc">목소리가 <b>얼마나 격했는지</b>를 재서, 평온한 36.5°에서 오르는 <b>체온처럼</b> 보여줍니다.</p>
+      </div>
+
+      <div class="txt c2">
+        <span class="kind mono">차가운 분노</span>
+        <p class="name">음성 분노</p>
+        <p class="tech mono">WavLM 3·6·9·12층 통계 융합</p>
+        <p class="desc"><b>조용해도</b> 화가 났는지 봅니다. 어느 깊이를 더 믿을지 모델이 스스로 배웁니다.</p>
+      </div>
+
+      <div class="txt human c3">
+        <span class="kind mono">사람의 자리</span>
+        <p class="name">상담사</p>
+        <p class="tech mono"></p>
+        <p class="desc">보조 신호는 주의를 <b>한 단계 올릴 수만</b> 있고, 감정온도 값을 덮어쓰지 못합니다.</p>
+      </div>
+
+    </div>
+
+    <div class="note">참고 신호로 상담사에게 전달되고, 감정온도 모델이 스스로 결정하지 않습니다.</div>
+
+  </div>
+
+</section>
+</div>
+</div>
+
+<p class="viewer-note">
+  <span><b>원본 규격</b> 1280 × 720 (16:9) — PPT 한 장에 그대로 삽입</span>
+  <span><b>캡처</b> 슬라이드 영역만 스크린샷</span>
+  <span><b>디자인</b> docs/brand-system.html · docs/deck.html 토큰 상속</span>
+</p>
+
+<script>
+(function () {
+  // 파형 — 고정 배열(재현 가능). 01은 크게 요동치고, 02는 거의 평평하다.
+  // 이 대비 하나가 "뜨거운 분노 / 차가운 분노"를 글보다 먼저 읽히게 한다.
+  var HOT  = [18,32,26,54,71,45,88,62,96,74,58,83,41,67,92,55,78,36,64,86,49,73,95,61,44,80,68,90,52,76,38,66,84,47,71,59,88,42,63,29,51,34,22,16];
+  var COLD = [7,11,9,14,10,17,12,8,15,11,19,13,9,16,12,20,14,10,18,13,8,15,11,17,12,9,16,13,19,11,14,10,18,12,8,15,11,16,13,9,12,10,7,6];
+
+  // 막대 높이는 패널 실제 높이에서 파생한다 — 패널이 남는 공간을 받아 자라도
+  // 파형이 넘치거나 납작해지지 않는다.
+  function drawWaves() {
+    document.querySelectorAll('[data-wave]').forEach(function (el) {
+      var hot = el.dataset.wave === 'hot';
+      var set = hot ? HOT : COLD;
+      var box = el.clientHeight - parseFloat(getComputedStyle(el).paddingBottom || 0);
+      var max = Math.max(24, box * (hot ? 0.86 : 0.30));
+      el.textContent = '';
+      set.forEach(function (v) {
+        var b = document.createElement('i');
+        b.style.height = Math.max(3, Math.round(v / 100 * max)) + 'px';
+        el.appendChild(b);
+      });
+    });
+  }
+
+  // 뷰어 축소 — 원본 1280×720을 유지한 채 화면에 맞춘다.
+  var scaler = document.getElementById('scaler');
+  var stage = scaler.parentElement;
+  function fit() {
+    var s = Math.min(stage.clientWidth / 1280, stage.clientHeight / 720, 1);
+    scaler.style.setProperty('--s', s || 1);
+  }
+
+  function render() { fit(); drawWaves(); }
+  render();
+  addEventListener('resize', render);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render, function () {});
+})();
+</script>

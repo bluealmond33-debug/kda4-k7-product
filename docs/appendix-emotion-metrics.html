@@ -1,0 +1,210 @@
+<title>KARI-NA · Appendix — 감정 모델 성능 지표</title>
+
+<style>
+/* ══════════════════════════════════════════════════════════════
+   KARI-NA 발표 덱 부록 1장 — 첨부된 "정확도는 유사하게, 분류 시간은 더 짧게."
+   Appendix 슬라이드의 판형을 그대로 따른다:
+     면·박스 없음 · 가로 규칙선만 · 강조 행 하나만 파랑 · 여백이 구조를 만든다.
+   숫자는 전부 docs/EMOTION_MODELS_QA_GUIDE.md 기재값이며,
+   WavLM 전체 정확도만 고정 test 혼동행렬 (2,215+419)/3,012 에서 산출했다.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  color-scheme: light;
+  --panel:#f8f9f9;
+  --ink:#17191c;
+  --ink-2:#4d5156;
+  --muted:#8b9096;
+  --line:#d8dade;
+  --line-soft:#e6e8ea;
+  --blue:#2f5fc4;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--panel);color:var(--ink);
+  font-family:"Avenir Next","Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  letter-spacing:-0.016em;word-break:keep-all;
+  display:flex;justify-content:center;
+}
+
+.slide{
+  position:relative;
+  width:1280px;height:720px;background:var(--panel);
+  padding:52px 76px 40px;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ── 머리 ─────────────────────────────────────────── */
+.eyebrow{
+  font-weight:800;font-size:14px;line-height:1;letter-spacing:.06em;
+  color:var(--blue);margin-bottom:16px;
+}
+h1{
+  margin:0;font-size:44px;font-weight:800;line-height:1.12;letter-spacing:-0.042em;
+}
+.sub{
+  margin:16px 0 0;font-size:18px;font-weight:500;line-height:1.5;
+  letter-spacing:-0.022em;color:var(--ink-2);
+}
+
+/* ── 입력 특징 — "무엇을 듣는가" ────────────────────
+   두 모델의 성능 차이는 결국 입력이 다르기 때문이므로 표보다 먼저 놓는다.
+   박스를 두르지 않고 라벨 + 스파크라인만으로 판형을 유지한다. */
+.feats{margin-top:30px;display:flex;flex-direction:column;gap:11px}
+.frow{display:flex;align-items:center;gap:14px}
+.frow .who{
+  flex:none;width:186px;font-size:14.5px;font-weight:700;letter-spacing:-0.02em;color:var(--ink);
+}
+.frow .who em{display:block;font-style:normal;font-weight:500;font-size:11.5px;color:var(--muted);margin-top:2px;letter-spacing:0}
+.spark{flex:none;width:96px;height:26px;display:block}
+.spark .w{fill:#c3c7cc}
+.spark .p{fill:none;stroke:var(--blue);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spark .lay{fill:var(--blue);opacity:.85}
+.spark .raw{fill:#b9bdc2}
+.frow .what{font-size:14px;font-weight:500;line-height:1.45;color:var(--ink-2)}
+.frow .what b{font-weight:700;color:var(--ink)}
+
+/* ── 표 ───────────────────────────────────────────── */
+.cap{margin-top:34px;font-size:14px;font-weight:500;color:var(--muted);letter-spacing:-0.018em}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:13px 0}
+th:first-child,td:first-child{text-align:left}
+thead th{
+  font-size:14px;font-weight:600;color:var(--ink-2);letter-spacing:-0.018em;
+  padding-bottom:11px;border-bottom:1.5px solid #b9bdc2;
+}
+tbody td{font-size:19px;font-weight:500;color:var(--ink);letter-spacing:-0.024em}
+tbody tr+tr td{border-top:1px solid var(--line-soft)}
+tbody td:first-child{font-weight:500}
+tbody td .sm{font-size:13px;font-weight:500;color:var(--muted);margin-left:6px;letter-spacing:-0.01em}
+/* 강조 행 — 최종 채택 모델 하나만 파랑 */
+tbody tr.hi td{color:var(--blue);font-weight:800}
+tbody tr.hi td .sm{color:var(--blue);opacity:.72;font-weight:600}
+/* 전화 음질 행 — 같은 모델의 조건 변형이므로 들여쓴다 */
+tbody td.indent{padding-left:17px;color:var(--ink-2)}
+tbody td.dash{color:var(--muted);font-weight:400}
+
+/* ── 바닥 ─────────────────────────────────────────── */
+/* 마크가 앉을 자리를 아래에 비워 둔다 — 주석이 두 줄이라 겹치기 쉽다 */
+.foot{
+  margin-top:auto;margin-bottom:32px;padding-top:16px;border-top:1.5px solid #b9bdc2;
+  display:flex;align-items:baseline;justify-content:space-between;gap:28px;
+}
+.foot .lead{font-size:17px;font-weight:500;color:var(--ink);letter-spacing:-0.024em}
+.foot .lead b{font-weight:800}
+.foot .note{font-size:13.5px;font-weight:500;color:var(--muted);letter-spacing:-0.018em;text-align:right}
+
+.mark{position:absolute;right:76px;bottom:28px}
+</style>
+
+<div class="slide">
+
+  <div class="eyebrow">Appendix</div>
+  <h1>같은 목소리를, 서로 다르게 듣습니다.</h1>
+  <p class="sub">감정온도는 소리의 물리량을 직접 재고, 음성 분노는 파형에서 스스로 배운 표현을 봅니다. 타깃이 달라 점수끼리 우열을 가리지 않습니다.</p>
+
+  <!-- ── 입력 특징 ──────────────────────────────────── -->
+  <div class="feats">
+
+    <div class="frow">
+      <span class="who">감정온도<em>eGeMAPS v02 · 88차원</em></span>
+      <svg class="spark" viewBox="0 0 96 26" aria-hidden="true">
+        <!-- 에너지(크기) 막대 위에 피치(높낮이) 곡선을 겹쳐, 두 물리량을 함께 본다는 걸 그대로 보여준다 -->
+        <rect class="w" x="2"  y="17" width="3" height="9"  rx="1.5"/>
+        <rect class="w" x="9"  y="13" width="3" height="13" rx="1.5"/>
+        <rect class="w" x="16" y="15" width="3" height="11" rx="1.5"/>
+        <rect class="w" x="23" y="9"  width="3" height="17" rx="1.5"/>
+        <rect class="w" x="30" y="11" width="3" height="15" rx="1.5"/>
+        <rect class="w" x="37" y="5"  width="3" height="21" rx="1.5"/>
+        <rect class="w" x="44" y="7"  width="3" height="19" rx="1.5"/>
+        <rect class="w" x="51" y="3"  width="3" height="23" rx="1.5"/>
+        <rect class="w" x="58" y="8"  width="3" height="18" rx="1.5"/>
+        <rect class="w" x="65" y="12" width="3" height="14" rx="1.5"/>
+        <rect class="w" x="72" y="10" width="3" height="16" rx="1.5"/>
+        <rect class="w" x="79" y="16" width="3" height="10" rx="1.5"/>
+        <rect class="w" x="86" y="19" width="3" height="7"  rx="1.5"/>
+        <path class="p" d="M3,20 C14,18 20,13 31,12 C42,11 47,5 58,5 C69,5 76,11 87,14"/>
+      </svg>
+      <span class="what">피치 <b>F0(높낮이)</b> · 에너지(크기) · 발화 속도 · <b>jitter·shimmer(떨림)</b> — 사람이 정의한 음향 지표를 그대로 잰다</span>
+    </div>
+
+    <div class="frow">
+      <span class="who">음성 분노<em>WavLM-base-plus · frozen</em></span>
+      <svg class="spark" viewBox="0 0 96 28" aria-hidden="true">
+        <!-- 위: 원본 파형 / 아래: 그 파형에서 뽑아낸 4개 깊이의 층(얕음→깊음) -->
+        <rect class="raw" x="2"  y="2" width="2" height="7"  rx="1"/>
+        <rect class="raw" x="7"  y="0" width="2" height="11" rx="1"/>
+        <rect class="raw" x="12" y="3" width="2" height="5"  rx="1"/>
+        <rect class="raw" x="17" y="1" width="2" height="9"  rx="1"/>
+        <rect class="raw" x="22" y="4" width="2" height="4"  rx="1"/>
+        <rect class="raw" x="27" y="0" width="2" height="12" rx="1"/>
+        <rect class="raw" x="32" y="2" width="2" height="8"  rx="1"/>
+        <rect class="raw" x="37" y="4" width="2" height="4"  rx="1"/>
+        <rect class="raw" x="42" y="1" width="2" height="10" rx="1"/>
+        <rect class="raw" x="47" y="3" width="2" height="6"  rx="1"/>
+        <rect class="raw" x="52" y="0" width="2" height="11" rx="1"/>
+        <rect class="raw" x="57" y="3" width="2" height="5"  rx="1"/>
+        <rect class="raw" x="62" y="1" width="2" height="9"  rx="1"/>
+        <rect class="raw" x="67" y="4" width="2" height="4"  rx="1"/>
+        <rect class="raw" x="72" y="2" width="2" height="8"  rx="1"/>
+        <rect class="raw" x="77" y="0" width="2" height="10" rx="1"/>
+        <rect class="raw" x="82" y="3" width="2" height="5"  rx="1"/>
+        <rect class="raw" x="87" y="2" width="2" height="7"  rx="1"/>
+        <rect class="lay" x="2" y="14"   width="22" height="2.5" rx="1.25" opacity=".45"/>
+        <rect class="lay" x="2" y="17.5" width="40" height="2.5" rx="1.25" opacity=".62"/>
+        <rect class="lay" x="2" y="21"   width="60" height="2.5" rx="1.25" opacity=".8"/>
+        <rect class="lay" x="2" y="24.5" width="82" height="2.5" rx="1.25"/>
+      </svg>
+      <span class="what">파형을 직접 읽는 <b>encoder 3·6·9·12층</b> × 시간축 <b>mean(전체 톤)·std(들쭉날쭉함)</b> — 층당 1,536차원</span>
+    </div>
+
+  </div>
+
+  <!-- ── 표 ─────────────────────────────────────────── -->
+  <p class="cap">감정온도는 27,467 발화 화자쌍 5-fold OOF, 음성 분노는 고정 test 3,012건(angry 647건) 기준입니다.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>모델</th>
+        <th>Macro F1</th>
+        <th>전체 정확도</th>
+        <th>격양 재현율</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>감정온도 · eGeMAPS + LightGBM</td>
+        <td>0.5638</td>
+        <td>64.29%</td>
+        <td>57.58%</td>
+      </tr>
+      <tr>
+        <td class="indent">└ 전화 음질 시뮬레이션</td>
+        <td>0.5633</td>
+        <td>64.60%</td>
+        <td>56.09%</td>
+      </tr>
+      <tr class="hi">
+        <td>음성 분노 · WavLM 4층 통계 융합</td>
+        <td>0.8053</td>
+        <td>87.45%<span class="sm">419/647 탐지</span></td>
+        <td class="dash">—</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── 바닥 ───────────────────────────────────────── -->
+  <div class="foot">
+    <span class="lead">16 kHz → 8 kHz → G.711 μ-law 왕복 → 16 kHz 근사 시뮬레이션에서 <b>Macro F1 차이 0.0004</b></span>
+    <span class="note">격양은 놓침을 줄이려 문턱을 P(high)≥0.30으로 낮춘 상담사 참고용 신호</span>
+  </div>
+
+  <!-- 브랜드 마크 — BrandLogo.tsx의 심볼(세로 캡슐 눈 + 채워진 반원 미소) 그대로 -->
+  <svg class="mark" viewBox="0 0 100 100" width="20" height="20" aria-hidden="true">
+    <rect x="31" y="30" width="12" height="27" rx="6" fill="#2f5fc4"/>
+    <rect x="57" y="30" width="12" height="27" rx="6" fill="#2f5fc4"/>
+    <path d="M27 62 A23 20 0 0 0 73 62 Z" fill="#2f5fc4"/>
+  </svg>
+
+</div>
