@@ -38,11 +38,13 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
   // 오버라이드(잠깐 손대는 순간에만) = 메모 입력 > 규정집 확장 > 본인확인 입력 포커스.
   // (구 v1: 미인증이면 고객카드가 떠서 통화 내내 그림자가 본인확인에 가 있던 문제 교정 —
   //  본인확인은 계속 보는 면이 아니라 초반에 잠깐 처리하는 작업이므로 입력에 들어갔을 때만 뜬다.)
+  // 단, 본인확인 필요 업무는 연결 직후 최우선 처리 대상이므로 손대기 전에도 광원이 여기로 온다.
   // 마우스 추적 없음 — 전환은 .card의 0.45s 이산 트랜지션.
+  const authNeedsAttention = vm.requiresAuth && !vm.verified;
   const focus: "customer" | "script" | "memo" | "reg" =
     memoFocused || editIdx !== null ? "memo"
     : vm.regExpanded ? "reg"
-    : authFocused ? "customer"
+    : authFocused || authNeedsAttention ? "customer"
     : "script";
 
   // 아코디언 outside-click 닫힘 — 왼쪽 컬럼 밖을 클릭하면 펼친 카드가 접힌다
@@ -338,7 +340,16 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
               </div>
             ) : (
               <div style={css("margin-top:13px;background:var(--gray-100);border-radius:8px;padding:12px")}>
-                <div style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);margin-bottom:3px")}>본인확인 · 미완료</div>
+                <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:3px")}>
+                  <span style={css("font:700 12.5px 'Geist Sans','Pretendard',sans-serif;color:" + (vm.requiresAuth ? "var(--amber-900)" : "var(--gray-700)"))}>
+                    본인확인 · {vm.requiresAuth ? "미완료" : "선택(이 업무는 불필요)"}
+                  </span>
+                  {vm.authAttempts > 0 && (
+                    <span style={css("font:600 10.5px 'Geist Mono','IBM Plex Mono',monospace;color:var(--red-800);background:var(--onair-surface);border-radius:9999px;padding:2px 8px")}>
+                      오답 {vm.authAttempts}회 · {vm.authVoiceLabel}
+                    </span>
+                  )}
+                </div>
                 <div style={css("font:400 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:10px")}>
                   고객이 말한 <span style={css("font-weight:700;color:var(--blue-900)")}>{vm.authAskLabel}</span>를 빈칸에 입력하면 자동 대조됩니다
                 </div>
@@ -398,9 +409,13 @@ export default function ActiveCall({ vm }: { vm: CallFlowVM }) {
 
             <div style={css("margin-top:12px")}>
               <div style={css("font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--gray-700);margin-bottom:7px")}>
-                고객 상세 조회 <span style={css("font-weight:400;color:var(--gray-600)")}>· 본인인증 후 열람</span>
+                고객 상세 조회{" "}
+                <span style={css("font-weight:400;color:var(--gray-600)")}>
+                  · {vm.requiresAuth ? "본인인증 후 열람" : "이 업무는 본인인증 불필요 · 바로 열람 가능"}
+                </span>
               </div>
-              {vm.verified ? (
+              {/* 본인인증이 필요 없는 업무는 잠그지 않는다 — data/authPolicy.ts 기준 */}
+              {!vm.requiresAuth || vm.verified ? (
                 <div style={css("display:flex;flex-direction:column;gap:7px")}>
                   <span onClick={() => setShowHistory((prev) => !prev)} className="qlink" style={css("cursor:pointer" + (showHistory ? ";border-color:var(--blue-400);color:var(--blue-700);font-weight:700" : ""))}>
                     과거 상담 이력 <span className="mi" style={css("font-size:17px" + (showHistory ? "" : ";color:var(--gray-600)"))}>{showHistory ? "expand_less" : "expand_more"}</span>

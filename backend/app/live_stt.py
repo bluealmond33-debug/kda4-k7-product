@@ -27,6 +27,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field, model_validator
 
 from app.live_dtmf_store import LiveDtmfEvent, save_dtmf_event
+from app.routing.auth_policy import requires_identity_verification
 from app.routing.emergency_gate import check_emergency
 from app.routing.taxonomy import DEPARTMENTS, ROUTING_LEVELS
 
@@ -662,6 +663,7 @@ def analyze_live_text(text: str) -> dict:
         "business_type": business_type,
         "business_code": business_code,
         "department": department,
+        "requires_auth": requires_identity_verification(business_type),
         "emotion": {
             "status": "unavailable",
             "score": None,

@@ -68,6 +68,12 @@ import {
   shouldIgnoreArsCallEnd,
   shouldStartFreshArsCall,
 } from "../services/arsLifecycle";
+import {
+  requiresIdentityVerification,
+  resolveAuthVoiceCue,
+  AUTH_VOICE_LABELS,
+  type AuthVoiceCue,
+} from "../data/authPolicy";
 
 export type Phase =
   | "idle"
@@ -294,6 +300,10 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [authErrMsg, setAuthErrMsg] = useState("");
   const [authTime, setAuthTime] = useState("");
   const [authMethodLabel, setAuthMethodLabel] = useState("");
+  // 오인증 재시도 횟수 — 방식(연락처/생년월일/계좌)을 바꿔도 유지된다(우회 방지)
+  const [authAttempts, setAuthAttempts] = useState(0);
+  // 이번 대조 시도가 재생해야 할 음성 슬롯 — 실제 TTS 연결 전까지는 화면 안내로만 쓰인다
+  const [authVoiceCue, setAuthVoiceCue] = useState<AuthVoiceCue | null>(null);
 
   const [memoItems, setMemoItems] = useState<string[]>([]);
   const [memoDraft, setMemoDraft] = useState("");
@@ -343,6 +353,8 @@ export function useCallFlow(config: CallFlowConfig = {}) {
   const [summary, setSummary] = useState<CallSummary | null>(null);
   const [consultationResponse, setConsultationResponse] =
     useState<ConsultationCardResponse>(() => getDemoConsultationCard());
+  // 이 상담이 본인확인 필요 업무인지 — 업무유형별 기준은 data/authPolicy.ts 참고
+  const requiresAuth = requiresIdentityVerification(consultationResponse.consultation_card.business_type);
   const summaryText = useRef("");
 
   const [scale, setScale] = useState(1);
@@ -1115,6 +1127,9 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     if (!realCallActiveRef.current || phaseRef.current === "active") return;
     if (phaseRef.current !== "prep") return;
     transitionPhase("active");
+    // 본인확인 필요 업무면 통화 연결 직후 최우선으로 인증 요청 음성을 낸다
+    // ("본인확인 요청" 직후 "8자리 안내"가 이어지는 고정 인트로 — 재시도 임계값과 무관)
+    if (requiresAuth && !verified) setAuthVoiceCue("request");
     setMicErr((current) =>
       current === "마지막 STT 처리 제한시간을 초과했습니다. 끝 발화를 확인해 주세요."
         ? ""
@@ -1135,7 +1150,7 @@ export function useCallFlow(config: CallFlowConfig = {}) {
         detail: "상담원 채널 연결 · 규정 추천 활성화",
       })
     );
-  }, [after, transitionPhase]);
+  }, [after, transitionPhase, requiresAuth, verified]);
 
   const finishIntakeAfterDrain = useCallback(
     (event: ArsLifecycleEvent, resumeAgent = false) => {
@@ -1675,7 +1690,17 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     }
     // 고객 진술값과 대조 — 불일치는 인증 실패 (은행 툴의 핵심 경로)
     if (digits.slice(-need) !== CUSTOMER.authAnswers[authMethod]) {
-      setAuthErrMsg("고객 진술과 불일치 — 값을 다시 확인하거나 다른 대조 방식을 사용하세요");
+      const attempt = authAttempts + 1;
+      const cue = resolveAuthVoiceCue(attempt, false);
+      setAuthAttempts(attempt);
+      setAuthVoiceCue(cue);
+      setAuthErrMsg(
+        cue === "verify_failed"
+          ? "본인확인이 반복 실패했습니다 — 다른 대조 방식을 시도하거나 상담 유형을 재확인하세요"
+          : cue === "mismatch"
+          ? "고객 진술과 불일치 — 값을 다시 확인하거나 다른 대조 방식을 사용하세요"
+          : "자릿수를 다시 확인하고 한 번 더 입력해 주세요"
+      );
       setAuthErr(true);
       return;
     }
@@ -1693,12 +1718,15 @@ export function useCallFlow(config: CallFlowConfig = {}) {
       setAuthTime(t);
       setAuthMethodLabel(lbl);
       setAuthErr(false);
+      setAuthVoiceCue(resolveAuthVoiceCue(authAttempts, true));
     }
-  }, [authInput, authMethod]);
+  }, [authInput, authMethod, authAttempts]);
   const resetAuth = useCallback(() => {
     setVerified(false);
     setAuthInput("");
     setAuthErr(false);
+    setAuthAttempts(0);
+    setAuthVoiceCue(null);
   }, []);
 
   // ── memo ──
@@ -2263,6 +2291,11 @@ export function useCallFlow(config: CallFlowConfig = {}) {
     // auth (1d)
     verified,
     notVerified: nv,
+    // 이 업무유형이 본인확인을 요구하는지 — data/authPolicy.ts 기준
+    requiresAuth,
+    authAttempts,
+    authVoiceCue,
+    authVoiceLabel: authVoiceCue ? AUTH_VOICE_LABELS[authVoiceCue] : "",
     setAuthPhone: () => pickAuth("phone"),
     setAuthBirth: () => pickAuth("birth"),
     setAuthAcct: () => pickAuth("account"),

@@ -38,6 +38,13 @@ export default function PrepCard({ vm }: { vm: CallFlowVM }) {
               {vm.handover.fromDept} → {AGENT.dept}
             </span>
           ) : null}
+          {/* 본인확인 필요 업무 — 연결 전 상담사가 미리 인지하도록 prep 단계에서부터 표시 */}
+          {vm.requiresAuth && (
+            <span style={css("display:inline-flex;align-items:center;gap:6px;font:700 11px 'Geist Sans','Pretendard',sans-serif;color:var(--amber-900);background:var(--gray-100);border-radius:9999px;padding:4px 11px;margin-bottom:13px;margin-left:" + (vm.isUrgent || vm.isTransfer ? "6px" : "0") + "")}>
+              <span className="mi" style={css("font-size:13px")}>verified_user</span>
+              본인인증 필요 업무 · 연결 직후 진행
+            </span>
+          )}
           {/* AI 사전 녹음 요약 = 이 카드의 히어로. 라벨을 붙여 '제목'이 아니라 '요약'으로 읽히게 한다 */}
           <div style={css("display:flex;gap:13px")}>
             <span style={css("width:4px;border-radius:2px;background:var(--blue-500);flex:none")} />
